@@ -1,0 +1,41 @@
+{
+  "name": "graphene-admin",
+  "version": "1.0.0",
+  "description": "Admin control panel for Graphene SEM test results analysis",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "nodemon server/index.js",
+    "client:dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio"
+  },
+  "keywords": ["graphene", "sem", "admin", "analysis"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "alpinejs": "^3.13.3",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2",
+    "postcss": "^8.4.32",
+    "prisma": "^5.7.0",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.8"
+  }
+}

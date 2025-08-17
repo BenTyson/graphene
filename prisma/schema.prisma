@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Biochar {
+  id                  String    @id @default(cuid())
+  experimentNumber    String    @unique @map("experiment_number")
+  testOrder           Int?      @map("test_order")
+  experimentDate      DateTime? @map("experiment_date")
+  reactor             String?
+  rawMaterial         String?   @map("raw_material")
+  startingAmount      Decimal?  @map("starting_amount") @db.Decimal(10, 2)
+  acidAmount          Decimal?  @map("acid_amount") @db.Decimal(10, 2)
+  acidConcentration   Decimal?  @map("acid_concentration") @db.Decimal(5, 2)
+  acidMolarity        Decimal?  @map("acid_molarity") @db.Decimal(5, 2)
+  acidType            String?   @map("acid_type")
+  temperature         Decimal?  @db.Decimal(6, 2)
+  time                Decimal?  @db.Decimal(10, 2)
+  pressureInitial     Decimal?  @map("pressure_initial") @db.Decimal(10, 2)
+  pressureFinal       Decimal?  @map("pressure_final") @db.Decimal(10, 2)
+  washAmount          Decimal?  @map("wash_amount") @db.Decimal(10, 2)
+  washMedium          String?   @map("wash_medium")
+  output              Decimal?  @db.Decimal(10, 2)
+  dryingTemp          Decimal?  @map("drying_temp") @db.Decimal(6, 2)
+  kftPercentage       Decimal?  @map("kft_percentage") @db.Decimal(5, 2)
+  comments            String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  
+  grapheneProductions Graphene[]
+  
+  @@map("biochar")
+  @@index([createdAt])
+  @@index([testOrder])
+  @@index([experimentDate])
+}
+
+model Graphene {
+  id                  String    @id @default(cuid())
+  experimentNumber    String    @unique @map("experiment_number")
+  testOrder           Int?      @map("test_order")
+  experimentDate      DateTime? @map("experiment_date")
+  oven                String?
+  quantity            Decimal?  @db.Decimal(10, 2)
+  biocharExperiment   String?   @map("biochar_experiment")
+  baseAmount          Decimal?  @map("base_amount") @db.Decimal(10, 2)
+  baseType            String?   @map("base_type")
+  baseConcentration   Decimal?  @map("base_concentration") @db.Decimal(5, 2)
+  grindingMethod      GrindingMethod? @map("grinding_method")
+  grindingTime        Decimal?  @map("grinding_time") @db.Decimal(10, 2)
+  gas                 String?
+  tempRate            String?   @map("temp_rate")
+  tempMax             Decimal?  @map("temp_max") @db.Decimal(6, 2)
+  time                Decimal?  @db.Decimal(10, 2)
+  washAmount          Decimal?  @map("wash_amount") @db.Decimal(10, 2)
+  washSolution        String?   @map("wash_solution")
+  dryingTemp          Decimal?  @map("drying_temp") @db.Decimal(6, 2)
+  dryingAtmosphere    String?   @map("drying_atmosphere")
+  dryingPressure      String?   @map("drying_pressure")
+  output              Decimal?  @db.Decimal(10, 2)
+  volume              Decimal?  @db.Decimal(10, 2)
+  species             String?
+  appearance          String?   @db.Text
+  comments            String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  
+  biocharLot          Biochar?  @relation(fields: [biocharExperiment], references: [experimentNumber])
+  
+  @@map("graphene")
+  @@index([biocharExperiment])
+  @@index([createdAt])
+  @@index([testOrder])
+  @@index([experimentDate])
+}
+
+enum GrindingMethod {
+  manual
+  mill
+}

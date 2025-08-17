@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graphene Admin Panel</title>
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body class="bg-white text-gray-900 font-sans">
+  <div id="app" x-data="grapheneApp()">
+    <!-- Header -->
+    <header class="border-b border-gray-200 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <h1 class="text-2xl font-bold tracking-tight">GRAPHENE</h1>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+      <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8">
+          <button
+            @click="activeTab = 'biochar'"
+            :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Biochar Production
+          </button>
+          <button
+            @click="activeTab = 'graphene'"
+            :class="activeTab === 'graphene' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Graphene Production
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Biochar Tab -->
+      <div x-show="activeTab === 'biochar'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Biochar Production Records</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('biochar')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Record
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="biocharSearch"
+            @input="searchBiochar()"
+            placeholder="Search experiments, materials..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Biochar Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exp #</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reactor</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raw Material</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting (g)</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acid</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">T/t</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pressure</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Output</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lot #</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-for="record in biocharRecords" :key="record.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.testOrder || '-'"></td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.experimentNumber"></td>
+                  <td class="px-4 py-3 text-sm" x-text="formatDate(record.experimentDate)"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.reactor"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.rawMaterial"></td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.startingAmount + 'g'"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <span x-text="formatAcid(record)"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-mono">
+                    <span x-text="record.temperature + '°C / ' + record.time + 'hr'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-mono">
+                    <span x-text="record.pressureInitial + ' → ' + record.pressureFinal + ' bar'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.output + 'g'"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 mr-2">Edit</button>
+                    <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Graphene Tab -->
+      <div x-show="activeTab === 'graphene'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Graphene Production Records</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, oven: '', quantity: '', biocharExperiment: '', baseAmount: '', baseType: '', baseConcentration: '', grindingMethod: '', grindingTime: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: '', output: '', volume: '', species: '', appearance: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Record
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="grapheneSearch"
+            @input="searchGraphene()"
+            placeholder="Search experiments, biochar source, species..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Graphene Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exp #</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oven</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biochar</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Output</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Species</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-for="record in grapheneRecords" :key="record.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.testOrder || '-'"></td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.experimentNumber"></td>
+                  <td class="px-4 py-3 text-sm" x-text="formatDate(record.experimentDate)"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.oven"></td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.quantity + 'g'"></td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.biocharExperiment"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <span x-text="formatBase(record)"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-mono">
+                    <span x-text="record.tempMax + '°C'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm font-mono" x-text="record.output + 'g'"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.species"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 mr-2">Edit</button>
+                    <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- Biochar Add/Edit Modal -->
+    <div x-show="showAddBiochar" x-cloak
+         @click.away="showAddBiochar = false; editingBiochar = null"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingBiochar ? 'Edit Biochar Record' : 'Add Biochar Record'"></h3>
+          
+          <form @submit.prevent="saveBiochar()" class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
+                <input type="text" x-model="biocharForm.experimentNumber" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
+                <input type="number" x-model="biocharForm.testOrder" 
+                       placeholder="1, 2, 3..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
+                <div class="flex items-center space-x-2">
+                  <input type="date" x-model="biocharForm.experimentDate" 
+                         :disabled="biocharForm.dateUnknown"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                  <label class="flex items-center whitespace-nowrap">
+                    <input type="checkbox" x-model="biocharForm.dateUnknown" 
+                           @change="if($event.target.checked) biocharForm.experimentDate = ''"
+                           class="mr-2 rounded border-gray-300">
+                    <span class="text-sm">Unknown</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reactor</label>
+                <div class="relative">
+                  <select x-model="biocharForm.reactor" 
+                          @change="if($event.target.value === 'add_new') { showAddReactor = true; biocharForm.reactor = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                    <option value="">Select reactor...</option>
+                    <template x-for="reactor in reactors" :key="reactor">
+                      <option :value="reactor" x-text="reactor"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Reactor</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Raw Material</label>
+                <div class="relative">
+                  <select x-model="biocharForm.rawMaterial" 
+                          @change="if($event.target.value === 'add_new') { showAddMaterial = true; biocharForm.rawMaterial = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                    <option value="">Select material...</option>
+                    <template x-for="material in rawMaterials" :key="material">
+                      <option :value="material" x-text="material"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Material</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Starting Amount (g)</label>
+                <input type="number" step="0.01" x-model="biocharForm.startingAmount"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="text-sm font-semibold mb-2">Acid Properties</h4>
+              <div class="grid grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.acidAmount"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.acidConcentration"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Molarity (M)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.acidMolarity"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Type</label>
+                  <div class="relative">
+                    <select x-model="biocharForm.acidType" 
+                            @change="if($event.target.value === 'add_new') { showAddAcidType = true; biocharForm.acidType = ''; }"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <option value="">Select...</option>
+                      <template x-for="acid in acidTypes" :key="acid">
+                        <option :value="acid" x-text="acid"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
+                <input type="number" step="0.1" x-model="biocharForm.temperature"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Time (hr)</label>
+                <input type="number" step="0.1" x-model="biocharForm.time"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
+                <input type="number" step="0.01" x-model="biocharForm.output"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pressure Initial (bar)</label>
+                <input type="number" step="0.1" x-model="biocharForm.pressureInitial"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pressure Final (bar)</label>
+                <input type="number" step="0.1" x-model="biocharForm.pressureFinal"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
+                <input type="number" step="0.01" x-model="biocharForm.washAmount"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Medium</label>
+                <div class="relative">
+                  <select x-model="biocharForm.washMedium" 
+                          @change="if($event.target.value === 'add_new') { showAddWashMedium = true; biocharForm.washMedium = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
+                    <option value="">Select medium...</option>
+                    <template x-for="medium in washMediums" :key="medium">
+                      <option :value="medium" x-text="medium"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Medium</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Drying Temp (°C)</label>
+                <input type="number" step="0.1" x-model="biocharForm.dryingTemp"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">KFT (%)</label>
+                <input type="number" step="0.01" x-model="biocharForm.kftPercentage"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea x-model="biocharForm.comments" rows="2"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-2 pt-4">
+              <button type="button" @click="showAddBiochar = false; editingBiochar = null"
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit"
+                      class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphene Add/Edit Modal -->
+    <div x-show="showAddGraphene" x-cloak
+         @click.away="showAddGraphene = false; editingGraphene = null"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingGraphene ? 'Edit Graphene Record' : 'Add Graphene Record'"></h3>
+          
+          <form @submit.prevent="saveGraphene()" class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
+                <input type="text" x-model="grapheneForm.experimentNumber" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
+                <input type="number" x-model="grapheneForm.testOrder" 
+                       placeholder="1, 2, 3..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
+                <div class="flex items-center space-x-2">
+                  <input type="date" x-model="grapheneForm.experimentDate" 
+                         :disabled="grapheneForm.dateUnknown"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                  <label class="flex items-center whitespace-nowrap">
+                    <input type="checkbox" x-model="grapheneForm.dateUnknown" 
+                           @change="if($event.target.checked) grapheneForm.experimentDate = ''"
+                           class="mr-2 rounded border-gray-300">
+                    <span class="text-sm">Unknown</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Oven</label>
+                <div class="relative">
+                  <select x-model="grapheneForm.oven" 
+                          @change="if($event.target.value === 'add_new') { showAddOven = true; grapheneForm.oven = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                    <option value="">Select oven...</option>
+                    <template x-for="oven in ovens" :key="oven">
+                      <option :value="oven" x-text="oven"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Oven</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (g)</label>
+                <input type="number" step="0.01" x-model="grapheneForm.quantity"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Experiment</label>
+                <div class="relative">
+                  <select x-model="grapheneForm.biocharExperiment" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                    <option value="">Select biochar experiment...</option>
+                    <template x-for="exp in availableExperiments" :key="exp">
+                      <option :value="exp" x-text="exp"></option>
+                    </template>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Select from biochar experiments</p>
+              </div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="text-sm font-semibold mb-2">Base Properties</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.baseAmount"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Type</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.baseType" 
+                            @change="if($event.target.value === 'add_new') { showAddBaseType = true; grapheneForm.baseType = ''; }"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <option value="">Select...</option>
+                      <template x-for="base in baseTypes" :key="base">
+                        <option :value="base" x-text="base"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.baseConcentration"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Method</label>
+                <select x-model="grapheneForm.grindingMethod"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="">Select...</option>
+                  <option value="manual">Manual</option>
+                  <option value="mill">Mill</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Time (min)</label>
+                <input type="number" step="0.1" x-model="grapheneForm.grindingTime"
+                       :disabled="grapheneForm.grindingMethod !== 'mill'"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Gas</label>
+                <div class="relative">
+                  <select x-model="grapheneForm.gas" 
+                          @change="if($event.target.value === 'add_new') { showAddGas = true; grapheneForm.gas = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
+                    <option value="">Select gas...</option>
+                    <template x-for="gas in gases" :key="gas">
+                      <option :value="gas" x-text="gas"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Gas</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Temp Rate</label>
+                <input type="text" x-model="grapheneForm.tempRate" placeholder="20-27°C/min"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Temp Max (°C)</label>
+                <input type="number" step="0.1" x-model="grapheneForm.tempMax"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Time (min)</label>
+                <input type="number" step="0.1" x-model="grapheneForm.time"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
+                <input type="number" step="0.01" x-model="grapheneForm.output"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Volume</label>
+                <input type="number" step="0.01" x-model="grapheneForm.volume"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
+                <input type="number" step="0.01" x-model="grapheneForm.washAmount"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Solution</label>
+                <div class="relative">
+                  <select x-model="grapheneForm.washSolution" 
+                          @change="if($event.target.value === 'add_new') { showAddWashSolution = true; grapheneForm.washSolution = ''; }"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
+                    <option value="">Select solution...</option>
+                    <template x-for="solution in washSolutions" :key="solution">
+                      <option :value="solution" x-text="solution"></option>
+                    </template>
+                    <option value="add_new" class="font-semibold">+ Add New Solution</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="text-sm font-semibold mb-2">Drying Properties</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Temperature (°C)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.dryingTemp"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Atmosphere</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.dryingAtmosphere" 
+                            @change="if($event.target.value === 'add_new') { showAddDryingAtmosphere = true; grapheneForm.dryingAtmosphere = ''; }"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <option value="">Select...</option>
+                      <template x-for="atmosphere in dryingAtmospheres" :key="atmosphere">
+                        <option :value="atmosphere" x-text="atmosphere"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Pressure</label>
+                  <input type="text" x-model="grapheneForm.dryingPressure" placeholder="atm pressure"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                <div class="relative">
+                  <select x-model="grapheneForm.species" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                    <option value="">Select species...</option>
+                    <template x-for="spec in species" :key="spec">
+                      <option :value="spec" x-text="spec"></option>
+                    </template>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Appearance</label>
+                <input type="text" x-model="grapheneForm.appearance"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea x-model="grapheneForm.comments" rows="2"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-2 pt-4">
+              <button type="button" @click="showAddGraphene = false; editingGraphene = null"
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit"
+                      class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Material Modal -->
+    <div x-show="showAddMaterial" x-cloak
+         @click.away="showAddMaterial = false; newMaterial = ''"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Raw Material</h3>
+          
+          <form @submit.prevent="addNewMaterial()">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Material Name</label>
+              <input type="text" x-model="newMaterial" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                     placeholder="Enter material name...">
+            </div>
+            
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddMaterial = false; newMaterial = ''"
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit"
+                      class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Add Material
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Acid Type Modal -->
+    <div x-show="showAddAcidType" x-cloak @click.away="showAddAcidType = false; newAcidType = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Acid Type</h3>
+          <form @submit.prevent="addNewAcidType()">
+            <input type="text" x-model="newAcidType" required placeholder="Enter acid type..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddAcidType = false; newAcidType = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Wash Medium Modal -->
+    <div x-show="showAddWashMedium" x-cloak @click.away="showAddWashMedium = false; newWashMedium = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Wash Medium</h3>
+          <form @submit.prevent="addNewWashMedium()">
+            <input type="text" x-model="newWashMedium" required placeholder="Enter wash medium..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddWashMedium = false; newWashMedium = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Reactor Modal -->
+    <div x-show="showAddReactor" x-cloak @click.away="showAddReactor = false; newReactor = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Reactor</h3>
+          <form @submit.prevent="addNewReactor()">
+            <input type="text" x-model="newReactor" required placeholder="Enter reactor name..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddReactor = false; newReactor = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Base Type Modal -->
+    <div x-show="showAddBaseType" x-cloak @click.away="showAddBaseType = false; newBaseType = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Base Type</h3>
+          <form @submit.prevent="addNewBaseType()">
+            <input type="text" x-model="newBaseType" required placeholder="Enter base type..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddBaseType = false; newBaseType = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Gas Modal -->
+    <div x-show="showAddGas" x-cloak @click.away="showAddGas = false; newGas = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Gas</h3>
+          <form @submit.prevent="addNewGas()">
+            <input type="text" x-model="newGas" required placeholder="Enter gas type..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddGas = false; newGas = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Wash Solution Modal -->
+    <div x-show="showAddWashSolution" x-cloak @click.away="showAddWashSolution = false; newWashSolution = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Wash Solution</h3>
+          <form @submit.prevent="addNewWashSolution()">
+            <input type="text" x-model="newWashSolution" required placeholder="Enter wash solution..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddWashSolution = false; newWashSolution = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Drying Atmosphere Modal -->
+    <div x-show="showAddDryingAtmosphere" x-cloak @click.away="showAddDryingAtmosphere = false; newDryingAtmosphere = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Drying Atmosphere</h3>
+          <form @submit.prevent="addNewDryingAtmosphere()">
+            <input type="text" x-model="newDryingAtmosphere" required placeholder="Enter atmosphere..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddDryingAtmosphere = false; newDryingAtmosphere = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add New Oven Modal -->
+    <div x-show="showAddOven" x-cloak @click.away="showAddOven = false; newOven = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Oven</h3>
+          <form @submit.prevent="addNewOven()">
+            <input type="text" x-model="newOven" required placeholder="Enter oven identifier..." class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4">
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddOven = false; newOven = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+
+  <script src="/src/js/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
