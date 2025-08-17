@@ -7,8 +7,15 @@ window.grapheneApp = function() {
     grapheneSearch: '',
     showAddBiochar: false,
     showAddGraphene: false,
+    showCombineModal: false,
     editingBiochar: null,
     editingGraphene: null,
+    selectedBiocharIds: [],
+    combineForm: {
+      lotNumber: '',
+      lotName: '',
+      description: ''
+    },
     rawMaterials: [
       'BAFA neu Hemp Fibre VF',
       'Canadian Rockies Hemp'
@@ -23,12 +30,16 @@ window.grapheneApp = function() {
     
     // Graphene dropdowns
     baseTypes: ['KOH'],
-    gases: ['Ar'],
+    gases: ['Ar', 'N2'],
     washSolutions: ['HCl'],
+    washWaters: ['+ Water'],
     dryingAtmospheres: ['N2 stream'],
+    dryingPressures: ['atm. Pressure'],
     ovens: ['A', 'B', 'C'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
+    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Voluminous', 'Very Voluminous'],
     availableExperiments: [],
+    availableLots: [],
     
     // Modal states for adding new options
     showAddAcidType: false,
@@ -38,7 +49,9 @@ window.grapheneApp = function() {
     showAddGas: false,
     showAddWashSolution: false,
     showAddDryingAtmosphere: false,
+    showAddDryingPressure: false,
     showAddOven: false,
+    showAddAppearanceTag: false,
     
     // New values for adding
     newAcidType: '',
@@ -48,7 +61,9 @@ window.grapheneApp = function() {
     newGas: '',
     newWashSolution: '',
     newDryingAtmosphere: '',
+    newDryingPressure: '',
     newOven: '',
+    newAppearanceTag: '',
     biocharForm: {
       experimentNumber: '',
       testOrder: '',
@@ -80,24 +95,30 @@ window.grapheneApp = function() {
       oven: '',
       quantity: '',
       biocharExperiment: '',
+      biocharLotNumber: '',
+      biocharSource: '',
       baseAmount: '',
       baseType: '',
       baseConcentration: '',
       grindingMethod: '',
       grindingTime: '',
+      homogeneous: '',
       gas: '',
       tempRate: '',
       tempMax: '',
       time: '',
       washAmount: '',
       washSolution: '',
+      washConcentration: '',
+      washWater: '',
       dryingTemp: '',
       dryingAtmosphere: '',
-      dryingPressure: '',
-      output: '',
-      volume: '',
+      dryingPressure: 'atm. Pressure',
+      volumeMl: '',
+      density: '',
       species: '',
-      appearance: '',
+      appearanceTags: [],
+      output: '',
       comments: ''
     },
     
@@ -106,6 +127,7 @@ window.grapheneApp = function() {
       await this.loadGrapheneRecords();
       this.loadRawMaterials();
       this.loadAvailableExperiments();
+      await this.loadAvailableLots();
     },
     
     loadRawMaterials() {
@@ -120,14 +142,24 @@ window.grapheneApp = function() {
     },
     
     loadAvailableExperiments() {
-      // Load experiment numbers from biochar records
+      // Load experiment numbers from biochar records that aren't in lots
       const experiments = new Set();
       this.biocharRecords.forEach(record => {
-        if (record.experimentNumber) {
+        if (record.experimentNumber && !record.lotNumber) {
           experiments.add(record.experimentNumber);
         }
       });
       this.availableExperiments = Array.from(experiments).sort();
+    },
+    
+    async loadAvailableLots() {
+      try {
+        const response = await fetch('/api/biochar/lots');
+        this.availableLots = await response.json();
+      } catch (error) {
+        console.error('Failed to load available lots:', error);
+        this.availableLots = [];
+      }
     },
     
     async loadBiocharRecords() {
@@ -135,6 +167,7 @@ window.grapheneApp = function() {
         const response = await fetch('/api/biochar');
         this.biocharRecords = await response.json();
         this.loadAvailableExperiments(); // Refresh experiments when biochar data changes
+        await this.loadAvailableLots(); // Refresh lots when biochar data changes
       } catch (error) {
         console.error('Failed to load biochar records:', error);
       }
@@ -203,6 +236,16 @@ window.grapheneApp = function() {
     editGraphene(record) {
       this.editingGraphene = record;
       this.grapheneForm = { ...record };
+      
+      // Set biocharSource based on what's populated
+      if (record.biocharExperiment) {
+        this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
+      } else if (record.biocharLotNumber) {
+        this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
+      } else {
+        this.grapheneForm.biocharSource = '';
+      }
+      
       this.showAddGraphene = true;
     },
     
@@ -225,7 +268,11 @@ window.grapheneApp = function() {
         ['startingAmount', 'acidAmount', 'acidConcentration', 'acidMolarity', 'temperature', 'time', 
          'pressureInitial', 'pressureFinal', 'washAmount', 'output', 'dryingTemp', 
          'kftPercentage', 'testOrder'].forEach(field => {
-          if (data[field]) data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+          if (data[field] === '' || data[field] === null || data[field] === undefined) {
+            data[field] = null;
+          } else if (data[field]) {
+            data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+          }
         });
         
         const response = await fetch(url, {
@@ -239,6 +286,10 @@ window.grapheneApp = function() {
           this.showAddBiochar = false;
           this.editingBiochar = null;
           this.biocharForm = {};
+        } else {
+          const errorData = await response.json();
+          console.error('Server error:', errorData);
+          alert(`Failed to save record: ${errorData.error || 'Unknown error'}`);
         }
       } catch (error) {
         console.error('Failed to save biochar record:', error);
@@ -263,10 +314,20 @@ window.grapheneApp = function() {
         delete data.dateUnknown;
         
         ['quantity', 'baseAmount', 'baseConcentration', 'grindingTime', 
-         'tempMax', 'time', 'washAmount', 'dryingTemp', 'output', 
-         'volume', 'testOrder'].forEach(field => {
-          if (data[field]) data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
+         'volumeMl', 'density', 'output', 'testOrder'].forEach(field => {
+          if (data[field] === '' || data[field] === null || data[field] === undefined) {
+            data[field] = null;
+          } else if (data[field]) {
+            data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+          }
         });
+        
+        // Handle homogeneous boolean conversion
+        if (data.homogeneous === 'true') data.homogeneous = true;
+        else if (data.homogeneous === 'false') data.homogeneous = false;
+        else if (data.homogeneous === '' || data.homogeneous === null || data.homogeneous === undefined) data.homogeneous = null;
+        else data.homogeneous = null;
         
         const response = await fetch(url, {
           method,
@@ -279,6 +340,10 @@ window.grapheneApp = function() {
           this.showAddGraphene = false;
           this.editingGraphene = null;
           this.grapheneForm = {};
+        } else {
+          const errorData = await response.json();
+          console.error('Server error:', errorData);
+          alert(`Failed to save record: ${errorData.error || 'Unknown error'}`);
         }
       } catch (error) {
         console.error('Failed to save graphene record:', error);
@@ -385,12 +450,106 @@ window.grapheneApp = function() {
       }
     },
     
+    addNewDryingPressure() {
+      if (this.newDryingPressure && !this.dryingPressures.includes(this.newDryingPressure)) {
+        this.dryingPressures.push(this.newDryingPressure);
+        this.grapheneForm.dryingPressure = this.newDryingPressure;
+        this.newDryingPressure = '';
+        this.showAddDryingPressure = false;
+      }
+    },
+    
     addNewOven() {
       if (this.newOven && !this.ovens.includes(this.newOven)) {
         this.ovens.push(this.newOven);
         this.grapheneForm.oven = this.newOven;
         this.newOven = '';
         this.showAddOven = false;
+      }
+    },
+    
+    addNewAppearanceTag() {
+      if (this.newAppearanceTag && !this.appearanceTags.includes(this.newAppearanceTag)) {
+        this.appearanceTags.push(this.newAppearanceTag);
+        this.newAppearanceTag = '';
+        this.showAddAppearanceTag = false;
+      }
+    },
+    
+    toggleAppearanceTag(tag) {
+      const index = this.grapheneForm.appearanceTags.indexOf(tag);
+      if (index > -1) {
+        this.grapheneForm.appearanceTags.splice(index, 1);
+      } else {
+        this.grapheneForm.appearanceTags.push(tag);
+      }
+    },
+    
+    formatAppearanceTags(tags) {
+      return tags && tags.length > 0 ? tags.join(', ') : '';
+    },
+    
+    calculateOutputPercentage(record) {
+      // Calculate output percentage based on quantity (input) and output
+      if (record.quantity && record.output && record.quantity > 0) {
+        const percentage = (record.output / record.quantity) * 100;
+        return percentage.toFixed(1) + '%';
+      }
+      return '';
+    },
+    
+    handleBiocharSourceChange(event) {
+      const value = event.target.value;
+      if (value.startsWith('exp:')) {
+        this.grapheneForm.biocharExperiment = value.replace('exp:', '');
+        this.grapheneForm.biocharLotNumber = '';
+      } else if (value.startsWith('lot:')) {
+        this.grapheneForm.biocharLotNumber = value.replace('lot:', '');
+        this.grapheneForm.biocharExperiment = '';
+      } else {
+        this.grapheneForm.biocharExperiment = '';
+        this.grapheneForm.biocharLotNumber = '';
+      }
+    },
+    
+    async combineBiocharIntoLot() {
+      try {
+        if (this.selectedBiocharIds.length === 0) {
+          alert('Please select at least one biochar experiment to combine.');
+          return;
+        }
+        
+        if (!this.combineForm.lotNumber.trim()) {
+          alert('Please enter a lot number.');
+          return;
+        }
+        
+        const response = await fetch('/api/biochar/combine-lot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lotNumber: this.combineForm.lotNumber.trim(),
+            lotName: this.combineForm.lotName.trim() || null,
+            description: this.combineForm.description.trim() || null,
+            experimentIds: this.selectedBiocharIds
+          })
+        });
+        
+        if (response.ok) {
+          const selectedCount = this.selectedBiocharIds.length;
+          const lotNumber = this.combineForm.lotNumber;
+          await this.loadBiocharRecords();
+          this.showCombineModal = false;
+          this.selectedBiocharIds = [];
+          this.combineForm = { lotNumber: '', lotName: '', description: '' };
+          alert(`Successfully created lot ${lotNumber} with ${selectedCount} experiments.`);
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to create lot: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Failed to combine biochar into lot:', error);
+        alert('Failed to create lot. Please try again.');
       }
     },
     

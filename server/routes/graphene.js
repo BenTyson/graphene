@@ -127,10 +127,10 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   
   const headers = [
     'Experiment #', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
-    'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)',
+    'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)', 'Homogeneous',
     'Gas', 'Temp Rate', 'Temp Max (°C)', 'Time (min)', 'Wash Amount (g)',
-    'Wash Solution', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
-    'Output (g)', 'Volume', 'Species', 'Appearance', 'Comments', 'Created At'
+    'Wash Solution', 'Wash Concentration (%)', 'Wash Water', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
+    'Volume (ml)', 'Density (ml/g)', 'Species', 'Appearance Tags', 'Output (g)', 'Comments', 'Created At'
   ];
   
   let csv = headers.join(',') + '\n';
@@ -146,19 +146,23 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       g.baseConcentration || '',
       g.grindingMethod || '',
       g.grindingTime || '',
+      g.homogeneous !== null ? (g.homogeneous ? 'Yes' : 'No') : '',
       g.gas || '',
       `"${(g.tempRate || '').replace(/"/g, '""')}"`,
       g.tempMax || '',
       g.time || '',
       g.washAmount || '',
       `"${(g.washSolution || '').replace(/"/g, '""')}"`,
+      g.washConcentration || '',
+      `"${(g.washWater || '').replace(/"/g, '""')}"`,
       g.dryingTemp || '',
       `"${(g.dryingAtmosphere || '').replace(/"/g, '""')}"`,
       `"${(g.dryingPressure || '').replace(/"/g, '""')}"`,
-      g.output || '',
-      g.volume || '',
+      g.volumeMl || '',
+      g.density || '',
       g.species || '',
-      `"${(g.appearance || '').replace(/"/g, '""')}"`,
+      `"${(g.appearanceTags || []).join(', ')}"`,
+      g.output || '',
       `"${(g.comments || '').replace(/"/g, '""')}"`,
       g.createdAt.toISOString()
     ];

@@ -10,6 +10,7 @@ datasource db {
 model Biochar {
   id                  String    @id @default(cuid())
   experimentNumber    String    @unique @map("experiment_number")
+  lotNumber           String?   @map("lot_number")
   testOrder           Int?      @map("test_order")
   experimentDate      DateTime? @map("experiment_date")
   reactor             String?
@@ -33,11 +34,27 @@ model Biochar {
   updatedAt           DateTime  @updatedAt @map("updated_at")
   
   grapheneProductions Graphene[]
+  lot                 BiocharLot? @relation(fields: [lotNumber], references: [lotNumber])
   
   @@map("biochar")
   @@index([createdAt])
   @@index([testOrder])
   @@index([experimentDate])
+  @@index([lotNumber])
+}
+
+model BiocharLot {
+  id                  String    @id @default(cuid())
+  lotNumber           String    @unique @map("lot_number")
+  lotName             String?   @map("lot_name")
+  description         String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  
+  experiments         Biochar[]
+  grapheneProductions Graphene[]
+  
+  @@map("biochar_lots")
 }
 
 model Graphene {
@@ -48,32 +65,39 @@ model Graphene {
   oven                String?
   quantity            Decimal?  @db.Decimal(10, 2)
   biocharExperiment   String?   @map("biochar_experiment")
+  biocharLotNumber    String?   @map("biochar_lot_number")
   baseAmount          Decimal?  @map("base_amount") @db.Decimal(10, 2)
   baseType            String?   @map("base_type")
   baseConcentration   Decimal?  @map("base_concentration") @db.Decimal(5, 2)
   grindingMethod      GrindingMethod? @map("grinding_method")
   grindingTime        Decimal?  @map("grinding_time") @db.Decimal(10, 2)
+  homogeneous         Boolean?
   gas                 String?
   tempRate            String?   @map("temp_rate")
   tempMax             Decimal?  @map("temp_max") @db.Decimal(6, 2)
   time                Decimal?  @db.Decimal(10, 2)
   washAmount          Decimal?  @map("wash_amount") @db.Decimal(10, 2)
   washSolution        String?   @map("wash_solution")
+  washConcentration   Decimal?  @map("wash_concentration") @db.Decimal(5, 2)
+  washWater           String?   @map("wash_water")
   dryingTemp          Decimal?  @map("drying_temp") @db.Decimal(6, 2)
   dryingAtmosphere    String?   @map("drying_atmosphere")
   dryingPressure      String?   @map("drying_pressure")
   output              Decimal?  @db.Decimal(10, 2)
-  volume              Decimal?  @db.Decimal(10, 2)
+  volumeMl            Decimal?  @map("volume_ml") @db.Decimal(10, 2)
+  density             Decimal?  @db.Decimal(10, 4)
   species             String?
-  appearance          String?   @db.Text
+  appearanceTags      String[]  @map("appearance_tags")
   comments            String?   @db.Text
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
   
-  biocharLot          Biochar?  @relation(fields: [biocharExperiment], references: [experimentNumber])
+  biocharExperimentRef Biochar?     @relation(fields: [biocharExperiment], references: [experimentNumber])
+  biocharLotRef        BiocharLot?  @relation(fields: [biocharLotNumber], references: [lotNumber])
   
   @@map("graphene")
   @@index([biocharExperiment])
+  @@index([biocharLotNumber])
   @@index([createdAt])
   @@index([testOrder])
   @@index([experimentDate])

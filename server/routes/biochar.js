@@ -99,6 +99,81 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
+// Get all lots
+router.get('/lots', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  
+  const lots = await prisma.biocharLot.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      experiments: {
+        select: { experimentNumber: true, id: true }
+      },
+      _count: {
+        select: { experiments: true }
+      }
+    }
+  });
+  
+  res.json(lots);
+}));
+
+// Combine experiments into a lot
+router.post('/combine-lot', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { lotNumber, lotName, description, experimentIds } = req.body;
+  
+  if (!lotNumber || !experimentIds || experimentIds.length === 0) {
+    res.status(400);
+    throw new Error('Lot number and experiment IDs are required');
+  }
+  
+  // Check if lot number already exists
+  const existingLot = await prisma.biocharLot.findUnique({
+    where: { lotNumber }
+  });
+  
+  if (existingLot) {
+    res.status(400);
+    throw new Error('Lot number already exists');
+  }
+  
+  // Check if any experiments are already in lots
+  const experimentsInLots = await prisma.biochar.findMany({
+    where: {
+      id: { in: experimentIds },
+      lotNumber: { not: null }
+    }
+  });
+  
+  if (experimentsInLots.length > 0) {
+    res.status(400);
+    throw new Error('Some experiments are already assigned to lots');
+  }
+  
+  // Create lot and update experiments
+  const result = await prisma.$transaction(async (tx) => {
+    // Create the lot
+    const lot = await tx.biocharLot.create({
+      data: {
+        lotNumber,
+        lotName,
+        description
+      }
+    });
+    
+    // Update experiments to reference the lot
+    await tx.biochar.updateMany({
+      where: { id: { in: experimentIds } },
+      data: { lotNumber }
+    });
+    
+    return lot;
+  });
+  
+  res.status(201).json({ success: true, lot: result });
+}));
+
 // Export to CSV
 router.get('/export/csv', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;

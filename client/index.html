@@ -52,6 +52,11 @@
             <button @click="exportData('biochar')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
+            <button @click="showCombineModal = true" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                    :class="{'opacity-50 cursor-not-allowed': biocharRecords.length === 0}"
+                    :disabled="biocharRecords.length === 0">
+              Combine into Lot
+            </button>
             <button @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
@@ -72,44 +77,86 @@
         <!-- Biochar Table -->
         <div class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exp #</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reactor</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raw Material</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Starting (g)</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acid</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">T/t</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pressure</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Output</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lot #</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <thead>
+              <!-- Main Header Row -->
+              <tr class="bg-gray-100">
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Select</th>
+                <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Basic Info</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Material</th>
+                <th colspan="8" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Process</th>
+                <th colspan="5" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Output</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Lot #</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+              <!-- Sub-Header Row -->
+              <tr class="bg-gray-50">
+                <!-- Basic Info sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Order</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Exp #</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Date</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Reactor</th>
+                <!-- Material sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Raw Material</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Start (g)</th>
+                <!-- Process sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid Amt</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid %</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Molarity</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid Type</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Temp</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Time</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">P Initial</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">P Final</th>
+                <!-- Output sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Wash Amt</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Wash Med</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Drying</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Output (g)</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">KFT %</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <template x-for="record in biocharRecords" :key="record.id">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.testOrder || '-'"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.experimentNumber"></td>
-                  <td class="px-4 py-3 text-sm" x-text="formatDate(record.experimentDate)"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.reactor"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.rawMaterial"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.startingAmount + 'g'"></td>
-                  <td class="px-4 py-3 text-sm">
-                    <span x-text="formatAcid(record)"></span>
+                <tr class="hover:bg-gray-50" :class="{'bg-blue-50': record.lotNumber}">
+                  <!-- Select checkbox -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-300">
+                    <input type="checkbox" x-model="selectedBiocharIds" :value="record.id" 
+                           :disabled="record.lotNumber"
+                           class="rounded border-gray-300" 
+                           :class="{'opacity-50 cursor-not-allowed': record.lotNumber}">
                   </td>
-                  <td class="px-4 py-3 text-sm font-mono">
-                    <span x-text="record.temperature + '°C / ' + record.time + 'hr'"></span>
+                  <!-- Basic Info columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.testOrder || '-'"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.experimentNumber"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.experimentDate)"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.reactor"></td>
+                  <!-- Material columns -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.rawMaterial"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.startingAmount ? record.startingAmount + 'g' : ''"></td>
+                  <!-- Process columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.acidAmount ? record.acidAmount + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.acidConcentration ? record.acidConcentration + '%' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.acidMolarity ? record.acidMolarity + 'M' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.acidType || ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.temperature ? record.temperature + '°C' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.time ? record.time + 'hr' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.pressureInitial ? record.pressureInitial + ' bar' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.pressureFinal ? record.pressureFinal + ' bar' : ''"></td>
+                  <!-- Output columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.washAmount ? record.washAmount + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.washMedium || ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.dryingTemp ? record.dryingTemp + '°C' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.output ? record.output + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.kftPercentage ? record.kftPercentage + '%' : ''"></td>
+                  <!-- Lot Number -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
+                    <span x-text="record.lotNumber || ''" 
+                          :class="{'text-blue-600 font-semibold': record.lotNumber}"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm font-mono">
-                    <span x-text="record.pressureInitial + ' → ' + record.pressureFinal + ' bar'"></span>
-                  </td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.output + 'g'"></td>
-                  <td class="px-4 py-3 text-sm">
-                    <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 mr-2">Edit</button>
-                    <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                  <!-- Actions -->
+                  <td class="px-2 py-2 text-xs">
+                    <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 mr-1 text-xs">Edit</button>
+                    <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
                   </td>
                 </tr>
               </template>
@@ -126,7 +173,7 @@
             <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, oven: '', quantity: '', biocharExperiment: '', baseAmount: '', baseType: '', baseConcentration: '', grindingMethod: '', grindingTime: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: '', output: '', volume: '', species: '', appearance: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', grindingMethod: '', grindingTime: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -146,41 +193,105 @@
         <!-- Graphene Table -->
         <div class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exp #</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oven</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biochar</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Output</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Species</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <thead>
+              <!-- Main Header Row -->
+              <tr class="bg-gray-100">
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Order</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Exp #</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Date</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Oven</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Qty (g)</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Biochar</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Base</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Homog.</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Gas</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Temperature</th>
+                <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Wash</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Drying</th>
+                <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Results</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Species</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Appearance</th>
+                <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+              <!-- Sub-Header Row -->
+              <tr class="bg-gray-50">
+                <!-- Base sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Amt</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Type</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Conc%</th>
+                <!-- Grinding sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Method</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Time</th>
+                <!-- Temperature sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Rate</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Max</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Time</th>
+                <!-- Wash sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Amt</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Sol.</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Conc%</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Water</th>
+                <!-- Drying sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Temp</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Atm.</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Press.</th>
+                <!-- Results sub-headers -->
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Vol(ml)</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Dens.</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Out(g)</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Out%</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <template x-for="record in grapheneRecords" :key="record.id">
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.testOrder || '-'"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.experimentNumber"></td>
-                  <td class="px-4 py-3 text-sm" x-text="formatDate(record.experimentDate)"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.oven"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.quantity + 'g'"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.biocharExperiment"></td>
-                  <td class="px-4 py-3 text-sm">
-                    <span x-text="formatBase(record)"></span>
+                  <!-- Basic info -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.testOrder || '-'"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.experimentNumber"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.experimentDate)"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.oven"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.quantity ? record.quantity + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
+                    <span x-text="record.biocharExperiment || (record.biocharLotNumber ? 'LOT: ' + record.biocharLotNumber : '')"
+                          :class="{'text-blue-600 font-semibold': record.biocharLotNumber}"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm font-mono">
-                    <span x-text="record.tempMax + '°C'"></span>
-                  </td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.output + 'g'"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.species"></td>
-                  <td class="px-4 py-3 text-sm">
-                    <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 mr-2">Edit</button>
-                    <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                  <!-- Base columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.baseAmount ? record.baseAmount + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.baseType"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.baseConcentration ? record.baseConcentration + '%' : ''"></td>
+                  <!-- Grinding columns -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.grindingMethod"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.grindingTime ? record.grindingTime + 'min' : ''"></td>
+                  <!-- Homogeneous -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.homogeneous !== null ? (record.homogeneous ? 'Yes' : 'No') : ''"></td>
+                  <!-- Gas -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.gas"></td>
+                  <!-- Temperature columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.tempRate"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.tempMax ? record.tempMax + '°C' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.time ? record.time + 'min' : ''"></td>
+                  <!-- Wash columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.washAmount ? record.washAmount + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.washSolution"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.washConcentration ? record.washConcentration + '%' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.washWater"></td>
+                  <!-- Drying columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.dryingTemp ? record.dryingTemp + '°C' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.dryingAtmosphere"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.dryingPressure"></td>
+                  <!-- Results columns -->
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.volumeMl ? record.volumeMl + 'ml' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.density || ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.output ? record.output + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="calculateOutputPercentage(record)"></td>
+                  <!-- Species & Appearance -->
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.species"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="formatAppearanceTags(record.appearanceTags)"></td>
+                  <!-- Actions -->
+                  <td class="px-2 py-2 text-xs">
+                    <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 mr-1 text-xs">Edit</button>
+                    <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
                   </td>
                 </tr>
               </template>
@@ -470,14 +581,22 @@
                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Experiment</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Source</label>
                 <div class="relative">
-                  <select x-model="grapheneForm.biocharExperiment" 
+                  <select x-model="grapheneForm.biocharSource" 
+                          @change="handleBiocharSourceChange($event)"
                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select biochar experiment...</option>
-                    <template x-for="exp in availableExperiments" :key="exp">
-                      <option :value="exp" x-text="exp"></option>
-                    </template>
+                    <option value="">Select biochar source...</option>
+                    <optgroup label="Individual Experiments">
+                      <template x-for="exp in availableExperiments" :key="'exp-' + exp">
+                        <option :value="'exp:' + exp" x-text="'EXP: ' + exp"></option>
+                      </template>
+                    </optgroup>
+                    <optgroup label="Combined Lots" x-show="availableLots.length > 0">
+                      <template x-for="lot in availableLots" :key="'lot-' + lot.lotNumber">
+                        <option :value="'lot:' + lot.lotNumber" x-text="'LOT: ' + lot.lotNumber + (lot.lotName ? ' (' + lot.lotName + ')' : '') + ' - ' + lot._count.experiments + ' experiments'"></option>
+                      </template>
+                    </optgroup>
                   </select>
                   <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                     <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
@@ -485,7 +604,7 @@
                     </svg>
                   </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Select from biochar experiments</p>
+                <p class="text-xs text-gray-500 mt-1">Select individual experiment or combined lot</p>
               </div>
             </div>
             
@@ -542,6 +661,18 @@
               </div>
             </div>
             
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Homogeneous</label>
+                <select x-model="grapheneForm.homogeneous"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="">Select...</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+            </div>
+            
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Gas</label>
@@ -574,46 +705,74 @@
               </div>
             </div>
             
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Time (min)</label>
                 <input type="number" step="0.1" x-model="grapheneForm.time"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
-                <input type="number" step="0.01" x-model="grapheneForm.output"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Volume</label>
-                <input type="number" step="0.01" x-model="grapheneForm.volume"
                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
-                <input type="number" step="0.01" x-model="grapheneForm.washAmount"
+                <label class="block text-sm font-medium text-gray-700 mb-1">Volume (ml)</label>
+                <input type="number" step="0.01" x-model="grapheneForm.volumeMl"
                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Solution</label>
-                <div class="relative">
-                  <select x-model="grapheneForm.washSolution" 
-                          @change="if($event.target.value === 'add_new') { showAddWashSolution = true; grapheneForm.washSolution = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                    <option value="">Select solution...</option>
-                    <template x-for="solution in washSolutions" :key="solution">
-                      <option :value="solution" x-text="solution"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Solution</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Density (ml/g)</label>
+                <input type="number" step="0.0001" x-model="grapheneForm.density"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="text-sm font-semibold mb-2">Wash Properties</h4>
+              <div class="grid grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.washAmount"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Solution</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.washSolution" 
+                            @change="if($event.target.value === 'add_new') { showAddWashSolution = true; grapheneForm.washSolution = ''; }"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <option value="">Select...</option>
+                      <template x-for="solution in washSolutions" :key="solution">
+                        <option :value="solution" x-text="solution"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.washConcentration"
+                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Water</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.washWater"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <option value="">None</option>
+                      <template x-for="water in washWaters" :key="water">
+                        <option :value="water" x-text="water"></option>
+                      </template>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -648,8 +807,21 @@
                 </div>
                 <div>
                   <label class="block text-xs text-gray-600 mb-1">Pressure</label>
-                  <input type="text" x-model="grapheneForm.dryingPressure" placeholder="atm pressure"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                  <div class="relative">
+                    <select x-model="grapheneForm.dryingPressure" 
+                            @change="if($event.target.value === 'add_new') { showAddDryingPressure = true; grapheneForm.dryingPressure = ''; }"
+                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                      <template x-for="pressure in dryingPressures" :key="pressure">
+                        <option :value="pressure" x-text="pressure"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
+                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -673,8 +845,35 @@
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Appearance</label>
-                <input type="text" x-model="grapheneForm.appearance"
+                <label class="block text-sm font-medium text-gray-700 mb-1">Appearance Tags</label>
+                <div class="space-y-2">
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="tag in appearanceTags" :key="tag">
+                      <button type="button" 
+                              @click="toggleAppearanceTag(tag)"
+                              :class="grapheneForm.appearanceTags.includes(tag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                              class="px-3 py-1 text-sm rounded-full border transition-colors">
+                        <span x-text="tag"></span>
+                      </button>
+                    </template>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button type="button" @click="showAddAppearanceTag = true" 
+                            class="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded-full border border-blue-200 hover:bg-blue-100">
+                      + Add New Tag
+                    </button>
+                  </div>
+                  <div x-show="grapheneForm.appearanceTags.length > 0" class="text-sm text-gray-600">
+                    Selected: <span x-text="grapheneForm.appearanceTags.join(', ')"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
+                <input type="number" step="0.01" x-model="grapheneForm.output"
                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
             </div>
@@ -862,6 +1061,107 @@
             <div class="flex justify-end space-x-2">
               <button type="button" @click="showAddOven = false; newOven = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
               <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Drying Pressure Modal -->
+    <div x-show="showAddDryingPressure" x-cloak @click.away="showAddDryingPressure = false; newDryingPressure = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Drying Pressure</h3>
+          <form @submit.prevent="addNewDryingPressure()">
+            <input type="text" x-model="newDryingPressure" placeholder="Enter drying pressure..." 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4" autofocus>
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddDryingPressure = false; newDryingPressure = ''" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Appearance Tag Modal -->
+    <div x-show="showAddAppearanceTag" x-cloak @click.away="showAddAppearanceTag = false; newAppearanceTag = ''" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Appearance Tag</h3>
+          <form @submit.prevent="addNewAppearanceTag()">
+            <input type="text" x-model="newAppearanceTag" placeholder="Enter appearance tag..." 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4" autofocus>
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddAppearanceTag = false; newAppearanceTag = ''" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">Add Tag</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Combine Biochar into Lot Modal -->
+    <div x-show="showCombineModal" x-cloak
+         @click.away="showCombineModal = false; selectedBiocharIds = []; combineForm = {lotNumber: '', lotName: '', description: ''}"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4">Combine Biochar Experiments into Lot</h3>
+          
+          <form @submit.prevent="combineBiocharIntoLot()" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Lot Number *</label>
+                <input type="text" x-model="combineForm.lotNumber" required
+                       placeholder="LOT-001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Lot Name</label>
+                <input type="text" x-model="combineForm.lotName"
+                       placeholder="High Temperature Batch"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea x-model="combineForm.description" rows="3"
+                        placeholder="Combined experiments with similar parameters..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div>
+              <h4 class="font-medium text-gray-700 mb-2">Selected Experiments (<span x-text="selectedBiocharIds.length"></span>)</h4>
+              <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-md">
+                <template x-for="id in selectedBiocharIds" :key="id">
+                  <div class="px-3 py-2 border-b border-gray-100 text-sm">
+                    <span x-text="biocharRecords.find(r => r.id === id)?.experimentNumber"></span>
+                    <span class="text-gray-500 ml-2" x-text="'- ' + formatDate(biocharRecords.find(r => r.id === id)?.experimentDate)"></span>
+                  </div>
+                </template>
+                <div x-show="selectedBiocharIds.length === 0" class="px-3 py-4 text-sm text-gray-500 text-center">
+                  No experiments selected. Please select experiments from the table above.
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="showCombineModal = false; selectedBiocharIds = []; combineForm = {lotNumber: '', lotName: '', description: ''}" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" 
+                      :disabled="selectedBiocharIds.length === 0 || !combineForm.lotNumber"
+                      :class="{'opacity-50 cursor-not-allowed': selectedBiocharIds.length === 0 || !combineForm.lotNumber}"
+                      class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Create Lot
+              </button>
             </div>
           </form>
         </div>

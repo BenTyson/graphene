@@ -16,30 +16,31 @@ A modern, minimal admin control panel for tracking and analyzing the two-stage g
 | Field | Type | Description |
 |-------|------|-------------|
 | id | String (cuid) | Primary key |
-| experiment_number | String (unique) | Unique experiment identifier |
+| experiment_number | String (unique) | Unique experiment identifier - used as reference for graphene |
 | test_order | Int? | Manual chronological ordering |
 | experiment_date | DateTime? | Experiment date (nullable for unknown) |
 | reactor | String? | Reactor used (dropdown: AV1, AV5) |
 | raw_material | String? | Source material (dropdown: BAFA neu Hemp Fibre VF, Canadian Rockies Hemp) |
+| starting_amount | Decimal? | Starting amount in grams |
 | acid_amount | Decimal? | Amount in grams |
 | acid_concentration | Decimal? | Percentage concentration |
 | acid_molarity | Decimal? | Molar concentration |
 | acid_type | String? | Type of acid (dropdown: Sulfuric Acid) |
 | temperature | Decimal? | Temperature in °C |
-| time | Decimal? | Time in minutes |
+| time | Decimal? | Time in HOURS (not minutes) |
 | pressure_initial | Decimal? | Initial pressure in bar |
 | pressure_final | Decimal? | Final pressure in bar |
 | wash_amount | Decimal? | Wash amount in grams |
 | wash_medium | String? | Wash medium (dropdown: Water) |
 | output | Decimal? | Output in grams |
-| lot_number | String? (unique) | Lot number for batching/combining |
 | drying_temp | Decimal? | Drying temperature in °C |
 | kft_percentage | Decimal? | Karl Fischer Titration % (moisture) |
 | comments | Text? | Additional notes |
 | created_at | DateTime | Auto timestamp |
 | updated_at | DateTime | Auto timestamp |
 
-**Indexes**: lot_number, test_order, experiment_date, created_at
+**Indexes**: test_order, experiment_date, created_at
+**Note**: No lot_number field - experiment_number serves as the unique identifier
 
 ### Graphene Production Table
 | Field | Type | Description |
@@ -50,64 +51,87 @@ A modern, minimal admin control panel for tracking and analyzing the two-stage g
 | experiment_date | DateTime? | Experiment date (nullable for unknown) |
 | oven | String? | Oven identifier (dropdown: A, B, C) |
 | quantity | Decimal? | Quantity in grams |
-| lot_number | String? | Reference to biochar lot (FOREIGN KEY) |
+| biochar_experiment | String? | Reference to biochar experiment_number (FOREIGN KEY) |
 | base_amount | Decimal? | Base amount in grams |
 | base_type | String? | Type of base (dropdown: KOH) |
 | base_concentration | Decimal? | Base concentration % |
 | grinding_method | Enum? | 'manual' or 'mill' |
-| grinding_time | Decimal? | Time if mill is used |
-| gas | String? | Gas type used (dropdown: Ar) |
+| grinding_time | Decimal? | Time in minutes if mill is used |
+| homogeneous | Boolean? | Yes/No for homogeneity |
+| gas | String? | Gas type used (dropdown: Ar, N2) |
 | temp_rate | String? | Temperature rate (e.g., "20-27°C/min") |
 | temp_max | Decimal? | Maximum temperature in °C |
 | time | Decimal? | Time in minutes |
 | wash_amount | Decimal? | Wash amount in grams |
 | wash_solution | String? | Wash solution (dropdown: HCl) |
+| wash_concentration | Decimal? | Wash compound concentration % |
+| wash_water | String? | Additional water wash (dropdown: + Water) |
 | drying_temp | Decimal? | Drying temperature in °C |
 | drying_atmosphere | String? | Drying atmosphere (dropdown: N2 stream) |
-| drying_pressure | String? | Drying pressure conditions |
-| output | Decimal? | Output in grams |
-| volume | Decimal? | Volume measurement |
+| drying_pressure | String? | Drying pressure (dropdown: atm. Pressure) |
+| volume_ml | Decimal? | Volume in milliliters |
+| density | Decimal? | Density in ml/g |
 | species | String? | Species classification (dropdown: 1, 2, 1/2 Mix, Mostly 1, Mostly 2, Mostly 1/2 Mix, 1 + Fibres) |
-| appearance | Text? | Visual appearance description |
+| appearance_tags | String[] | Array of appearance tags (multiselect) |
+| output | Decimal? | Output in grams (positioned at end of form) |
 | comments | Text? | Additional notes |
 | created_at | DateTime | Auto timestamp |
 | updated_at | DateTime | Auto timestamp |
 
-**Relationship**: biocharLot (lot_number → Biochar.lot_number)
-**Indexes**: lot_number, test_order, experiment_date, created_at
+**Relationship**: biocharLot (biochar_experiment → Biochar.experiment_number)
+**Indexes**: biochar_experiment, test_order, experiment_date, created_at
 
 ## Critical Architecture Decisions
 
 ### Data Flow & Relationships
-1. **Biochar → Graphene**: One-to-many via lot_number (biochar lots feed graphene production)
-2. **Lot Combination**: Multiple biochar experiments can be assigned same lot_number for homogenization
+1. **Biochar → Graphene**: One-to-many via experiment_number (biochar experiments feed graphene production)
+2. **No Lot System**: Removed lot_number concept - direct experiment-to-experiment traceability
 3. **Chronological Ordering**: test_order field handles historical data without dates
 4. **Dropdown Architecture**: All major fields use controlled vocabularies with "Add New" capability
+5. **Appearance Tags**: Multi-select tag system with predefined options (Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Voluminous, Very Voluminous)
 
 ### Sorting Logic (API)
 Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at ASC` (nulls last)
 
 ### Key UI Patterns
 1. **Biochar Interface**
-   - Checkbox selection for combining experiments into lots
-   - "Combine Selected" button (appears when 2+ selected)
+   - Simple CRUD interface without lot combination
    - All major fields are dropdowns with extensible options
+   - Starting amount field for raw material input
+   - Time displayed in hours (not minutes)
    
 2. **Graphene Interface**
-   - Lot number dropdown ONLY shows biochar lots (enforces traceability)
-   - Species dropdown with fixed scientific classifications
+   - Biochar experiment dropdown ONLY shows biochar experiment numbers
+   - Two-tier table header system for organized data display
+   - Appearance tags with multi-select interface
+   - Homogeneous Yes/No dropdown after grinding
+   - Enhanced wash section (amount, solution, concentration%, water)
+   - Drying pressure as dropdown with "atm. Pressure" default
+   - Output field positioned at end of form
+   - Volume (ml) and Density (ml/g) fields
    - Grinding time only enabled when method="mill"
 
 3. **Form Architecture**
    - All forms support both Add/Edit modes
    - Dropdowns auto-populate from existing data + predefined options
    - Modal system for adding new dropdown values
+   - Proper null handling for empty numeric fields
    - Auto-save on form submission
 
 ### Dropdown Data Sources
 **Biochar**: rawMaterials, acidTypes, reactors, washMediums
-**Graphene**: ovens, baseTypes, gases, washSolutions, dryingAtmospheres, species
+**Graphene**: ovens, baseTypes, gases (Ar, N2), washSolutions, washWaters, dryingAtmospheres, dryingPressures, species, appearanceTags
 **Shared**: All maintain session-level persistence with database integration
+
+### Two-Tier Table Structure (Graphene)
+**Main Headers** (bg-gray-100, darker): Base, Grinding, Temperature, Wash, Drying, Results
+**Sub-Headers** (bg-gray-50, lighter): Specific fields under each section
+- Base: Amount, Type, Concentration%
+- Grinding: Method, Time
+- Temperature: Rate, Max, Time
+- Wash: Amount, Solution, Concentration%, Water
+- Drying: Temp, Atmosphere, Pressure
+- Results: Volume(ml), Density, Output(g)
 
 ## Design System
 
@@ -200,23 +224,24 @@ graphene/
 - `GET /api/biochar?sortBy=chronological&order=asc&search=term` - List with smart sorting
 - `GET /api/biochar/:id` - Get single record
 - `POST /api/biochar` - Create new record
-- `PUT /api/biochar/:id` - Update record (used for lot combination)
+- `PUT /api/biochar/:id` - Update record
 - `DELETE /api/biochar/:id` - Delete record
 - `GET /api/biochar/export/csv` - Export to CSV
 
 ### Graphene Endpoints
-- `GET /api/graphene?sortBy=chronological&order=asc&search=term&lotNumber=lot` - List with filtering
+- `GET /api/graphene?sortBy=chronological&order=asc&search=term&biocharExperiment=exp` - List with filtering
 - `GET /api/graphene/:id` - Get single record
 - `POST /api/graphene` - Create new record
 - `PUT /api/graphene/:id` - Update record
 - `DELETE /api/graphene/:id` - Delete record
 - `GET /api/graphene/export/csv` - Export to CSV
-- `GET /api/graphene/by-lot/:lotNumber` - Get by lot number
+- `GET /api/graphene/by-biochar/:biocharExperiment` - Get by biochar experiment
 
 ### Critical API Behaviors
 - **Chronological sorting**: Default sortBy='chronological' uses multi-field ordering
-- **Search**: Full-text search across experiment_number, lot_number, comments, material fields
-- **Lot enforcement**: Graphene lot_number must exist in Biochar table
+- **Search**: Full-text search across experiment_number, biochar_experiment, comments, material fields
+- **Experiment enforcement**: Graphene biochar_experiment must exist in Biochar table
+- **Null handling**: Empty numeric fields properly converted to null (not empty strings)
 
 ## Future Phases
 
