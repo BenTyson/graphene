@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import biocharRoutes from './routes/biochar.js';
 import grapheneRoutes from './routes/graphene.js';
+import betRoutes from './routes/bet.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.locals.prisma = prisma;
 // Routes
 app.use('/api/biochar', biocharRoutes);
 app.use('/api/graphene', grapheneRoutes);
+app.use('/api/bet', betRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

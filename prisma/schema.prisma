@@ -94,6 +94,7 @@ model Graphene {
   
   biocharExperimentRef Biochar?     @relation(fields: [biocharExperiment], references: [experimentNumber])
   biocharLotRef        BiocharLot?  @relation(fields: [biocharLotNumber], references: [lotNumber])
+  betTests             BET[]
   
   @@map("graphene")
   @@index([biocharExperiment])
@@ -101,6 +102,28 @@ model Graphene {
   @@index([createdAt])
   @@index([testOrder])
   @@index([experimentDate])
+}
+
+model BET {
+  id                  String    @id @default(cuid())
+  sampleNumber        String    @unique @map("sample_number")
+  testOrder           Int?      @map("test_order")
+  testDate            DateTime? @map("test_date")
+  grapheneSample      String?   @map("graphene_sample")
+  multipointBetArea   Decimal?  @map("multipoint_bet_area") @db.Decimal(10, 4)
+  langmuirSurfaceArea Decimal?  @map("langmuir_surface_area") @db.Decimal(10, 4)
+  species             String?
+  comments            String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  
+  grapheneRef         Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
+  
+  @@map("bet")
+  @@index([grapheneSample])
+  @@index([createdAt])
+  @@index([testOrder])
+  @@index([testDate])
 }
 
 enum GrindingMethod {

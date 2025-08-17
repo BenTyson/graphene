@@ -3,13 +3,17 @@ window.grapheneApp = function() {
     activeTab: 'biochar',
     biocharRecords: [],
     grapheneRecords: [],
+    betRecords: [],
     biocharSearch: '',
     grapheneSearch: '',
+    betSearch: '',
     showAddBiochar: false,
     showAddGraphene: false,
+    showAddBet: false,
     showCombineModal: false,
     editingBiochar: null,
     editingGraphene: null,
+    editingBet: null,
     selectedBiocharIds: [],
     combineForm: {
       lotNumber: '',
@@ -40,6 +44,7 @@ window.grapheneApp = function() {
     appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Voluminous', 'Very Voluminous'],
     availableExperiments: [],
     availableLots: [],
+    availableGrapheneSamples: [],
     
     // Modal states for adding new options
     showAddAcidType: false,
@@ -121,12 +126,25 @@ window.grapheneApp = function() {
       output: '',
       comments: ''
     },
+    betForm: {
+      sampleNumber: '',
+      testOrder: '',
+      testDate: '',
+      dateUnknown: false,
+      grapheneSample: '',
+      multipointBetArea: '',
+      langmuirSurfaceArea: '',
+      species: '',
+      comments: ''
+    },
     
     async init() {
       await this.loadBiocharRecords();
       await this.loadGrapheneRecords();
+      await this.loadBetRecords();
       this.loadRawMaterials();
       this.loadAvailableExperiments();
+      this.loadAvailableGrapheneSamples();
       await this.loadAvailableLots();
     },
     
@@ -150,6 +168,17 @@ window.grapheneApp = function() {
         }
       });
       this.availableExperiments = Array.from(experiments).sort();
+    },
+    
+    loadAvailableGrapheneSamples() {
+      // Load experiment numbers from graphene records
+      const samples = new Set();
+      this.grapheneRecords.forEach(record => {
+        if (record.experimentNumber) {
+          samples.add(record.experimentNumber);
+        }
+      });
+      this.availableGrapheneSamples = Array.from(samples).sort();
     },
     
     async loadAvailableLots() {
@@ -177,6 +206,7 @@ window.grapheneApp = function() {
       try {
         const response = await fetch('/api/graphene');
         this.grapheneRecords = await response.json();
+        this.loadAvailableGrapheneSamples(); // Refresh graphene samples when data changes
       } catch (error) {
         console.error('Failed to load graphene records:', error);
       }
@@ -197,6 +227,24 @@ window.grapheneApp = function() {
         this.grapheneRecords = await response.json();
       } catch (error) {
         console.error('Failed to search graphene records:', error);
+      }
+    },
+    
+    async loadBetRecords() {
+      try {
+        const response = await fetch('/api/bet');
+        this.betRecords = await response.json();
+      } catch (error) {
+        console.error('Failed to load BET records:', error);
+      }
+    },
+    
+    async searchBet() {
+      try {
+        const response = await fetch(`/api/bet?search=${encodeURIComponent(this.betSearch)}`);
+        this.betRecords = await response.json();
+      } catch (error) {
+        console.error('Failed to search BET records:', error);
       }
     },
     
@@ -374,7 +422,14 @@ window.grapheneApp = function() {
     },
     
     async exportData(type) {
-      const url = type === 'biochar' ? '/api/biochar/export/csv' : '/api/graphene/export/csv';
+      let url;
+      if (type === 'biochar') {
+        url = '/api/biochar/export/csv';
+      } else if (type === 'graphene') {
+        url = '/api/graphene/export/csv';
+      } else if (type === 'bet') {
+        url = '/api/bet/export/csv';
+      }
       window.open(url, '_blank');
     },
     
@@ -496,6 +551,85 @@ window.grapheneApp = function() {
         return percentage.toFixed(1) + '%';
       }
       return '';
+    },
+    
+    formatScientificNotation(value) {
+      // Format scientific notation values like 1.520e3 or regular numbers
+      if (!value) return '';
+      
+      const num = parseFloat(value);
+      if (isNaN(num)) return value; // Return as-is if not a number
+      
+      // If the number is large (>= 1000), show in scientific notation
+      if (num >= 1000) {
+        return num.toExponential(3);
+      }
+      // Otherwise show as regular number with appropriate decimal places
+      return num.toFixed(3);
+    },
+    
+    editBet(record) {
+      this.editingBet = record;
+      this.betForm = { ...record };
+      this.showAddBet = true;
+    },
+    
+    async saveBet() {
+      try {
+        const url = this.editingBet 
+          ? `/api/bet/${this.editingBet.id}` 
+          : '/api/bet';
+        const method = this.editingBet ? 'PUT' : 'POST';
+        
+        // Convert string numbers to actual numbers
+        const data = { ...this.betForm };
+        
+        // Handle date
+        if (data.dateUnknown || !data.testDate) {
+          data.testDate = null;
+        }
+        delete data.dateUnknown;
+        
+        // Handle numeric fields
+        ['multipointBetArea', 'langmuirSurfaceArea', 'testOrder'].forEach(field => {
+          if (data[field] === '' || data[field] === null || data[field] === undefined) {
+            data[field] = null;
+          } else if (data[field]) {
+            data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+          }
+        });
+        
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          await this.loadBetRecords();
+          this.showAddBet = false;
+          this.editingBet = null;
+          this.betForm = {};
+        } else {
+          const errorData = await response.json();
+          console.error('Server error:', errorData);
+          alert(`Failed to save record: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Failed to save BET record:', error);
+        alert('Failed to save record. Please try again.');
+      }
+    },
+    
+    async deleteBet(id) {
+      if (!confirm('Are you sure you want to delete this record?')) return;
+      
+      try {
+        await fetch(`/api/bet/${id}`, { method: 'DELETE' });
+        await this.loadBetRecords();
+      } catch (error) {
+        console.error('Failed to delete BET record:', error);
+      }
     },
     
     handleBiocharSourceChange(event) {
