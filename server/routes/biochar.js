@@ -175,8 +175,32 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
+  // Convert numeric fields from strings to proper types
+  const data = { ...req.body };
+  const numericFields = ['testOrder', 'startingAmount', 'acidAmount', 'acidConcentration', 'acidMolarity', 
+                        'temperature', 'time', 'pressureInitial', 'pressureFinal', 'washAmount', 
+                        'output', 'dryingTemp', 'kftPercentage'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle date field
+  if (data.experimentDate && data.experimentDate !== '') {
+    data.experimentDate = new Date(data.experimentDate);
+  } else {
+    data.experimentDate = null;
+  }
+  
   const biochar = await prisma.biochar.create({
-    data: req.body
+    data
   });
   
   res.status(201).json(biochar);
@@ -187,9 +211,33 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
+  // Convert numeric fields from strings to proper types
+  const data = { ...req.body };
+  const numericFields = ['testOrder', 'startingAmount', 'acidAmount', 'acidConcentration', 'acidMolarity', 
+                        'temperature', 'time', 'pressureInitial', 'pressureFinal', 'washAmount', 
+                        'output', 'dryingTemp', 'kftPercentage'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle date field
+  if (data.experimentDate && data.experimentDate !== '') {
+    data.experimentDate = new Date(data.experimentDate);
+  } else {
+    data.experimentDate = null;
+  }
+  
   const biochar = await prisma.biochar.update({
     where: { id },
-    data: req.body
+    data
   });
   
   res.json(biochar);

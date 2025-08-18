@@ -6,7 +6,7 @@ const router = express.Router();
 // Get all BET records
 router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  const { sortBy = 'chronological', order = 'asc', search } = req.query;
+  const { sortBy = 'chronological', order = 'desc', search } = req.query;
   
   let where = {};
   if (search) {
@@ -65,8 +65,30 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
+  // Convert numeric fields from strings to proper types
+  const data = { ...req.body };
+  const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle date field
+  if (data.testDate && data.testDate !== '') {
+    data.testDate = new Date(data.testDate);
+  } else {
+    data.testDate = null;
+  }
+  
   const betRecord = await prisma.bET.create({
-    data: req.body
+    data
   });
   
   res.status(201).json(betRecord);
@@ -77,9 +99,31 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
+  // Convert numeric fields from strings to proper types
+  const data = { ...req.body };
+  const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle date field
+  if (data.testDate && data.testDate !== '') {
+    data.testDate = new Date(data.testDate);
+  } else {
+    data.testDate = null;
+  }
+  
   const betRecord = await prisma.bET.update({
     where: { id },
-    data: req.body
+    data
   });
   
   res.json(betRecord);

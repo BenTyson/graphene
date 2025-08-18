@@ -78,7 +78,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const graphenes = await prisma.graphene.findMany({
     where,
     orderBy,
-    include: { biocharLot: true }
+    include: { biocharLotRef: true }
   });
   
   res.json(graphenes);
@@ -91,7 +91,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   
   const graphene = await prisma.graphene.findUnique({
     where: { id },
-    include: { biocharLot: true }
+    include: { biocharLotRef: true }
   });
   
   if (!graphene) {
@@ -110,7 +110,7 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
   const graphenes = await prisma.graphene.findMany({
     where: { biocharExperiment },
     orderBy: { createdAt: 'desc' },
-    include: { biocharLot: true }
+    include: { biocharLotRef: true }
   });
   
   res.json(graphenes);
@@ -124,7 +124,7 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
   // Get the graphene record to find its biochar reference
   const graphene = await prisma.graphene.findUnique({
     where: { experimentNumber },
-    include: { biocharLot: true }
+    include: { biocharLotRef: true }
   });
   
   if (!graphene) {
@@ -159,7 +159,7 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
     sourceBiochar,
     lotBiocharExperiments,
     betTests,
-    lotInfo: graphene.biocharLot
+    lotInfo: graphene.biocharLotRef
   });
 }));
 
@@ -173,6 +173,11 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
     data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
   }
   
+  // Remove UI-only fields that don't exist in database schema
+  delete data.biocharSource;
+  delete data.dateUnknown;
+  delete data.semReportFile;
+  
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
     try {
@@ -181,6 +186,44 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
       data.appearanceTags = [];
     }
   }
+  
+  // Convert numeric fields from strings to proper types
+  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'grindingTime', 
+                        'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
+                        'volumeMl', 'density', 'output'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle boolean field
+  if (data.homogeneous !== undefined && data.homogeneous !== null && data.homogeneous !== '') {
+    data.homogeneous = data.homogeneous === 'true' || data.homogeneous === true;
+  } else {
+    data.homogeneous = null;
+  }
+  
+  // Handle date field
+  if (data.experimentDate && data.experimentDate !== '') {
+    data.experimentDate = new Date(data.experimentDate);
+  } else {
+    data.experimentDate = null;
+  }
+  
+  // Handle reference fields - convert empty strings to null
+  const referenceFields = ['biocharExperiment', 'biocharLotNumber'];
+  referenceFields.forEach(field => {
+    if (data[field] === '') {
+      data[field] = null;
+    }
+  });
   
   const graphene = await prisma.graphene.create({
     data
@@ -218,6 +261,11 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
     }
   }
   
+  // Remove UI-only fields that don't exist in database schema
+  delete data.biocharSource;
+  delete data.dateUnknown;
+  delete data.semReportFile;
+  
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
     try {
@@ -226,6 +274,44 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
       data.appearanceTags = [];
     }
   }
+  
+  // Convert numeric fields from strings to proper types
+  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'grindingTime', 
+                        'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
+                        'volumeMl', 'density', 'output'];
+  
+  numericFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const num = parseFloat(data[field]);
+      if (!isNaN(num)) {
+        data[field] = num;
+      }
+    } else {
+      data[field] = null;
+    }
+  });
+  
+  // Handle boolean field
+  if (data.homogeneous !== undefined && data.homogeneous !== null && data.homogeneous !== '') {
+    data.homogeneous = data.homogeneous === 'true' || data.homogeneous === true;
+  } else {
+    data.homogeneous = null;
+  }
+  
+  // Handle date field
+  if (data.experimentDate && data.experimentDate !== '') {
+    data.experimentDate = new Date(data.experimentDate);
+  } else {
+    data.experimentDate = null;
+  }
+  
+  // Handle reference fields - convert empty strings to null
+  const referenceFields = ['biocharExperiment', 'biocharLotNumber'];
+  referenceFields.forEach(field => {
+    if (data[field] === '') {
+      data[field] = null;
+    }
+  });
   
   const graphene = await prisma.graphene.update({
     where: { id },
@@ -265,7 +351,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   
   const graphenes = await prisma.graphene.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { biocharLot: true }
+    include: { biocharLotRef: true }
   });
   
   const headers = [

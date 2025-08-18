@@ -1129,7 +1129,7 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Temperature Rate (°C/min)</label>
-                  <input type="number" step="0.1" x-model="grapheneForm.tempRate" placeholder="3"
+                  <input type="text" x-model="grapheneForm.tempRate" placeholder="20-27 or 3"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
@@ -1288,7 +1288,7 @@
                     <template x-for="tag in appearanceTags" :key="tag">
                       <button type="button" 
                               @click="toggleAppearanceTag(tag)"
-                              :class="grapheneForm.appearanceTags.includes(tag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                              :class="(grapheneForm.appearanceTags && grapheneForm.appearanceTags.includes(tag)) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                               class="px-3 py-1 text-sm rounded-full border transition-colors">
                         <span x-text="tag"></span>
                       </button>
@@ -1300,7 +1300,7 @@
                       + Add New Tag
                     </button>
                   </div>
-                  <div x-show="grapheneForm.appearanceTags.length > 0" class="text-sm text-gray-600">
+                  <div x-show="grapheneForm.appearanceTags && grapheneForm.appearanceTags.length > 0" class="text-sm text-gray-600">
                     Selected: <span x-text="(grapheneForm.appearanceTags || []).join(', ')"></span>
                   </div>
                 </div>

@@ -380,6 +380,11 @@ window.grapheneApp = function() {
       const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests']);
       this.grapheneForm = { ...editableFields };
       
+      // Ensure appearanceTags is always an array
+      if (!this.grapheneForm.appearanceTags || !Array.isArray(this.grapheneForm.appearanceTags)) {
+        this.grapheneForm.appearanceTags = [];
+      }
+      
       // Set biocharSource based on what's populated
       if (record.biocharExperiment) {
         this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
@@ -425,6 +430,8 @@ window.grapheneApp = function() {
       this.showAddGraphene = false;
       this.editingGraphene = null;
       this.grapheneForm = { ...DEFAULT_FORMS.graphene };
+      // Ensure appearanceTags is always an array
+      this.grapheneForm.appearanceTags = [];
     },
     
     // BET CRUD operations
