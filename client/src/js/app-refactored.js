@@ -125,6 +125,14 @@ window.grapheneApp = function() {
     // Selection states
     selectedBiocharIds: [],
     
+    // Expandable row states
+    expandedBiocharRows: {},
+    expandedGrapheneRows: {},
+    biocharRelatedData: {},
+    grapheneRelatedData: {},
+    loadingBiocharRelated: {},
+    loadingGrapheneRelated: {},
+    
     // Dropdown options
     rawMaterials: ['BAFA neu Hemp Fibre VF', 'Canadian Rockies Hemp'],
     acidTypes: ['Sulfuric Acid'],
@@ -171,6 +179,11 @@ window.grapheneApp = function() {
     
     // Import utilities as methods
     ...formatters,
+    
+    // Alias for scientific notation formatting (used in HTML)
+    formatScientific(value) {
+      return formatters.formatScientificNotation(value);
+    },
     
     // Initialization
     async init() {
@@ -258,6 +271,53 @@ window.grapheneApp = function() {
     searchBet: dataHelpers.debounce(async function() {
       await this.loadBetRecords();
     }, 300),
+    
+    // Expandable row methods
+    async toggleBiocharExpansion(experimentNumber) {
+      // Toggle the expansion state
+      this.expandedBiocharRows[experimentNumber] = !this.expandedBiocharRows[experimentNumber];
+      
+      // If expanding and we don't have data yet, fetch it
+      if (this.expandedBiocharRows[experimentNumber] && !this.biocharRelatedData[experimentNumber]) {
+        await this.loadBiocharRelatedData(experimentNumber);
+      }
+    },
+    
+    async toggleGrapheneExpansion(experimentNumber) {
+      // Toggle the expansion state
+      this.expandedGrapheneRows[experimentNumber] = !this.expandedGrapheneRows[experimentNumber];
+      
+      // If expanding and we don't have data yet, fetch it
+      if (this.expandedGrapheneRows[experimentNumber] && !this.grapheneRelatedData[experimentNumber]) {
+        await this.loadGrapheneRelatedData(experimentNumber);
+      }
+    },
+    
+    async loadBiocharRelatedData(experimentNumber) {
+      try {
+        this.loadingBiocharRelated[experimentNumber] = true;
+        const relatedData = await API.biochar.getRelated(experimentNumber);
+        this.biocharRelatedData[experimentNumber] = relatedData;
+      } catch (error) {
+        console.error('Failed to load biochar related data:', error);
+        alert(`Failed to load related data: ${error.message}`);
+      } finally {
+        this.loadingBiocharRelated[experimentNumber] = false;
+      }
+    },
+    
+    async loadGrapheneRelatedData(experimentNumber) {
+      try {
+        this.loadingGrapheneRelated[experimentNumber] = true;
+        const relatedData = await API.graphene.getRelated(experimentNumber);
+        this.grapheneRelatedData[experimentNumber] = relatedData;
+      } catch (error) {
+        console.error('Failed to load graphene related data:', error);
+        alert(`Failed to load related data: ${error.message}`);
+      } finally {
+        this.loadingGrapheneRelated[experimentNumber] = false;
+      }
+    },
     
     // Biochar CRUD operations
     editBiochar(record) {

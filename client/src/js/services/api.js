@@ -62,6 +62,11 @@ export const biocharAPI = {
   // Export to CSV
   exportCSV: () => {
     window.open(`${API_BASE}/biochar/export/csv`, '_blank');
+  },
+
+  // Get related graphene and BET data for a biochar experiment
+  getRelated: (experimentNumber) => {
+    return fetch(`${API_BASE}/biochar/${experimentNumber}/related`).then(handleResponse);
   }
 };
 
@@ -142,6 +147,11 @@ export const grapheneAPI = {
   // Export to CSV
   exportCSV: () => {
     window.open(`${API_BASE}/graphene/export/csv`, '_blank');
+  },
+
+  // Get related biochar and BET data for a graphene experiment
+  getRelated: (experimentNumber) => {
+    return fetch(`${API_BASE}/graphene/${experimentNumber}/related`).then(handleResponse);
   }
 };
 

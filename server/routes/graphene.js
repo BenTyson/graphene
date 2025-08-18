@@ -42,7 +42,7 @@ const upload = multer({
 // Get all graphene records
 router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  const { sortBy = 'chronological', order = 'asc', search, biocharExperiment } = req.query;
+  const { sortBy = 'chronological', order = 'desc', search, biocharExperiment } = req.query;
   
   let where = {};
   
@@ -114,6 +114,53 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
   });
   
   res.json(graphenes);
+}));
+
+// Get related data for a graphene experiment - MUST BE BEFORE /:id route
+router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { experimentNumber } = req.params;
+  
+  // Get the graphene record to find its biochar reference
+  const graphene = await prisma.graphene.findUnique({
+    where: { experimentNumber },
+    include: { biocharLot: true }
+  });
+  
+  if (!graphene) {
+    res.status(404);
+    throw new Error('Graphene record not found');
+  }
+  
+  // Get source biochar data
+  let sourceBiochar = null;
+  let lotBiocharExperiments = [];
+  
+  if (graphene.biocharExperiment) {
+    // Direct biochar reference
+    sourceBiochar = await prisma.biochar.findUnique({
+      where: { experimentNumber: graphene.biocharExperiment }
+    });
+  } else if (graphene.biocharLotNumber) {
+    // Lot reference - get all biochar experiments in the lot
+    lotBiocharExperiments = await prisma.biochar.findMany({
+      where: { lotNumber: graphene.biocharLotNumber },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+  
+  // Get BET tests for this graphene
+  const betTests = await prisma.bET.findMany({
+    where: { grapheneSample: experimentNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  res.json({
+    sourceBiochar,
+    lotBiocharExperiments,
+    betTests,
+    lotInfo: graphene.biocharLot
+  });
 }));
 
 // Create new graphene record with optional SEM file
