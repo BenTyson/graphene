@@ -1,7 +1,7 @@
 # Phase 1: Graphene Admin Control Panel
 
 ## Project Overview
-A modern, minimal admin control panel for tracking and analyzing the two-stage graphene production process: Biochar synthesis and Graphene production with lot-based traceability.
+A modern, minimal admin control panel for tracking and analyzing the complete graphene production workflow: Biochar synthesis → Graphene production → BET surface area analysis, with advanced lot-based traceability and scientific data management.
 
 ## Technology Stack
 - **Backend**: Node.js + Express.js
@@ -39,8 +39,8 @@ A modern, minimal admin control panel for tracking and analyzing the two-stage g
 | created_at | DateTime | Auto timestamp |
 | updated_at | DateTime | Auto timestamp |
 
-**Indexes**: test_order, experiment_date, created_at
-**Note**: No lot_number field - experiment_number serves as the unique identifier
+**Indexes**: test_order, experiment_date, created_at, lot_number
+**Lot System**: lot_number field links experiments to BiocharLot table for combination functionality
 
 ### Graphene Production Table
 | Field | Type | Description |
@@ -52,6 +52,7 @@ A modern, minimal admin control panel for tracking and analyzing the two-stage g
 | oven | String? | Oven identifier (dropdown: A, B, C) |
 | quantity | Decimal? | Quantity in grams |
 | biochar_experiment | String? | Reference to biochar experiment_number (FOREIGN KEY) |
+| biochar_lot_number | String? | Reference to biochar lot_number (FOREIGN KEY) |
 | base_amount | Decimal? | Base amount in grams |
 | base_type | String? | Type of base (dropdown: KOH) |
 | base_concentration | Decimal? | Base concentration % |
@@ -78,31 +79,73 @@ A modern, minimal admin control panel for tracking and analyzing the two-stage g
 | created_at | DateTime | Auto timestamp |
 | updated_at | DateTime | Auto timestamp |
 
-**Relationship**: biocharLot (biochar_experiment → Biochar.experiment_number)
-**Indexes**: biochar_experiment, test_order, experiment_date, created_at
+**Relationships**: 
+- biocharExperimentRef (biochar_experiment → Biochar.experiment_number)
+- biocharLotRef (biochar_lot_number → BiocharLot.lot_number)
+- betTests (one-to-many → BET.graphene_sample)
+**Indexes**: biochar_experiment, biochar_lot_number, test_order, experiment_date, created_at
+
+### BiocharLot Table (Lot Management)
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (cuid) | Primary key |
+| lot_number | String (unique) | Unique lot identifier (user-defined) |
+| lot_name | String? | Optional descriptive name |
+| description | Text? | Optional lot description |
+| created_at | DateTime | Auto timestamp |
+| updated_at | DateTime | Auto timestamp |
+
+**Relationships**: experiments (one-to-many → Biochar.lot_number), grapheneProductions (one-to-many → Graphene.biochar_lot_number)
+**Purpose**: Allows combining multiple biochar experiments into logical lots for graphene production
+
+### BET Surface Area Analysis Table
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (cuid) | Primary key |
+| test_date | DateTime? | Test date (nullable for unknown) |
+| graphene_sample | String? | Reference to graphene experiment_number (FOREIGN KEY) |
+| multipoint_bet_area | Decimal(10,4)? | Multipoint BET surface area (m²/g) |
+| langmuir_surface_area | Decimal(10,4)? | Langmuir surface area (m²/g) |
+| species | String? | Species classification (from graphene dropdown) |
+| comments | Text? | Additional notes |
+| created_at | DateTime | Auto timestamp |
+| updated_at | DateTime | Auto timestamp |
+
+**Relationship**: grapheneRef (graphene_sample → Graphene.experiment_number)
+**Indexes**: graphene_sample, test_date, created_at
+**Scientific Notation**: Supports values like 1.520e3 (1.520 × 10³) for surface area measurements
 
 ## Critical Architecture Decisions
 
 ### Data Flow & Relationships
-1. **Biochar → Graphene**: One-to-many via experiment_number (biochar experiments feed graphene production)
-2. **No Lot System**: Removed lot_number concept - direct experiment-to-experiment traceability
-3. **Chronological Ordering**: test_order field handles historical data without dates
-4. **Dropdown Architecture**: All major fields use controlled vocabularies with "Add New" capability
-5. **Appearance Tags**: Multi-select tag system with predefined options (Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Voluminous, Very Voluminous)
+1. **Biochar → Graphene**: One-to-many via experiment_number OR lot_number (flexible referencing)
+2. **Biochar → Lots**: Many biochar experiments can be combined into named lots
+3. **Graphene → BET**: One-to-many via experiment_number (graphene samples feed BET analysis)
+4. **Dual Reference System**: Graphene can reference either individual biochar experiments OR combined lots
+5. **Chronological Ordering**: test_order field handles historical data without dates for biochar and graphene tables
+6. **Dropdown Architecture**: All major fields use controlled vocabularies with "Add New" capability
+7. **Appearance Tags**: Multi-select tag system with predefined options (Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Voluminous, Very Voluminous)
+8. **Scientific Data Handling**: BET table supports scientific notation for large surface area values
 
 ### Sorting Logic (API)
 Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at ASC` (nulls last)
 
 ### Key UI Patterns
 1. **Biochar Interface**
-   - Simple CRUD interface without lot combination
+   - Advanced CRUD interface WITH lot combination functionality
+   - Checkbox selection system for multi-experiment lot creation
+   - Two-tier table headers with separate columns for acid properties, temperature, pressure
+   - Visual indicators: Blue highlighting for experiments assigned to lots
+   - "Combine into Lot" button with modal for lot creation (lot number, name, description)
    - All major fields are dropdowns with extensible options
    - Starting amount field for raw material input
    - Time displayed in hours (not minutes)
+   - Individual columns for: Acid Amt, Acid %, Molarity, Acid Type, Temp, Time, P Initial, P Final
    
 2. **Graphene Interface**
-   - Biochar experiment dropdown ONLY shows biochar experiment numbers
+   - Dual-source dropdown: Shows BOTH individual biochar experiments AND combined lots
    - Two-tier table header system for organized data display
+   - Enhanced Results section with automatic Output % calculation (output/quantity × 100)
    - Appearance tags with multi-select interface
    - Homogeneous Yes/No dropdown after grinding
    - Enhanced wash section (amount, solution, concentration%, water)
@@ -110,8 +153,17 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
    - Output field positioned at end of form
    - Volume (ml) and Density (ml/g) fields
    - Grinding time only enabled when method="mill"
+   - Separate columns for all base properties instead of concatenated display
+   
+3. **BET Interface**
+   - Clean CRUD interface for surface area analysis data
+   - Graphene sample dropdown populated from existing graphene experiments
+   - Scientific notation input support (1.520e3 or 1520)
+   - Species dropdown shared with graphene form options
+   - Test date with "Unknown" checkbox option
+   - Automatic formatting of large numbers in scientific notation display
 
-3. **Form Architecture**
+4. **Form Architecture**
    - All forms support both Add/Edit modes
    - Dropdowns auto-populate from existing data + predefined options
    - Modal system for adding new dropdown values

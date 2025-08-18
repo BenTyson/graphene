@@ -24,8 +24,8 @@ router.get('/', asyncHandler(async (req, res) => {
   if (sortBy === 'chronological') {
     // Sort by test order first, then by date, then by creation time
     orderBy = [
-      { testOrder: { sort: order, nulls: 'last' } },
-      { experimentDate: { sort: order, nulls: 'last' } },
+      { testOrder: order },
+      { experimentDate: order },
       { createdAt: order }
     ];
   } else {

@@ -162,8 +162,20 @@
                   </td>
                   <!-- Actions -->
                   <td class="px-2 py-2 text-xs">
-                    <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 mr-1 text-xs">Edit</button>
-                    <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                    <div class="flex items-center space-x-1">
+                      <template x-if="record.comments">
+                        <div class="relative group">
+                          <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                          </svg>
+                          <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block z-10 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg">
+                            <span x-text="record.comments"></span>
+                          </div>
+                        </div>
+                      </template>
+                      <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 text-xs">Edit</button>
+                      <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                    </div>
                   </td>
                 </tr>
               </template>
@@ -297,8 +309,20 @@
                   <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="formatAppearanceTags(record.appearanceTags)"></td>
                   <!-- Actions -->
                   <td class="px-2 py-2 text-xs">
-                    <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 mr-1 text-xs">Edit</button>
-                    <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                    <div class="flex items-center space-x-1">
+                      <template x-if="record.comments">
+                        <div class="relative group">
+                          <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                          </svg>
+                          <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block z-10 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg">
+                            <span x-text="record.comments"></span>
+                          </div>
+                        </div>
+                      </template>
+                      <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 text-xs">Edit</button>
+                      <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
+                    </div>
                   </td>
                 </tr>
               </template>
@@ -337,8 +361,6 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sample #</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Graphene Sample</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multipoint BET Area (m²/g)</th>
@@ -350,16 +372,26 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <template x-for="record in betRecords" :key="record.id">
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.testOrder || '-'"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.sampleNumber"></td>
                   <td class="px-4 py-3 text-sm" x-text="formatDate(record.testDate)"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="record.grapheneSample"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.multipointBetArea)"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.langmuirSurfaceArea)"></td>
                   <td class="px-4 py-3 text-sm" x-text="record.species"></td>
                   <td class="px-4 py-3 text-sm">
-                    <button @click="editBet(record)" class="text-gray-600 hover:text-gray-900 mr-2">Edit</button>
-                    <button @click="deleteBet(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                    <div class="flex items-center space-x-2">
+                      <template x-if="record.comments">
+                        <div class="relative group">
+                          <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                          </svg>
+                          <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block z-10 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg">
+                            <span x-text="record.comments"></span>
+                          </div>
+                        </div>
+                      </template>
+                      <button @click="editBet(record)" class="text-gray-600 hover:text-gray-900">Edit</button>
+                      <button @click="deleteBet(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                    </div>
                   </td>
                 </tr>
               </template>
@@ -378,113 +410,122 @@
         <div class="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
           <h3 class="text-lg font-semibold mb-4" x-text="editingBiochar ? 'Edit Biochar Record' : 'Add Biochar Record'"></h3>
           
-          <form @submit.prevent="saveBiochar()" class="space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
-                <input type="text" x-model="biocharForm.experimentNumber" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+          <form @submit.prevent="saveBiochar()" class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
+                  <input type="text" x-model="biocharForm.experimentNumber" required
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
+                  <input type="number" x-model="biocharForm.testOrder" 
+                         placeholder="1, 2, 3..."
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
+                  <div class="flex items-center space-x-2">
+                    <input type="date" x-model="biocharForm.experimentDate" 
+                           :disabled="biocharForm.dateUnknown"
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                    <label class="flex items-center whitespace-nowrap">
+                      <input type="checkbox" x-model="biocharForm.dateUnknown" 
+                             @change="if($event.target.checked) biocharForm.experimentDate = ''"
+                             class="mr-2 rounded border-gray-300">
+                      <span class="text-sm">Unknown</span>
+                    </label>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
-                <input type="number" x-model="biocharForm.testOrder" 
-                       placeholder="1, 2, 3..."
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
-                <div class="flex items-center space-x-2">
-                  <input type="date" x-model="biocharForm.experimentDate" 
-                         :disabled="biocharForm.dateUnknown"
-                         class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
-                  <label class="flex items-center whitespace-nowrap">
-                    <input type="checkbox" x-model="biocharForm.dateUnknown" 
-                           @change="if($event.target.checked) biocharForm.experimentDate = ''"
-                           class="mr-2 rounded border-gray-300">
-                    <span class="text-sm">Unknown</span>
-                  </label>
+            </div>
+
+            <!-- Setup & Materials -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Setup & Materials</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Reactor</label>
+                  <div class="relative">
+                    <select x-model="biocharForm.reactor" 
+                            @change="if($event.target.value === 'add_new') { showAddReactor = true; biocharForm.reactor = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select reactor...</option>
+                      <template x-for="reactor in reactors" :key="reactor">
+                        <option :value="reactor" x-text="reactor"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Reactor</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Raw Material</label>
+                  <div class="relative">
+                    <select x-model="biocharForm.rawMaterial" 
+                            @change="if($event.target.value === 'add_new') { showAddMaterial = true; biocharForm.rawMaterial = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select material...</option>
+                      <template x-for="material in rawMaterials" :key="material">
+                        <option :value="material" x-text="material"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Material</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Starting Amount (g)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.startingAmount"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
               </div>
             </div>
             
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Reactor</label>
-                <div class="relative">
-                  <select x-model="biocharForm.reactor" 
-                          @change="if($event.target.value === 'add_new') { showAddReactor = true; biocharForm.reactor = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select reactor...</option>
-                    <template x-for="reactor in reactors" :key="reactor">
-                      <option :value="reactor" x-text="reactor"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Reactor</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Raw Material</label>
-                <div class="relative">
-                  <select x-model="biocharForm.rawMaterial" 
-                          @change="if($event.target.value === 'add_new') { showAddMaterial = true; biocharForm.rawMaterial = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select material...</option>
-                    <template x-for="material in rawMaterials" :key="material">
-                      <option :value="material" x-text="material"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Material</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Starting Amount (g)</label>
-                <input type="number" step="0.01" x-model="biocharForm.startingAmount"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
-            </div>
-            
-            <div class="border-t pt-4">
-              <h4 class="text-sm font-semibold mb-2">Acid Properties</h4>
+            <!-- Acid Treatment -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Acid Treatment</h4>
               <div class="grid grid-cols-4 gap-4">
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Amount (g)</label>
                   <input type="number" step="0.01" x-model="biocharForm.acidAmount"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Concentration (%)</label>
                   <input type="number" step="0.01" x-model="biocharForm.acidConcentration"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Molarity (M)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Molarity (M)</label>
                   <input type="number" step="0.01" x-model="biocharForm.acidMolarity"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Type</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <div class="relative">
                     <select x-model="biocharForm.acidType" 
                             @change="if($event.target.value === 'add_new') { showAddAcidType = true; biocharForm.acidType = ''; }"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <option value="">Select...</option>
                       <template x-for="acid in acidTypes" :key="acid">
                         <option :value="acid" x-text="acid"></option>
                       </template>
                       <option value="add_new" class="font-semibold">+ Add New</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
@@ -493,77 +534,84 @@
               </div>
             </div>
             
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
-                <input type="number" step="0.1" x-model="biocharForm.temperature"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+            <!-- Process Conditions -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Process Conditions</h4>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
+                  <input type="number" step="0.1" x-model="biocharForm.temperature"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Time (hr)</label>
+                  <input type="number" step="0.1" x-model="biocharForm.time"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Time (hr)</label>
-                <input type="number" step="0.1" x-model="biocharForm.time"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
-                <input type="number" step="0.01" x-model="biocharForm.output"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pressure Initial (bar)</label>
-                <input type="number" step="0.1" x-model="biocharForm.pressureInitial"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pressure Final (bar)</label>
-                <input type="number" step="0.1" x-model="biocharForm.pressureFinal"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
-                <input type="number" step="0.01" x-model="biocharForm.washAmount"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Wash Medium</label>
-                <div class="relative">
-                  <select x-model="biocharForm.washMedium" 
-                          @change="if($event.target.value === 'add_new') { showAddWashMedium = true; biocharForm.washMedium = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                    <option value="">Select medium...</option>
-                    <template x-for="medium in washMediums" :key="medium">
-                      <option :value="medium" x-text="medium"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Medium</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Initial Pressure (bar)</label>
+                  <input type="number" step="0.1" x-model="biocharForm.pressureInitial"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Final Pressure (bar)</label>
+                  <input type="number" step="0.1" x-model="biocharForm.pressureFinal"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
               </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Drying Temp (°C)</label>
-                <input type="number" step="0.1" x-model="biocharForm.dryingTemp"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+            <!-- Post-Processing -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Post-Processing</h4>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.washAmount"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Wash Medium</label>
+                  <div class="relative">
+                    <select x-model="biocharForm.washMedium" 
+                            @change="if($event.target.value === 'add_new') { showAddWashMedium = true; biocharForm.washMedium = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
+                      <option value="">Select medium...</option>
+                      <template x-for="medium in washMediums" :key="medium">
+                        <option :value="medium" x-text="medium"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Medium</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">KFT (%)</label>
-                <input type="number" step="0.01" x-model="biocharForm.kftPercentage"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Drying Temp (°C)</label>
+                  <input type="number" step="0.1" x-model="biocharForm.dryingTemp"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">KFT (%)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.kftPercentage"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
+                  <input type="number" step="0.01" x-model="biocharForm.output"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
               </div>
             </div>
             
+            <!-- Comments -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
               <textarea x-model="biocharForm.comments" rows="2"
@@ -571,7 +619,7 @@
             </div>
             
             <div class="flex justify-end space-x-2 pt-4">
-              <button type="button" @click="showAddBiochar = false; editingBiochar = null"
+              <button type="button" @click="showAddBiochar = false; editingBiochar = null; biocharForm = {}"
                       class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
                 Cancel
               </button>
@@ -594,250 +642,251 @@
         <div class="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
           <h3 class="text-lg font-semibold mb-4" x-text="editingGraphene ? 'Edit Graphene Record' : 'Add Graphene Record'"></h3>
           
-          <form @submit.prevent="saveGraphene()" class="space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
-                <input type="text" x-model="grapheneForm.experimentNumber" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
-                <input type="number" x-model="grapheneForm.testOrder" 
-                       placeholder="1, 2, 3..."
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
-                <div class="flex items-center space-x-2">
-                  <input type="date" x-model="grapheneForm.experimentDate" 
-                         :disabled="grapheneForm.dateUnknown"
-                         class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
-                  <label class="flex items-center whitespace-nowrap">
-                    <input type="checkbox" x-model="grapheneForm.dateUnknown" 
-                           @change="if($event.target.checked) grapheneForm.experimentDate = ''"
-                           class="mr-2 rounded border-gray-300">
-                    <span class="text-sm">Unknown</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Oven</label>
-                <div class="relative">
-                  <select x-model="grapheneForm.oven" 
-                          @change="if($event.target.value === 'add_new') { showAddOven = true; grapheneForm.oven = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select oven...</option>
-                    <template x-for="oven in ovens" :key="oven">
-                      <option :value="oven" x-text="oven"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Oven</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (g)</label>
-                <input type="number" step="0.01" x-model="grapheneForm.quantity"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Source</label>
-                <div class="relative">
-                  <select x-model="grapheneForm.biocharSource" 
-                          @change="handleBiocharSourceChange($event)"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select biochar source...</option>
-                    <optgroup label="Individual Experiments">
-                      <template x-for="exp in availableExperiments" :key="'exp-' + exp">
-                        <option :value="'exp:' + exp" x-text="'EXP: ' + exp"></option>
-                      </template>
-                    </optgroup>
-                    <optgroup label="Combined Lots" x-show="availableLots.length > 0">
-                      <template x-for="lot in availableLots" :key="'lot-' + lot.lotNumber">
-                        <option :value="'lot:' + lot.lotNumber" x-text="'LOT: ' + lot.lotNumber + (lot.lotName ? ' (' + lot.lotName + ')' : '') + ' - ' + lot._count.experiments + ' experiments'"></option>
-                      </template>
-                    </optgroup>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Select individual experiment or combined lot</p>
-              </div>
-            </div>
-            
-            <div class="border-t pt-4">
-              <h4 class="text-sm font-semibold mb-2">Base Properties</h4>
+          <form @submit.prevent="saveGraphene()" class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
               <div class="grid grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
-                  <input type="number" step="0.01" x-model="grapheneForm.baseAmount"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
+                  <input type="text" x-model="grapheneForm.experimentNumber" required
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Type</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
+                  <input type="number" x-model="grapheneForm.testOrder" 
+                         placeholder="1, 2, 3..."
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Experiment Date</label>
+                  <div class="flex items-center space-x-2">
+                    <input type="date" x-model="grapheneForm.experimentDate" 
+                           :disabled="grapheneForm.dateUnknown"
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                    <label class="flex items-center whitespace-nowrap">
+                      <input type="checkbox" x-model="grapheneForm.dateUnknown" 
+                             @change="if($event.target.checked) grapheneForm.experimentDate = ''"
+                             class="mr-2 rounded border-gray-300">
+                      <span class="text-sm">Unknown</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Setup & Materials -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Setup & Materials</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Oven</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.oven" 
+                            @change="if($event.target.value === 'add_new') { showAddOven = true; grapheneForm.oven = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select oven...</option>
+                      <template x-for="oven in ovens" :key="oven">
+                        <option :value="oven" x-text="oven"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Oven</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.quantity"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Source</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.biocharSource" 
+                            @change="handleBiocharSourceChange($event)"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select biochar source...</option>
+                      <optgroup label="Individual Experiments">
+                        <template x-for="exp in availableExperiments" :key="'exp-' + exp">
+                          <option :value="'exp:' + exp" x-text="'EXP: ' + exp"></option>
+                        </template>
+                      </optgroup>
+                      <optgroup label="Combined Lots" x-show="availableLots.length > 0">
+                        <template x-for="lot in availableLots" :key="'lot-' + lot.lotNumber">
+                          <option :value="'lot:' + lot.lotNumber" x-text="'LOT: ' + lot.lotNumber + (lot.lotName ? ' (' + lot.lotName + ')' : '') + ' - ' + lot._count.experiments + ' experiments'"></option>
+                        </template>
+                      </optgroup>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Select individual experiment or combined lot</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Base Treatment -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Base Treatment</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Amount (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.baseAmount"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <div class="relative">
                     <select x-model="grapheneForm.baseType" 
                             @change="if($event.target.value === 'add_new') { showAddBaseType = true; grapheneForm.baseType = ''; }"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <option value="">Select...</option>
                       <template x-for="base in baseTypes" :key="base">
                         <option :value="base" x-text="base"></option>
                       </template>
                       <option value="add_new" class="font-semibold">+ Add New</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Concentration (%)</label>
                   <input type="number" step="0.01" x-model="grapheneForm.baseConcentration"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+              </div>
+            </div>
+
+            <!-- Preparation -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Preparation</h4>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Method</label>
+                  <select x-model="grapheneForm.grindingMethod"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Select...</option>
+                    <option value="manual">Manual</option>
+                    <option value="mill">Mill</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Time (min)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.grindingTime"
+                         :disabled="grapheneForm.grindingMethod !== 'mill'"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Homogeneous</label>
+                  <select x-model="grapheneForm.homogeneous"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Select...</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
                 </div>
               </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Method</label>
-                <select x-model="grapheneForm.grindingMethod"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                  <option value="">Select...</option>
-                  <option value="manual">Manual</option>
-                  <option value="mill">Mill</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Time (min)</label>
-                <input type="number" step="0.1" x-model="grapheneForm.grindingTime"
-                       :disabled="grapheneForm.grindingMethod !== 'mill'"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-1 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Homogeneous</label>
-                <select x-model="grapheneForm.homogeneous"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                  <option value="">Select...</option>
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Gas</label>
-                <div class="relative">
-                  <select x-model="grapheneForm.gas" 
-                          @change="if($event.target.value === 'add_new') { showAddGas = true; grapheneForm.gas = ''; }"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                    <option value="">Select gas...</option>
-                    <template x-for="gas in gases" :key="gas">
-                      <option :value="gas" x-text="gas"></option>
-                    </template>
-                    <option value="add_new" class="font-semibold">+ Add New Gas</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
+            <!-- Thermal Treatment -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Thermal Treatment</h4>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Gas</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.gas" 
+                            @change="if($event.target.value === 'add_new') { showAddGas = true; grapheneForm.gas = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
+                      <option value="">Select gas...</option>
+                      <template x-for="gas in gases" :key="gas">
+                        <option :value="gas" x-text="gas"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Gas</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Temp Rate</label>
-                <input type="text" x-model="grapheneForm.tempRate" placeholder="20-27°C/min"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Temp Max (°C)</label>
-                <input type="number" step="0.1" x-model="grapheneForm.tempMax"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-1 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Time (min)</label>
-                <input type="number" step="0.1" x-model="grapheneForm.time"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Volume (ml)</label>
-                <input type="number" step="0.01" x-model="grapheneForm.volumeMl"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Density (ml/g)</label>
-                <input type="number" step="0.0001" x-model="grapheneForm.density"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
-            <div class="border-t pt-4">
-              <h4 class="text-sm font-semibold mb-2">Wash Properties</h4>
-              <div class="grid grid-cols-4 gap-4">
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Amount (g)</label>
-                  <input type="number" step="0.01" x-model="grapheneForm.washAmount"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Time (min)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.time"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Temperature Rate</label>
+                  <input type="text" x-model="grapheneForm.tempRate" placeholder="20-27°C/min"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Solution</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Max Temperature (°C)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.tempMax"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Washing -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Washing</h4>
+              <div class="grid grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Amount (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.washAmount"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Solution</label>
                   <div class="relative">
                     <select x-model="grapheneForm.washSolution" 
                             @change="if($event.target.value === 'add_new') { showAddWashSolution = true; grapheneForm.washSolution = ''; }"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <option value="">Select...</option>
                       <template x-for="solution in washSolutions" :key="solution">
                         <option :value="solution" x-text="solution"></option>
                       </template>
                       <option value="add_new" class="font-semibold">+ Add New</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Concentration (%)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Concentration (%)</label>
                   <input type="number" step="0.1" x-model="grapheneForm.washConcentration"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Water</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Water</label>
                   <div class="relative">
                     <select x-model="grapheneForm.washWater"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <option value="">None</option>
                       <template x-for="water in washWaters" :key="water">
                         <option :value="water" x-text="water"></option>
                       </template>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
@@ -846,46 +895,47 @@
               </div>
             </div>
             
-            <div class="border-t pt-4">
-              <h4 class="text-sm font-semibold mb-2">Drying Properties</h4>
+            <!-- Drying -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Drying</h4>
               <div class="grid grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Temperature (°C)</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
                   <input type="number" step="0.1" x-model="grapheneForm.dryingTemp"
-                         class="w-full px-2 py-1 border border-gray-300 rounded">
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Atmosphere</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Atmosphere</label>
                   <div class="relative">
                     <select x-model="grapheneForm.dryingAtmosphere" 
                             @change="if($event.target.value === 'add_new') { showAddDryingAtmosphere = true; grapheneForm.dryingAtmosphere = ''; }"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <option value="">Select...</option>
                       <template x-for="atmosphere in dryingAtmospheres" :key="atmosphere">
                         <option :value="atmosphere" x-text="atmosphere"></option>
                       </template>
                       <option value="add_new" class="font-semibold">+ Add New</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs text-gray-600 mb-1">Pressure</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Pressure</label>
                   <div class="relative">
                     <select x-model="grapheneForm.dryingPressure" 
                             @change="if($event.target.value === 'add_new') { showAddDryingPressure = true; grapheneForm.dryingPressure = ''; }"
-                            class="w-full px-2 py-1 border border-gray-300 rounded appearance-none">
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
                       <template x-for="pressure in dryingPressures" :key="pressure">
                         <option :value="pressure" x-text="pressure"></option>
                       </template>
                       <option value="add_new" class="font-semibold">+ Add New</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-1 pointer-events-none">
-                      <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                       </svg>
                     </div>
@@ -893,23 +943,44 @@
                 </div>
               </div>
             </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
-                <div class="relative">
-                  <select x-model="grapheneForm.species" 
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
-                    <option value="">Select species...</option>
-                    <template x-for="spec in species" :key="spec">
-                      <option :value="spec" x-text="spec"></option>
-                    </template>
-                  </select>
-                  <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
+
+            <!-- Product Characterization -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Product Characterization</h4>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Volume (ml)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.volumeMl"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Density (ml/g)</label>
+                  <input type="number" step="0.0001" x-model="grapheneForm.density"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.species" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select species...</option>
+                      <template x-for="spec in species" :key="spec">
+                        <option :value="spec" x-text="spec"></option>
+                      </template>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
+                  <input type="number" step="0.01" x-model="grapheneForm.output"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
               </div>
               <div>
@@ -938,14 +1009,7 @@
               </div>
             </div>
             
-            <div class="grid grid-cols-1 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Output (g)</label>
-                <input type="number" step="0.01" x-model="grapheneForm.output"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              </div>
-            </div>
-            
+            <!-- Comments -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
               <textarea x-model="grapheneForm.comments" rows="2"
@@ -953,7 +1017,7 @@
             </div>
             
             <div class="flex justify-end space-x-2 pt-4">
-              <button type="button" @click="showAddGraphene = false; editingGraphene = null"
+              <button type="button" @click="showAddGraphene = false; editingGraphene = null; grapheneForm = {}"
                       class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
                 Cancel
               </button>
@@ -1246,19 +1310,7 @@
           <h3 class="text-lg font-semibold mb-4" x-text="editingBet ? 'Edit BET Record' : 'Add BET Record'"></h3>
           
           <form @submit.prevent="saveBet()" class="space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sample # *</label>
-                <input type="text" x-model="betForm.sampleNumber" required
-                       placeholder="BET-001"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
-                <input type="number" x-model="betForm.testOrder" 
-                       placeholder="1, 2, 3..."
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-              </div>
+            <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Test Date</label>
                 <div class="flex items-center space-x-2">

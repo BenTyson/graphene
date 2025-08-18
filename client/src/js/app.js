@@ -127,8 +127,6 @@ window.grapheneApp = function() {
       comments: ''
     },
     betForm: {
-      sampleNumber: '',
-      testOrder: '',
       testDate: '',
       dateUnknown: false,
       grapheneSample: '',
@@ -162,22 +160,26 @@ window.grapheneApp = function() {
     loadAvailableExperiments() {
       // Load experiment numbers from biochar records that aren't in lots
       const experiments = new Set();
-      this.biocharRecords.forEach(record => {
-        if (record.experimentNumber && !record.lotNumber) {
-          experiments.add(record.experimentNumber);
-        }
-      });
+      if (Array.isArray(this.biocharRecords)) {
+        this.biocharRecords.forEach(record => {
+          if (record.experimentNumber && !record.lotNumber) {
+            experiments.add(record.experimentNumber);
+          }
+        });
+      }
       this.availableExperiments = Array.from(experiments).sort();
     },
     
     loadAvailableGrapheneSamples() {
       // Load experiment numbers from graphene records
       const samples = new Set();
-      this.grapheneRecords.forEach(record => {
-        if (record.experimentNumber) {
-          samples.add(record.experimentNumber);
-        }
-      });
+      if (Array.isArray(this.grapheneRecords)) {
+        this.grapheneRecords.forEach(record => {
+          if (record.experimentNumber) {
+            samples.add(record.experimentNumber);
+          }
+        });
+      }
       this.availableGrapheneSamples = Array.from(samples).sort();
     },
     
@@ -194,21 +196,33 @@ window.grapheneApp = function() {
     async loadBiocharRecords() {
       try {
         const response = await fetch('/api/biochar');
-        this.biocharRecords = await response.json();
-        this.loadAvailableExperiments(); // Refresh experiments when biochar data changes
-        await this.loadAvailableLots(); // Refresh lots when biochar data changes
+        if (response.ok) {
+          this.biocharRecords = await response.json();
+          this.loadAvailableExperiments(); // Refresh experiments when biochar data changes
+          await this.loadAvailableLots(); // Refresh lots when biochar data changes
+        } else {
+          console.error('Failed to load biochar records:', response.status);
+          this.biocharRecords = [];
+        }
       } catch (error) {
         console.error('Failed to load biochar records:', error);
+        this.biocharRecords = [];
       }
     },
     
     async loadGrapheneRecords() {
       try {
         const response = await fetch('/api/graphene');
-        this.grapheneRecords = await response.json();
-        this.loadAvailableGrapheneSamples(); // Refresh graphene samples when data changes
+        if (response.ok) {
+          this.grapheneRecords = await response.json();
+          this.loadAvailableGrapheneSamples(); // Refresh graphene samples when data changes
+        } else {
+          console.error('Failed to load graphene records:', response.status);
+          this.grapheneRecords = [];
+        }
       } catch (error) {
         console.error('Failed to load graphene records:', error);
+        this.grapheneRecords = [];
       }
     },
     
@@ -233,9 +247,15 @@ window.grapheneApp = function() {
     async loadBetRecords() {
       try {
         const response = await fetch('/api/bet');
-        this.betRecords = await response.json();
+        if (response.ok) {
+          this.betRecords = await response.json();
+        } else {
+          console.error('Failed to load BET records:', response.status);
+          this.betRecords = [];
+        }
       } catch (error) {
         console.error('Failed to load BET records:', error);
+        this.betRecords = [];
       }
     },
     
@@ -277,13 +297,17 @@ window.grapheneApp = function() {
     
     editBiochar(record) {
       this.editingBiochar = record;
-      this.biocharForm = { ...record };
+      // Copy only the fields that should be editable
+      const { id, createdAt, updatedAt, _count, grapheneProductions, lot, lotNumber, ...editableFields } = record;
+      this.biocharForm = { ...editableFields };
       this.showAddBiochar = true;
     },
     
     editGraphene(record) {
       this.editingGraphene = record;
-      this.grapheneForm = { ...record };
+      // Copy only the fields that should be editable
+      const { id, createdAt, updatedAt, biocharLot, biocharExperimentRef, biocharLotRef, betTests, ...editableFields } = record;
+      this.grapheneForm = { ...editableFields };
       
       // Set biocharSource based on what's populated
       if (record.biocharExperiment) {
@@ -570,7 +594,9 @@ window.grapheneApp = function() {
     
     editBet(record) {
       this.editingBet = record;
-      this.betForm = { ...record };
+      // Copy only the fields that should be editable
+      const { id, createdAt, updatedAt, grapheneRef, ...editableFields } = record;
+      this.betForm = { ...editableFields };
       this.showAddBet = true;
     },
     
@@ -591,11 +617,11 @@ window.grapheneApp = function() {
         delete data.dateUnknown;
         
         // Handle numeric fields
-        ['multipointBetArea', 'langmuirSurfaceArea', 'testOrder'].forEach(field => {
+        ['multipointBetArea', 'langmuirSurfaceArea'].forEach(field => {
           if (data[field] === '' || data[field] === null || data[field] === undefined) {
             data[field] = null;
           } else if (data[field]) {
-            data[field] = field === 'testOrder' ? parseInt(data[field]) : parseFloat(data[field]);
+            data[field] = parseFloat(data[field]);
           }
         });
         

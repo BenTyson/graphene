@@ -12,7 +12,6 @@ router.get('/', asyncHandler(async (req, res) => {
   if (search) {
     where = {
       OR: [
-        { sampleNumber: { contains: search, mode: 'insensitive' } },
         { grapheneSample: { contains: search, mode: 'insensitive' } },
         { species: { contains: search, mode: 'insensitive' } },
         { comments: { contains: search, mode: 'insensitive' } }
@@ -22,10 +21,9 @@ router.get('/', asyncHandler(async (req, res) => {
   
   let orderBy;
   if (sortBy === 'chronological') {
-    // Sort by test order first, then by date, then by creation time
+    // Sort by date first, then by creation time
     orderBy = [
-      { testOrder: { sort: order, nulls: 'last' } },
-      { testDate: { sort: order, nulls: 'last' } },
+      { testDate: order },
       { createdAt: order }
     ];
   } else {
@@ -109,7 +107,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
   
   const headers = [
-    'Sample #', 'Test Order', 'Test Date', 'Graphene Sample', 
+    'Test Date', 'Graphene Sample', 
     'Multipoint BET Area (m²/g)', 'Langmuir Surface Area (m²/g)', 
     'Species', 'Comments', 'Created At'
   ];
@@ -118,8 +116,6 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   
   betRecords.forEach(b => {
     const row = [
-      b.sampleNumber,
-      b.testOrder || '',
       b.testDate ? b.testDate.toISOString().split('T')[0] : '',
       b.grapheneSample || '',
       b.multipointBetArea || '',
