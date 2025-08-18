@@ -13,6 +13,7 @@ model Biochar {
   lotNumber           String?   @map("lot_number")
   testOrder           Int?      @map("test_order")
   experimentDate      DateTime? @map("experiment_date")
+  researchTeam        String?   @map("research_team")
   reactor             String?
   rawMaterial         String?   @map("raw_material")
   startingAmount      Decimal?  @map("starting_amount") @db.Decimal(10, 2)
@@ -62,6 +63,7 @@ model Graphene {
   experimentNumber    String    @unique @map("experiment_number")
   testOrder           Int?      @map("test_order")
   experimentDate      DateTime? @map("experiment_date")
+  researchTeam        String?   @map("research_team")
   oven                String?
   quantity            Decimal?  @db.Decimal(10, 2)
   biocharExperiment   String?   @map("biochar_experiment")
@@ -88,6 +90,7 @@ model Graphene {
   density             Decimal?  @db.Decimal(10, 4)
   species             String?
   appearanceTags      String[]  @map("appearance_tags")
+  semReportPath       String?   @map("sem_report_path")
   comments            String?   @db.Text
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")

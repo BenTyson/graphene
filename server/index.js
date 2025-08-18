@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import biocharRoutes from './routes/biochar.js';
 import grapheneRoutes from './routes/graphene.js';
@@ -24,6 +25,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Make prisma available in routes
 app.locals.prisma = prisma;
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/api/biochar', biocharRoutes);

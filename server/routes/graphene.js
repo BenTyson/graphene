@@ -1,7 +1,43 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'sem-reports');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Create unique filename with timestamp
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${timestamp}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    // Only allow PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Get all graphene records
 router.get('/', asyncHandler(async (req, res) => {
@@ -80,25 +116,73 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
   res.json(graphenes);
 }));
 
-// Create new graphene record
-router.post('/', asyncHandler(async (req, res) => {
+// Create new graphene record with optional SEM file
+router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
+  // If file was uploaded, add the path to the data
+  const data = { ...req.body };
+  if (req.file) {
+    data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
+  }
+  
+  // Handle appearanceTags array from FormData
+  if (data.appearanceTags && typeof data.appearanceTags === 'string') {
+    try {
+      data.appearanceTags = JSON.parse(data.appearanceTags);
+    } catch (e) {
+      data.appearanceTags = [];
+    }
+  }
+  
   const graphene = await prisma.graphene.create({
-    data: req.body
+    data
   });
   
   res.status(201).json(graphene);
 }));
 
-// Update graphene record
-router.put('/:id', asyncHandler(async (req, res) => {
+// Update graphene record with optional SEM file
+router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
+  // Get existing record to handle file replacement
+  const existingRecord = await prisma.graphene.findUnique({
+    where: { id }
+  });
+  
+  if (!existingRecord) {
+    res.status(404);
+    throw new Error('Graphene record not found');
+  }
+  
+  // If new file was uploaded, add the path to the data and delete old file
+  const data = { ...req.body };
+  if (req.file) {
+    data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
+    
+    // Delete old file if it exists
+    if (existingRecord.semReportPath) {
+      const oldFilePath = path.join(process.cwd(), existingRecord.semReportPath);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
+  }
+  
+  // Handle appearanceTags array from FormData
+  if (data.appearanceTags && typeof data.appearanceTags === 'string') {
+    try {
+      data.appearanceTags = JSON.parse(data.appearanceTags);
+    } catch (e) {
+      data.appearanceTags = [];
+    }
+  }
+  
   const graphene = await prisma.graphene.update({
     where: { id },
-    data: req.body
+    data
   });
   
   res.json(graphene);
@@ -108,6 +192,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
+  
+  // Get record to delete associated file
+  const existingRecord = await prisma.graphene.findUnique({
+    where: { id }
+  });
+  
+  if (existingRecord && existingRecord.semReportPath) {
+    const filePath = path.join(process.cwd(), existingRecord.semReportPath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
   
   await prisma.graphene.delete({
     where: { id }

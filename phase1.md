@@ -133,10 +133,12 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
 ### Key UI Patterns
 1. **Biochar Interface**
    - Advanced CRUD interface WITH lot combination functionality
+   - Copy button for quick record duplication with auto-incremented test order
    - Checkbox selection system for multi-experiment lot creation
    - Two-tier table headers with separate columns for acid properties, temperature, pressure
    - Visual indicators: Blue highlighting for experiments assigned to lots
    - "Combine into Lot" button with modal for lot creation (lot number, name, description)
+   - "Unknown" date checkbox for records without known experiment dates
    - All major fields are dropdowns with extensible options
    - Starting amount field for raw material input
    - Time displayed in hours (not minutes)
@@ -146,7 +148,8 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
    - Dual-source dropdown: Shows BOTH individual biochar experiments AND combined lots
    - Two-tier table header system for organized data display
    - Enhanced Results section with automatic Output % calculation (output/quantity × 100)
-   - Appearance tags with multi-select interface
+   - Appearance tags with multi-select interface (20-item limit with memory protection)
+   - "Unknown" date checkbox for records without known experiment dates
    - Homogeneous Yes/No dropdown after grinding
    - Enhanced wash section (amount, solution, concentration%, water)
    - Drying pressure as dropdown with "atm. Pressure" default
@@ -154,6 +157,7 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
    - Volume (ml) and Density (ml/g) fields
    - Grinding time only enabled when method="mill"
    - Separate columns for all base properties instead of concatenated display
+   - Defensive null checking on all array operations
    
 3. **BET Interface**
    - Clean CRUD interface for surface area analysis data
@@ -164,11 +168,15 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
    - Automatic formatting of large numbers in scientific notation display
 
 4. **Form Architecture**
-   - All forms support both Add/Edit modes
+   - All forms support both Add/Edit modes with copy functionality
    - Dropdowns auto-populate from existing data + predefined options
    - Modal system for adding new dropdown values
+   - Enhanced form validation with memory leak prevention
+   - Array bounds checking (20-item limit on appearance tags)
+   - Defensive null checking on all array operations
    - Proper null handling for empty numeric fields
-   - Auto-save on form submission
+   - "Unknown" date checkbox handling for historical records
+   - Auto-save on form submission with proper error handling
 
 ### Dropdown Data Sources
 **Biochar**: rawMaterials, acidTypes, reactors, washMediums
@@ -213,31 +221,31 @@ graphene/
 ├── server/
 │   ├── index.js                 # Express server entry
 │   ├── routes/
-│   │   ├── biochar.js           # Biochar CRUD endpoints
-│   │   └── graphene.js          # Graphene CRUD endpoints
-│   ├── prisma/
-│   │   ├── schema.prisma        # Database schema
-│   │   └── migrations/          # Database migrations
+│   │   ├── biochar.js           # Biochar CRUD endpoints + lot management
+│   │   ├── graphene.js          # Graphene CRUD endpoints
+│   │   └── bet.js               # BET Analysis CRUD endpoints
 │   └── middleware/
 │       └── errorHandler.js      # Error handling
+├── prisma/
+│   ├── schema.prisma            # Database schema (Biochar, Graphene, BET, BiocharLot)
+│   └── migrations/              # Database migrations
 ├── client/
-│   ├── index.html               # Main HTML entry
+│   ├── index.html               # Main HTML entry with all three tabs
 │   ├── src/
 │   │   ├── styles/
 │   │   │   └── main.css         # Tailwind CSS
 │   │   ├── js/
-│   │   │   ├── app.js           # Main application
-│   │   │   ├── biochar.js       # Biochar table logic
-│   │   │   └── graphene.js      # Graphene table logic
-│   │   └── components/
-│   │       ├── table.js         # Reusable table component
-│   │       └── forms.js         # Form components
+│   │   │   └── app.js           # Main application (all functionality consolidated)
+│   │   └── components/          # Directory exists but empty (functionality in app.js)
 │   └── dist/                    # Build output
 ├── docker-compose.yml           # PostgreSQL container
 ├── package.json                 # Dependencies
-├── .env.example                 # Environment variables
-├── .gitignore
-└── README.md
+├── postcss.config.js            # PostCSS configuration
+├── tailwind.config.js           # Tailwind configuration
+├── vite.config.js               # Vite configuration
+├── phase1.md                    # This documentation file
+├── README.md                    # Project README
+└── .gitignore
 ```
 
 ## Implementation Timeline
@@ -274,20 +282,30 @@ graphene/
 
 ### Biochar Endpoints
 - `GET /api/biochar?sortBy=chronological&order=asc&search=term` - List with smart sorting
+- `GET /api/biochar/lots` - Get all biochar lots with experiment counts
+- `GET /api/biochar/export/csv` - Export to CSV
 - `GET /api/biochar/:id` - Get single record
 - `POST /api/biochar` - Create new record
+- `POST /api/biochar/combine-lot` - Combine experiments into lots
 - `PUT /api/biochar/:id` - Update record
 - `DELETE /api/biochar/:id` - Delete record
-- `GET /api/biochar/export/csv` - Export to CSV
 
 ### Graphene Endpoints
 - `GET /api/graphene?sortBy=chronological&order=asc&search=term&biocharExperiment=exp` - List with filtering
+- `GET /api/graphene/export/csv` - Export to CSV
+- `GET /api/graphene/by-biochar/:biocharExperiment` - Get by biochar experiment
 - `GET /api/graphene/:id` - Get single record
 - `POST /api/graphene` - Create new record
 - `PUT /api/graphene/:id` - Update record
 - `DELETE /api/graphene/:id` - Delete record
-- `GET /api/graphene/export/csv` - Export to CSV
-- `GET /api/graphene/by-biochar/:biocharExperiment` - Get by biochar experiment
+
+### BET Analysis Endpoints
+- `GET /api/bet?sortBy=chronological&order=asc&search=term` - List with smart sorting
+- `GET /api/bet/export/csv` - Export to CSV
+- `GET /api/bet/:id` - Get single record
+- `POST /api/bet` - Create new record
+- `PUT /api/bet/:id` - Update record
+- `DELETE /api/bet/:id` - Delete record
 
 ### Critical API Behaviors
 - **Chronological sorting**: Default sortBy='chronological' uses multi-field ordering
@@ -326,12 +344,17 @@ graphene/
 ## Implementation Status: COMPLETE
 
 ### Current State
-- ✅ Full CRUD operations for both tables
+- ✅ Full CRUD operations for all three tables (Biochar, Graphene, BET)
+- ✅ Complete BET Analysis tab with surface area measurements
 - ✅ Dropdown system with extensible vocabularies
-- ✅ Lot-based traceability (Biochar → Graphene)
+- ✅ Lot-based traceability (Biochar → Graphene → BET)
 - ✅ Experiment combination into lots
+- ✅ Copy functionality for quick record duplication
 - ✅ Chronological ordering system (test_order + dates)
-- ✅ Search and export functionality
+- ✅ Search and export functionality for all tables
+- ✅ Enhanced form validation and memory protection
+- ✅ Unknown date handling with checkbox options
+- ✅ Scientific notation support for BET measurements
 - ✅ Responsive monochrome UI
 
 ### Key Implementation Notes
@@ -341,6 +364,9 @@ graphene/
 - **Test Order**: Manual integer for chronological sorting when dates unknown
 - **Species**: Fixed scientific classifications for graphene characterization
 - **Combine Feature**: Multiple biochar experiments → single lot via UI checkboxes
+- **Copy Feature**: Duplicate existing records with auto-incremented test order
+- **Memory Protection**: Array bounds checking and defensive null handling
+- **BET Integration**: Full surface area analysis workflow with graphene sample linking
 
 ### Startup Sequence
 1. `npm install` (if packages missing)

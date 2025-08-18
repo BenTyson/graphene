@@ -64,7 +64,7 @@
                     :disabled="biocharRecords.length === 0">
               Combine into Lot
             </button>
-            <button @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -193,7 +193,7 @@
             <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', grindingMethod: '', grindingTime: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', grindingMethod: '', grindingTime: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -321,6 +321,7 @@
                           </div>
                         </div>
                       </template>
+                      <button x-show="record.semReportPath" @click="viewSemReport(record.semReportPath)" class="text-blue-600 hover:text-blue-900 text-xs mr-2">View SEM</button>
                       <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 text-xs">Edit</button>
                       <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
                     </div>
@@ -439,6 +440,25 @@
                              class="mr-2 rounded border-gray-300">
                       <span class="text-sm">Unknown</span>
                     </label>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Research Team</label>
+                  <div class="relative">
+                    <select x-model="biocharForm.researchTeam" 
+                            @change="if($event.target.value === 'add_new') { showAddResearchTeam = true; biocharForm.researchTeam = 'Curia - Germany'; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select team...</option>
+                      <template x-for="team in researchTeams" :key="team">
+                        <option :value="team" x-text="team"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Team</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -671,6 +691,25 @@
                              class="mr-2 rounded border-gray-300">
                       <span class="text-sm">Unknown</span>
                     </label>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Research Team</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.researchTeam" 
+                            @change="if($event.target.value === 'add_new') { showAddResearchTeam = true; grapheneForm.researchTeam = 'Curia - Germany'; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select team...</option>
+                      <template x-for="team in researchTeams" :key="team">
+                        <option :value="team" x-text="team"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Team</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1004,9 +1043,22 @@
                     </button>
                   </div>
                   <div x-show="grapheneForm.appearanceTags.length > 0" class="text-sm text-gray-600">
-                    Selected: <span x-text="grapheneForm.appearanceTags.join(', ')"></span>
+                    Selected: <span x-text="(grapheneForm.appearanceTags || []).join(', ')"></span>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            <!-- SEM Report Upload -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">SEM Report (PDF)</label>
+              <input type="file" 
+                     accept=".pdf"
+                     @change="handleSemFileChange($event)"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              <p class="text-xs text-gray-500 mt-1">Upload PDF files only (max 10MB)</p>
+              <div x-show="grapheneForm.semReportFile" class="text-sm text-green-600 mt-1">
+                File selected: <span x-text="grapheneForm.semReportFile?.name"></span>
               </div>
             </div>
             
@@ -1389,9 +1441,64 @@
       </div>
     </div>
     
+    <!-- SEM Report Modal -->
+    <div x-show="showSemModal" x-cloak
+         @click.away="closeSemModal()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-4xl w-full h-[90vh] p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">SEM Report</h3>
+            <button @click="closeSemModal()" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="h-full">
+            <iframe x-show="currentSemPdf" 
+                    :src="currentSemPdf" 
+                    class="w-full h-full border rounded"
+                    title="SEM Report PDF">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Research Team Modal -->
+    <div x-show="showAddResearchTeam" x-cloak
+         @click.away="showAddResearchTeam = false; newResearchTeam = ''"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Research Team</h3>
+          <form @submit.prevent="addNewResearchTeam()" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
+              <input type="text" x-model="newResearchTeam" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+            </div>
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddResearchTeam = false; newResearchTeam = ''"
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Add Team
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
   </div>
 
-  <script src="/src/js/app.js"></script>
+  <!-- Use modules for better code organization -->
+  <script type="module" src="/src/js/app-refactored.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
