@@ -303,6 +303,18 @@ window.grapheneApp = function() {
       this.showAddBiochar = true;
     },
     
+    copyBiochar(record) {
+      this.editingBiochar = null; // This is a new record, not an edit
+      // Copy all editable fields but clear the experiment number so it's unique
+      const { id, createdAt, updatedAt, _count, grapheneProductions, lot, lotNumber, experimentNumber, ...editableFields } = record;
+      this.biocharForm = { 
+        ...editableFields,
+        experimentNumber: '', // Clear this to force a new unique value
+        testOrder: record.testOrder ? record.testOrder + 1 : null // Increment test order if it exists
+      };
+      this.showAddBiochar = true;
+    },
+    
     editGraphene(record) {
       this.editingGraphene = record;
       // Copy only the fields that should be editable

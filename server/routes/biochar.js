@@ -45,6 +45,72 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(biochars);
 }));
 
+// Get all lots - MUST BE BEFORE /:id route
+router.get('/lots', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  
+  const lots = await prisma.biocharLot.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      experiments: {
+        select: { experimentNumber: true, id: true }
+      },
+      _count: {
+        select: { experiments: true }
+      }
+    }
+  });
+  
+  res.json(lots);
+}));
+
+// Export to CSV - MUST BE BEFORE /:id route
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  
+  const biochars = await prisma.biochar.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  const headers = [
+    'Experiment #', 'Reactor', 'Raw Material', 'Starting Amount (g)', 'Acid Amount (g)', 'Acid Concentration (%)',
+    'Acid Molarity (M)', 'Acid Type', 'Temperature (°C)', 'Time (hr)',
+    'Pressure Initial (bar)', 'Pressure Final (bar)', 'Wash Amount (g)', 'Wash Medium',
+    'Output (g)', 'Drying Temp (°C)', 'KFT (%)', 'Comments', 'Created At'
+  ];
+  
+  let csv = headers.join(',') + '\n';
+  
+  biochars.forEach(b => {
+    const row = [
+      b.experimentNumber,
+      b.reactor || '',
+      b.rawMaterial || '',
+      b.startingAmount || '',
+      b.acidAmount || '',
+      b.acidConcentration || '',
+      b.acidMolarity || '',
+      b.acidType || '',
+      b.temperature || '',
+      b.time || '',
+      b.pressureInitial || '',
+      b.pressureFinal || '',
+      b.washAmount || '',
+      b.washMedium || '',
+      b.output || '',
+      b.dryingTemp || '',
+      b.kftPercentage || '',
+      `"${(b.comments || '').replace(/"/g, '""')}"`,
+      b.createdAt.toISOString()
+    ];
+    csv += row.join(',') + '\n';
+  });
+  
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="biochar_export.csv"');
+  res.send(csv);
+}));
+
 // Get single biochar record
 router.get('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
@@ -97,25 +163,6 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   });
   
   res.status(204).send();
-}));
-
-// Get all lots
-router.get('/lots', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  
-  const lots = await prisma.biocharLot.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      experiments: {
-        select: { experimentNumber: true, id: true }
-      },
-      _count: {
-        select: { experiments: true }
-      }
-    }
-  });
-  
-  res.json(lots);
 }));
 
 // Combine experiments into a lot
@@ -172,53 +219,6 @@ router.post('/combine-lot', asyncHandler(async (req, res) => {
   });
   
   res.status(201).json({ success: true, lot: result });
-}));
-
-// Export to CSV
-router.get('/export/csv', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  
-  const biochars = await prisma.biochar.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  
-  const headers = [
-    'Experiment #', 'Reactor', 'Raw Material', 'Starting Amount (g)', 'Acid Amount (g)', 'Acid Concentration (%)',
-    'Acid Molarity (M)', 'Acid Type', 'Temperature (°C)', 'Time (hr)',
-    'Pressure Initial (bar)', 'Pressure Final (bar)', 'Wash Amount (g)', 'Wash Medium',
-    'Output (g)', 'Drying Temp (°C)', 'KFT (%)', 'Comments', 'Created At'
-  ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  biochars.forEach(b => {
-    const row = [
-      b.experimentNumber,
-      b.reactor || '',
-      b.rawMaterial || '',
-      b.startingAmount || '',
-      b.acidAmount || '',
-      b.acidConcentration || '',
-      b.acidMolarity || '',
-      b.acidType || '',
-      b.temperature || '',
-      b.time || '',
-      b.pressureInitial || '',
-      b.pressureFinal || '',
-      b.washAmount || '',
-      b.washMedium || '',
-      b.output || '',
-      b.dryingTemp || '',
-      b.kftPercentage || '',
-      `"${(b.comments || '').replace(/"/g, '""')}"`,
-      b.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="biochar_export.csv"');
-  res.send(csv);
 }));
 
 export default router;
