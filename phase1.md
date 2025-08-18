@@ -219,30 +219,37 @@ Records sorted by: `test_order ASC` → `experiment_date ASC` → `created_at AS
 ```
 graphene/
 ├── server/
-│   ├── index.js                 # Express server entry
+│   ├── index.js                 # Express server with multer file handling
 │   ├── routes/
-│   │   ├── biochar.js           # Biochar CRUD endpoints + lot management
-│   │   ├── graphene.js          # Graphene CRUD endpoints
-│   │   └── bet.js               # BET Analysis CRUD endpoints
+│   │   ├── biochar.js           # Biochar CRUD + lot management
+│   │   ├── graphene.js          # Graphene CRUD + SEM PDF uploads
+│   │   └── bet.js               # BET Analysis CRUD
 │   └── middleware/
-│       └── errorHandler.js      # Error handling
+│       └── errorHandler.js      # Centralized error handling
 ├── prisma/
-│   ├── schema.prisma            # Database schema (Biochar, Graphene, BET, BiocharLot)
+│   ├── schema.prisma            # Database schema (4 models with relationships)
 │   └── migrations/              # Database migrations
 ├── client/
-│   ├── index.html               # Main HTML entry with all three tabs
+│   ├── index.html               # Main HTML (1503 lines, 3 tabs + modals)
 │   ├── src/
 │   │   ├── styles/
 │   │   │   └── main.css         # Tailwind CSS
 │   │   ├── js/
-│   │   │   └── app.js           # Main application (all functionality consolidated)
-│   │   └── components/          # Directory exists but empty (functionality in app.js)
+│   │   │   ├── app-refactored.js    # Modular Alpine.js app (450 lines)
+│   │   │   ├── app-original.js      # Backup of monolithic version
+│   │   │   ├── services/
+│   │   │   │   └── api.js           # Centralized API layer (170 lines)
+│   │   │   └── utils/
+│   │   │       ├── formatters.js    # Data formatting (120 lines)
+│   │   │       ├── validators.js    # Form validation (160 lines)
+│   │   │       └── dataHelpers.js   # Data utilities (140 lines)
+│   │   └── components/          # Reserved for future component extraction
 │   └── dist/                    # Build output
+├── uploads/
+│   └── sem-reports/             # SEM PDF storage
 ├── docker-compose.yml           # PostgreSQL container
-├── package.json                 # Dependencies
-├── postcss.config.js            # PostCSS configuration
-├── tailwind.config.js           # Tailwind configuration
-├── vite.config.js               # Vite configuration
+├── package.json                 # Dependencies (includes multer)
+├── REFACTORING.md               # Refactoring documentation
 ├── phase1.md                    # This documentation file
 ├── README.md                    # Project README
 └── .gitignore
@@ -340,6 +347,26 @@ graphene/
 - Zero data loss
 - Accurate lot number tracking
 - Efficient data entry workflow
+
+## Recent Updates (Latest)
+
+### SEM Report Integration
+- **PDF Upload**: Graphene records now support SEM report PDF attachments (max 10MB)
+- **File Management**: Automatic cleanup on record deletion/update
+- **Viewer Modal**: Large format modal for viewing PDFs inline
+- **Storage**: Files stored in `/uploads/sem-reports/` with unique timestamps
+
+### Research Team Tracking
+- **New Field**: Added to both Biochar and Graphene tables
+- **Default Value**: "Curia - Germany" pre-selected
+- **Extensible**: Dropdown with "Add New Team" functionality
+
+### Code Refactoring (Modular Architecture)
+- **API Service Layer**: All HTTP requests centralized in `services/api.js`
+- **Utility Functions**: Extracted formatters, validators, and data helpers
+- **Reduced Complexity**: Main app reduced from 829 to 450 lines (45% reduction)
+- **ES6 Modules**: Modern JavaScript module system for better tree-shaking
+- **Backward Compatible**: Original `app.js` backed up, can rollback instantly
 
 ## Implementation Status: COMPLETE
 

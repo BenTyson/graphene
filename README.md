@@ -1,15 +1,35 @@
-# Graphene Admin Panel
+# HGraphene Production Control System
 
-A modern, minimal admin control panel for tracking and analyzing Graphene SEM test results through a two-stage production process.
+## Quick Start for Claude Agents
 
-## Features
+### System Overview
+**Purpose**: Track and analyze the complete graphene production workflow from biochar synthesis through BET surface area analysis with lot-based traceability, SEM report management, and research team tracking.
 
-- **Dual Process Tracking**: Separate management for Biochar and Graphene production
-- **Dynamic Data Entry**: Inline editing with comprehensive field support
-- **Data Export**: CSV export functionality for analysis
-- **Clean UI**: Monochrome, minimal design focused on data clarity
-- **Search & Filter**: Quick search across all fields
-- **Lot Tracking**: Link Graphene production to Biochar lots
+**Tech Stack**: Node.js + Express + PostgreSQL + Prisma + Alpine.js + Tailwind CSS
+
+**Key Files for Understanding**:
+1. `/phase1.md` - Complete technical specification and architecture
+2. `/prisma/schema.prisma` - Database structure and relationships  
+3. `/client/src/js/app-refactored.js` - Main application logic (modular)
+4. `/server/routes/` - API endpoints for each table
+
+### Critical Context
+- **Production Flow**: Biochar → Graphene → BET Analysis
+- **Lot System**: Multiple biochar experiments can be combined into lots
+- **Research Teams**: Default is "Curia - Germany" 
+- **SEM Reports**: PDF attachments for graphene experiments
+- **Time Units**: Biochar uses HOURS, Graphene uses MINUTES
+
+## Core Features
+
+- **Three-Stage Tracking**: Biochar → Graphene → BET Analysis
+- **SEM Integration**: PDF upload/view for graphene experiments  
+- **Research Team Tracking**: Default "Curia - Germany" with extensible dropdown
+- **Lot Management**: Combine multiple biochar experiments for batch processing
+- **Scientific Notation**: BET supports values like 1.520e3 for surface areas
+- **Modular Architecture**: ES6 modules for maintainable code
+- **File Management**: Automatic PDF cleanup on record deletion
+- **Memory Protection**: Array bounds checking and defensive programming
 
 ## Tech Stack
 
@@ -65,33 +85,49 @@ The application will be available at:
 
 ```
 graphene/
-├── server/           # Express backend
-│   ├── routes/       # API endpoints
-│   └── middleware/   # Express middleware
-├── client/           # Frontend application
-│   ├── src/          # Source files
-│   └── index.html    # Main HTML
-├── prisma/           # Database schema
-├── docker-compose.yml # PostgreSQL setup
-└── phase1.md         # Project planning
+├── server/                 # Backend (Express + Prisma)
+│   ├── routes/            # API endpoints (biochar, graphene, bet)
+│   └── middleware/        # Error handling
+├── client/                # Frontend (Alpine.js + Tailwind)
+│   ├── index.html        # Main UI (3 tabs + modals)
+│   └── src/js/           # Modular JavaScript
+│       ├── app-refactored.js  # Main app (450 lines)
+│       ├── app-original.js    # Backup monolithic version
+│       ├── services/         # API layer (170 lines)
+│       └── utils/           # Formatters & validators (420 lines)
+├── prisma/               # Database
+│   └── schema.prisma    # 4 models with relationships
+├── uploads/              # File storage
+│   └── sem-reports/     # PDF attachments
+├── REFACTORING.md       # Modular architecture guide
+├── phase1.md            # COMPLETE SPECIFICATION
+└── docker-compose.yml   # PostgreSQL setup
 ```
 
 ## API Endpoints
 
 ### Biochar
-- `GET /api/biochar` - List all records
+- `GET /api/biochar` - List with search/sort
 - `POST /api/biochar` - Create record
-- `PUT /api/biochar/:id` - Update record
+- `PUT /api/biochar/:id` - Update record  
 - `DELETE /api/biochar/:id` - Delete record
+- `POST /api/biochar/combine-lot` - Create lot from experiments
+- `GET /api/biochar/lots` - Get all lots
 - `GET /api/biochar/export/csv` - Export to CSV
 
-### Graphene
-- `GET /api/graphene` - List all records
-- `POST /api/graphene` - Create record
-- `PUT /api/graphene/:id` - Update record
-- `DELETE /api/graphene/:id` - Delete record
-- `GET /api/graphene/by-lot/:lotNumber` - Get by lot
+### Graphene (with SEM PDF support)
+- `GET /api/graphene` - List with search/sort
+- `POST /api/graphene` - Create (supports file upload)
+- `PUT /api/graphene/:id` - Update (supports file upload)
+- `DELETE /api/graphene/:id` - Delete (removes PDF)
 - `GET /api/graphene/export/csv` - Export to CSV
+
+### BET Analysis
+- `GET /api/bet` - List with search/sort
+- `POST /api/bet` - Create record
+- `PUT /api/bet/:id` - Update record
+- `DELETE /api/bet/:id` - Delete record
+- `GET /api/bet/export/csv` - Export to CSV
 
 ## Database Management
 
@@ -140,24 +176,69 @@ npm run build
    node server/index.js
    ```
 
-## Data Fields
+## Database Schema (4 Tables)
 
-### Biochar Production
-- Experiment Number, Reactor, Raw Material
-- Acid properties (amount, concentration, molarity, type)
-- Temperature, Time, Pressure (initial/final)
-- Wash (amount, medium)
-- Output, Lot Number, Drying Temperature
-- KFT % (moisture content)
+### 1. Biochar Production
+- **Core**: experimentNumber, researchTeam, testOrder, experimentDate
+- **Material**: reactor, rawMaterial, startingAmount
+- **Acid**: acidAmount, acidConcentration, acidMolarity, acidType
+- **Process**: temperature, time (HOURS), pressureInitial, pressureFinal
+- **Output**: washAmount, washMedium, output, dryingTemp, kftPercentage
+- **Grouping**: lotNumber (links to BiocharLot table)
 
-### Graphene Production
-- Experiment Number, Oven, Quantity, Lot Number
-- Base properties (amount, type, concentration)
-- Grinding (method, time)
-- Gas, Temperature (rate, max), Time
-- Wash (amount, solution)
-- Drying (temp, atmosphere, pressure)
-- Output, Volume, Species, Appearance
+### 2. Graphene Production  
+- **Core**: experimentNumber, researchTeam, testOrder, experimentDate
+- **Setup**: oven, quantity, biocharExperiment OR biocharLotNumber
+- **Base**: baseAmount, baseType, baseConcentration
+- **Grinding**: grindingMethod (manual/mill), grindingTime, homogeneous
+- **Temperature**: gas, tempRate, tempMax, time (MINUTES)
+- **Wash**: washAmount, washSolution, washConcentration, washWater
+- **Drying**: dryingTemp, dryingAtmosphere, dryingPressure
+- **Results**: volumeMl, density, species, appearanceTags[], output
+- **Files**: semReportPath (PDF storage path)
+
+### 3. BET Analysis
+- **Core**: testDate, grapheneSample (links to Graphene)
+- **Measurements**: multipointBetArea, langmuirSurfaceArea (scientific notation)
+- **Classification**: species, comments
+
+### 4. BiocharLot (Grouping)
+- **Core**: lotNumber, lotName, description
+- **Relationships**: Links multiple Biochar experiments
+
+## Common Tasks for Claude Agents
+
+### Adding a New Field
+1. Update Prisma schema in `/prisma/schema.prisma`
+2. Run `npx prisma db push` to update database
+3. Add field to form in `/client/index.html`
+4. Update form object in `/client/src/js/app-refactored.js`
+5. Add to validators if numeric in `/client/src/js/utils/validators.js`
+
+### Adding a New Dropdown
+1. Add array to app initialization (line ~90 in app-refactored.js)
+2. Create modal for adding new values in HTML
+3. Add method for adding new dropdown value
+4. Connect to form field with change handler
+
+### Debugging
+- **Check Backend**: `curl http://localhost:3000/api/health`
+- **View Logs**: Backend logs to console
+- **Database Issues**: `npx prisma studio` for GUI  
+- **File Issues**: Check `/uploads/sem-reports/` permissions
+
+### Code Architecture  
+- **app-refactored.js**: Main Alpine.js application (450 lines)
+- **services/api.js**: Centralized API calls (170 lines)
+- **utils/formatters.js**: Data formatting functions (120 lines)
+- **utils/validators.js**: Form validation logic (160 lines)
+- **utils/dataHelpers.js**: Data manipulation utilities (140 lines)
+
+### Rollback Instructions
+If refactored code has issues:
+1. Change `app-refactored.js` to `app-original.js` in HTML
+2. Remove `type="module"` from script tag
+3. Original functionality restored
 
 ## Future Enhancements
 
