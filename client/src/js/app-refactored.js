@@ -90,6 +90,9 @@ window.grapheneApp = function() {
     // Tab management
     activeTab: 'biochar',
     
+    // Debug property to test reactivity
+    debugCounter: 0,
+    
     // Data storage
     biocharRecords: [],
     grapheneRecords: [],
@@ -274,48 +277,92 @@ window.grapheneApp = function() {
     
     // Expandable row methods
     async toggleBiocharExpansion(experimentNumber) {
-      // Toggle the expansion state
-      this.expandedBiocharRows[experimentNumber] = !this.expandedBiocharRows[experimentNumber];
+      console.log('toggleBiocharExpansion called with:', experimentNumber);
+      
+      // Toggle the expansion state using Alpine.js reactive assignment
+      this.expandedBiocharRows = {
+        ...this.expandedBiocharRows,
+        [experimentNumber]: !this.expandedBiocharRows[experimentNumber]
+      };
+      console.log('Expansion state:', this.expandedBiocharRows[experimentNumber]);
       
       // If expanding and we don't have data yet, fetch it
       if (this.expandedBiocharRows[experimentNumber] && !this.biocharRelatedData[experimentNumber]) {
+        console.log('Loading related data for:', experimentNumber);
         await this.loadBiocharRelatedData(experimentNumber);
       }
     },
     
     async toggleGrapheneExpansion(experimentNumber) {
-      // Toggle the expansion state
-      this.expandedGrapheneRows[experimentNumber] = !this.expandedGrapheneRows[experimentNumber];
+      console.log('toggleGrapheneExpansion called with:', experimentNumber);
+      
+      // Test basic reactivity first
+      this.debugCounter++;
+      console.log('Debug counter incremented to:', this.debugCounter);
+      
+      // Toggle the expansion state using Alpine.js reactive assignment
+      const newState = !this.expandedGrapheneRows[experimentNumber];
+      this.expandedGrapheneRows = {
+        ...this.expandedGrapheneRows,
+        [experimentNumber]: newState
+      };
+      console.log('Expansion state:', this.expandedGrapheneRows[experimentNumber]);
+      
+      // Force Alpine.js to detect the change and re-render
+      await this.$nextTick();
+      console.log('After $nextTick, state:', this.expandedGrapheneRows[experimentNumber]);
       
       // If expanding and we don't have data yet, fetch it
       if (this.expandedGrapheneRows[experimentNumber] && !this.grapheneRelatedData[experimentNumber]) {
+        console.log('Loading related data for:', experimentNumber);
         await this.loadGrapheneRelatedData(experimentNumber);
       }
     },
     
     async loadBiocharRelatedData(experimentNumber) {
       try {
-        this.loadingBiocharRelated[experimentNumber] = true;
+        this.loadingBiocharRelated = {
+          ...this.loadingBiocharRelated,
+          [experimentNumber]: true
+        };
         const relatedData = await API.biochar.getRelated(experimentNumber);
-        this.biocharRelatedData[experimentNumber] = relatedData;
+        this.biocharRelatedData = {
+          ...this.biocharRelatedData,
+          [experimentNumber]: relatedData
+        };
       } catch (error) {
         console.error('Failed to load biochar related data:', error);
         alert(`Failed to load related data: ${error.message}`);
       } finally {
-        this.loadingBiocharRelated[experimentNumber] = false;
+        this.loadingBiocharRelated = {
+          ...this.loadingBiocharRelated,
+          [experimentNumber]: false
+        };
       }
     },
     
     async loadGrapheneRelatedData(experimentNumber) {
       try {
-        this.loadingGrapheneRelated[experimentNumber] = true;
+        this.loadingGrapheneRelated = {
+          ...this.loadingGrapheneRelated,
+          [experimentNumber]: true
+        };
+        console.log('Fetching related data from API...');
         const relatedData = await API.graphene.getRelated(experimentNumber);
-        this.grapheneRelatedData[experimentNumber] = relatedData;
+        console.log('Received related data:', relatedData);
+        this.grapheneRelatedData = {
+          ...this.grapheneRelatedData,
+          [experimentNumber]: relatedData
+        };
+        console.log('Stored in grapheneRelatedData:', this.grapheneRelatedData);
       } catch (error) {
         console.error('Failed to load graphene related data:', error);
         alert(`Failed to load related data: ${error.message}`);
       } finally {
-        this.loadingGrapheneRelated[experimentNumber] = false;
+        this.loadingGrapheneRelated = {
+          ...this.loadingGrapheneRelated,
+          [experimentNumber]: false
+        };
       }
     },
     
