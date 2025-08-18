@@ -90,9 +90,6 @@ window.grapheneApp = function() {
     // Tab management
     activeTab: 'biochar',
     
-    // Debug property to test reactivity
-    debugCounter: 0,
-    
     // Data storage
     biocharRecords: [],
     grapheneRecords: [],
@@ -277,44 +274,31 @@ window.grapheneApp = function() {
     
     // Expandable row methods
     async toggleBiocharExpansion(experimentNumber) {
-      console.log('toggleBiocharExpansion called with:', experimentNumber);
-      
       // Toggle the expansion state using Alpine.js reactive assignment
       this.expandedBiocharRows = {
         ...this.expandedBiocharRows,
         [experimentNumber]: !this.expandedBiocharRows[experimentNumber]
       };
-      console.log('Expansion state:', this.expandedBiocharRows[experimentNumber]);
       
       // If expanding and we don't have data yet, fetch it
       if (this.expandedBiocharRows[experimentNumber] && !this.biocharRelatedData[experimentNumber]) {
-        console.log('Loading related data for:', experimentNumber);
         await this.loadBiocharRelatedData(experimentNumber);
       }
     },
     
     async toggleGrapheneExpansion(experimentNumber) {
-      console.log('toggleGrapheneExpansion called with:', experimentNumber);
-      
-      // Test basic reactivity first
-      this.debugCounter++;
-      console.log('Debug counter incremented to:', this.debugCounter);
-      
       // Toggle the expansion state using Alpine.js reactive assignment
       const newState = !this.expandedGrapheneRows[experimentNumber];
       this.expandedGrapheneRows = {
         ...this.expandedGrapheneRows,
         [experimentNumber]: newState
       };
-      console.log('Expansion state:', this.expandedGrapheneRows[experimentNumber]);
       
       // Force Alpine.js to detect the change and re-render
       await this.$nextTick();
-      console.log('After $nextTick, state:', this.expandedGrapheneRows[experimentNumber]);
       
       // If expanding and we don't have data yet, fetch it
       if (this.expandedGrapheneRows[experimentNumber] && !this.grapheneRelatedData[experimentNumber]) {
-        console.log('Loading related data for:', experimentNumber);
         await this.loadGrapheneRelatedData(experimentNumber);
       }
     },
@@ -347,14 +331,11 @@ window.grapheneApp = function() {
           ...this.loadingGrapheneRelated,
           [experimentNumber]: true
         };
-        console.log('Fetching related data from API...');
         const relatedData = await API.graphene.getRelated(experimentNumber);
-        console.log('Received related data:', relatedData);
         this.grapheneRelatedData = {
           ...this.grapheneRelatedData,
           [experimentNumber]: relatedData
         };
-        console.log('Stored in grapheneRelatedData:', this.grapheneRelatedData);
       } catch (error) {
         console.error('Failed to load graphene related data:', error);
         alert(`Failed to load related data: ${error.message}`);
@@ -426,6 +407,30 @@ window.grapheneApp = function() {
       this.editingGraphene = record;
       const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests']);
       this.grapheneForm = { ...editableFields };
+      
+      // Ensure appearanceTags is always an array
+      if (!this.grapheneForm.appearanceTags || !Array.isArray(this.grapheneForm.appearanceTags)) {
+        this.grapheneForm.appearanceTags = [];
+      }
+      
+      // Set biocharSource based on what's populated
+      if (record.biocharExperiment) {
+        this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
+      } else if (record.biocharLotNumber) {
+        this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
+      }
+      
+      this.showAddGraphene = true;
+    },
+    
+    copyGraphene(record) {
+      this.editingGraphene = null;
+      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'experimentNumber', 'semReportPath']);
+      this.grapheneForm = { 
+        ...editableFields,
+        experimentNumber: '',
+        testOrder: record.testOrder ? record.testOrder + 1 : null
+      };
       
       // Ensure appearanceTags is always an array
       if (!this.grapheneForm.appearanceTags || !Array.isArray(this.grapheneForm.appearanceTags)) {
