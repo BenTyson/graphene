@@ -38,21 +38,36 @@ export const processNumericFields = (data, fields, integerFields = []) => {
 };
 
 /**
- * Handle date field with unknown checkbox
+ * Handle experiment date field with unknown checkbox (for biochar/graphene)
  * @param {Object} data - Form data
  * @returns {Object} Processed data with date handling
  */
-export const processDateField = (data) => {
+export const processExperimentDateField = (data) => {
   const processed = { ...data };
   
   if (processed.dateUnknown || !processed.experimentDate) {
     processed.experimentDate = null;
   }
+  
+  delete processed.dateUnknown;
+  delete processed.testDate; // Remove testDate field (not valid for biochar/graphene)
+  return processed;
+};
+
+/**
+ * Handle test date field with unknown checkbox (for BET)
+ * @param {Object} data - Form data
+ * @returns {Object} Processed data with date handling
+ */
+export const processTestDateField = (data) => {
+  const processed = { ...data };
+  
   if (processed.dateUnknown || !processed.testDate) {
     processed.testDate = null;
   }
   
   delete processed.dateUnknown;
+  delete processed.experimentDate; // Remove experimentDate field (not valid for BET)
   return processed;
 };
 
@@ -140,7 +155,7 @@ export const validateRange = (value, min, max) => {
  * @returns {Object} Processed data ready for API
  */
 export const processBiocharForm = (formData) => {
-  let data = processDateField(formData);
+  let data = processExperimentDateField(formData);
   
   const numericFields = [
     'startingAmount', 'acidAmount', 'acidConcentration', 'acidMolarity',
@@ -159,7 +174,7 @@ export const processBiocharForm = (formData) => {
  * @returns {Object} Processed data ready for API
  */
 export const processGrapheneForm = (formData) => {
-  let data = processDateField(formData);
+  let data = processExperimentDateField(formData);
   
   const numericFields = [
     'quantity', 'baseAmount', 'baseConcentration', 'grindingTime',
@@ -182,7 +197,7 @@ export const processGrapheneForm = (formData) => {
  * @returns {Object} Processed data ready for API
  */
 export const processBetForm = (formData) => {
-  let data = processDateField(formData);
+  let data = processTestDateField(formData);
   
   const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
   data = processNumericFields(data, numericFields);
@@ -204,7 +219,8 @@ export const validateArrayLength = (array, maxLength) => {
 export default {
   parseNumericField,
   processNumericFields,
-  processDateField,
+  processExperimentDateField,
+  processTestDateField,
   parseHomogeneous,
   validatePDFFile,
   validateRequired,
