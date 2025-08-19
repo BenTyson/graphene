@@ -13,7 +13,12 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "backup:create": "node scripts/backup-db.js create",
+    "backup:list": "node scripts/backup-db.js list",
+    "backup:cleanup": "node scripts/backup-db.js cleanup",
+    "backup:restore": "node scripts/restore-db.js",
+    "backup:auto": "node scripts/backup-db.js create && echo 'Backup completed at $(date)'"
   },
   "keywords": [
     "graphene",

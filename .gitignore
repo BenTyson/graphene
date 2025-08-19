@@ -26,6 +26,10 @@ lerna-debug.log*
 *.sqlite3
 prisma/migrations/
 
+# Backups & Logs
+backups/
+logs/
+
 # IDE
 .vscode/
 .idea/

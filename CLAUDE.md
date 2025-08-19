@@ -14,7 +14,46 @@ npm run lint
 
 # Type checking (if available) 
 npm run typecheck
+
+# Database backup (HIGHLY RECOMMENDED before schema changes)
+npm run backup:create
 ```
+
+## Database Backup & Recovery
+
+**CRITICAL**: Always backup before any database schema changes, migrations, or major development work.
+
+### Quick Backup Commands
+```bash
+# Create manual backup
+npm run backup:create
+
+# List available backups
+npm run backup:list
+
+# Restore from backup (interactive selection)
+npm run backup:restore
+
+# Restore specific backup file
+npm run backup:restore graphene_backup_2024-01-15T10-30-00.sql
+
+# Clean up old backups (keeps last 10)
+npm run backup:cleanup
+```
+
+### Setup Automated Daily Backups
+```bash
+# One-time setup for daily automated backups at 2:00 AM
+./scripts/setup-auto-backup.sh
+```
+
+### Backup System Details
+- **Storage**: `./backups/` directory (excluded from git)
+- **Format**: PostgreSQL custom format (.sql files)
+- **Retention**: Automatically keeps last 10 backups
+- **Size**: Compressed format for efficient storage
+- **Security**: Uses existing database credentials from .env
+- **Logging**: Cron jobs logged to `./logs/backup-cron.log`
 
 ## Architecture
 
