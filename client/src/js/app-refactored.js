@@ -147,7 +147,7 @@ window.grapheneApp = function() {
     dryingPressures: ['atm. Pressure'],
     ovens: ['A', 'B', 'C'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
-    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Voluminous', 'Very Voluminous'],
+    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
     
     // Modal states for adding new dropdown options
     showAddMaterial: false,
@@ -418,6 +418,8 @@ window.grapheneApp = function() {
         this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
       } else if (record.biocharLotNumber) {
         this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
+      } else {
+        this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
       }
       
       this.showAddGraphene = true;
@@ -442,6 +444,8 @@ window.grapheneApp = function() {
         this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
       } else if (record.biocharLotNumber) {
         this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
+      } else {
+        this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
       }
       
       this.showAddGraphene = true;

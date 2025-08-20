@@ -431,8 +431,8 @@
                   <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.oven"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.quantity ? record.quantity + 'g' : ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
-                    <span x-text="record.biocharExperiment || (record.biocharLotNumber ? 'LOT: ' + record.biocharLotNumber : '')"
-                          :class="{'text-blue-600 font-semibold': record.biocharLotNumber}"></span>
+                    <span x-text="record.biocharExperiment || (record.biocharLotNumber ? 'LOT: ' + record.biocharLotNumber : (!record.biocharExperiment && !record.biocharLotNumber ? 'Various' : ''))"
+                          :class="{'text-blue-600 font-semibold': record.biocharLotNumber, 'text-gray-500 italic': !record.biocharExperiment && !record.biocharLotNumber}"></span>
                   </td>
                   <!-- Base columns -->
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.baseAmount ? record.baseAmount + 'g' : ''"></td>
@@ -1018,6 +1018,7 @@
                             @change="handleBiocharSourceChange($event)"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
                       <option value="">Select biochar source...</option>
+                      <option value="various">Various (Mixed Sources)</option>
                       <optgroup label="Individual Experiments">
                         <template x-for="exp in availableExperiments" :key="'exp-' + exp">
                           <option :value="'exp:' + exp" x-text="'EXP: ' + exp"></option>
