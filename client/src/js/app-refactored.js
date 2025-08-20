@@ -46,6 +46,9 @@ const DEFAULT_FORMS = {
     baseAmount: '',
     baseType: '',
     baseConcentration: '',
+    base2Amount: '',
+    base2Type: '',
+    base2Concentration: '',
     grindingMethod: '',
     grindingTime: '',
     homogeneous: '',
@@ -139,7 +142,7 @@ window.grapheneApp = function() {
     washMediums: ['Water'],
     reactors: ['AV1', 'AV5'],
     researchTeams: ['Curia - Germany'],
-    baseTypes: ['KOH'],
+    baseTypes: ['KOH', 'NaOH'],
     gases: ['Ar', 'N2'],
     washSolutions: ['HCl'],
     washWaters: ['+ Water'],
@@ -147,7 +150,7 @@ window.grapheneApp = function() {
     dryingPressures: ['atm. Pressure'],
     ovens: ['A', 'B', 'C'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
-    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
+    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
     
     // Modal states for adding new dropdown options
     showAddMaterial: false,

@@ -71,6 +71,9 @@ model Graphene {
   baseAmount          Decimal?  @map("base_amount") @db.Decimal(10, 2)
   baseType            String?   @map("base_type")
   baseConcentration   Decimal?  @map("base_concentration") @db.Decimal(5, 2)
+  base2Amount         Decimal?  @map("base2_amount") @db.Decimal(10, 2)
+  base2Type           String?   @map("base2_type")
+  base2Concentration  Decimal?  @map("base2_concentration") @db.Decimal(5, 2)
   grindingMethod      GrindingMethod? @map("grinding_method")
   grindingTime        Decimal?  @map("grinding_time") @db.Decimal(10, 2)
   homogeneous         Boolean?

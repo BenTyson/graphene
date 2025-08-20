@@ -188,7 +188,8 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   }
   
   // Convert numeric fields from strings to proper types
-  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'grindingTime', 
+  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
+                        'base2Amount', 'base2Concentration', 'grindingTime', 
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
                         'volumeMl', 'density', 'output'];
   
@@ -276,7 +277,8 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   }
   
   // Convert numeric fields from strings to proper types
-  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'grindingTime', 
+  const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
+                        'base2Amount', 'base2Concentration', 'grindingTime', 
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
                         'volumeMl', 'density', 'output'];
   

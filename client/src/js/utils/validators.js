@@ -177,8 +177,8 @@ export const processGrapheneForm = (formData) => {
   let data = processExperimentDateField(formData);
   
   const numericFields = [
-    'quantity', 'baseAmount', 'baseConcentration', 'grindingTime',
-    'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp',
+    'quantity', 'baseAmount', 'baseConcentration', 'base2Amount', 'base2Concentration',
+    'grindingTime', 'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp',
     'volumeMl', 'density', 'output', 'testOrder'
   ];
   
