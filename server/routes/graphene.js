@@ -250,7 +250,20 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   
   // If new file was uploaded, add the path to the data and delete old file
   const data = { ...req.body };
-  if (req.file) {
+  
+  // Handle SEM report removal
+  if (data.removeSemReport === 'true' || data.removeSemReport === true) {
+    data.semReportPath = null;
+    
+    // Delete the file if it exists
+    if (existingRecord.semReportPath) {
+      const oldFilePath = path.join(process.cwd(), existingRecord.semReportPath);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
+  } else if (req.file) {
+    // New file uploaded
     data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
     
     // Delete old file if it exists
@@ -266,6 +279,8 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   delete data.biocharSource;
   delete data.dateUnknown;
   delete data.semReportFile;
+  delete data.removeSemReport;
+  delete data.replaceSemReport;
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {

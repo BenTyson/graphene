@@ -68,6 +68,8 @@ export const processTestDateField = (data) => {
   
   delete processed.dateUnknown;
   delete processed.experimentDate; // Remove experimentDate field (not valid for BET)
+  delete processed.sampleNumber; // Remove sampleNumber field (not valid for BET)
+  delete processed.testOrder; // Remove testOrder field (not valid for BET)
   return processed;
 };
 

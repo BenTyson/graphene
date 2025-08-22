@@ -68,6 +68,8 @@ const DEFAULT_FORMS = {
     species: '',
     appearanceTags: [],
     semReportFile: null,
+    removeSemReport: false,
+    replaceSemReport: false,
     output: '',
     comments: ''
   },
@@ -425,6 +427,10 @@ window.grapheneApp = function() {
         this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
       }
       
+      // Initialize SEM-related flags
+      this.grapheneForm.removeSemReport = false;
+      this.grapheneForm.replaceSemReport = false;
+      
       this.showAddGraphene = true;
     },
     
@@ -451,6 +457,10 @@ window.grapheneApp = function() {
         this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
       }
       
+      // Initialize SEM-related flags
+      this.grapheneForm.removeSemReport = false;
+      this.grapheneForm.replaceSemReport = false;
+      
       this.showAddGraphene = true;
     },
     
@@ -458,6 +468,11 @@ window.grapheneApp = function() {
       try {
         const data = validators.processGrapheneForm(this.grapheneForm);
         const file = this.grapheneForm.semReportFile;
+        
+        // Add removal flag if user wants to remove SEM report
+        if (this.grapheneForm.removeSemReport) {
+          data.removeSemReport = true;
+        }
         
         if (this.editingGraphene) {
           await API.graphene.update(this.editingGraphene.id, data, file);
@@ -491,6 +506,9 @@ window.grapheneApp = function() {
       this.grapheneForm = { ...DEFAULT_FORMS.graphene };
       // Ensure appearanceTags is always an array
       this.grapheneForm.appearanceTags = [];
+      // Reset SEM-related flags
+      this.grapheneForm.removeSemReport = false;
+      this.grapheneForm.replaceSemReport = false;
     },
     
     // BET CRUD operations
@@ -599,7 +617,9 @@ window.grapheneApp = function() {
     
     viewSemReport(semReportPath) {
       if (semReportPath) {
-        this.currentSemPdf = semReportPath;
+        // Path will be proxied through Vite to backend
+        // Add PDF viewer parameters to hide navigation pane and toolbar elements
+        this.currentSemPdf = semReportPath + '#navpanes=0&toolbar=0';
         this.showSemModal = true;
       }
     },

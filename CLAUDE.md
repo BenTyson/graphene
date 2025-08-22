@@ -82,64 +82,55 @@ npm run backup:cleanup
 │   │   │   ├── services/api.js      # API client
 │   │   │   └── utils/               # Formatters, validators, helpers
 │   │   └── styles/main.css          # Tailwind CSS
+├── scripts/
+│   ├── backup-db.js        # Database backup utility
+│   ├── restore-db.js       # Database restore utility
+│   └── setup-auto-backup.sh # Automated backup setup
 ├── prisma/
 │   └── schema.prisma       # Database schema
-├── docs/
-│   └── archive/            # Old documentation (phase1.md, REFACTORING.md)
-└── package.json
+├── uploads/
+│   └── sem-reports/        # SEM PDF storage
+├── backups/                # Database backups (gitignored)
+└── vite.config.js          # Vite dev server with proxy for /api and /uploads
 ```
 
-## Key Features
+## Database Schema Key Points
 
-### 1. Material Journey Tracking (Expandable Rows)
-**Purpose**: Track materials through the complete pipeline: Biochar → Graphene → BET Testing
+### Graphene Model Updates
+- **Second Base Support**: Added `base2Amount`, `base2Type`, `base2Concentration` fields
+- **SEM Reports**: `semReportPath` links to PDF files in `/uploads/sem-reports/`
+- **Biochar Source**: Can be individual experiment, lot number, or "Various" (no reference)
 
-**Implementation**:
-- Click any experiment number to expand row showing related data
-- **Expandable rows appear directly below the clicked row** (not at bottom of table)
-- API endpoints: `GET /api/biochar/:experimentNumber/related`, `GET /api/graphene/:experimentNumber/related`
+### Important Relationships
+- Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
+- Graphene → BET: Via `grapheneSample` field
+- Files use soft references (experiment numbers) not hard foreign keys for flexibility
 
-**Alpine.js State Management**:
-```javascript
-// Expansion states (in app-refactored.js)
-expandedBiocharRows: {}     // {experimentNumber: boolean}
-expandedGrapheneRows: {}    // {experimentNumber: boolean}
-biocharRelatedData: {}      // {experimentNumber: relatedData}
-grapheneRelatedData: {}     // {experimentNumber: relatedData}
-```
-
-**Template Structure** (Expandable rows directly below parent):
-```html
-<template x-for="record in records" :key="record.id">
-  <tbody>
-    <tr><!-- Main row content --></tr>
-    <tr x-show="expandedRows[record.experimentNumber]">
-      <!-- Expandable content appears directly below -->
-    </tr>
-  </tbody>
-</template>
-```
-
-### 2. Duplicate/Copy Functionality
-- **Biochar**: `copyBiochar(record)` - Duplicates all fields except experimentNumber
-- **Graphene**: `copyGraphene(record)` - Duplicates all fields except experimentNumber and SEM report
-- Test order automatically increments by 1
-- Speeds up data entry for similar experiments
-
-### 3. Database Relationships
-```prisma
-Biochar ←→ Graphene (via biocharExperiment field)
-Biochar ←→ BiocharLot ←→ Graphene (via lot relationships)
-Graphene ←→ BET (via grapheneSample field)
-```
-
-### 4. UI Design Principles
+## UI Design Principles
 - **Monochrome styling** with minimal color accents
 - **Light blue (#EBF8FF)** reserved for lot-related records
 - **Clean SVG icons** instead of emojis
 - **Compact table layouts** with nested headers
 - **Professional appearance** suitable for laboratory use
 - **No unnecessary comments in code**
+
+## Core Features
+
+### Material Journey Tracking
+- Click experiment numbers to expand rows showing complete material pipeline
+- Biochar → Graphene → BET test relationships visible inline
+- Expandable rows use `<tbody>` wrapper for Alpine.js compatibility
+
+### File Management
+- **SEM PDFs**: Upload, view, replace, or remove PDF reports for graphene records
+- **Vite Proxy**: `/uploads` proxied to backend for PDF serving
+- **Automatic cleanup**: Files deleted when records removed
+
+### Data Entry Optimization
+- **Copy/Duplicate**: Clone records with auto-incremented test order
+- **Dropdown Management**: Dynamic addition of new options
+- **Base Types**: KOH, NaOH (supports dual base experiments)
+- **Appearance Tags**: Multiple selectable tags for graphene characterization
 
 ## Common Issues & Solutions
 
@@ -265,81 +256,26 @@ delete data.semReportFile;  // File object
 - **Graphene**: Time stored in MINUTES
 - Different units maintained for scientific accuracy
 
-### Default Values
-- **Research Team**: "Curia - Germany" (default for new records)
-- **Sort Order**: All tables show newest records first (DESC)
-- **Drying Pressure**: "atm. Pressure" (default for graphene)
+### Default Values & Constants
+- **Research Team**: "Curia - Germany"
+- **Sort Order**: DESC (newest first)
+- **Drying Pressure**: "atm. Pressure" 
+- **Time Units**: Biochar (hours), Graphene (minutes)
+- **Base Types**: KOH, NaOH
+- **Appearance Tags**: Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Grey, Voluminous, Very Voluminous, Brittle
 
-### Unique Constraints
-- **Experiment numbers**: Must be unique across each table
-- **Lot numbers**: Must be unique in BiocharLot table
+### Data Constraints
+- **Experiment numbers**: Unique per table
+- **Lot numbers**: Unique in BiocharLot table
+- **SEM Reports**: PDF only, max 10MB
+- **Scientific Notation**: BET values support format like 1.520e3
 
-### File Handling
-- **SEM Reports**: PDF only, max 10MB, stored in `/uploads/sem-reports/`
-- **File deletion**: Automatic cleanup when record deleted or file replaced
 
-### Scientific Notation
-- BET values displayed with `formatScientific()` helper
-- Handles values like 1.520e3 for surface areas
+## Quick Debugging Reference
 
-### Appearance Tags
-- Graphene supports multiple appearance tags (array field)
-- Options: Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Voluminous, Very Voluminous
-
-## Recent Features & Updates
-
-### Journey Tracking Expandable Rows (Latest)
-- Click experiment numbers to see complete material journey
-- Expandable content appears directly below clicked row (improved UX)
-- Professional monochrome styling with clean SVG icons
-- Smooth animations with loading states
-- Null-safe templates prevent console errors
-
-### Copy/Duplicate Functionality
-- Added to both Biochar and Graphene tables
-- Copies all fields except unique identifiers
-- Auto-increments test order
-- Speeds up repetitive data entry
-
-### Data Relationship Visualization
-- Direct biochar → graphene relationships via experiment number
-- Lot-based relationships for combined biochar batches
-- Automatic loading of related data on expansion
-- Clear visual hierarchy with nested tables
-
-## Debugging Tips
-
-1. **Check Alpine.js state**: 
-   ```javascript
-   Alpine.$data(document.querySelector('[x-data]'))
-   ```
-
-2. **Monitor API calls**: Check Network tab for failed requests
-
-3. **Verify Prisma queries**: Check server console for SQL output
-
-4. **Template errors**: Look for "Alpine Expression Error" in console
-
-5. **Reactivity issues**: Ensure using spread operators for state updates
-
-6. **Common console errors**:
-   - "Cannot read properties of undefined" → Add null checks in templates
-   - "Expected Int, provided String" → Check data type conversion in routes
-   - Template not updating → Use spread operator and $nextTick()
-
-## Contact & Support
-
-For issues or questions about the codebase:
-1. Check this documentation first
-2. Review similar patterns in existing code
-3. Check Prisma schema for database structure
-4. Test API endpoints with curl or Postman
-5. Verify Alpine.js reactivity with console logging
-
-## Archived Documentation
-
-Older planning and refactoring documentation has been moved to `/docs/archive/`:
-- `phase1.md` - Original project specification
-- `REFACTORING.md` - Code refactoring history
-
-These files are kept for historical reference but should not be used for current development.
+**Alpine.js State**: `Alpine.$data(document.querySelector('[x-data]'))`
+**Common Errors**:
+- "Cannot read properties of undefined" → Add null checks with `?.`
+- "Expected Int, provided String" → Check numeric field conversion in routes
+- Template not updating → Use spread operator: `this.state = {...this.state, key: value}`
+- Multiple `<tr>` in template → Wrap in `<tbody>`
