@@ -100,6 +100,12 @@ npm run backup:cleanup
 - **Second Base Support**: Added `base2Amount`, `base2Type`, `base2Concentration` fields
 - **SEM Reports**: `semReportPath` links to PDF files in `/uploads/sem-reports/`
 - **Biochar Source**: Can be individual experiment, lot number, or "Various" (no reference)
+- **Experiment Objectives**: 5 text fields for structured experiment documentation:
+  - `objective` - Experiment goal
+  - `experimentDetails` - Procedure details  
+  - `result` - Experiment outcome
+  - `conclusion` - Analysis
+  - `recommendedAction` - Next steps
 
 ### Important Relationships
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
@@ -131,6 +137,10 @@ npm run backup:cleanup
 - **Dropdown Management**: Dynamic addition of new options
 - **Base Types**: KOH, NaOH (supports dual base experiments)
 - **Appearance Tags**: Multiple selectable tags for graphene characterization
+- **Objective Parser**: Paste full experiment text, auto-extracts into 5 structured fields
+  - Uses `/client/src/js/utils/objectiveParser.js`
+  - Handles variations: "Objective:", "OBJECTIVE", with/without colons
+  - Preserves multi-line formatting in each section
 
 ## Common Issues & Solutions
 

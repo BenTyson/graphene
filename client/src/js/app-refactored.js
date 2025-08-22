@@ -5,6 +5,7 @@ import API from './services/api.js';
 import formatters from './utils/formatters.js';
 import validators from './utils/validators.js';
 import dataHelpers from './utils/dataHelpers.js';
+import objectiveParser from './utils/objectiveParser.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -70,6 +71,12 @@ const DEFAULT_FORMS = {
     semReportFile: null,
     removeSemReport: false,
     replaceSemReport: false,
+    objective: '',
+    experimentDetails: '',
+    result: '',
+    conclusion: '',
+    recommendedAction: '',
+    objectivePaste: '', // For the paste textarea
     output: '',
     comments: ''
   },
@@ -642,6 +649,39 @@ window.grapheneApp = function() {
         this.grapheneForm.biocharExperiment = '';
         this.grapheneForm.biocharLotNumber = '';
       }
+    },
+    
+    // Objective parsing
+    parseObjective() {
+      if (!this.grapheneForm.objectivePaste) {
+        alert('Please paste the objective text first');
+        return;
+      }
+      
+      const parsed = objectiveParser.parseObjectiveText(this.grapheneForm.objectivePaste);
+      
+      if (parsed) {
+        // Update form fields with parsed data
+        this.grapheneForm.objective = parsed.objective || '';
+        this.grapheneForm.experimentDetails = parsed.experimentDetails || '';
+        this.grapheneForm.result = parsed.result || '';
+        this.grapheneForm.conclusion = parsed.conclusion || '';
+        this.grapheneForm.recommendedAction = parsed.recommendedAction || '';
+        
+        // Show success message
+        alert('Objective text parsed successfully! Review the extracted fields below.');
+      } else {
+        alert('Could not parse the objective text. Please check the format and try again.');
+      }
+    },
+    
+    clearObjectiveFields() {
+      this.grapheneForm.objective = '';
+      this.grapheneForm.experimentDetails = '';
+      this.grapheneForm.result = '';
+      this.grapheneForm.conclusion = '';
+      this.grapheneForm.recommendedAction = '';
+      this.grapheneForm.objectivePaste = '';
     },
     
     // Appearance tags handling

@@ -177,6 +177,9 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   delete data.biocharSource;
   delete data.dateUnknown;
   delete data.semReportFile;
+  delete data.objectivePaste;
+  delete data.removeSemReport;
+  delete data.replaceSemReport;
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
@@ -281,6 +284,7 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   delete data.semReportFile;
   delete data.removeSemReport;
   delete data.replaceSemReport;
+  delete data.objectivePaste;
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {

@@ -190,6 +190,9 @@ export const processGrapheneForm = (formData) => {
   // Remove file from data (handled separately)
   delete data.semReportFile;
   
+  // Remove UI-only objective paste field
+  delete data.objectivePaste;
+  
   return data;
 };
 

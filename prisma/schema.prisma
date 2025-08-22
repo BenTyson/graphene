@@ -94,6 +94,11 @@ model Graphene {
   species             String?
   appearanceTags      String[]  @map("appearance_tags")
   semReportPath       String?   @map("sem_report_path")
+  objective           String?   @db.Text
+  experimentDetails   String?   @map("experiment_details") @db.Text
+  result              String?   @db.Text
+  conclusion          String?   @db.Text
+  recommendedAction   String?   @map("recommended_action") @db.Text
   comments            String?   @db.Text
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")

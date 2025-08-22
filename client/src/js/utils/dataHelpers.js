@@ -183,7 +183,7 @@ export const debounce = (func, wait = 300) => {
   return function executedFunction(...args) {
     const later = () => {
       clearTimeout(timeout);
-      func(...args);
+      func.apply(this, args);
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
