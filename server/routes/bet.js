@@ -76,7 +76,14 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   });
   
-  res.json(betRecords);
+  // Convert Decimal fields to numbers for frontend
+  const processedRecords = betRecords.map(record => ({
+    ...record,
+    multipointBetArea: record.multipointBetArea ? Number(record.multipointBetArea) : null,
+    langmuirSurfaceArea: record.langmuirSurfaceArea ? Number(record.langmuirSurfaceArea) : null
+  }));
+  
+  res.json(processedRecords);
 }));
 
 // Get single BET record
@@ -94,7 +101,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
     throw new Error('BET record not found');
   }
   
-  res.json(betRecord);
+  // Convert Decimal fields to numbers for frontend
+  const processedRecord = {
+    ...betRecord,
+    multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
+    langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
+  };
+  
+  res.json(processedRecord);
 }));
 
 // Create new BET record
@@ -128,14 +142,29 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
     data.betReportPath = path.join('bet-reports', req.file.filename);
   }
   
-  // Remove file upload fields from data
+  // Remove UI-only fields from data
   delete data.betReportFile;
+  delete data.removeBetReport;
+  delete data.replaceBetReport;
+  delete data.grapheneRef;
+  
+  // Remove id and timestamps if present
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
   
   const betRecord = await prisma.bET.create({
     data
   });
   
-  res.status(201).json(betRecord);
+  // Convert Decimal fields to numbers for frontend
+  const processedRecord = {
+    ...betRecord,
+    multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
+    langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
+  };
+  
+  res.status(201).json(processedRecord);
 }));
 
 // Update BET record
@@ -196,17 +225,30 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
     data.betReportPath = path.join('bet-reports', req.file.filename);
   }
   
-  // Remove UI-only fields from data
+  // Remove UI-only fields and relational fields from data
   delete data.betReportFile;
   delete data.removeBetReport;
   delete data.replaceBetReport;
+  delete data.grapheneRef; // Remove any relational data
+  
+  // Remove id and timestamps if present (Prisma handles these automatically)
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
   
   const betRecord = await prisma.bET.update({
     where: { id },
     data
   });
   
-  res.json(betRecord);
+  // Convert Decimal fields to numbers for frontend
+  const processedRecord = {
+    ...betRecord,
+    multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
+    langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
+  };
+  
+  res.json(processedRecord);
 }));
 
 // Delete BET record
