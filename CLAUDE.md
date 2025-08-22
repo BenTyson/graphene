@@ -72,7 +72,8 @@ npm run backup:cleanup
 │   ├── routes/
 │   │   ├── biochar.js      # Biochar CRUD + /api/biochar/:experimentNumber/related
 │   │   ├── graphene.js     # Graphene CRUD + /api/graphene/:experimentNumber/related  
-│   │   └── bet.js          # BET test CRUD
+│   │   ├── bet.js          # BET test CRUD
+│   │   └── updateReports.js # Update report management + associations
 │   └── middleware/
 ├── client/
 │   ├── index.html          # Main UI with Alpine.js templates
@@ -89,7 +90,8 @@ npm run backup:cleanup
 ├── prisma/
 │   └── schema.prisma       # Database schema
 ├── uploads/
-│   └── sem-reports/        # SEM PDF storage
+│   ├── sem-reports/        # SEM PDF storage
+│   └── update-reports/     # Weekly update report PDFs
 ├── backups/                # Database backups (gitignored)
 └── vite.config.js          # Vite dev server with proxy for /api and /uploads
 ```
@@ -106,10 +108,18 @@ npm run backup:cleanup
   - `result` - Experiment outcome
   - `conclusion` - Analysis
   - `recommendedAction` - Next steps
+- **Update Report Associations**: Many-to-many relationship with weekly update reports
+
+### Update Reports System
+- **UpdateReport Model**: Stores weekly PDF reports with metadata (filename, description, week date)
+- **GrapheneUpdateReport Junction**: Many-to-many relationship between graphene experiments and update reports
+- **File Storage**: PDFs stored in `/uploads/update-reports/` with unique timestamped names
+- **Associations**: Single report can be associated with multiple experiments; experiments can have multiple reports
 
 ### Important Relationships
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
 - Graphene → BET: Via `grapheneSample` field
+- Graphene ↔ Update Reports: Many-to-many via `GrapheneUpdateReport` junction table
 - Files use soft references (experiment numbers) not hard foreign keys for flexibility
 
 ## UI Design Principles
@@ -125,12 +135,21 @@ npm run backup:cleanup
 ### Material Journey Tracking
 - Click experiment numbers to expand rows showing complete material pipeline
 - Biochar → Graphene → BET test relationships visible inline
+- Update reports and SEM PDFs displayed in expandable sections
 - Expandable rows use `<tbody>` wrapper for Alpine.js compatibility
 
 ### File Management
 - **SEM PDFs**: Upload, view, replace, or remove PDF reports for graphene records
+- **Update Reports**: Weekly PDF reports with multi-experiment associations
 - **Vite Proxy**: `/uploads` proxied to backend for PDF serving
 - **Automatic cleanup**: Files deleted when records removed
+
+### Weekly Update Reports
+- **Upload Once, Associate Many**: Single PDF can reference multiple experiments
+- **Bi-directional Linking**: Assign reports to experiments or experiments to reports
+- **Metadata Tracking**: Week dates, descriptions, upload timestamps
+- **Inline PDF Viewing**: Click any report to view PDF with navigation controls
+- **Search & Filter**: Find reports by filename, description, or associated experiments
 
 ### Data Entry Optimization
 - **Copy/Duplicate**: Clone records with auto-incremented test order
@@ -200,6 +219,11 @@ numericFields.forEach(field => {
 delete data.biocharSource;  // UI field for source selection
 delete data.dateUnknown;    // UI checkbox
 delete data.semReportFile;  // File object
+delete data.updateFile;     // Update report file object
+delete data.objectivePaste; // Objective parsing textarea
+
+// Exclude relational objects from editableFields extraction
+const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'updateReports'];
 ```
 
 ### Temperature Rate Input
@@ -232,6 +256,15 @@ delete data.semReportFile;  // File object
 - `PUT /api/bet/:id` - Update record
 - `DELETE /api/bet/:id` - Delete record
 - `GET /api/bet/export/csv` - Export to CSV
+
+### Update Reports
+- `GET /api/update-reports` - List all reports with associated experiments
+- `POST /api/update-reports` - Upload new report with file and associations (50MB max)
+- `PUT /api/update-reports/:id` - Update metadata and experiment associations
+- `DELETE /api/update-reports/:id` - Delete report and file
+- `POST /api/update-reports/:id/graphene/:grapheneId` - Add experiment association
+- `DELETE /api/update-reports/:id/graphene/:grapheneId` - Remove experiment association
+- `GET /api/update-reports/graphene/:experimentNumber` - Get reports for specific experiment
 
 ## Code Style Guidelines
 

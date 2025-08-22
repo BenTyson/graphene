@@ -1,7 +1,43 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// Configure multer for BET report uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'bet-reports');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Create unique filename with timestamp
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, `${name}_${timestamp}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    // Only allow PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Get all BET records
 router.get('/', asyncHandler(async (req, res) => {
@@ -62,7 +98,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Create new BET record
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
   // Convert numeric fields from strings to proper types
@@ -87,6 +123,14 @@ router.post('/', asyncHandler(async (req, res) => {
     data.testDate = null;
   }
   
+  // Handle BET report file upload
+  if (req.file) {
+    data.betReportPath = path.join('bet-reports', req.file.filename);
+  }
+  
+  // Remove file upload fields from data
+  delete data.betReportFile;
+  
   const betRecord = await prisma.bET.create({
     data
   });
@@ -95,7 +139,7 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // Update BET record
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
@@ -120,6 +164,42 @@ router.put('/:id', asyncHandler(async (req, res) => {
   } else {
     data.testDate = null;
   }
+  
+  // Get existing record to handle file operations
+  const existingRecord = await prisma.bET.findUnique({
+    where: { id }
+  });
+  
+  if (!existingRecord) {
+    res.status(404);
+    throw new Error('BET record not found');
+  }
+  
+  // Handle BET report file operations
+  if (data.removeBetReport === 'true') {
+    // Remove existing file
+    if (existingRecord.betReportPath) {
+      const filePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    data.betReportPath = null;
+  } else if (req.file) {
+    // Replace existing file
+    if (existingRecord.betReportPath) {
+      const oldFilePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
+    data.betReportPath = path.join('bet-reports', req.file.filename);
+  }
+  
+  // Remove UI-only fields from data
+  delete data.betReportFile;
+  delete data.removeBetReport;
+  delete data.replaceBetReport;
   
   const betRecord = await prisma.bET.update({
     where: { id },
@@ -133,6 +213,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
+  
+  // Get existing record to delete associated file
+  const existingRecord = await prisma.bET.findUnique({
+    where: { id }
+  });
+  
+  if (existingRecord && existingRecord.betReportPath) {
+    const filePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
   
   await prisma.bET.delete({
     where: { id }
@@ -151,9 +243,9 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
   
   const headers = [
-    'Test Date', 'Graphene Sample', 
+    'Test Date', 'Graphene Sample', 'Research Team', 'Testing Lab',
     'Multipoint BET Area (m²/g)', 'Langmuir Surface Area (m²/g)', 
-    'Species', 'Comments', 'Created At'
+    'Species', 'BET Report', 'Comments', 'Created At'
   ];
   
   let csv = headers.join(',') + '\n';
@@ -162,9 +254,12 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     const row = [
       b.testDate ? b.testDate.toISOString().split('T')[0] : '',
       b.grapheneSample || '',
+      b.researchTeam || '',
+      b.testingLab || '',
       b.multipointBetArea || '',
       b.langmuirSurfaceArea || '',
       b.species || '',
+      b.betReportPath ? 'Yes' : 'No',
       `"${(b.comments || '').replace(/"/g, '""')}"`,
       b.createdAt.toISOString()
     ];

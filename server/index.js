@@ -8,6 +8,8 @@ import { PrismaClient } from '@prisma/client';
 import biocharRoutes from './routes/biochar.js';
 import grapheneRoutes from './routes/graphene.js';
 import betRoutes from './routes/bet.js';
+import conductivityRoutes from './routes/conductivity.js';
+import updateReportRoutes from './routes/updateReports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -33,6 +35,8 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api/biochar', biocharRoutes);
 app.use('/api/graphene', grapheneRoutes);
 app.use('/api/bet', betRoutes);
+app.use('/api/conductivity', conductivityRoutes);
+app.use('/api/update-reports', updateReportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

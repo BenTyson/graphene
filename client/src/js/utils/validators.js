@@ -193,6 +193,9 @@ export const processGrapheneForm = (formData) => {
   // Remove UI-only objective paste field
   delete data.objectivePaste;
   
+  // Keep updateReportIds for API processing
+  // (it will be handled separately in the API service)
+  
   return data;
 };
 

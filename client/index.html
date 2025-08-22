@@ -46,6 +46,20 @@
           >
             BET Analysis
           </button>
+          <button
+            @click="activeTab = 'conductivity'"
+            :class="activeTab === 'conductivity' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Conductivity Tests
+          </button>
+          <button
+            @click="activeTab = 'updates'"
+            :class="activeTab === 'updates' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Update Reports
+          </button>
         </nav>
       </div>
     </div>
@@ -599,6 +613,74 @@
                             </template>
                           </div>
                           
+                          <!-- Update Reports -->
+                          <div>
+                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                              </svg>
+                              Update Reports
+                            </h4>
+                            <template x-if="record.updateReports && record.updateReports.length > 0">
+                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div class="space-y-2">
+                                  <template x-for="updateReport in record.updateReports">
+                                    <div class="bg-white rounded p-2 text-xs border">
+                                      <div class="flex justify-between mb-1">
+                                        <button @click="viewUpdateReport(updateReport.updateReport.filePath)" 
+                                                class="font-medium text-blue-600 hover:text-blue-800 text-left">
+                                          <span x-text="updateReport.updateReport.originalName"></span>
+                                        </button>
+                                        <span class="text-gray-500" x-text="updateReport.updateReport.weekOf ? 'Week of ' + new Date(updateReport.updateReport.weekOf).toLocaleDateString() : 'No date'"></span>
+                                      </div>
+                                      <div x-show="updateReport.updateReport.description" class="text-gray-600">
+                                        <span x-text="updateReport.updateReport.description"></span>
+                                      </div>
+                                      <div class="text-gray-400 text-xs mt-1">
+                                        Uploaded: <span x-text="formatDate(updateReport.updateReport.createdAt)"></span>
+                                      </div>
+                                    </div>
+                                  </template>
+                                </div>
+                              </div>
+                            </template>
+                            
+                            <template x-if="!record.updateReports || record.updateReports.length === 0">
+                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+                                No update reports associated with this experiment
+                              </div>
+                            </template>
+                          </div>
+                          
+                          <!-- SEM Report -->
+                          <div>
+                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                              </svg>
+                              SEM Report
+                            </h4>
+                            <template x-if="record.semReportPath">
+                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div class="bg-white rounded p-2 text-xs border">
+                                  <div class="flex justify-between items-center">
+                                    <button @click="viewSemReport(record.semReportPath)" 
+                                            class="font-medium text-blue-600 hover:text-blue-800 text-left">
+                                      <span>View SEM Report PDF</span>
+                                    </button>
+                                    <span class="text-gray-500 text-xs">Click to view</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </template>
+                            
+                            <template x-if="!record.semReportPath">
+                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+                                No SEM report uploaded for this experiment
+                              </div>
+                            </template>
+                          </div>
+                          
                           <!-- Experiment Objective & Results -->
                           <div x-show="record.objective || record.experimentDetails || record.result || record.conclusion || record.recommendedAction">
                             <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
@@ -674,9 +756,12 @@
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Graphene Sample</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Research Team</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Testing Lab</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multipoint BET Area (m²/g)</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Langmuir Surface Area (m²/g)</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Species</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BET Report</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -685,9 +770,22 @@
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 text-sm" x-text="formatDate(record.testDate)"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="record.grapheneSample"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.researchTeam"></td>
+                  <td class="px-4 py-3 text-sm" x-text="record.testingLab"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.multipointBetArea)"></td>
                   <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.langmuirSurfaceArea)"></td>
                   <td class="px-4 py-3 text-sm" x-text="record.species"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <template x-if="record.betReportPath">
+                      <button @click="window.open('/uploads/' + record.betReportPath, '_blank')" 
+                              class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        View PDF
+                      </button>
+                    </template>
+                    <template x-if="!record.betReportPath">
+                      <span class="text-gray-400 text-sm">No report</span>
+                    </template>
+                  </td>
                   <td class="px-4 py-3 text-sm">
                     <div class="flex items-center space-x-2">
                       <template x-if="record.comments">
@@ -703,6 +801,172 @@
                       <button @click="editBet(record)" class="text-gray-600 hover:text-gray-900">Edit</button>
                       <button @click="deleteBet(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
                     </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Conductivity Tests Tab -->
+      <div x-show="activeTab === 'conductivity'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Conductivity Test Results</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('conductivity')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="conductivityForm = {testDate: '', dateUnknown: false, grapheneSample: '', description: '', conductivity1kN: '', conductivity8kN: '', conductivity12kN: '', conductivity20kN: '', comments: ''}; editingConductivity = null; showAddConductivity = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Record
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="conductivitySearch"
+            @input="searchConductivity()"
+            placeholder="Search samples, descriptions..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Conductivity Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Test Date</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Graphene Sample</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Description</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">1kN (S/cm²)</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">8kN (S/cm²)</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">12kN (S/cm²)</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">20kN (S/cm²)</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+              <template x-for="record in conductivityRecords" :key="record.id">
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
+                      <button @click="toggleExpanded('conductivity', record.id)" class="text-blue-600 hover:text-blue-900 font-medium">
+                        <span x-text="record.grapheneSample"></span>
+                        <svg class="w-4 h-4 inline ml-1" :class="{'transform rotate-180': expandedRows['conductivity_' + record.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </button>
+                    </td>
+                    <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.description"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="record.conductivity1kN || ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="record.conductivity8kN || ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="record.conductivity12kN || ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="record.conductivity20kN || ''"></td>
+                    <td class="px-2 py-2 text-xs">
+                      <div class="flex space-x-2">
+                        <button @click="editConductivity(record)" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button @click="deleteConductivity(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr x-show="expandedRows['conductivity_' + record.id]" class="bg-gray-50">
+                    <td colspan="8" class="px-2 py-2 text-xs">
+                      <div class="grid grid-cols-1 gap-2">
+                        <div class="text-xs"><strong>Comments:</strong> <span x-text="record.comments || 'None'"></span></div>
+                        <div class="text-xs text-gray-500">Created: <span x-text="new Date(record.createdAt).toLocaleString()"></span></div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+          </table>
+        </div>
+      </div>
+
+      <!-- Update Reports Tab -->
+      <div x-show="activeTab === 'updates'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Weekly Update Reports</h2>
+          <div class="flex space-x-2">
+            <button @click="updateReportForm = {description: '', weekOf: '', grapheneIds: [], updateFile: null}; editingUpdateReport = null; showAddUpdateReport = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Upload Report
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="updateReportSearch"
+            @input="searchUpdateReports()"
+            placeholder="Search reports, descriptions..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Update Reports Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">File Name</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Week Of</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Associated Experiments</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Uploaded</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-for="report in updateReports" :key="report.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm">
+                    <button @click="viewUpdateReport(report.filePath)" 
+                            class="text-blue-600 hover:text-blue-800 font-medium">
+                      <span x-text="report.originalName"></span>
+                    </button>
+                  </td>
+                  <td class="px-4 py-3 text-sm" x-text="report.weekOf ? new Date(report.weekOf).toLocaleDateString() : '-'"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="max-w-xs truncate" x-text="report.description || '-'"></div>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="max-w-xs">
+                      <template x-if="report.grapheneReports && report.grapheneReports.length > 0">
+                        <div>
+                          <template x-for="(gr, index) in report.grapheneReports.slice(0, 3)" :key="gr.id">
+                            <span>
+                              <span x-text="gr.graphene.experimentNumber"></span><span x-show="index < Math.min(2, report.grapheneReports.length - 1)">, </span>
+                            </span>
+                          </template>
+                          <span x-show="report.grapheneReports.length > 3" x-text="`... +${report.grapheneReports.length - 3} more`"></span>
+                        </div>
+                      </template>
+                      <template x-if="!report.grapheneReports || report.grapheneReports.length === 0">
+                        <span class="text-gray-500">No associations</span>
+                      </template>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-500" x-text="formatDate(report.createdAt)"></td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="flex space-x-2">
+                      <button @click="editUpdateReport(report)" 
+                              class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                      <button @click="deleteUpdateReport(report.id)" 
+                              class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <template x-if="updateReports.length === 0">
+                <tr>
+                  <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                    No update reports found. Upload your first weekly report to get started.
                   </td>
                 </tr>
               </template>
@@ -1515,6 +1779,29 @@
               </div>
             </div>
             
+            <!-- Update Reports Association -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Associated Update Reports</label>
+              <div class="border border-gray-300 rounded-md p-3 max-h-32 overflow-y-auto">
+                <template x-for="report in updateReports" :key="report.id">
+                  <label class="flex items-center space-x-2 py-1">
+                    <input type="checkbox" 
+                           :checked="grapheneForm.updateReportIds && grapheneForm.updateReportIds.includes(report.id)"
+                           @change="toggleUpdateReportSelection(report.id)"
+                           class="rounded border-gray-300 focus:ring-black">
+                    <span class="text-sm">
+                      <strong x-text="report.originalName"></strong>
+                      <span class="text-gray-500" x-show="report.weekOf"> - Week of <span x-text="new Date(report.weekOf).toLocaleDateString()"></span></span>
+                    </span>
+                  </label>
+                </template>
+                <template x-if="updateReports.length === 0">
+                  <div class="text-sm text-gray-500 text-center py-2">No update reports available</div>
+                </template>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Select update reports that mention this experiment</p>
+            </div>
+            
             <!-- Comments -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
@@ -1858,6 +2145,27 @@
             
             <div class="grid grid-cols-2 gap-4">
               <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Research Team</label>
+                <select x-model="betForm.researchTeam" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <template x-for="team in researchTeams" :key="team">
+                    <option :value="team" x-text="team"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Testing Lab</label>
+                <select x-model="betForm.testingLab" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <template x-for="lab in testingLabs" :key="lab">
+                    <option :value="lab" x-text="lab"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Multipoint BET Area (m²/g)</label>
                 <input type="text" x-model="betForm.multipointBetArea" 
                        placeholder="1.520e3 or 1520"
@@ -1870,6 +2178,30 @@
                        placeholder="2.340e3 or 2340"
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                 <p class="text-xs text-gray-500 mt-1">Scientific notation: 2.340e3 = 2.340 × 10³</p>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">BET Report (PDF)</label>
+              <div class="space-y-2">
+                <input type="file" 
+                       accept="application/pdf"
+                       @change="betForm.betReportFile = $event.target.files[0]"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <template x-if="editingBet && editingBet.betReportPath">
+                  <div class="flex items-center justify-between bg-blue-50 p-2 rounded">
+                    <span class="text-sm text-blue-800">Current BET report attached</span>
+                    <div class="flex space-x-2">
+                      <button type="button" @click="window.open('/uploads/' + editingBet.betReportPath, '_blank')" 
+                              class="text-blue-600 hover:text-blue-800 text-sm">View</button>
+                      <button type="button" @click="betForm.removeBetReport = true" 
+                              class="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="betForm.removeBetReport">
+                  <div class="text-red-600 text-sm">BET report will be removed when saved</div>
+                </template>
               </div>
             </div>
             
@@ -1890,6 +2222,199 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conductivity Add/Edit Modal -->
+    <div x-show="showAddConductivity" x-cloak
+         @click.away="showAddConductivity = false; editingConductivity = null"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingConductivity ? 'Edit Conductivity Test' : 'Add Conductivity Test'"></h3>
+          
+          <form @submit.prevent="saveConductivity()" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Test Date</label>
+                <div class="flex items-center space-x-2">
+                  <input type="date" x-model="conductivityForm.testDate" 
+                         :disabled="conductivityForm.dateUnknown"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                  <label class="flex items-center whitespace-nowrap">
+                    <input type="checkbox" x-model="conductivityForm.dateUnknown" 
+                           @change="if($event.target.checked) conductivityForm.testDate = ''"
+                           class="mr-2 rounded border-gray-300">
+                    <span class="text-sm">Unknown</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
+              <select x-model="conductivityForm.grapheneSample" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <option value="">Select graphene sample...</option>
+                <template x-for="exp in availableGrapheneSamples" :key="exp">
+                  <option :value="exp" x-text="exp"></option>
+                </template>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea x-model="conductivityForm.description" rows="3"
+                        placeholder="Test conditions, setup, methodology..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">1kN Conductivity (S/cm²)</label>
+                <input type="number" step="any" x-model="conductivityForm.conductivity1kN" 
+                       placeholder="0.000001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">8kN Conductivity (S/cm²)</label>
+                <input type="number" step="any" x-model="conductivityForm.conductivity8kN" 
+                       placeholder="0.000001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">12kN Conductivity (S/cm²)</label>
+                <input type="number" step="any" x-model="conductivityForm.conductivity12kN" 
+                       placeholder="0.000001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">20kN Conductivity (S/cm²)</label>
+                <input type="number" step="any" x-model="conductivityForm.conductivity20kN" 
+                       placeholder="0.000001"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea x-model="conductivityForm.comments" rows="3"
+                        placeholder="Additional notes about the conductivity test..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="showAddConductivity = false; editingConductivity = null; conductivityForm = {}" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingConductivity ? 'Update' : 'Create'"></span> Record
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Update Report Modal -->
+    <div x-show="showAddUpdateReport" x-cloak
+         @click.away="closeUpdateReportForm()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <h3 class="text-lg font-semibold mb-4" 
+              x-text="editingUpdateReport ? 'Edit Update Report' : 'Upload Update Report'"></h3>
+          
+          <form @submit.prevent="saveUpdateReport()" class="space-y-4">
+            <template x-if="!editingUpdateReport">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Update Report File *</label>
+                <input type="file" 
+                       @change="handleUpdateFileChange($event)" 
+                       accept="application/pdf"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <p class="text-xs text-gray-500 mt-1">PDF files only, max 50MB</p>
+              </div>
+            </template>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Week Of</label>
+              <input type="date" x-model="updateReportForm.weekOf" 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea x-model="updateReportForm.description" rows="3"
+                        placeholder="Brief description of the update report content..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Associated Graphene Experiments</label>
+              <div class="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
+                <template x-for="graphene in grapheneRecords" :key="graphene.id">
+                  <label class="flex items-center space-x-2 py-1">
+                    <input type="checkbox" 
+                           :checked="updateReportForm.grapheneIds.includes(graphene.id)"
+                           @change="toggleGrapheneSelection(graphene.id)"
+                           class="rounded border-gray-300 focus:ring-black">
+                    <span class="text-sm">
+                      <strong x-text="graphene.experimentNumber"></strong>
+                      <span class="text-gray-500" x-show="graphene.species"> - <span x-text="graphene.species"></span></span>
+                    </span>
+                  </label>
+                </template>
+                <template x-if="grapheneRecords.length === 0">
+                  <div class="text-sm text-gray-500 text-center py-2">No graphene experiments available</div>
+                </template>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Select all experiments mentioned in this update report</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="closeUpdateReportForm()" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingUpdateReport ? 'Update' : 'Upload'"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Update Report Viewer Modal -->
+    <div x-show="showUpdateReportModal" x-cloak
+         @click.away="closeUpdateReportModal()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-4xl w-full h-[90vh] p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Update Report</h3>
+            <button @click="closeUpdateReportModal()" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="h-full">
+            <iframe x-show="currentUpdateReport" 
+                    :src="currentUpdateReport" 
+                    class="w-full h-full border rounded"
+                    title="Update Report PDF">
+            </iframe>
+          </div>
         </div>
       </div>
     </div>

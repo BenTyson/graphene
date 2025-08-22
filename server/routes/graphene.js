@@ -78,7 +78,14 @@ router.get('/', asyncHandler(async (req, res) => {
   const graphenes = await prisma.graphene.findMany({
     where,
     orderBy,
-    include: { biocharLotRef: true }
+    include: { 
+      biocharLotRef: true,
+      updateReports: {
+        include: {
+          updateReport: true
+        }
+      }
+    }
   });
   
   res.json(graphenes);
@@ -91,7 +98,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
   
   const graphene = await prisma.graphene.findUnique({
     where: { id },
-    include: { biocharLotRef: true }
+    include: { 
+      biocharLotRef: true,
+      updateReports: {
+        include: {
+          updateReport: true
+        }
+      }
+    }
   });
   
   if (!graphene) {
@@ -110,7 +124,14 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
   const graphenes = await prisma.graphene.findMany({
     where: { biocharExperiment },
     orderBy: { createdAt: 'desc' },
-    include: { biocharLotRef: true }
+    include: { 
+      biocharLotRef: true,
+      updateReports: {
+        include: {
+          updateReport: true
+        }
+      }
+    }
   });
   
   res.json(graphenes);
@@ -124,7 +145,14 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
   // Get the graphene record to find its biochar reference
   const graphene = await prisma.graphene.findUnique({
     where: { experimentNumber },
-    include: { biocharLotRef: true }
+    include: { 
+      biocharLotRef: true,
+      updateReports: {
+        include: {
+          updateReport: true
+        }
+      }
+    }
   });
   
   if (!graphene) {
@@ -229,9 +257,33 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
     }
   });
   
+  // Extract update report IDs and remove from main data
+  let updateReportIds = [];
+  if (data.updateReportIds) {
+    try {
+      updateReportIds = JSON.parse(data.updateReportIds);
+    } catch (e) {
+      updateReportIds = Array.isArray(data.updateReportIds) ? data.updateReportIds : [];
+    }
+    delete data.updateReportIds;
+  }
+  
   const graphene = await prisma.graphene.create({
     data
   });
+  
+  // Create update report associations if provided
+  if (updateReportIds.length > 0) {
+    const updateReportAssociations = updateReportIds.map(reportId => ({
+      grapheneId: graphene.id,
+      updateReportId: reportId
+    }));
+    
+    await prisma.grapheneUpdateReport.createMany({
+      data: updateReportAssociations,
+      skipDuplicates: true
+    });
+  }
   
   res.status(201).json(graphene);
 }));
@@ -334,10 +386,44 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
     }
   });
   
+  // Extract update report IDs and remove from main data
+  let updateReportIds = [];
+  let hasUpdateReportIds = false;
+  if (data.updateReportIds !== undefined) {
+    hasUpdateReportIds = true;
+    try {
+      updateReportIds = JSON.parse(data.updateReportIds);
+    } catch (e) {
+      updateReportIds = Array.isArray(data.updateReportIds) ? data.updateReportIds : [];
+    }
+    delete data.updateReportIds;
+  }
+  
   const graphene = await prisma.graphene.update({
     where: { id },
     data
   });
+  
+  // Update report associations if provided
+  if (hasUpdateReportIds) {
+    // Remove existing associations
+    await prisma.grapheneUpdateReport.deleteMany({
+      where: { grapheneId: id }
+    });
+    
+    // Create new associations
+    if (updateReportIds.length > 0) {
+      const updateReportAssociations = updateReportIds.map(reportId => ({
+        grapheneId: id,
+        updateReportId: reportId
+      }));
+      
+      await prisma.grapheneUpdateReport.createMany({
+        data: updateReportAssociations,
+        skipDuplicates: true
+      });
+    }
+  }
   
   res.json(graphene);
 }));

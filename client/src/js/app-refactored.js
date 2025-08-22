@@ -77,6 +77,7 @@ const DEFAULT_FORMS = {
     conclusion: '',
     recommendedAction: '',
     objectivePaste: '', // For the paste textarea
+    updateReportIds: [],
     output: '',
     comments: ''
   },
@@ -84,15 +85,37 @@ const DEFAULT_FORMS = {
     testDate: '',
     dateUnknown: false,
     grapheneSample: '',
+    researchTeam: 'Curia - Germany',
+    testingLab: 'Fraunhofer-Institut',
     multipointBetArea: '',
     langmuirSurfaceArea: '',
     species: '',
+    betReportFile: null,
+    removeBetReport: false,
+    replaceBetReport: false,
+    comments: ''
+  },
+  conductivity: {
+    testDate: '',
+    dateUnknown: false,
+    grapheneSample: '',
+    description: '',
+    conductivity1kN: '',
+    conductivity8kN: '',
+    conductivity12kN: '',
+    conductivity20kN: '',
     comments: ''
   },
   combine: {
     lotNumber: '',
     lotName: '',
     description: ''
+  },
+  updateReport: {
+    description: '',
+    weekOf: '',
+    grapheneIds: [],
+    updateFile: null
   }
 };
 
@@ -106,6 +129,8 @@ window.grapheneApp = function() {
     biocharRecords: [],
     grapheneRecords: [],
     betRecords: [],
+    conductivityRecords: [],
+    updateReports: [],
     availableExperiments: [],
     availableLots: [],
     availableGrapheneSamples: [],
@@ -114,30 +139,41 @@ window.grapheneApp = function() {
     biocharSearch: '',
     grapheneSearch: '',
     betSearch: '',
+    conductivitySearch: '',
+    updateReportSearch: '',
     
     // Modal states
     showAddBiochar: false,
     showAddGraphene: false,
     showAddBet: false,
+    showAddConductivity: false,
     showCombineModal: false,
     showSemModal: false,
     currentSemPdf: null,
+    showAddUpdateReport: false,
+    showUpdateReportModal: false,
+    currentUpdateReport: null,
     
     // Editing states
     editingBiochar: null,
     editingGraphene: null,
     editingBet: null,
+    editingConductivity: null,
+    editingUpdateReport: null,
     
     // Forms
     biocharForm: { ...DEFAULT_FORMS.biochar },
     grapheneForm: { ...DEFAULT_FORMS.graphene },
     betForm: { ...DEFAULT_FORMS.bet },
+    conductivityForm: { ...DEFAULT_FORMS.conductivity },
     combineForm: { ...DEFAULT_FORMS.combine },
+    updateReportForm: { ...DEFAULT_FORMS.updateReport },
     
     // Selection states
     selectedBiocharIds: [],
     
     // Expandable row states
+    expandedRows: {},
     expandedBiocharRows: {},
     expandedGrapheneRows: {},
     biocharRelatedData: {},
@@ -151,6 +187,7 @@ window.grapheneApp = function() {
     washMediums: ['Water'],
     reactors: ['AV1', 'AV5'],
     researchTeams: ['Curia - Germany'],
+    testingLabs: ['Fraunhofer-Institut'],
     baseTypes: ['KOH', 'NaOH'],
     gases: ['Ar', 'N2'],
     washSolutions: ['HCl'],
@@ -202,7 +239,9 @@ window.grapheneApp = function() {
       await Promise.all([
         this.loadBiocharRecords(),
         this.loadGrapheneRecords(),
-        this.loadBetRecords()
+        this.loadBetRecords(),
+        this.loadConductivityRecords(),
+        this.loadUpdateReports()
       ]);
       this.loadDropdownOptions();
     },
@@ -235,6 +274,28 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load BET records:', error);
         this.betRecords = [];
+      }
+    },
+    
+    async loadConductivityRecords() {
+      try {
+        this.conductivityRecords = await API.conductivity.getAll(this.conductivitySearch);
+        console.log('Loaded conductivity records:', this.conductivityRecords);
+        if (this.conductivityRecords.length > 0) {
+          console.log('First record structure:', this.conductivityRecords[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load conductivity records:', error);
+        this.conductivityRecords = [];
+      }
+    },
+    
+    async loadUpdateReports() {
+      try {
+        this.updateReports = await API.updateReport.getAll();
+      } catch (error) {
+        console.error('Failed to load update reports:', error);
+        this.updateReports = [];
       }
     },
     
@@ -272,17 +333,50 @@ window.grapheneApp = function() {
     },
     
     // Search methods (debounced)
-    searchBiochar: dataHelpers.debounce(async function() {
-      await this.loadBiocharRecords();
-    }, 300),
+    searchBiochar() {
+      if (!this._debouncedSearchBiochar) {
+        this._debouncedSearchBiochar = dataHelpers.debounce(async () => {
+          await this.loadBiocharRecords();
+        }, 300);
+      }
+      this._debouncedSearchBiochar();
+    },
     
-    searchGraphene: dataHelpers.debounce(async function() {
-      await this.loadGrapheneRecords();
-    }, 300),
+    searchGraphene() {
+      if (!this._debouncedSearchGraphene) {
+        this._debouncedSearchGraphene = dataHelpers.debounce(async () => {
+          await this.loadGrapheneRecords();
+        }, 300);
+      }
+      this._debouncedSearchGraphene();
+    },
     
-    searchBet: dataHelpers.debounce(async function() {
-      await this.loadBetRecords();
-    }, 300),
+    searchBet() {
+      if (!this._debouncedSearchBet) {
+        this._debouncedSearchBet = dataHelpers.debounce(async () => {
+          await this.loadBetRecords();
+        }, 300);
+      }
+      this._debouncedSearchBet();
+    },
+    
+    searchConductivity() {
+      if (!this._debouncedSearchConductivity) {
+        this._debouncedSearchConductivity = dataHelpers.debounce(async () => {
+          await this.loadConductivityRecords();
+        }, 300);
+      }
+      this._debouncedSearchConductivity();
+    },
+    
+    searchUpdateReports() {
+      if (!this._debouncedSearchUpdateReports) {
+        this._debouncedSearchUpdateReports = dataHelpers.debounce(async () => {
+          await this.loadUpdateReports();
+        }, 300);
+      }
+      this._debouncedSearchUpdateReports();
+    },
     
     // Expandable row methods
     async toggleBiocharExpansion(experimentNumber) {
@@ -359,6 +453,15 @@ window.grapheneApp = function() {
       }
     },
     
+    // Generic toggle method for simple expandable rows
+    toggleExpanded(type, id) {
+      const key = `${type}_${id}`;
+      this.expandedRows = {
+        ...this.expandedRows,
+        [key]: !this.expandedRows[key]
+      };
+    },
+    
     // Biochar CRUD operations
     editBiochar(record) {
       this.editingBiochar = record;
@@ -417,7 +520,7 @@ window.grapheneApp = function() {
     // Graphene CRUD operations
     editGraphene(record) {
       this.editingGraphene = record;
-      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests']);
+      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'updateReports']);
       this.grapheneForm = { ...editableFields };
       
       // Ensure appearanceTags is always an array
@@ -438,12 +541,15 @@ window.grapheneApp = function() {
       this.grapheneForm.removeSemReport = false;
       this.grapheneForm.replaceSemReport = false;
       
+      // Initialize update report IDs from existing associations
+      this.grapheneForm.updateReportIds = record.updateReports?.map(ur => ur.updateReportId) || [];
+      
       this.showAddGraphene = true;
     },
     
     copyGraphene(record) {
       this.editingGraphene = null;
-      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'experimentNumber', 'semReportPath']);
+      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'updateReports', 'experimentNumber', 'semReportPath']);
       this.grapheneForm = { 
         ...editableFields,
         experimentNumber: '',
@@ -467,6 +573,9 @@ window.grapheneApp = function() {
       // Initialize SEM-related flags
       this.grapheneForm.removeSemReport = false;
       this.grapheneForm.replaceSemReport = false;
+      
+      // Copy update report associations from original record
+      this.grapheneForm.updateReportIds = record.updateReports?.map(ur => ur.updateReportId) || [];
       
       this.showAddGraphene = true;
     },
@@ -516,24 +625,48 @@ window.grapheneApp = function() {
       // Reset SEM-related flags
       this.grapheneForm.removeSemReport = false;
       this.grapheneForm.replaceSemReport = false;
+      // Reset update report IDs
+      this.grapheneForm.updateReportIds = [];
     },
     
     // BET CRUD operations
     editBet(record) {
       this.editingBet = record;
-      const editableFields = dataHelpers.extractEditableFields(record, ['grapheneRef']);
-      this.betForm = { ...editableFields };
+      this.betForm = {
+        testDate: record.testDate ? record.testDate.split('T')[0] : '',
+        dateUnknown: !record.testDate,
+        grapheneSample: record.grapheneSample || '',
+        researchTeam: record.researchTeam || 'Curia - Germany',
+        testingLab: record.testingLab || 'Fraunhofer-Institut',
+        multipointBetArea: record.multipointBetArea || '',
+        langmuirSurfaceArea: record.langmuirSurfaceArea || '',
+        species: record.species || '',
+        betReportFile: null,
+        removeBetReport: false,
+        replaceBetReport: false,
+        comments: record.comments || ''
+      };
       this.showAddBet = true;
     },
     
     async saveBet() {
       try {
-        const data = validators.processBetForm(this.betForm);
+        const data = { ...this.betForm };
+        
+        // Handle date
+        if (data.dateUnknown) {
+          data.testDate = null;
+        }
+        delete data.dateUnknown;
+        
+        // Extract file from form data
+        const file = data.betReportFile;
+        delete data.betReportFile;
         
         if (this.editingBet) {
-          await API.bet.update(this.editingBet.id, data);
+          await API.bet.update(this.editingBet.id, data, file);
         } else {
-          await API.bet.create(data);
+          await API.bet.create(data, file);
         }
         
         await this.loadBetRecords();
@@ -562,6 +695,156 @@ window.grapheneApp = function() {
       this.betForm = { ...DEFAULT_FORMS.bet };
     },
     
+    // Conductivity CRUD operations
+    editConductivity(record) {
+      this.editingConductivity = record;
+      this.conductivityForm = {
+        testDate: record.testDate ? record.testDate.split('T')[0] : '',
+        dateUnknown: !record.testDate,
+        grapheneSample: record.grapheneSample || '',
+        description: record.description || '',
+        conductivity1kN: record.conductivity1kN || '',
+        conductivity8kN: record.conductivity8kN || '',
+        conductivity12kN: record.conductivity12kN || '',
+        conductivity20kN: record.conductivity20kN || '',
+        comments: record.comments || ''
+      };
+      this.showAddConductivity = true;
+    },
+    
+    async saveConductivity() {
+      try {
+        const data = { ...this.conductivityForm };
+        
+        if (data.dateUnknown) {
+          data.testDate = null;
+        }
+        delete data.dateUnknown;
+        
+        if (this.editingConductivity) {
+          await API.conductivity.update(this.editingConductivity.id, data);
+        } else {
+          await API.conductivity.create(data);
+        }
+        
+        await this.loadConductivityRecords();
+        this.closeConductivityForm();
+      } catch (error) {
+        console.error('Failed to save conductivity record:', error);
+        alert(`Failed to save record: ${error.message}`);
+      }
+    },
+    
+    async deleteConductivity(id) {
+      if (!confirm('Are you sure you want to delete this record?')) return;
+      
+      try {
+        await API.conductivity.delete(id);
+        await this.loadConductivityRecords();
+      } catch (error) {
+        console.error('Failed to delete conductivity record:', error);
+        alert(`Failed to delete record: ${error.message}`);
+      }
+    },
+    
+    closeConductivityForm() {
+      this.showAddConductivity = false;
+      this.editingConductivity = null;
+      this.conductivityForm = { ...DEFAULT_FORMS.conductivity };
+    },
+    
+    // Update Report CRUD operations
+    editUpdateReport(record) {
+      this.editingUpdateReport = record;
+      this.updateReportForm = {
+        description: record.description || '',
+        weekOf: record.weekOf ? record.weekOf.split('T')[0] : '',
+        grapheneIds: record.grapheneReports?.map(gr => gr.grapheneId) || [],
+        updateFile: null
+      };
+      this.showAddUpdateReport = true;
+    },
+    
+    async saveUpdateReport() {
+      try {
+        const data = { ...this.updateReportForm };
+        const file = this.updateReportForm.updateFile;
+        
+        // Remove the file object from data since it's handled separately
+        delete data.updateFile;
+        
+        if (this.editingUpdateReport) {
+          await API.updateReport.update(this.editingUpdateReport.id, data);
+        } else {
+          if (!file) {
+            alert('Please select an update report file');
+            return;
+          }
+          await API.updateReport.create(data, file);
+        }
+        
+        await this.loadUpdateReports();
+        await this.loadGrapheneRecords(); // Refresh graphene records to show new associations
+        this.closeUpdateReportForm();
+      } catch (error) {
+        console.error('Failed to save update report:', error);
+        alert(`Failed to save update report: ${error.message}`);
+      }
+    },
+    
+    async deleteUpdateReport(id) {
+      if (!confirm('Are you sure you want to delete this update report?')) return;
+      
+      try {
+        await API.updateReport.delete(id);
+        await this.loadUpdateReports();
+        await this.loadGrapheneRecords(); // Refresh graphene records to update associations
+      } catch (error) {
+        console.error('Failed to delete update report:', error);
+        alert(`Failed to delete update report: ${error.message}`);
+      }
+    },
+    
+    closeUpdateReportForm() {
+      this.showAddUpdateReport = false;
+      this.editingUpdateReport = null;
+      this.updateReportForm = { ...DEFAULT_FORMS.updateReport };
+    },
+    
+    viewUpdateReport(filePath) {
+      if (filePath) {
+        this.currentUpdateReport = filePath + '#navpanes=0&toolbar=0';
+        this.showUpdateReportModal = true;
+      }
+    },
+    
+    closeUpdateReportModal() {
+      this.showUpdateReportModal = false;
+      this.currentUpdateReport = null;
+    },
+    
+    handleUpdateFileChange(event) {
+      const file = event.target.files[0];
+      const validation = validators.validatePDFFile(file);
+      
+      if (validation.isValid) {
+        this.updateReportForm.updateFile = file;
+      } else {
+        alert(validation.message);
+        event.target.value = '';
+        this.updateReportForm.updateFile = null;
+      }
+    },
+    
+    toggleGrapheneSelection(grapheneId) {
+      const index = this.updateReportForm.grapheneIds.indexOf(grapheneId);
+      if (index > -1) {
+        this.updateReportForm.grapheneIds.splice(index, 1);
+      } else {
+        this.updateReportForm.grapheneIds.push(grapheneId);
+      }
+    },
+    
     // Export methods
     exportData(type) {
       if (type === 'biochar') {
@@ -570,6 +853,8 @@ window.grapheneApp = function() {
         API.graphene.exportCSV();
       } else if (type === 'bet') {
         API.bet.exportCSV();
+      } else if (type === 'conductivity') {
+        API.conductivity.exportCSV();
       }
     },
     
@@ -695,6 +980,20 @@ window.grapheneApp = function() {
         this.grapheneForm.appearanceTags.splice(index, 1);
       } else if (this.grapheneForm.appearanceTags.length < 20) {
         this.grapheneForm.appearanceTags.push(tag);
+      }
+    },
+    
+    // Update report selection handling
+    toggleUpdateReportSelection(reportId) {
+      if (!this.grapheneForm.updateReportIds) {
+        this.grapheneForm.updateReportIds = [];
+      }
+      
+      const index = this.grapheneForm.updateReportIds.indexOf(reportId);
+      if (index > -1) {
+        this.grapheneForm.updateReportIds.splice(index, 1);
+      } else {
+        this.grapheneForm.updateReportIds.push(reportId);
       }
     },
     

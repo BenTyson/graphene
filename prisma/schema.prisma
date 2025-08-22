@@ -106,6 +106,8 @@ model Graphene {
   biocharExperimentRef Biochar?     @relation(fields: [biocharExperiment], references: [experimentNumber])
   biocharLotRef        BiocharLot?  @relation(fields: [biocharLotNumber], references: [lotNumber])
   betTests             BET[]
+  conductivityTests    ConductivityTest[]
+  updateReports        GrapheneUpdateReport[]
   
   @@map("graphene")
   @@index([biocharExperiment])
@@ -119,9 +121,12 @@ model BET {
   id                  String    @id @default(cuid())
   testDate            DateTime? @map("test_date")
   grapheneSample      String?   @map("graphene_sample")
+  researchTeam        String?   @map("research_team")
+  testingLab          String?   @map("testing_lab")
   multipointBetArea   Decimal?  @map("multipoint_bet_area") @db.Decimal(10, 4)
   langmuirSurfaceArea Decimal?  @map("langmuir_surface_area") @db.Decimal(10, 4)
   species             String?
+  betReportPath       String?   @map("bet_report_path")
   comments            String?   @db.Text
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
@@ -132,6 +137,57 @@ model BET {
   @@index([grapheneSample])
   @@index([createdAt])
   @@index([testDate])
+}
+
+model ConductivityTest {
+  id              String    @id @default(cuid())
+  testDate        DateTime? @map("test_date")
+  grapheneSample  String?   @map("graphene_sample")
+  description     String?   @db.Text
+  conductivity1kN Decimal?  @map("conductivity_1kn") @db.Decimal(12, 6)
+  conductivity8kN Decimal?  @map("conductivity_8kn") @db.Decimal(12, 6)
+  conductivity12kN Decimal? @map("conductivity_12kn") @db.Decimal(12, 6)
+  conductivity20kN Decimal? @map("conductivity_20kn") @db.Decimal(12, 6)
+  comments        String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  grapheneRef     Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
+  
+  @@map("conductivity_tests")
+  @@index([grapheneSample])
+  @@index([createdAt])
+  @@index([testDate])
+}
+
+model UpdateReport {
+  id               String    @id @default(cuid())
+  filename         String    @map("filename")
+  originalName     String    @map("original_name")
+  filePath         String    @map("file_path")
+  description      String?   @db.Text
+  weekOf           DateTime? @map("week_of")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  
+  grapheneReports  GrapheneUpdateReport[]
+  
+  @@map("update_reports")
+  @@index([createdAt])
+  @@index([weekOf])
+}
+
+model GrapheneUpdateReport {
+  id              String  @id @default(cuid())
+  grapheneId      String  @map("graphene_id")
+  updateReportId  String  @map("update_report_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  graphene        Graphene      @relation(fields: [grapheneId], references: [id], onDelete: Cascade)
+  updateReport    UpdateReport  @relation(fields: [updateReportId], references: [id], onDelete: Cascade)
+  
+  @@unique([grapheneId, updateReportId])
+  @@map("graphene_update_reports")
 }
 
 enum GrindingMethod {
