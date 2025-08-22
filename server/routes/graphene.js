@@ -215,6 +215,7 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   delete data.objectivePaste;
   delete data.removeSemReport;
   delete data.replaceSemReport;
+  delete data.density; // Density is calculated, not stored
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
@@ -227,9 +228,9 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   
   // Convert numeric fields from strings to proper types
   const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
-                        'base2Amount', 'base2Concentration', 'grindingTime', 
+                        'base2Amount', 'base2Concentration', 'grindingTime', 'grindingFrequency',
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
-                        'volumeMl', 'density', 'output'];
+                        'volumeMl', 'output'];
   
   numericFields.forEach(field => {
     if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
@@ -344,6 +345,7 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   delete data.removeSemReport;
   delete data.replaceSemReport;
   delete data.objectivePaste;
+  delete data.density; // Density is calculated, not stored
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
@@ -356,9 +358,9 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   
   // Convert numeric fields from strings to proper types
   const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
-                        'base2Amount', 'base2Concentration', 'grindingTime', 
+                        'base2Amount', 'base2Concentration', 'grindingTime', 'grindingFrequency',
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
-                        'volumeMl', 'density', 'output'];
+                        'volumeMl', 'output'];
   
   numericFields.forEach(field => {
     if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
@@ -470,7 +472,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   
   const headers = [
     'Experiment #', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
-    'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)', 'Homogeneous',
+    'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)', 'Grinding Frequency (Hz)', 'Homogeneous',
     'Gas', 'Temp Rate', 'Temp Max (°C)', 'Time (min)', 'Wash Amount (g)',
     'Wash Solution', 'Wash Concentration (%)', 'Wash Water', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
     'Volume (ml)', 'Density (ml/g)', 'Species', 'Appearance Tags', 'Output (g)', 'Comments', 'Created At'
@@ -489,6 +491,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       g.baseConcentration || '',
       g.grindingMethod || '',
       g.grindingTime || '',
+      g.grindingFrequency || '',
       g.homogeneous !== null ? (g.homogeneous ? 'Yes' : 'No') : '',
       g.gas || '',
       `"${(g.tempRate || '').replace(/"/g, '""')}"`,
@@ -502,7 +505,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       `"${(g.dryingAtmosphere || '').replace(/"/g, '""')}"`,
       `"${(g.dryingPressure || '').replace(/"/g, '""')}"`,
       g.volumeMl || '',
-      g.density || '',
+      (g.volumeMl && g.output) ? (g.volumeMl / g.output).toFixed(4) : '',
       g.species || '',
       `"${(g.appearanceTags || []).join(', ')}"`,
       g.output || '',

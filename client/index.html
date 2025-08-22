@@ -30,42 +30,57 @@
             :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
-            Biochar Production
+            Biochar
           </button>
           <button
             @click="activeTab = 'graphene'"
             :class="activeTab === 'graphene' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
-            Graphene Production
+            Graphene
           </button>
           <button
-            @click="activeTab = 'bet'"
-            :class="activeTab === 'bet' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'"
+            :class="activeTab.startsWith('test-') ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
-            BET Analysis
-          </button>
-          <button
-            @click="activeTab = 'conductivity'"
-            :class="activeTab === 'conductivity' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Conductivity Tests
-          </button>
-          <button
-            @click="activeTab = 'raman'"
-            :class="activeTab === 'raman' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            RAMAN Analysis
+            Test Results
           </button>
           <button
             @click="activeTab = 'updates'"
             :class="activeTab === 'updates' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
-            Update Reports
+            Curia Updates
+          </button>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Sub-navigation for Tests -->
+    <div x-show="activeTab.startsWith('test-')" x-cloak class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="border-b border-gray-100 bg-gray-50">
+        <nav class="flex space-x-6 px-2 py-3">
+          <button
+            @click="activeTab = 'test-bet'"
+            :class="activeTab === 'test-bet' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            BET
+          </button>
+          <button
+            @click="activeTab = 'test-conductivity'"
+            :class="activeTab === 'test-conductivity' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            Conductivity
+          </button>
+          <button
+            @click="activeTab = 'test-raman'"
+            :class="activeTab === 'test-raman' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            RAMAN
           </button>
         </nav>
       </div>
@@ -365,7 +380,7 @@
             <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingTime: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingTime: '', grindingFrequency: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -395,7 +410,7 @@
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Qty (g)</th>
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Biochar</th>
                 <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Base</th>
-                <th colspan="2" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Homog.</th>
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Gas</th>
                 <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Temperature</th>
@@ -414,7 +429,8 @@
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Conc%</th>
                 <!-- Grinding sub-headers -->
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Method</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Time</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Time</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Freq</th>
                 <!-- Temperature sub-headers -->
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Rate</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Max</th>
@@ -470,7 +486,8 @@
                   </td>
                   <!-- Grinding columns -->
                   <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.grindingMethod"></td>
-                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.grindingTime ? record.grindingTime + 'min' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.grindingTime ? record.grindingTime + 'min' : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.grindingFrequency ? record.grindingFrequency + 'Hz' : ''"></td>
                   <!-- Homogeneous -->
                   <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.homogeneous !== null ? (record.homogeneous ? 'Yes' : 'No') : ''"></td>
                   <!-- Gas -->
@@ -490,7 +507,7 @@
                   <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.dryingPressure"></td>
                   <!-- Results columns -->
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.volumeMl ? record.volumeMl + 'ml' : ''"></td>
-                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.density || ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="(record.volumeMl && record.output) ? (record.volumeMl / record.output).toFixed(2) + ' ml/g' : ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.output ? record.output + 'g' : ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="calculateOutputPercentage(record)"></td>
                   <!-- Species & Appearance -->
@@ -832,11 +849,11 @@
 
 
       <!-- BET Tab -->
-      <div x-show="activeTab === 'bet'" x-cloak>
+      <div x-show="activeTab === 'test-bet'" x-cloak>
         <div class="mb-6 flex justify-between items-center">
           <h2 class="text-xl font-semibold">BET Surface Area Analysis</h2>
           <div class="flex space-x-2">
-            <button @click="exportData('bet')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+            <button @click="exportData('test-bet')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
             <button @click="betForm = {testDate: '', dateUnknown: false, grapheneSample: '', multipointBetArea: '', langmuirSurfaceArea: '', species: '', comments: ''}; editingBet = null; showAddBet = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
@@ -917,11 +934,11 @@
       </div>
 
       <!-- Conductivity Tests Tab -->
-      <div x-show="activeTab === 'conductivity'" x-cloak>
+      <div x-show="activeTab === 'test-conductivity'" x-cloak>
         <div class="mb-6 flex justify-between items-center">
           <h2 class="text-xl font-semibold">Conductivity Test Results</h2>
           <div class="flex space-x-2">
-            <button @click="exportData('conductivity')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+            <button @click="exportData('test-conductivity')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
             <button @click="conductivityForm = {testDate: '', dateUnknown: false, grapheneSample: '', description: '', conductivity1kN: '', conductivity8kN: '', conductivity12kN: '', conductivity20kN: '', comments: ''}; editingConductivity = null; showAddConductivity = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
@@ -995,11 +1012,11 @@
       </div>
 
       <!-- RAMAN Analysis Tab -->
-      <div x-show="activeTab === 'raman'" x-cloak>
+      <div x-show="activeTab === 'test-raman'" x-cloak>
         <div class="mb-6 flex justify-between items-center">
           <h2 class="text-xl font-semibold">RAMAN Analysis Results</h2>
           <div class="flex space-x-2">
-            <button @click="exportData('raman')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+            <button @click="exportData('test-raman')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
             <button @click="ramanForm = {testDate: '', dateUnknown: false, grapheneSample: '', researchTeam: 'Curia - Germany', testingLab: '', integrationRange2DLow: '', integrationRange2DHigh: '', integrationRangeGLow: '', integrationRangeGHigh: '', integrationRangeDLow: '', integrationRangeDHigh: '', integrationRangeDGLow: '', integrationRangeDGHigh: '', integralTypA2D1: '', integralTypA2D2: '', integralTypAG1: '', integralTypAG2: '', integralTypAD1: '', integralTypAD2: '', integralTypADG1: '', integralTypADG2: '', peakHighTypJ2D1: '', peakHighTypJ2D2: '', peakHighTypJG1: '', peakHighTypJG2: '', peakHighTypJD1: '', peakHighTypJD2: '', peakHighTypJDG1: '', peakHighTypJDG2: '', ramanReportFile: null, comments: ''}; editingRaman = null; showAddRaman = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
@@ -1666,7 +1683,7 @@
             <!-- Preparation -->
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Preparation</h4>
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-4 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Method</label>
                   <select x-model="grapheneForm.grindingMethod"
@@ -1674,12 +1691,19 @@
                     <option value="">Select...</option>
                     <option value="manual">Manual</option>
                     <option value="mill">Mill</option>
+                    <option value="ball_mill">Ball Mill</option>
                   </select>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Time (min)</label>
                   <input type="number" step="0.1" x-model="grapheneForm.grindingTime"
-                         :disabled="grapheneForm.grindingMethod !== 'mill'"
+                         :disabled="!grapheneForm.grindingMethod || grapheneForm.grindingMethod === 'manual'"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Frequency (Hz)</label>
+                  <input type="number" step="0.1" x-model="grapheneForm.grindingFrequency"
+                         :disabled="grapheneForm.grindingMethod !== 'ball_mill'"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
                 </div>
                 <div>
@@ -1846,11 +1870,6 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Volume (ml)</label>
                   <input type="number" step="0.01" x-model="grapheneForm.volumeMl"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Density (ml/g)</label>
-                  <input type="number" step="0.0001" x-model="grapheneForm.density"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
               </div>

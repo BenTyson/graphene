@@ -73,6 +73,8 @@ npm run backup:cleanup
 │   │   ├── biochar.js      # Biochar CRUD + /api/biochar/:experimentNumber/related
 │   │   ├── graphene.js     # Graphene CRUD + /api/graphene/:experimentNumber/related  
 │   │   ├── bet.js          # BET test CRUD
+│   │   ├── conductivity.js # Conductivity test CRUD
+│   │   ├── raman.js        # RAMAN test CRUD
 │   │   └── updateReports.js # Update report management + associations
 │   └── middleware/
 ├── client/
@@ -92,6 +94,7 @@ npm run backup:cleanup
 ├── uploads/
 │   ├── sem-reports/        # SEM PDF storage
 │   ├── bet-reports/        # BET test PDF storage
+│   ├── raman-reports/      # RAMAN test PDF storage
 │   └── update-reports/     # Weekly update report PDFs
 ├── backups/                # Database backups (gitignored)
 └── vite.config.js          # Vite dev server with proxy for /api and /uploads
@@ -117,11 +120,33 @@ npm run backup:cleanup
 - **File Storage**: PDFs stored in `/uploads/update-reports/` with unique timestamped names
 - **Associations**: Single report can be associated with multiple experiments; experiments can have multiple reports
 
+### Testing Models
+
+#### Conductivity Tests
+- **Purpose**: Track electrical conductivity measurements at different pressures
+- **Key Fields**: `conductivity1kN`, `conductivity8kN`, `conductivity12kN`, `conductivity20kN`
+- **Relationship**: Links to Graphene via `grapheneSample` field
+
+#### RAMAN Tests
+- **Purpose**: Track RAMAN spectroscopy analysis with absorption band measurements
+- **Matrix Structure**: 3×4 data matrix for absorption band analysis
+  - **Rows**: Integration Range, Integral Typ A, Peak High Typ J
+  - **Columns**: 2D Band, G Band, D Band, D/G Ratio
+- **Data Storage**: 24 separate numeric fields for database analysis
+  - Integration Range: Low/high pairs (e.g., `integrationRange2DLow`, `integrationRange2DHigh`)
+  - Integral Typ A: Two values per band (e.g., `integralTypA2D1`, `integralTypA2D2`)
+  - Peak High Typ J: Two values per band (e.g., `peakHighTypJ2D1`, `peakHighTypJ2D2`)
+- **Display Format**: Combined values shown as "2791-2557" for ranges, "2581,228" for pairs
+- **Testing Labs**: Fraunhofer-Institut, Clariant
+- **PDF Reports**: Stored in `/uploads/raman-reports/`
+
 ### Important Relationships
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
 - Graphene → BET: Via `grapheneSample` field
+- Graphene → Conductivity: Via `grapheneSample` field  
+- Graphene → RAMAN: Via `grapheneSample` field
 - Graphene ↔ Update Reports: Many-to-many via `GrapheneUpdateReport` junction table
-- BET Tests: Include `researchTeam`, `testingLab`, and `betReportPath` for comprehensive tracking
+- All test types include `researchTeam`, `testingLab`, and PDF report paths
 - Files use soft references (experiment numbers) not hard foreign keys for flexibility
 
 ## UI Design Principles
@@ -136,14 +161,17 @@ npm run backup:cleanup
 
 ### Material Journey Tracking
 - Click experiment numbers to expand rows showing complete material pipeline
-- Biochar → Graphene → BET test relationships visible inline
-- Update reports and SEM PDFs displayed in expandable sections
+- Biochar → Graphene → BET/Conductivity/RAMAN test relationships visible inline
+- Update reports, SEM PDFs, and test reports displayed in expandable sections
 - Expandable rows use `<tbody>` wrapper for Alpine.js compatibility
+- All PDF reports open in modal viewers with navigation controls
 
 ### File Management
 - **SEM PDFs**: Upload, view, replace, or remove PDF reports for graphene records
 - **BET Reports**: Upload, view, replace, or remove PDF reports for BET test records
+- **RAMAN Reports**: Upload, view, replace, or remove PDF reports for RAMAN test records
 - **Update Reports**: Weekly PDF reports with multi-experiment associations
+- **Modal Viewers**: All PDFs open in fullscreen modals with iframe display
 - **Vite Proxy**: `/uploads` proxied to backend for PDF serving
 - **Automatic cleanup**: Files deleted when records removed
 
@@ -159,6 +187,7 @@ npm run backup:cleanup
 - **Dropdown Management**: Dynamic addition of new options
 - **Base Types**: KOH, NaOH (supports dual base experiments)
 - **Appearance Tags**: Multiple selectable tags for graphene characterization
+- **Calculated Fields**: Density (specific volume in ml/g) automatically calculated from volume/output ratio
 - **Objective Parser**: Paste full experiment text, auto-extracts into 5 structured fields
   - Uses `/client/src/js/utils/objectiveParser.js`
   - Handles variations: "Objective:", "OBJECTIVE", with/without colons
@@ -222,6 +251,7 @@ numericFields.forEach(field => {
 delete data.biocharSource;  // UI field for source selection
 delete data.dateUnknown;    // UI checkbox
 delete data.semReportFile;  // File object
+delete data.ramanReportFile; // RAMAN file object
 delete data.updateFile;     // Update report file object
 delete data.objectivePaste; // Objective parsing textarea
 
@@ -232,6 +262,10 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 ### Temperature Rate Input
 **Problem**: Users need to enter ranges like "20-27"
 **Solution**: Use `type="text"` instead of `type="number"` for tempRate field
+
+### Multer File Upload Fields
+**Problem**: "Unexpected field" error when uploading files with FormData
+**Solution**: Exclude file object fields (e.g., `ramanReportFile`) from FormData when appending fields in API client. Only the actual file should be appended with the correct field name expected by Multer.
 
 ## API Endpoints
 
@@ -259,6 +293,20 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - `PUT /api/bet/:id` - Update record (supports BET PDF upload)
 - `DELETE /api/bet/:id` - Delete record
 - `GET /api/bet/export/csv` - Export to CSV
+
+### Conductivity
+- `GET /api/conductivity` - List all with filters (default sort: desc)
+- `POST /api/conductivity` - Create new record
+- `PUT /api/conductivity/:id` - Update record
+- `DELETE /api/conductivity/:id` - Delete record
+- `GET /api/conductivity/export/csv` - Export to CSV
+
+### RAMAN
+- `GET /api/raman` - List all with filters (default sort: desc)
+- `POST /api/raman` - Create new record (supports RAMAN PDF upload)
+- `PUT /api/raman/:id` - Update record (supports RAMAN PDF upload)
+- `DELETE /api/raman/:id` - Delete record
+- `GET /api/raman/export/csv` - Export to CSV
 
 ### Update Reports
 - `GET /api/update-reports` - List all reports with associated experiments

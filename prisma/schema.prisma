@@ -8,231 +8,221 @@ datasource db {
 }
 
 model Biochar {
-  id                  String    @id @default(cuid())
-  experimentNumber    String    @unique @map("experiment_number")
-  lotNumber           String?   @map("lot_number")
-  testOrder           Int?      @map("test_order")
-  experimentDate      DateTime? @map("experiment_date")
-  researchTeam        String?   @map("research_team")
+  id                  String      @id @default(cuid())
+  experimentNumber    String      @unique @map("experiment_number")
   reactor             String?
-  rawMaterial         String?   @map("raw_material")
-  startingAmount      Decimal?  @map("starting_amount") @db.Decimal(10, 2)
-  acidAmount          Decimal?  @map("acid_amount") @db.Decimal(10, 2)
-  acidConcentration   Decimal?  @map("acid_concentration") @db.Decimal(5, 2)
-  acidMolarity        Decimal?  @map("acid_molarity") @db.Decimal(5, 2)
-  acidType            String?   @map("acid_type")
-  temperature         Decimal?  @db.Decimal(6, 2)
-  time                Decimal?  @db.Decimal(10, 2)
-  pressureInitial     Decimal?  @map("pressure_initial") @db.Decimal(10, 2)
-  pressureFinal       Decimal?  @map("pressure_final") @db.Decimal(10, 2)
-  washAmount          Decimal?  @map("wash_amount") @db.Decimal(10, 2)
-  washMedium          String?   @map("wash_medium")
-  output              Decimal?  @db.Decimal(10, 2)
-  dryingTemp          Decimal?  @map("drying_temp") @db.Decimal(6, 2)
-  kftPercentage       Decimal?  @map("kft_percentage") @db.Decimal(5, 2)
-  comments            String?   @db.Text
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  
-  grapheneProductions Graphene[]
+  rawMaterial         String?     @map("raw_material")
+  acidAmount          Decimal?    @map("acid_amount") @db.Decimal(10, 2)
+  acidConcentration   Decimal?    @map("acid_concentration") @db.Decimal(5, 2)
+  acidMolarity        Decimal?    @map("acid_molarity") @db.Decimal(5, 2)
+  acidType            String?     @map("acid_type")
+  temperature         Decimal?    @db.Decimal(6, 2)
+  time                Decimal?    @db.Decimal(10, 2)
+  pressureInitial     Decimal?    @map("pressure_initial") @db.Decimal(10, 2)
+  pressureFinal       Decimal?    @map("pressure_final") @db.Decimal(10, 2)
+  washAmount          Decimal?    @map("wash_amount") @db.Decimal(10, 2)
+  washMedium          String?     @map("wash_medium")
+  output              Decimal?    @db.Decimal(10, 2)
+  dryingTemp          Decimal?    @map("drying_temp") @db.Decimal(6, 2)
+  kftPercentage       Decimal?    @map("kft_percentage") @db.Decimal(5, 2)
+  comments            String?
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+  experimentDate      DateTime?   @map("experiment_date")
+  testOrder           Int?        @map("test_order")
+  startingAmount      Decimal?    @map("starting_amount") @db.Decimal(10, 2)
+  lotNumber           String?     @map("lot_number")
+  researchTeam        String?     @map("research_team")
   lot                 BiocharLot? @relation(fields: [lotNumber], references: [lotNumber])
-  
-  @@map("biochar")
+  grapheneProductions Graphene[]
+
   @@index([createdAt])
   @@index([testOrder])
   @@index([experimentDate])
   @@index([lotNumber])
+  @@map("biochar")
 }
 
 model BiocharLot {
-  id                  String    @id @default(cuid())
-  lotNumber           String    @unique @map("lot_number")
-  lotName             String?   @map("lot_name")
-  description         String?   @db.Text
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  
+  id                  String     @id @default(cuid())
+  lotNumber           String     @unique @map("lot_number")
+  lotName             String?    @map("lot_name")
+  description         String?
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
   experiments         Biochar[]
   grapheneProductions Graphene[]
-  
+
   @@map("biochar_lots")
 }
 
 model Graphene {
-  id                  String    @id @default(cuid())
-  experimentNumber    String    @unique @map("experiment_number")
-  testOrder           Int?      @map("test_order")
-  experimentDate      DateTime? @map("experiment_date")
-  researchTeam        String?   @map("research_team")
-  oven                String?
-  quantity            Decimal?  @db.Decimal(10, 2)
-  biocharExperiment   String?   @map("biochar_experiment")
-  biocharLotNumber    String?   @map("biochar_lot_number")
-  baseAmount          Decimal?  @map("base_amount") @db.Decimal(10, 2)
-  baseType            String?   @map("base_type")
-  baseConcentration   Decimal?  @map("base_concentration") @db.Decimal(5, 2)
-  base2Amount         Decimal?  @map("base2_amount") @db.Decimal(10, 2)
-  base2Type           String?   @map("base2_type")
-  base2Concentration  Decimal?  @map("base2_concentration") @db.Decimal(5, 2)
-  grindingMethod      GrindingMethod? @map("grinding_method")
-  grindingTime        Decimal?  @map("grinding_time") @db.Decimal(10, 2)
-  homogeneous         Boolean?
-  gas                 String?
-  tempRate            String?   @map("temp_rate")
-  tempMax             Decimal?  @map("temp_max") @db.Decimal(6, 2)
-  time                Decimal?  @db.Decimal(10, 2)
-  washAmount          Decimal?  @map("wash_amount") @db.Decimal(10, 2)
-  washSolution        String?   @map("wash_solution")
-  washConcentration   Decimal?  @map("wash_concentration") @db.Decimal(5, 2)
-  washWater           String?   @map("wash_water")
-  dryingTemp          Decimal?  @map("drying_temp") @db.Decimal(6, 2)
-  dryingAtmosphere    String?   @map("drying_atmosphere")
-  dryingPressure      String?   @map("drying_pressure")
-  output              Decimal?  @db.Decimal(10, 2)
-  volumeMl            Decimal?  @map("volume_ml") @db.Decimal(10, 2)
-  density             Decimal?  @db.Decimal(10, 4)
-  species             String?
-  appearanceTags      String[]  @map("appearance_tags")
-  semReportPath       String?   @map("sem_report_path")
-  objective           String?   @db.Text
-  experimentDetails   String?   @map("experiment_details") @db.Text
-  result              String?   @db.Text
-  conclusion          String?   @db.Text
-  recommendedAction   String?   @map("recommended_action") @db.Text
-  comments            String?   @db.Text
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  
-  biocharExperimentRef Biochar?     @relation(fields: [biocharExperiment], references: [experimentNumber])
-  biocharLotRef        BiocharLot?  @relation(fields: [biocharLotNumber], references: [lotNumber])
+  id                   String                 @id @default(cuid())
+  experimentNumber     String                 @unique @map("experiment_number")
+  oven                 String?
+  quantity             Decimal?               @db.Decimal(10, 2)
+  baseAmount           Decimal?               @map("base_amount") @db.Decimal(10, 2)
+  baseType             String?                @map("base_type")
+  baseConcentration    Decimal?               @map("base_concentration") @db.Decimal(5, 2)
+  grindingMethod       GrindingMethod?        @map("grinding_method")
+  grindingTime         Decimal?               @map("grinding_time") @db.Decimal(10, 2)
+  gas                  String?
+  tempRate             String?                @map("temp_rate")
+  tempMax              Decimal?               @map("temp_max") @db.Decimal(6, 2)
+  time                 Decimal?               @db.Decimal(10, 2)
+  washAmount           Decimal?               @map("wash_amount") @db.Decimal(10, 2)
+  washSolution         String?                @map("wash_solution")
+  dryingTemp           Decimal?               @map("drying_temp") @db.Decimal(6, 2)
+  dryingAtmosphere     String?                @map("drying_atmosphere")
+  dryingPressure       String?                @map("drying_pressure")
+  output               Decimal?               @db.Decimal(10, 2)
+  species              String?
+  comments             String?
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+  experimentDate       DateTime?              @map("experiment_date")
+  testOrder            Int?                   @map("test_order")
+  biocharExperiment    String?                @map("biochar_experiment")
+  appearanceTags       String[]               @map("appearance_tags")
+  density              Decimal?               @db.Decimal(10, 4)
+  homogeneous          Boolean?
+  volumeMl             Decimal?               @map("volume_ml") @db.Decimal(10, 2)
+  washConcentration    Decimal?               @map("wash_concentration") @db.Decimal(5, 2)
+  washWater            String?                @map("wash_water")
+  biocharLotNumber     String?                @map("biochar_lot_number")
+  researchTeam         String?                @map("research_team")
+  semReportPath        String?                @map("sem_report_path")
+  base2Amount          Decimal?               @map("base2_amount") @db.Decimal(10, 2)
+  base2Concentration   Decimal?               @map("base2_concentration") @db.Decimal(5, 2)
+  base2Type            String?                @map("base2_type")
+  conclusion           String?
+  experimentDetails    String?                @map("experiment_details")
+  objective            String?
+  recommendedAction    String?                @map("recommended_action")
+  result               String?
+  grindingFrequency    Decimal?               @map("grinding_frequency") @db.Decimal(10, 2)
   betTests             BET[]
   conductivityTests    ConductivityTest[]
-  ramanTests           RamanTest[]
+  biocharExperimentRef Biochar?               @relation(fields: [biocharExperiment], references: [experimentNumber])
+  biocharLotRef        BiocharLot?            @relation(fields: [biocharLotNumber], references: [lotNumber])
   updateReports        GrapheneUpdateReport[]
-  
-  @@map("graphene")
+  ramanTests           RamanTest[]
+
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
   @@index([createdAt])
   @@index([testOrder])
   @@index([experimentDate])
+  @@map("graphene")
 }
 
 model BET {
   id                  String    @id @default(cuid())
   testDate            DateTime? @map("test_date")
   grapheneSample      String?   @map("graphene_sample")
-  researchTeam        String?   @map("research_team")
-  testingLab          String?   @map("testing_lab")
   multipointBetArea   Decimal?  @map("multipoint_bet_area") @db.Decimal(10, 4)
   langmuirSurfaceArea Decimal?  @map("langmuir_surface_area") @db.Decimal(10, 4)
   species             String?
-  betReportPath       String?   @map("bet_report_path")
-  comments            String?   @db.Text
+  comments            String?
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
-  
+  betReportPath       String?   @map("bet_report_path")
+  researchTeam        String?   @map("research_team")
+  testingLab          String?   @map("testing_lab")
   grapheneRef         Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
-  
-  @@map("bet")
+
   @@index([grapheneSample])
   @@index([createdAt])
   @@index([testDate])
+  @@map("bet")
 }
 
 model ConductivityTest {
-  id              String    @id @default(cuid())
-  testDate        DateTime? @map("test_date")
-  grapheneSample  String?   @map("graphene_sample")
-  description     String?   @db.Text
-  conductivity1kN Decimal?  @map("conductivity_1kn") @db.Decimal(12, 6)
-  conductivity8kN Decimal?  @map("conductivity_8kn") @db.Decimal(12, 6)
-  conductivity12kN Decimal? @map("conductivity_12kn") @db.Decimal(12, 6)
-  conductivity20kN Decimal? @map("conductivity_20kn") @db.Decimal(12, 6)
-  comments        String?   @db.Text
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  
-  grapheneRef     Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
-  
-  @@map("conductivity_tests")
+  id               String    @id @default(cuid())
+  testDate         DateTime? @map("test_date")
+  grapheneSample   String?   @map("graphene_sample")
+  description      String?
+  conductivity1kN  Decimal?  @map("conductivity_1kn") @db.Decimal(12, 6)
+  conductivity8kN  Decimal?  @map("conductivity_8kn") @db.Decimal(12, 6)
+  conductivity12kN Decimal?  @map("conductivity_12kn") @db.Decimal(12, 6)
+  conductivity20kN Decimal?  @map("conductivity_20kn") @db.Decimal(12, 6)
+  comments         String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  grapheneRef      Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
+
   @@index([grapheneSample])
   @@index([createdAt])
   @@index([testDate])
+  @@map("conductivity_tests")
 }
 
 model RamanTest {
-  id                    String    @id @default(cuid())
-  testDate              DateTime? @map("test_date")
-  grapheneSample        String?   @map("graphene_sample")
-  researchTeam          String?   @map("research_team")
-  testingLab            String?   @map("testing_lab")
-  ramanReportPath       String?   @map("raman_report_path")
-  // Integration range row (low and high for each band)
-  integrationRange2DLow     Decimal?  @map("integration_range_2d_low") @db.Decimal(10, 2)
-  integrationRange2DHigh    Decimal?  @map("integration_range_2d_high") @db.Decimal(10, 2)
-  integrationRangeGLow      Decimal?  @map("integration_range_g_low") @db.Decimal(10, 2)
-  integrationRangeGHigh     Decimal?  @map("integration_range_g_high") @db.Decimal(10, 2)
-  integrationRangeDLow      Decimal?  @map("integration_range_d_low") @db.Decimal(10, 2)
-  integrationRangeDHigh     Decimal?  @map("integration_range_d_high") @db.Decimal(10, 2)
-  integrationRangeDGLow     Decimal?  @map("integration_range_dg_low") @db.Decimal(10, 4)
-  integrationRangeDGHigh    Decimal?  @map("integration_range_dg_high") @db.Decimal(10, 4)
-  // Integral Typ A row (two values for each band)
-  integralTypA2D1       Decimal?  @map("integral_typ_a_2d_1") @db.Decimal(10, 3)
-  integralTypA2D2       Decimal?  @map("integral_typ_a_2d_2") @db.Decimal(10, 3)
-  integralTypAG1        Decimal?  @map("integral_typ_a_g_1") @db.Decimal(10, 3)
-  integralTypAG2        Decimal?  @map("integral_typ_a_g_2") @db.Decimal(10, 3)
-  integralTypAD1        Decimal?  @map("integral_typ_a_d_1") @db.Decimal(10, 3)
-  integralTypAD2        Decimal?  @map("integral_typ_a_d_2") @db.Decimal(10, 3)
-  integralTypADG1       Decimal?  @map("integral_typ_a_dg_1") @db.Decimal(10, 4)
-  integralTypADG2       Decimal?  @map("integral_typ_a_dg_2") @db.Decimal(10, 4)
-  // Peak high Typ J row (two values for each band)
-  peakHighTypJ2D1       Decimal?  @map("peak_high_typ_j_2d_1") @db.Decimal(10, 4)
-  peakHighTypJ2D2       Decimal?  @map("peak_high_typ_j_2d_2") @db.Decimal(10, 4)
-  peakHighTypJG1        Decimal?  @map("peak_high_typ_j_g_1") @db.Decimal(10, 4)
-  peakHighTypJG2        Decimal?  @map("peak_high_typ_j_g_2") @db.Decimal(10, 4)
-  peakHighTypJD1        Decimal?  @map("peak_high_typ_j_d_1") @db.Decimal(10, 4)
-  peakHighTypJD2        Decimal?  @map("peak_high_typ_j_d_2") @db.Decimal(10, 4)
-  peakHighTypJDG1       Decimal?  @map("peak_high_typ_j_dg_1") @db.Decimal(10, 4)
-  peakHighTypJDG2       Decimal?  @map("peak_high_typ_j_dg_2") @db.Decimal(10, 4)
-  comments              String?   @db.Text
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-  
-  grapheneRef           Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
-  
-  @@map("raman_tests")
+  id                     String    @id @default(cuid())
+  testDate               DateTime? @map("test_date")
+  grapheneSample         String?   @map("graphene_sample")
+  researchTeam           String?   @map("research_team")
+  testingLab             String?   @map("testing_lab")
+  ramanReportPath        String?   @map("raman_report_path")
+  comments               String?
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  integralTypA2D1        Decimal?  @map("integral_typ_a_2d_1") @db.Decimal(10, 3)
+  integralTypA2D2        Decimal?  @map("integral_typ_a_2d_2") @db.Decimal(10, 3)
+  integralTypAD1         Decimal?  @map("integral_typ_a_d_1") @db.Decimal(10, 3)
+  integralTypAD2         Decimal?  @map("integral_typ_a_d_2") @db.Decimal(10, 3)
+  integralTypADG1        Decimal?  @map("integral_typ_a_dg_1") @db.Decimal(10, 4)
+  integralTypADG2        Decimal?  @map("integral_typ_a_dg_2") @db.Decimal(10, 4)
+  integralTypAG1         Decimal?  @map("integral_typ_a_g_1") @db.Decimal(10, 3)
+  integralTypAG2         Decimal?  @map("integral_typ_a_g_2") @db.Decimal(10, 3)
+  integrationRange2DHigh Decimal?  @map("integration_range_2d_high") @db.Decimal(10, 2)
+  integrationRange2DLow  Decimal?  @map("integration_range_2d_low") @db.Decimal(10, 2)
+  integrationRangeDHigh  Decimal?  @map("integration_range_d_high") @db.Decimal(10, 2)
+  integrationRangeDLow   Decimal?  @map("integration_range_d_low") @db.Decimal(10, 2)
+  integrationRangeDGHigh Decimal?  @map("integration_range_dg_high") @db.Decimal(10, 4)
+  integrationRangeDGLow  Decimal?  @map("integration_range_dg_low") @db.Decimal(10, 4)
+  integrationRangeGHigh  Decimal?  @map("integration_range_g_high") @db.Decimal(10, 2)
+  integrationRangeGLow   Decimal?  @map("integration_range_g_low") @db.Decimal(10, 2)
+  peakHighTypJ2D1        Decimal?  @map("peak_high_typ_j_2d_1") @db.Decimal(10, 4)
+  peakHighTypJ2D2        Decimal?  @map("peak_high_typ_j_2d_2") @db.Decimal(10, 4)
+  peakHighTypJD1         Decimal?  @map("peak_high_typ_j_d_1") @db.Decimal(10, 4)
+  peakHighTypJD2         Decimal?  @map("peak_high_typ_j_d_2") @db.Decimal(10, 4)
+  peakHighTypJDG1        Decimal?  @map("peak_high_typ_j_dg_1") @db.Decimal(10, 4)
+  peakHighTypJDG2        Decimal?  @map("peak_high_typ_j_dg_2") @db.Decimal(10, 4)
+  peakHighTypJG1         Decimal?  @map("peak_high_typ_j_g_1") @db.Decimal(10, 4)
+  peakHighTypJG2         Decimal?  @map("peak_high_typ_j_g_2") @db.Decimal(10, 4)
+  grapheneRef            Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
+
   @@index([grapheneSample])
   @@index([createdAt])
   @@index([testDate])
+  @@map("raman_tests")
 }
 
 model UpdateReport {
-  id               String    @id @default(cuid())
-  filename         String    @map("filename")
-  originalName     String    @map("original_name")
-  filePath         String    @map("file_path")
-  description      String?   @db.Text
-  weekOf           DateTime? @map("week_of")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  
-  grapheneReports  GrapheneUpdateReport[]
-  
-  @@map("update_reports")
+  id              String                 @id @default(cuid())
+  filename        String                 @map("filename")
+  originalName    String                 @map("original_name")
+  filePath        String                 @map("file_path")
+  description     String?
+  weekOf          DateTime?              @map("week_of")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+  grapheneReports GrapheneUpdateReport[]
+
   @@index([createdAt])
   @@index([weekOf])
+  @@map("update_reports")
 }
 
 model GrapheneUpdateReport {
-  id              String  @id @default(cuid())
-  grapheneId      String  @map("graphene_id")
-  updateReportId  String  @map("update_report_id")
-  createdAt       DateTime @default(now()) @map("created_at")
-  
-  graphene        Graphene      @relation(fields: [grapheneId], references: [id], onDelete: Cascade)
-  updateReport    UpdateReport  @relation(fields: [updateReportId], references: [id], onDelete: Cascade)
-  
+  id             String       @id @default(cuid())
+  grapheneId     String       @map("graphene_id")
+  updateReportId String       @map("update_report_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  graphene       Graphene     @relation(fields: [grapheneId], references: [id], onDelete: Cascade)
+  updateReport   UpdateReport @relation(fields: [updateReportId], references: [id], onDelete: Cascade)
+
   @@unique([grapheneId, updateReportId])
   @@map("graphene_update_reports")
 }
@@ -240,4 +230,5 @@ model GrapheneUpdateReport {
 enum GrindingMethod {
   manual
   mill
+  ball_mill
 }

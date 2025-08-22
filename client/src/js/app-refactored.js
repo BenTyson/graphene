@@ -52,6 +52,7 @@ const DEFAULT_FORMS = {
     base2Concentration: '',
     grindingMethod: '',
     grindingTime: '',
+    grindingFrequency: '',
     homogeneous: '',
     gas: '',
     tempRate: '',
@@ -65,7 +66,6 @@ const DEFAULT_FORMS = {
     dryingAtmosphere: '',
     dryingPressure: 'atm. Pressure',
     volumeMl: '',
-    density: '',
     species: '',
     appearanceTags: [],
     semReportFile: null,
@@ -1007,11 +1007,11 @@ window.grapheneApp = function() {
         API.biochar.exportCSV();
       } else if (type === 'graphene') {
         API.graphene.exportCSV();
-      } else if (type === 'bet') {
+      } else if (type === 'bet' || type === 'test-bet') {
         API.bet.exportCSV();
-      } else if (type === 'conductivity') {
+      } else if (type === 'conductivity' || type === 'test-conductivity') {
         API.conductivity.exportCSV();
-      } else if (type === 'raman') {
+      } else if (type === 'raman' || type === 'test-raman') {
         API.raman.exportCSV();
       }
     },
