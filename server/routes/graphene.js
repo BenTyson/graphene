@@ -182,11 +182,18 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
     where: { grapheneSample: experimentNumber },
     orderBy: { createdAt: 'desc' }
   });
+
+  // Get RAMAN tests for this graphene
+  const ramanTests = await prisma.ramanTest.findMany({
+    where: { grapheneSample: experimentNumber },
+    orderBy: { createdAt: 'desc' }
+  });
   
   res.json({
     sourceBiochar,
     lotBiocharExperiments,
     betTests,
+    ramanTests,
     lotInfo: graphene.biocharLotRef
   });
 }));

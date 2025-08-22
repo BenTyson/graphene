@@ -9,6 +9,7 @@ import biocharRoutes from './routes/biochar.js';
 import grapheneRoutes from './routes/graphene.js';
 import betRoutes from './routes/bet.js';
 import conductivityRoutes from './routes/conductivity.js';
+import ramanRoutes from './routes/raman.js';
 import updateReportRoutes from './routes/updateReports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -36,6 +37,7 @@ app.use('/api/biochar', biocharRoutes);
 app.use('/api/graphene', grapheneRoutes);
 app.use('/api/bet', betRoutes);
 app.use('/api/conductivity', conductivityRoutes);
+app.use('/api/raman', ramanRoutes);
 app.use('/api/update-reports', updateReportRoutes);
 
 // Health check

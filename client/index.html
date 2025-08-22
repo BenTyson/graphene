@@ -54,6 +54,13 @@
             Conductivity Tests
           </button>
           <button
+            @click="activeTab = 'raman'"
+            :class="activeTab === 'raman' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            RAMAN Analysis
+          </button>
+          <button
             @click="activeTab = 'updates'"
             :class="activeTab === 'updates' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
@@ -596,9 +603,25 @@
                                         <tr><td class="font-medium">Multipoint BET:</td><td x-text="bet.multipointBetArea ? formatScientific(bet.multipointBetArea) + ' m²/g' : 'N/A'"></td></tr>
                                         <tr><td class="font-medium">Langmuir:</td><td x-text="bet.langmuirSurfaceArea ? formatScientific(bet.langmuirSurfaceArea) + ' m²/g' : 'N/A'"></td></tr>
                                         <tr><td class="font-medium">Species:</td><td x-text="bet.species || 'N/A'"></td></tr>
+                                        <tr x-show="bet.researchTeam"><td class="font-medium">Research Team:</td><td x-text="bet.researchTeam || 'N/A'"></td></tr>
+                                        <tr x-show="bet.testingLab"><td class="font-medium">Testing Lab:</td><td x-text="bet.testingLab || 'N/A'"></td></tr>
                                       </table>
                                       <template x-if="bet.comments">
                                         <p class="text-gray-600 mt-1" x-text="bet.comments"></p>
+                                      </template>
+                                      <template x-if="bet.betReportPath">
+                                        <div class="mt-2 pt-2 border-t border-gray-200">
+                                          <div class="flex items-center justify-between">
+                                            <span class="text-xs font-medium text-gray-700">BET Report:</span>
+                                            <button @click="window.open('/uploads/' + bet.betReportPath, '_blank')" 
+                                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center">
+                                              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                              </svg>
+                                              View PDF
+                                            </button>
+                                          </div>
+                                        </div>
                                       </template>
                                     </div>
                                   </template>
@@ -609,6 +632,90 @@
                             <template x-if="!grapheneRelatedData[record.experimentNumber].betTests || grapheneRelatedData[record.experimentNumber].betTests.length === 0">
                               <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
                                 No BET tests found for this graphene sample
+                              </div>
+                            </template>
+                          </div>
+                          
+                          <!-- RAMAN Analysis Results -->
+                          <div>
+                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                              </svg>
+                              RAMAN Analysis
+                            </h4>
+                            <template x-if="grapheneRelatedData[record.experimentNumber].ramanTests && grapheneRelatedData[record.experimentNumber].ramanTests.length > 0">
+                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div class="space-y-2">
+                                  <template x-for="raman in grapheneRelatedData[record.experimentNumber].ramanTests">
+                                    <div class="bg-white rounded p-2 text-xs border">
+                                      <div class="flex justify-between mb-1">
+                                        <span class="font-medium">RAMAN Test</span>
+                                        <span x-text="formatDate(raman.testDate)"></span>
+                                      </div>
+                                      <div class="mb-2">
+                                        <div class="text-xs mb-1"><strong>Research Team:</strong> <span x-text="raman.researchTeam || 'N/A'"></span> | <strong>Testing Lab:</strong> <span x-text="raman.testingLab || 'N/A'"></span></div>
+                                        <table class="w-full text-xs border border-gray-200">
+                                          <thead class="bg-gray-50">
+                                            <tr>
+                                              <th class="px-1 py-1 text-left border-r border-gray-200 text-xs"></th>
+                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">2D</th>
+                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">G</th>
+                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">D</th>
+                                              <th class="px-1 py-1 text-center text-xs">D/G</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            <tr class="border-t border-gray-200">
+                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Int. Range</td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRange2DLow && raman.integrationRange2DHigh) ? `${raman.integrationRange2DLow}-${raman.integrationRange2DHigh}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRangeGLow && raman.integrationRangeGHigh) ? `${raman.integrationRangeGLow}-${raman.integrationRangeGHigh}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRangeDLow && raman.integrationRangeDHigh) ? `${raman.integrationRangeDLow}-${raman.integrationRangeDHigh}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.integrationRangeDGLow && raman.integrationRangeDGHigh) ? `${raman.integrationRangeDGLow}-${raman.integrationRangeDGHigh}` : '-'"></td>
+                                            </tr>
+                                            <tr class="border-t border-gray-200">
+                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Integral A</td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypA2D1 && raman.integralTypA2D2) ? `${raman.integralTypA2D1},${raman.integralTypA2D2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypAG1 && raman.integralTypAG2) ? `${raman.integralTypAG1},${raman.integralTypAG2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypAD1 && raman.integralTypAD2) ? `${raman.integralTypAD1},${raman.integralTypAD2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.integralTypADG1 && raman.integralTypADG2) ? `${raman.integralTypADG1},${raman.integralTypADG2}` : '-'"></td>
+                                            </tr>
+                                            <tr class="border-t border-gray-200">
+                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Peak J</td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJ2D1 && raman.peakHighTypJ2D2) ? `${raman.peakHighTypJ2D1},${raman.peakHighTypJ2D2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJG1 && raman.peakHighTypJG2) ? `${raman.peakHighTypJG1},${raman.peakHighTypJG2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJD1 && raman.peakHighTypJD2) ? `${raman.peakHighTypJD1},${raman.peakHighTypJD2}` : '-'"></td>
+                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.peakHighTypJDG1 && raman.peakHighTypJDG2) ? `${raman.peakHighTypJDG1},${raman.peakHighTypJDG2}` : '-'"></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                      <template x-if="raman.comments">
+                                        <p class="text-gray-600 mt-1" x-text="raman.comments"></p>
+                                      </template>
+                                      <template x-if="raman.ramanReportPath">
+                                        <div class="mt-2 pt-2 border-t border-gray-200">
+                                          <div class="flex items-center justify-between">
+                                            <span class="text-xs font-medium text-gray-700">RAMAN Report:</span>
+                                            <button @click="viewRamanPdf(raman.ramanReportPath)" 
+                                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center">
+                                              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                              </svg>
+                                              View PDF
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </template>
+                                    </div>
+                                  </template>
+                                </div>
+                              </div>
+                            </template>
+                            
+                            <template x-if="!grapheneRelatedData[record.experimentNumber].ramanTests || grapheneRelatedData[record.experimentNumber].ramanTests.length === 0">
+                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+                                No RAMAN analysis found for this graphene sample
                               </div>
                             </template>
                           </div>
@@ -878,6 +985,146 @@
                       <div class="grid grid-cols-1 gap-2">
                         <div class="text-xs"><strong>Comments:</strong> <span x-text="record.comments || 'None'"></span></div>
                         <div class="text-xs text-gray-500">Created: <span x-text="new Date(record.createdAt).toLocaleString()"></span></div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+          </table>
+        </div>
+      </div>
+
+      <!-- RAMAN Analysis Tab -->
+      <div x-show="activeTab === 'raman'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">RAMAN Analysis Results</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('raman')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="ramanForm = {testDate: '', dateUnknown: false, grapheneSample: '', researchTeam: 'Curia - Germany', testingLab: '', integrationRange2DLow: '', integrationRange2DHigh: '', integrationRangeGLow: '', integrationRangeGHigh: '', integrationRangeDLow: '', integrationRangeDHigh: '', integrationRangeDGLow: '', integrationRangeDGHigh: '', integralTypA2D1: '', integralTypA2D2: '', integralTypAG1: '', integralTypAG2: '', integralTypAD1: '', integralTypAD2: '', integralTypADG1: '', integralTypADG2: '', peakHighTypJ2D1: '', peakHighTypJ2D2: '', peakHighTypJG1: '', peakHighTypJG2: '', peakHighTypJD1: '', peakHighTypJD2: '', peakHighTypJDG1: '', peakHighTypJDG2: '', ramanReportFile: null, comments: ''}; editingRaman = null; showAddRaman = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Record
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="ramanSearch"
+            @input="searchRaman()"
+            placeholder="Search samples, labs, teams..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- RAMAN Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Test Date</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Graphene Sample</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Testing Lab</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300" colspan="4">Integral Typ A</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+              <tr class="bg-gray-100">
+                <th class="px-2 py-1 border-r border-gray-300"></th>
+                <th class="px-2 py-1 border-r border-gray-300"></th>
+                <th class="px-2 py-1 border-r border-gray-300"></th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">2D Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">G Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">D Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-300">D/G Ratio</th>
+                <th class="px-2 py-1"></th>
+              </tr>
+            </thead>
+              <template x-for="record in ramanRecords" :key="record.id">
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
+                      <button @click="toggleExpanded('raman', record.id)" class="text-blue-600 hover:text-blue-900 font-medium">
+                        <span x-text="record.grapheneSample"></span>
+                        <svg class="w-4 h-4 inline ml-1" :class="{'transform rotate-180': expandedRows['raman_' + record.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </button>
+                    </td>
+                    <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testingLab"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypA2D1 && record.integralTypA2D2) ? `${record.integralTypA2D1},${record.integralTypA2D2}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypAG1 && record.integralTypAG2) ? `${record.integralTypAG1},${record.integralTypAG2}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypAD1 && record.integralTypAD2) ? `${record.integralTypAD1},${record.integralTypAD2}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypADG1 && record.integralTypADG2) ? `${record.integralTypADG1},${record.integralTypADG2}` : ''"></td>
+                    <td class="px-2 py-2 text-xs">
+                      <div class="flex space-x-2">
+                        <button @click="editRaman(record)" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button @click="deleteRaman(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr x-show="expandedRows['raman_' + record.id]" class="bg-gray-50">
+                    <td colspan="8" class="px-2 py-2 text-xs">
+                      <div class="space-y-3">
+                        <!-- RAMAN Data Matrix -->
+                        <div>
+                          <h5 class="font-semibold mb-2">Absorption Band Analysis</h5>
+                          <table class="w-full text-xs border border-gray-200">
+                            <thead class="bg-gray-100">
+                              <tr>
+                                <th class="px-2 py-1 text-left border-r border-gray-200"></th>
+                                <th class="px-2 py-1 text-center border-r border-gray-200">2D Band</th>
+                                <th class="px-2 py-1 text-center border-r border-gray-200">G Band</th>
+                                <th class="px-2 py-1 text-center border-r border-gray-200">D Band</th>
+                                <th class="px-2 py-1 text-center">D/G Ratio</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr class="border-t border-gray-200">
+                                <td class="px-2 py-1 font-medium border-r border-gray-200">Integration Range</td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integrationRange2DLow && record.integrationRange2DHigh) ? `${record.integrationRange2DLow}-${record.integrationRange2DHigh}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integrationRangeGLow && record.integrationRangeGHigh) ? `${record.integrationRangeGLow}-${record.integrationRangeGHigh}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integrationRangeDLow && record.integrationRangeDHigh) ? `${record.integrationRangeDLow}-${record.integrationRangeDHigh}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono" x-text="(record.integrationRangeDGLow && record.integrationRangeDGHigh) ? `${record.integrationRangeDGLow}-${record.integrationRangeDGHigh}` : '-'"></td>
+                              </tr>
+                              <tr class="border-t border-gray-200">
+                                <td class="px-2 py-1 font-medium border-r border-gray-200">Integral Typ A</td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integralTypA2D1 && record.integralTypA2D2) ? `${record.integralTypA2D1},${record.integralTypA2D2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integralTypAG1 && record.integralTypAG2) ? `${record.integralTypAG1},${record.integralTypAG2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.integralTypAD1 && record.integralTypAD2) ? `${record.integralTypAD1},${record.integralTypAD2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono" x-text="(record.integralTypADG1 && record.integralTypADG2) ? `${record.integralTypADG1},${record.integralTypADG2}` : '-'"></td>
+                              </tr>
+                              <tr class="border-t border-gray-200">
+                                <td class="px-2 py-1 font-medium border-r border-gray-200">Peak High Typ J</td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.peakHighTypJ2D1 && record.peakHighTypJ2D2) ? `${record.peakHighTypJ2D1},${record.peakHighTypJ2D2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.peakHighTypJG1 && record.peakHighTypJG2) ? `${record.peakHighTypJG1},${record.peakHighTypJG2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono border-r border-gray-200" x-text="(record.peakHighTypJD1 && record.peakHighTypJD2) ? `${record.peakHighTypJD1},${record.peakHighTypJD2}` : '-'"></td>
+                                <td class="px-2 py-1 text-center font-mono" x-text="(record.peakHighTypJDG1 && record.peakHighTypJDG2) ? `${record.peakHighTypJDG1},${record.peakHighTypJDG2}` : '-'"></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        
+                        <!-- Additional Info -->
+                        <div class="grid grid-cols-2 gap-4">
+                          <div>
+                            <div class="mb-2"><strong>Research Team:</strong> <span x-text="record.researchTeam || 'N/A'"></span></div>
+                            <template x-if="record.ramanReportPath">
+                              <div class="mb-2">
+                                <strong>RAMAN Report:</strong>
+                                <button @click="viewRamanPdf(record.ramanReportPath)" class="text-blue-600 hover:text-blue-900 ml-1">
+                                  View PDF
+                                </button>
+                              </div>
+                            </template>
+                          </div>
+                          <div>
+                            <div class="mb-2"><strong>Comments:</strong> <span x-text="record.comments || 'None'"></span></div>
+                            <div class="text-xs text-gray-500">Created: <span x-text="new Date(record.createdAt).toLocaleString()"></span></div>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2322,6 +2569,289 @@
       </div>
     </div>
 
+    <!-- RAMAN Add/Edit Modal -->
+    <div x-show="showAddRaman" x-cloak
+         @click.away="showAddRaman = false; editingRaman = null"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingRaman ? 'Edit RAMAN Test' : 'Add RAMAN Test'"></h3>
+          
+          <form @submit.prevent="saveRaman()" class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Test Date</label>
+                  <div class="flex items-center space-x-2">
+                    <input type="date" x-model="ramanForm.testDate" 
+                           :disabled="ramanForm.dateUnknown"
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black disabled:bg-gray-100">
+                    <label class="flex items-center whitespace-nowrap">
+                      <input type="checkbox" x-model="ramanForm.dateUnknown" 
+                             @change="if($event.target.checked) ramanForm.testDate = ''"
+                             class="mr-2 rounded border-gray-300">
+                      <span class="text-sm">Unknown</span>
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample *</label>
+                  <select x-model="ramanForm.grapheneSample" required
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                    <option value="">Select graphene sample...</option>
+                    <template x-for="exp in availableGrapheneSamples" :key="exp">
+                      <option :value="exp" x-text="exp"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Team and Lab Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Team & Lab Information</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Research Team</label>
+                  <select x-model="ramanForm.researchTeam" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                    <option value="">Select research team...</option>
+                    <template x-for="team in researchTeams" :key="team">
+                      <option :value="team" x-text="team"></option>
+                    </template>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Testing Lab</label>
+                  <select x-model="ramanForm.testingLab" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                    <option value="">Select testing lab...</option>
+                    <template x-for="lab in testingLabs" :key="lab">
+                      <option :value="lab" x-text="lab"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Absorption Band Data Matrix -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Absorption Band Analysis</h4>
+              <table class="w-full border border-gray-300">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-3 py-2 text-left text-sm font-medium text-gray-700 border-r border-gray-300">Absorption Band</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-gray-700 border-r border-gray-300">2D Band</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-gray-700 border-r border-gray-300">G Band</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-gray-700 border-r border-gray-300">D Band</th>
+                    <th class="px-3 py-2 text-center text-sm font-medium text-gray-700">D/G Ratio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Integration Range Row -->
+                  <tr class="border-t border-gray-300">
+                    <td class="px-3 py-2 text-sm font-medium text-gray-700 border-r border-gray-300 bg-gray-50">Integration Range</td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integrationRange2DLow" 
+                               placeholder="2791"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integrationRange2DHigh" 
+                               placeholder="2557"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeGLow" 
+                               placeholder="1753.2"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeGHigh" 
+                               placeholder="1474"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeDLow" 
+                               placeholder="1474"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeDHigh" 
+                               placeholder="959"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeDGLow" 
+                               placeholder="1.0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integrationRangeDGHigh" 
+                               placeholder="1.451"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- Integral Typ A Row -->
+                  <tr class="border-t border-gray-300">
+                    <td class="px-3 py-2 text-sm font-medium text-gray-700 border-r border-gray-300 bg-gray-50">Integral Typ A</td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integralTypA2D1" 
+                               placeholder="2581"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integralTypA2D2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integralTypAG1" 
+                               placeholder="228"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integralTypAG2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integralTypAD1" 
+                               placeholder="330"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integralTypAD2" 
+                               placeholder="8"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.integralTypADG1" 
+                               placeholder="1"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.integralTypADG2" 
+                               placeholder="451"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- Peak High Typ J Row -->
+                  <tr class="border-t border-gray-300">
+                    <td class="px-3 py-2 text-sm font-medium text-gray-700 border-r border-gray-300 bg-gray-50">Peak High Typ J</td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJ2D1" 
+                               placeholder="0.024"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJ2D2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJG1" 
+                               placeholder="1.972"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJG2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 border-r border-gray-300">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJD1" 
+                               placeholder="1.784"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJD2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                    <td class="px-1 py-1">
+                      <div class="grid grid-cols-2 gap-1">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJDG1" 
+                               placeholder="0.905"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                        <input type="number" step="any" x-model="ramanForm.peakHighTypJDG2" 
+                               placeholder="0"
+                               class="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- PDF Upload -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">RAMAN Report</h4>
+              <template x-if="editingRaman && editingRaman.ramanReportPath">
+                <div class="mb-3 p-3 bg-blue-50 rounded-md">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-blue-800">Current report: RAMAN Report PDF</span>
+                    <div class="flex space-x-2">
+                      <button type="button" @click="viewRamanPdf(editingRaman.ramanReportPath)" 
+                              class="text-blue-600 hover:text-blue-800 text-sm">View</button>
+                      <button type="button" @click="ramanForm.removeRamanReport = true; ramanForm.replacementFile = null" 
+                              class="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              
+              <template x-if="!editingRaman || !editingRaman.ramanReportPath || ramanForm.removeRamanReport">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <span x-show="!editingRaman">Upload RAMAN Report (Optional)</span>
+                    <span x-show="editingRaman && (!editingRaman.ramanReportPath || ramanForm.removeRamanReport)">Upload New RAMAN Report</span>
+                  </label>
+                  <input type="file" 
+                         @change="ramanForm.ramanReportFile = $event.target.files[0]" 
+                         accept="application/pdf"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <p class="text-xs text-gray-500 mt-1">PDF files only, max 10MB</p>
+                </div>
+              </template>
+              
+              <template x-if="editingRaman && editingRaman.ramanReportPath && !ramanForm.removeRamanReport">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Replace RAMAN Report (Optional)</label>
+                  <input type="file" 
+                         @change="ramanForm.ramanReportFile = $event.target.files[0]" 
+                         accept="application/pdf"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <p class="text-xs text-gray-500 mt-1">PDF files only, max 10MB. Leave empty to keep current report.</p>
+                </div>
+              </template>
+            </div>
+
+            <!-- Comments -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea x-model="ramanForm.comments" rows="3"
+                        placeholder="Additional notes about the RAMAN analysis..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="showAddRaman = false; editingRaman = null; ramanForm = {}" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingRaman ? 'Update' : 'Create'"></span> Record
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Add/Edit Update Report Modal -->
     <div x-show="showAddUpdateReport" x-cloak
          @click.away="closeUpdateReportForm()"
@@ -2439,6 +2969,32 @@
                     :src="currentSemPdf" 
                     class="w-full h-full border rounded"
                     title="SEM Report PDF">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAMAN Report Modal -->
+    <div x-show="showRamanModal" x-cloak
+         @click.away="closeRamanModal()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-4xl w-full h-[90vh] p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">RAMAN Report</h3>
+            <button @click="closeRamanModal()" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="h-full">
+            <iframe x-show="currentRamanPdf" 
+                    :src="currentRamanPdf" 
+                    class="w-full h-full border rounded"
+                    title="RAMAN Report PDF">
             </iframe>
           </div>
         </div>

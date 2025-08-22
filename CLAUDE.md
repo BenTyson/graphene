@@ -91,6 +91,7 @@ npm run backup:cleanup
 │   └── schema.prisma       # Database schema
 ├── uploads/
 │   ├── sem-reports/        # SEM PDF storage
+│   ├── bet-reports/        # BET test PDF storage
 │   └── update-reports/     # Weekly update report PDFs
 ├── backups/                # Database backups (gitignored)
 └── vite.config.js          # Vite dev server with proxy for /api and /uploads
@@ -120,6 +121,7 @@ npm run backup:cleanup
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
 - Graphene → BET: Via `grapheneSample` field
 - Graphene ↔ Update Reports: Many-to-many via `GrapheneUpdateReport` junction table
+- BET Tests: Include `researchTeam`, `testingLab`, and `betReportPath` for comprehensive tracking
 - Files use soft references (experiment numbers) not hard foreign keys for flexibility
 
 ## UI Design Principles
@@ -140,6 +142,7 @@ npm run backup:cleanup
 
 ### File Management
 - **SEM PDFs**: Upload, view, replace, or remove PDF reports for graphene records
+- **BET Reports**: Upload, view, replace, or remove PDF reports for BET test records
 - **Update Reports**: Weekly PDF reports with multi-experiment associations
 - **Vite Proxy**: `/uploads` proxied to backend for PDF serving
 - **Automatic cleanup**: Files deleted when records removed
@@ -252,8 +255,8 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 
 ### BET
 - `GET /api/bet` - List all with filters (default sort: desc)
-- `POST /api/bet` - Create new record
-- `PUT /api/bet/:id` - Update record
+- `POST /api/bet` - Create new record (supports BET PDF upload)
+- `PUT /api/bet/:id` - Update record (supports BET PDF upload)
 - `DELETE /api/bet/:id` - Delete record
 - `GET /api/bet/export/csv` - Export to CSV
 

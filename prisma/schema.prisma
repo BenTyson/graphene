@@ -107,6 +107,7 @@ model Graphene {
   biocharLotRef        BiocharLot?  @relation(fields: [biocharLotNumber], references: [lotNumber])
   betTests             BET[]
   conductivityTests    ConductivityTest[]
+  ramanTests           RamanTest[]
   updateReports        GrapheneUpdateReport[]
   
   @@map("graphene")
@@ -155,6 +156,52 @@ model ConductivityTest {
   grapheneRef     Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
   
   @@map("conductivity_tests")
+  @@index([grapheneSample])
+  @@index([createdAt])
+  @@index([testDate])
+}
+
+model RamanTest {
+  id                    String    @id @default(cuid())
+  testDate              DateTime? @map("test_date")
+  grapheneSample        String?   @map("graphene_sample")
+  researchTeam          String?   @map("research_team")
+  testingLab            String?   @map("testing_lab")
+  ramanReportPath       String?   @map("raman_report_path")
+  // Integration range row (low and high for each band)
+  integrationRange2DLow     Decimal?  @map("integration_range_2d_low") @db.Decimal(10, 2)
+  integrationRange2DHigh    Decimal?  @map("integration_range_2d_high") @db.Decimal(10, 2)
+  integrationRangeGLow      Decimal?  @map("integration_range_g_low") @db.Decimal(10, 2)
+  integrationRangeGHigh     Decimal?  @map("integration_range_g_high") @db.Decimal(10, 2)
+  integrationRangeDLow      Decimal?  @map("integration_range_d_low") @db.Decimal(10, 2)
+  integrationRangeDHigh     Decimal?  @map("integration_range_d_high") @db.Decimal(10, 2)
+  integrationRangeDGLow     Decimal?  @map("integration_range_dg_low") @db.Decimal(10, 4)
+  integrationRangeDGHigh    Decimal?  @map("integration_range_dg_high") @db.Decimal(10, 4)
+  // Integral Typ A row (two values for each band)
+  integralTypA2D1       Decimal?  @map("integral_typ_a_2d_1") @db.Decimal(10, 3)
+  integralTypA2D2       Decimal?  @map("integral_typ_a_2d_2") @db.Decimal(10, 3)
+  integralTypAG1        Decimal?  @map("integral_typ_a_g_1") @db.Decimal(10, 3)
+  integralTypAG2        Decimal?  @map("integral_typ_a_g_2") @db.Decimal(10, 3)
+  integralTypAD1        Decimal?  @map("integral_typ_a_d_1") @db.Decimal(10, 3)
+  integralTypAD2        Decimal?  @map("integral_typ_a_d_2") @db.Decimal(10, 3)
+  integralTypADG1       Decimal?  @map("integral_typ_a_dg_1") @db.Decimal(10, 4)
+  integralTypADG2       Decimal?  @map("integral_typ_a_dg_2") @db.Decimal(10, 4)
+  // Peak high Typ J row (two values for each band)
+  peakHighTypJ2D1       Decimal?  @map("peak_high_typ_j_2d_1") @db.Decimal(10, 4)
+  peakHighTypJ2D2       Decimal?  @map("peak_high_typ_j_2d_2") @db.Decimal(10, 4)
+  peakHighTypJG1        Decimal?  @map("peak_high_typ_j_g_1") @db.Decimal(10, 4)
+  peakHighTypJG2        Decimal?  @map("peak_high_typ_j_g_2") @db.Decimal(10, 4)
+  peakHighTypJD1        Decimal?  @map("peak_high_typ_j_d_1") @db.Decimal(10, 4)
+  peakHighTypJD2        Decimal?  @map("peak_high_typ_j_d_2") @db.Decimal(10, 4)
+  peakHighTypJDG1       Decimal?  @map("peak_high_typ_j_dg_1") @db.Decimal(10, 4)
+  peakHighTypJDG2       Decimal?  @map("peak_high_typ_j_dg_2") @db.Decimal(10, 4)
+  comments              String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  grapheneRef           Graphene? @relation(fields: [grapheneSample], references: [experimentNumber])
+  
+  @@map("raman_tests")
   @@index([grapheneSample])
   @@index([createdAt])
   @@index([testDate])

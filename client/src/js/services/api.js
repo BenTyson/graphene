@@ -269,6 +269,74 @@ export const conductivityAPI = {
   }
 };
 
+// RAMAN API endpoints
+export const ramanAPI = {
+  // Get all RAMAN records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/raman${query}`).then(handleResponse);
+  },
+
+  // Get single RAMAN record
+  getById: (id) => {
+    return fetch(`${API_BASE}/raman/${id}`).then(handleResponse);
+  },
+
+  // Create new RAMAN record (with file upload support)
+  create: async (data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'ramanReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('ramanReport', file);
+    }
+    
+    return fetch(`${API_BASE}/raman`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update RAMAN record (with file upload support)
+  update: async (id, data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'ramanReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('ramanReport', file);
+    }
+    
+    return fetch(`${API_BASE}/raman/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete RAMAN record
+  delete: (id) => {
+    return fetch(`${API_BASE}/raman/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/raman/export/csv`, '_blank');
+  }
+};
+
 // Update Reports API endpoints
 export const updateReportAPI = {
   // Get all update reports
@@ -350,5 +418,6 @@ export default {
   graphene: grapheneAPI,
   bet: betAPI,
   conductivity: conductivityAPI,
+  raman: ramanAPI,
   updateReport: updateReportAPI
 };

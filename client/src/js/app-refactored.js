@@ -106,6 +106,44 @@ const DEFAULT_FORMS = {
     conductivity20kN: '',
     comments: ''
   },
+  raman: {
+    testDate: '',
+    dateUnknown: false,
+    grapheneSample: '',
+    researchTeam: 'Curia - Germany',
+    testingLab: '',
+    // Integration range row (low and high for each)
+    integrationRange2DLow: '',
+    integrationRange2DHigh: '',
+    integrationRangeGLow: '',
+    integrationRangeGHigh: '',
+    integrationRangeDLow: '',
+    integrationRangeDHigh: '',
+    integrationRangeDGLow: '',
+    integrationRangeDGHigh: '',
+    // Integral Typ A row (two values for each)
+    integralTypA2D1: '',
+    integralTypA2D2: '',
+    integralTypAG1: '',
+    integralTypAG2: '',
+    integralTypAD1: '',
+    integralTypAD2: '',
+    integralTypADG1: '',
+    integralTypADG2: '',
+    // Peak high Typ J row (two values for each)
+    peakHighTypJ2D1: '',
+    peakHighTypJ2D2: '',
+    peakHighTypJG1: '',
+    peakHighTypJG2: '',
+    peakHighTypJD1: '',
+    peakHighTypJD2: '',
+    peakHighTypJDG1: '',
+    peakHighTypJDG2: '',
+    ramanReportFile: null,
+    removeRamanReport: false,
+    replaceRamanReport: false,
+    comments: ''
+  },
   combine: {
     lotNumber: '',
     lotName: '',
@@ -130,6 +168,7 @@ window.grapheneApp = function() {
     grapheneRecords: [],
     betRecords: [],
     conductivityRecords: [],
+    ramanRecords: [],
     updateReports: [],
     availableExperiments: [],
     availableLots: [],
@@ -140,6 +179,7 @@ window.grapheneApp = function() {
     grapheneSearch: '',
     betSearch: '',
     conductivitySearch: '',
+    ramanSearch: '',
     updateReportSearch: '',
     
     // Modal states
@@ -147,9 +187,12 @@ window.grapheneApp = function() {
     showAddGraphene: false,
     showAddBet: false,
     showAddConductivity: false,
+    showAddRaman: false,
     showCombineModal: false,
     showSemModal: false,
     currentSemPdf: null,
+    showRamanModal: false,
+    currentRamanPdf: null,
     showAddUpdateReport: false,
     showUpdateReportModal: false,
     currentUpdateReport: null,
@@ -159,6 +202,7 @@ window.grapheneApp = function() {
     editingGraphene: null,
     editingBet: null,
     editingConductivity: null,
+    editingRaman: null,
     editingUpdateReport: null,
     
     // Forms
@@ -166,6 +210,7 @@ window.grapheneApp = function() {
     grapheneForm: { ...DEFAULT_FORMS.graphene },
     betForm: { ...DEFAULT_FORMS.bet },
     conductivityForm: { ...DEFAULT_FORMS.conductivity },
+    ramanForm: { ...DEFAULT_FORMS.raman },
     combineForm: { ...DEFAULT_FORMS.combine },
     updateReportForm: { ...DEFAULT_FORMS.updateReport },
     
@@ -187,7 +232,7 @@ window.grapheneApp = function() {
     washMediums: ['Water'],
     reactors: ['AV1', 'AV5'],
     researchTeams: ['Curia - Germany'],
-    testingLabs: ['Fraunhofer-Institut'],
+    testingLabs: ['Fraunhofer-Institut', 'Clariant'],
     baseTypes: ['KOH', 'NaOH'],
     gases: ['Ar', 'N2'],
     washSolutions: ['HCl'],
@@ -241,6 +286,7 @@ window.grapheneApp = function() {
         this.loadGrapheneRecords(),
         this.loadBetRecords(),
         this.loadConductivityRecords(),
+        this.loadRamanRecords(),
         this.loadUpdateReports()
       ]);
       this.loadDropdownOptions();
@@ -287,6 +333,16 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load conductivity records:', error);
         this.conductivityRecords = [];
+      }
+    },
+
+    async loadRamanRecords() {
+      try {
+        this.ramanRecords = await API.raman.getAll(this.ramanSearch);
+        console.log('Loaded RAMAN records:', this.ramanRecords);
+      } catch (error) {
+        console.error('Failed to load RAMAN records:', error);
+        this.ramanRecords = [];
       }
     },
     
@@ -367,6 +423,15 @@ window.grapheneApp = function() {
         }, 300);
       }
       this._debouncedSearchConductivity();
+    },
+
+    searchRaman() {
+      if (!this._debouncedSearchRaman) {
+        this._debouncedSearchRaman = dataHelpers.debounce(async () => {
+          await this.loadRamanRecords();
+        }, 300);
+      }
+      this._debouncedSearchRaman();
     },
     
     searchUpdateReports() {
@@ -752,6 +817,97 @@ window.grapheneApp = function() {
       this.editingConductivity = null;
       this.conductivityForm = { ...DEFAULT_FORMS.conductivity };
     },
+
+    // RAMAN Test management
+    editRaman(record) {
+      this.editingRaman = record;
+      this.ramanForm = {
+        testDate: record.testDate ? new Date(record.testDate).toISOString().split('T')[0] : '',
+        dateUnknown: !record.testDate,
+        grapheneSample: record.grapheneSample || '',
+        researchTeam: record.researchTeam || 'Curia - Germany',
+        testingLab: record.testingLab || '',
+        // Integration range row (low and high for each)
+        integrationRange2DLow: record.integrationRange2DLow || '',
+        integrationRange2DHigh: record.integrationRange2DHigh || '',
+        integrationRangeGLow: record.integrationRangeGLow || '',
+        integrationRangeGHigh: record.integrationRangeGHigh || '',
+        integrationRangeDLow: record.integrationRangeDLow || '',
+        integrationRangeDHigh: record.integrationRangeDHigh || '',
+        integrationRangeDGLow: record.integrationRangeDGLow || '',
+        integrationRangeDGHigh: record.integrationRangeDGHigh || '',
+        // Integral Typ A row (two values for each)
+        integralTypA2D1: record.integralTypA2D1 || '',
+        integralTypA2D2: record.integralTypA2D2 || '',
+        integralTypAG1: record.integralTypAG1 || '',
+        integralTypAG2: record.integralTypAG2 || '',
+        integralTypAD1: record.integralTypAD1 || '',
+        integralTypAD2: record.integralTypAD2 || '',
+        integralTypADG1: record.integralTypADG1 || '',
+        integralTypADG2: record.integralTypADG2 || '',
+        // Peak high Typ J row (two values for each)
+        peakHighTypJ2D1: record.peakHighTypJ2D1 || '',
+        peakHighTypJ2D2: record.peakHighTypJ2D2 || '',
+        peakHighTypJG1: record.peakHighTypJG1 || '',
+        peakHighTypJG2: record.peakHighTypJG2 || '',
+        peakHighTypJD1: record.peakHighTypJD1 || '',
+        peakHighTypJD2: record.peakHighTypJD2 || '',
+        peakHighTypJDG1: record.peakHighTypJDG1 || '',
+        peakHighTypJDG2: record.peakHighTypJDG2 || '',
+        ramanReportFile: null,
+        removeRamanReport: false,
+        replaceRamanReport: false,
+        comments: record.comments || ''
+      };
+      this.showAddRaman = true;
+    },
+
+    async saveRaman() {
+      try {
+        const data = { ...this.ramanForm };
+        
+        if (data.dateUnknown) {
+          data.testDate = null;
+        }
+        delete data.dateUnknown;
+        
+        // Handle file removal
+        if (data.removeRamanReport) {
+          data.removeRamanReport = 'true';
+        }
+        
+        let result;
+        if (this.editingRaman) {
+          result = await API.raman.update(this.editingRaman.id, data, data.ramanReportFile);
+        } else {
+          result = await API.raman.create(data, data.ramanReportFile);
+        }
+        
+        await this.loadRamanRecords();
+        this.closeRamanForm();
+      } catch (error) {
+        console.error('Failed to save RAMAN record:', error);
+        alert(`Failed to save record: ${error.message}`);
+      }
+    },
+
+    async deleteRaman(id) {
+      if (!confirm('Are you sure you want to delete this record?')) return;
+      
+      try {
+        await API.raman.delete(id);
+        await this.loadRamanRecords();
+      } catch (error) {
+        console.error('Failed to delete RAMAN record:', error);
+        alert(`Failed to delete record: ${error.message}`);
+      }
+    },
+
+    closeRamanForm() {
+      this.showAddRaman = false;
+      this.editingRaman = null;
+      this.ramanForm = { ...DEFAULT_FORMS.raman };
+    },
     
     // Update Report CRUD operations
     editUpdateReport(record) {
@@ -855,6 +1011,8 @@ window.grapheneApp = function() {
         API.bet.exportCSV();
       } else if (type === 'conductivity') {
         API.conductivity.exportCSV();
+      } else if (type === 'raman') {
+        API.raman.exportCSV();
       }
     },
     
@@ -919,6 +1077,18 @@ window.grapheneApp = function() {
     closeSemModal() {
       this.showSemModal = false;
       this.currentSemPdf = null;
+    },
+
+    viewRamanPdf(ramanReportPath) {
+      if (ramanReportPath) {
+        this.currentRamanPdf = '/uploads/' + ramanReportPath + '#navpanes=0&toolbar=0';
+        this.showRamanModal = true;
+      }
+    },
+
+    closeRamanModal() {
+      this.showRamanModal = false;
+      this.currentRamanPdf = null;
     },
     
     // Biochar source handling for graphene form
