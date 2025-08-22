@@ -188,6 +188,7 @@ npm run backup:cleanup
 - **Base Types**: KOH, NaOH (supports dual base experiments)
 - **Appearance Tags**: Multiple selectable tags for graphene characterization
 - **Calculated Fields**: Density (specific volume in ml/g) automatically calculated from volume/output ratio
+- **Grinding Options**: Manual, Mill, Ball Mill methods with conditional frequency field (Hz) for Ball Mill only
 - **Objective Parser**: Paste full experiment text, auto-extracts into 5 structured fields
   - Uses `/client/src/js/utils/objectiveParser.js`
   - Handles variations: "Objective:", "OBJECTIVE", with/without colons
