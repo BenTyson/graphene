@@ -268,9 +268,15 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
     data.homogeneous = null;
   }
   
-  // Handle date field
+  // Handle date field - treat as local date to avoid timezone issues
   if (data.experimentDate && data.experimentDate !== '') {
-    data.experimentDate = new Date(data.experimentDate);
+    // If it's a date-only string (YYYY-MM-DD), create local date
+    if (data.experimentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = data.experimentDate.split('-');
+      data.experimentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      data.experimentDate = new Date(data.experimentDate);
+    }
   } else {
     data.experimentDate = null;
   }
@@ -419,9 +425,15 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
     data.homogeneous = null;
   }
   
-  // Handle date field
+  // Handle date field - treat as local date to avoid timezone issues
   if (data.experimentDate && data.experimentDate !== '') {
-    data.experimentDate = new Date(data.experimentDate);
+    // If it's a date-only string (YYYY-MM-DD), create local date
+    if (data.experimentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = data.experimentDate.split('-');
+      data.experimentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      data.experimentDate = new Date(data.experimentDate);
+    }
   } else {
     data.experimentDate = null;
   }
