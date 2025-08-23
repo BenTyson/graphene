@@ -84,6 +84,11 @@ router.get('/', asyncHandler(async (req, res) => {
         include: {
           updateReport: true
         }
+      },
+      semReports: {
+        include: {
+          semReport: true
+        }
       }
     }
   });
@@ -103,6 +108,11 @@ router.get('/:id', asyncHandler(async (req, res) => {
       updateReports: {
         include: {
           updateReport: true
+        }
+      },
+      semReports: {
+        include: {
+          semReport: true
         }
       }
     }
@@ -130,6 +140,11 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
         include: {
           updateReport: true
         }
+      },
+      semReports: {
+        include: {
+          semReport: true
+        }
       }
     }
   });
@@ -150,6 +165,11 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
       updateReports: {
         include: {
           updateReport: true
+        }
+      },
+      semReports: {
+        include: {
+          semReport: true
         }
       }
     }

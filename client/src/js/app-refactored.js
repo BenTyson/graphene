@@ -154,6 +154,12 @@ const DEFAULT_FORMS = {
     weekOf: '',
     grapheneIds: [],
     updateFile: null
+  },
+  semReport: {
+    description: '',
+    uploadDate: '',
+    grapheneIds: [],
+    semFiles: null
   }
 };
 
@@ -170,6 +176,7 @@ window.grapheneApp = function() {
     conductivityRecords: [],
     ramanRecords: [],
     updateReports: [],
+    semReports: [],
     availableExperiments: [],
     availableLots: [],
     availableGrapheneSamples: [],
@@ -181,6 +188,7 @@ window.grapheneApp = function() {
     conductivitySearch: '',
     ramanSearch: '',
     updateReportSearch: '',
+    semReportSearch: '',
     
     // Modal states
     showAddBiochar: false,
@@ -194,6 +202,7 @@ window.grapheneApp = function() {
     showRamanModal: false,
     currentRamanPdf: null,
     showAddUpdateReport: false,
+    showAddSemReport: false,
     showUpdateReportModal: false,
     currentUpdateReport: null,
     
@@ -204,6 +213,7 @@ window.grapheneApp = function() {
     editingConductivity: null,
     editingRaman: null,
     editingUpdateReport: null,
+    editingSemReport: null,
     
     // Forms
     biocharForm: { ...DEFAULT_FORMS.biochar },
@@ -213,6 +223,7 @@ window.grapheneApp = function() {
     ramanForm: { ...DEFAULT_FORMS.raman },
     combineForm: { ...DEFAULT_FORMS.combine },
     updateReportForm: { ...DEFAULT_FORMS.updateReport },
+    semReportForm: { ...DEFAULT_FORMS.semReport },
     
     // Selection states
     selectedBiocharIds: [],
@@ -287,7 +298,8 @@ window.grapheneApp = function() {
         this.loadBetRecords(),
         this.loadConductivityRecords(),
         this.loadRamanRecords(),
-        this.loadUpdateReports()
+        this.loadUpdateReports(),
+        this.loadSemReports()
       ]);
       this.loadDropdownOptions();
     },
@@ -352,6 +364,15 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load update reports:', error);
         this.updateReports = [];
+      }
+    },
+    
+    async loadSemReports() {
+      try {
+        this.semReports = await API.semReport.getAll();
+      } catch (error) {
+        console.error('Failed to load SEM reports:', error);
+        this.semReports = [];
       }
     },
     
@@ -441,6 +462,15 @@ window.grapheneApp = function() {
         }, 300);
       }
       this._debouncedSearchUpdateReports();
+    },
+    
+    searchSemReports() {
+      if (!this._debouncedSearchSemReports) {
+        this._debouncedSearchSemReports = dataHelpers.debounce(async () => {
+          await this.loadSemReports();
+        }, 300);
+      }
+      this._debouncedSearchSemReports();
     },
     
     // Expandable row methods
@@ -998,6 +1028,125 @@ window.grapheneApp = function() {
         this.updateReportForm.grapheneIds.splice(index, 1);
       } else {
         this.updateReportForm.grapheneIds.push(grapheneId);
+      }
+    },
+    
+    // SEM Report methods
+    async saveSemReport() {
+      try {
+        const files = this.semReportForm.semFiles;
+        
+        console.log('Saving SEM report, files:', files);
+        console.log('Is editing:', this.editingSemReport);
+        console.log('Files length:', files ? files.length : 0);
+        
+        // Only require files for new uploads, not edits
+        if (!this.editingSemReport && (!files || files.length === 0)) {
+          alert('Please select at least one PDF file to upload');
+          return;
+        }
+        
+        const data = {
+          description: this.semReportForm.description,
+          uploadDate: this.semReportForm.uploadDate,
+          grapheneIds: this.semReportForm.grapheneIds
+        };
+        
+        if (this.editingSemReport) {
+          await API.semReport.update(this.editingSemReport.id, data);
+        } else {
+          await API.semReport.create(data, files);
+        }
+        
+        await this.loadSemReports();
+        this.closeSemReportForm();
+      } catch (error) {
+        console.error('Failed to save SEM report:', error);
+        alert(`Failed to save SEM report: ${error.message}`);
+      }
+    },
+    
+    editSemReport(record) {
+      this.editingSemReport = record;
+      this.semReportForm = {
+        description: record.description || '',
+        uploadDate: record.uploadDate ? new Date(record.uploadDate).toISOString().split('T')[0] : '',
+        grapheneIds: record.grapheneReports ? record.grapheneReports.map(gr => gr.graphene.id) : [],
+        semFiles: null
+      };
+      this.showAddSemReport = true;
+    },
+    
+    async deleteSemReport(id) {
+      if (confirm('Are you sure you want to delete this SEM report?')) {
+        try {
+          await API.semReport.delete(id);
+          await this.loadSemReports();
+        } catch (error) {
+          console.error('Failed to delete SEM report:', error);
+          alert(`Failed to delete SEM report: ${error.message}`);
+        }
+      }
+    },
+    
+    closeSemReportForm() {
+      this.showAddSemReport = false;
+      this.editingSemReport = null;
+      this.semReportForm = { ...DEFAULT_FORMS.semReport };
+    },
+    
+    viewSemPdf(filePath) {
+      if (filePath) {
+        this.currentSemPdf = filePath + '#navpanes=0&toolbar=0';
+        this.showSemModal = true;
+      }
+    },
+    
+    closeSemModal() {
+      this.showSemModal = false;
+      this.currentSemPdf = null;
+    },
+    
+    handleSemFileChange(event) {
+      console.log('handleSemFileChange called, event:', event);
+      
+      if (!event || !event.target || !event.target.files) {
+        console.error('Invalid event object:', event);
+        return;
+      }
+      
+      const files = event.target.files;
+      const filesArray = Array.from(files);
+      
+      console.log('Files selected:', filesArray.length, 'files');
+      console.log('File details:', filesArray.map(f => ({ name: f.name, size: f.size, type: f.type })));
+      
+      // Validate all files are PDFs
+      const allValid = filesArray.every(file => {
+        const validation = validators.validatePDFFile(file);
+        if (!validation.isValid) {
+          alert(`${file.name}: ${validation.message}`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (allValid && filesArray.length > 0) {
+        this.semReportForm.semFiles = filesArray;
+        console.log('Files stored in form:', this.semReportForm.semFiles);
+        console.log('Form state after file selection:', this.semReportForm);
+      } else {
+        event.target.value = null;
+        this.semReportForm.semFiles = null;
+      }
+    },
+    
+    toggleSemGrapheneSelection(grapheneId) {
+      const index = this.semReportForm.grapheneIds.indexOf(grapheneId);
+      if (index > -1) {
+        this.semReportForm.grapheneIds.splice(index, 1);
+      } else {
+        this.semReportForm.grapheneIds.push(grapheneId);
       }
     },
     

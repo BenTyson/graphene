@@ -107,6 +107,7 @@ model Graphene {
   biocharLotRef        BiocharLot?            @relation(fields: [biocharLotNumber], references: [lotNumber])
   updateReports        GrapheneUpdateReport[]
   ramanTests           RamanTest[]
+  semReports           GrapheneSemReport[]
 
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
@@ -215,6 +216,22 @@ model UpdateReport {
   @@map("update_reports")
 }
 
+model SemReport {
+  id              String              @id @default(cuid())
+  filename        String              @map("filename")
+  originalName    String              @map("original_name")
+  filePath        String              @map("file_path")
+  description     String?
+  uploadDate      DateTime?           @map("upload_date")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  grapheneReports GrapheneSemReport[]
+
+  @@index([createdAt])
+  @@index([uploadDate])
+  @@map("sem_reports")
+}
+
 model GrapheneUpdateReport {
   id             String       @id @default(cuid())
   grapheneId     String       @map("graphene_id")
@@ -225,6 +242,18 @@ model GrapheneUpdateReport {
 
   @@unique([grapheneId, updateReportId])
   @@map("graphene_update_reports")
+}
+
+model GrapheneSemReport {
+  id          String    @id @default(cuid())
+  grapheneId  String    @map("graphene_id")
+  semReportId String    @map("sem_report_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  graphene    Graphene  @relation(fields: [grapheneId], references: [id], onDelete: Cascade)
+  semReport   SemReport @relation(fields: [semReportId], references: [id], onDelete: Cascade)
+
+  @@unique([grapheneId, semReportId])
+  @@map("graphene_sem_reports")
 }
 
 enum GrindingMethod {

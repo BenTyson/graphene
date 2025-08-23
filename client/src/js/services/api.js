@@ -412,6 +412,83 @@ export const updateReportAPI = {
   }
 };
 
+// SEM Reports API endpoints
+export const semReportAPI = {
+  // Get all SEM reports
+  getAll: () => {
+    return fetch(`${API_BASE}/sem-reports`).then(handleResponse);
+  },
+
+  // Get single SEM report
+  getById: (id) => {
+    return fetch(`${API_BASE}/sem-reports/${id}`).then(handleResponse);
+  },
+
+  // Get SEM reports for specific graphene experiment
+  getByGrapheneExperiment: (experimentNumber) => {
+    return fetch(`${API_BASE}/sem-reports/graphene/${experimentNumber}`).then(handleResponse);
+  },
+
+  // Create new SEM reports with bulk file upload
+  create: (data, files) => {
+    const formData = new FormData();
+    
+    // Add all data fields
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        if (key === 'grapheneIds' && Array.isArray(data[key])) {
+          formData.append(key, JSON.stringify(data[key]));
+        } else {
+          formData.append(key, data[key]);
+        }
+      }
+    });
+    
+    // Add files
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        formData.append('semFiles', files[i]);
+      }
+    }
+    
+    return fetch(`${API_BASE}/sem-reports`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update SEM report metadata and associations
+  update: (id, data) => {
+    const payload = { ...data };
+    
+    // Convert grapheneIds array to JSON string if needed
+    if (payload.grapheneIds && Array.isArray(payload.grapheneIds)) {
+      payload.grapheneIds = JSON.stringify(payload.grapheneIds);
+    }
+    
+    return jsonRequest(`${API_BASE}/sem-reports/${id}`, 'PUT', payload);
+  },
+
+  // Delete SEM report
+  delete: (id) => {
+    return fetch(`${API_BASE}/sem-reports/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Add graphene association to existing report
+  addGrapheneAssociation: (reportId, grapheneId) => {
+    return fetch(`${API_BASE}/sem-reports/${reportId}/graphene/${grapheneId}`, {
+      method: 'POST'
+    }).then(handleResponse);
+  },
+
+  // Remove graphene association from report
+  removeGrapheneAssociation: (reportId, grapheneId) => {
+    return fetch(`${API_BASE}/sem-reports/${reportId}/graphene/${grapheneId}`, {
+      method: 'DELETE'
+    }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -419,5 +496,6 @@ export default {
   bet: betAPI,
   conductivity: conductivityAPI,
   raman: ramanAPI,
-  updateReport: updateReportAPI
+  updateReport: updateReportAPI,
+  semReport: semReportAPI
 };

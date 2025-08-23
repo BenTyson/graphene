@@ -140,12 +140,24 @@ npm run backup:cleanup
 - **Testing Labs**: Fraunhofer-Institut, Clariant
 - **PDF Reports**: Stored in `/uploads/raman-reports/`
 
+#### SEM Report Management
+- **Purpose**: Centralized bulk upload and management of SEM PDF reports
+- **SemReport Model**: Stores metadata (filename, originalName, filePath, description, uploadDate)
+- **Many-to-Many Relationships**: Single report can associate with multiple graphene experiments
+- **GrapheneSemReport Junction**: Links SEM reports to graphene records via IDs
+- **Bulk Upload**: Support for up to 10 PDF files simultaneously (10MB each max)
+- **File Storage**: PDFs stored in `/uploads/sem-reports/` with unique timestamped names
+- **Dual Display**: Graphene expansions show both direct attachments AND associated reports
+- **Association Management**: Add/remove experiment associations post-upload
+- **Backward Compatibility**: Maintains existing `semReportPath` field for direct uploads
+
 ### Important Relationships
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
 - Graphene → BET: Via `grapheneSample` field
 - Graphene → Conductivity: Via `grapheneSample` field  
 - Graphene → RAMAN: Via `grapheneSample` field
 - Graphene ↔ Update Reports: Many-to-many via `GrapheneUpdateReport` junction table
+- Graphene ↔ SEM Reports: Many-to-many via `GrapheneSemReport` junction table
 - All test types include `researchTeam`, `testingLab`, and PDF report paths
 - Files use soft references (experiment numbers) not hard foreign keys for flexibility
 
@@ -317,6 +329,16 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - `POST /api/update-reports/:id/graphene/:grapheneId` - Add experiment association
 - `DELETE /api/update-reports/:id/graphene/:grapheneId` - Remove experiment association
 - `GET /api/update-reports/graphene/:experimentNumber` - Get reports for specific experiment
+
+### SEM Reports
+- `GET /api/sem-reports` - List all SEM reports with associated experiments
+- `POST /api/sem-reports` - Bulk upload PDFs with optional associations (10MB each, 10 files max)
+- `PUT /api/sem-reports/:id` - Update metadata and experiment associations
+- `DELETE /api/sem-reports/:id` - Delete report and file
+- `GET /api/sem-reports/:id` - Get single SEM report with associations
+- `GET /api/sem-reports/graphene/:experimentNumber` - Get SEM reports for specific experiment
+- `POST /api/sem-reports/:id/graphene/:grapheneId` - Add experiment association
+- `DELETE /api/sem-reports/:id/graphene/:grapheneId` - Remove experiment association
 
 ## Code Style Guidelines
 

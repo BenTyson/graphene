@@ -11,6 +11,7 @@ import betRoutes from './routes/bet.js';
 import conductivityRoutes from './routes/conductivity.js';
 import ramanRoutes from './routes/raman.js';
 import updateReportRoutes from './routes/updateReports.js';
+import semReportRoutes from './routes/semReports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/api/bet', betRoutes);
 app.use('/api/conductivity', conductivityRoutes);
 app.use('/api/raman', ramanRoutes);
 app.use('/api/update-reports', updateReportRoutes);
+app.use('/api/sem-reports', semReportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
