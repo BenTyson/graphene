@@ -135,7 +135,7 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
     throw new Error('No files uploaded');
   }
   
-  const { description, uploadDate, grapheneIds } = req.body;
+  const { reportDate, grapheneIds } = req.body;
   let parsedGrapheneIds = [];
   
   // Parse graphene IDs if provided
@@ -155,8 +155,7 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
       filename: file.filename,
       originalName: file.originalname,
       filePath: path.join('sem-reports', file.filename),
-      description: description || null,
-      uploadDate: uploadDate ? new Date(uploadDate) : new Date()
+      reportDate: reportDate ? new Date(reportDate) : new Date()
     };
     
     // Create the SEM report
@@ -206,7 +205,7 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
 router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
-  const { description, uploadDate, grapheneIds } = req.body;
+  const { reportDate, grapheneIds } = req.body;
   
   let parsedGrapheneIds = [];
   if (grapheneIds) {
@@ -221,8 +220,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const updatedReport = await prisma.semReport.update({
     where: { id },
     data: {
-      description: description || null,
-      uploadDate: uploadDate ? new Date(uploadDate) : null
+      reportDate: reportDate ? new Date(reportDate) : null
     }
   });
   

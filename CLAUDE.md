@@ -19,6 +19,21 @@ npm run typecheck
 npm run backup:create
 ```
 
+## Claude Code Slash Commands
+
+### Database Backup Command
+Use the `#dbbackup` slash command for quick database backups:
+
+```
+#dbbackup
+```
+
+This command automatically:
+- Creates timestamped backup in `backups/` directory  
+- Shows backup size and completion status
+- Lists recent backups for reference
+- **Critical before any schema changes or major development work**
+
 ## Database Backup & Recovery
 
 **CRITICAL**: Always backup before any database schema changes, migrations, or major development work.
@@ -142,12 +157,17 @@ npm run backup:cleanup
 
 #### SEM Report Management
 - **Purpose**: Centralized bulk upload and management of SEM PDF reports
-- **SemReport Model**: Stores metadata (filename, originalName, filePath, description, uploadDate)
+- **SemReport Model**: Stores metadata (filename, originalName, filePath, reportDate)
 - **Many-to-Many Relationships**: Single report can associate with multiple graphene experiments
 - **GrapheneSemReport Junction**: Links SEM reports to graphene records via IDs
 - **Bulk Upload**: Support for up to 10 PDF files simultaneously (10MB each max)
 - **File Storage**: PDFs stored in `/uploads/sem-reports/` with unique timestamped names
-- **Dual Display**: Graphene expansions show both direct attachments AND associated reports
+- **Full Circle Integration**: 
+  - Direct uploads through graphene modal create SemReport entries
+  - All SEM reports appear in centralized SEM Reports table
+  - Both direct and associated reports show in graphene row expansions
+- **Table Display**: Sample #, Date, Species, PDF Name, Actions columns
+- **Automatic Refresh**: SEM table updates when reports uploaded via graphene modal
 - **Association Management**: Add/remove experiment associations post-upload
 - **Backward Compatibility**: Maintains existing `semReportPath` field for direct uploads
 
@@ -280,6 +300,12 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 **Problem**: "Unexpected field" error when uploading files with FormData
 **Solution**: Exclude file object fields (e.g., `ramanReportFile`) from FormData when appending fields in API client. Only the actual file should be appended with the correct field name expected by Multer.
 
+### SEM Report System Architecture
+**Direct Upload Flow**: Graphene modal upload → Creates SemReport entry → Shows in SEM table
+**Bulk Upload Flow**: SEM Reports page → Creates multiple entries → Associates with experiments
+**Display Integration**: Both types appear in graphene expansions with original filenames
+**Table Refresh**: `loadSemReports()` called after graphene save operations
+
 ## API Endpoints
 
 ### Biochar
@@ -333,12 +359,13 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 ### SEM Reports
 - `GET /api/sem-reports` - List all SEM reports with associated experiments
 - `POST /api/sem-reports` - Bulk upload PDFs with optional associations (10MB each, 10 files max)
-- `PUT /api/sem-reports/:id` - Update metadata and experiment associations
+- `PUT /api/sem-reports/:id` - Update report date and experiment associations
 - `DELETE /api/sem-reports/:id` - Delete report and file
 - `GET /api/sem-reports/:id` - Get single SEM report with associations
 - `GET /api/sem-reports/graphene/:experimentNumber` - Get SEM reports for specific experiment
 - `POST /api/sem-reports/:id/graphene/:grapheneId` - Add experiment association
 - `DELETE /api/sem-reports/:id/graphene/:grapheneId` - Remove experiment association
+- **Note**: Direct uploads through graphene modal automatically create SEM report entries
 
 ## Code Style Guidelines
 
@@ -396,3 +423,4 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - "Expected Int, provided String" → Check numeric field conversion in routes
 - Template not updating → Use spread operator: `this.state = {...this.state, key: value}`
 - Multiple `<tr>` in template → Wrap in `<tbody>`
+- dbbackup

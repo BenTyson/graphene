@@ -222,11 +222,8 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
 router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
-  // If file was uploaded, add the path to the data
+  // Prepare data (no longer setting semReportPath as we use SEM report associations)
   const data = { ...req.body };
-  if (req.file) {
-    data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
-  }
   
   // Remove UI-only fields that don't exist in database schema
   delete data.biocharSource;
@@ -236,6 +233,7 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   delete data.removeSemReport;
   delete data.replaceSemReport;
   delete data.density; // Density is calculated, not stored
+  delete data.semReports; // Relational field, not stored directly
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
@@ -300,6 +298,28 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
     data
   });
   
+  // Create SEM report entry if file was uploaded directly
+  if (req.file) {
+    const semReportData = {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      filePath: `sem-reports/${req.file.filename}`,
+      reportDate: data.experimentDate || new Date()
+    };
+    
+    const semReport = await prisma.semReport.create({
+      data: semReportData
+    });
+    
+    // Create association between graphene and SEM report
+    await prisma.grapheneSemReport.create({
+      data: {
+        grapheneId: graphene.id,
+        semReportId: semReport.id
+      }
+    });
+  }
+  
   // Create update report associations if provided
   if (updateReportIds.length > 0) {
     const updateReportAssociations = updateReportIds.map(reportId => ({
@@ -346,10 +366,8 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
       }
     }
   } else if (req.file) {
-    // New file uploaded
-    data.semReportPath = `/uploads/sem-reports/${req.file.filename}`;
-    
-    // Delete old file if it exists
+    // New file uploaded - clear old semReportPath and delete old file
+    data.semReportPath = null;
     if (existingRecord.semReportPath) {
       const oldFilePath = path.join(process.cwd(), existingRecord.semReportPath);
       if (fs.existsSync(oldFilePath)) {
@@ -366,6 +384,7 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   delete data.replaceSemReport;
   delete data.objectivePaste;
   delete data.density; // Density is calculated, not stored
+  delete data.semReports; // Relational field, not stored directly
   
   // Handle appearanceTags array from FormData
   if (data.appearanceTags && typeof data.appearanceTags === 'string') {
@@ -432,6 +451,28 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
     where: { id },
     data
   });
+  
+  // Handle SEM report creation for direct uploads
+  if (req.file && !data.removeSemReport) {
+    const semReportData = {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      filePath: `sem-reports/${req.file.filename}`,
+      reportDate: data.experimentDate || new Date()
+    };
+    
+    const semReport = await prisma.semReport.create({
+      data: semReportData
+    });
+    
+    // Create association between graphene and SEM report
+    await prisma.grapheneSemReport.create({
+      data: {
+        grapheneId: id,
+        semReportId: semReport.id
+      }
+    });
+  }
   
   // Update report associations if provided
   if (hasUpdateReportIds) {

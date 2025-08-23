@@ -222,13 +222,13 @@ model SemReport {
   originalName    String              @map("original_name")
   filePath        String              @map("file_path")
   description     String?
-  uploadDate      DateTime?           @map("upload_date")
+  reportDate      DateTime?           @map("report_date")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   grapheneReports GrapheneSemReport[]
 
   @@index([createdAt])
-  @@index([uploadDate])
+  @@index([reportDate])
   @@map("sem_reports")
 }
 

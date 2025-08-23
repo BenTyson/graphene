@@ -156,8 +156,7 @@ const DEFAULT_FORMS = {
     updateFile: null
   },
   semReport: {
-    description: '',
-    uploadDate: '',
+    reportDate: '',
     grapheneIds: [],
     semFiles: null
   }
@@ -692,6 +691,7 @@ window.grapheneApp = function() {
         }
         
         await this.loadGrapheneRecords();
+        await this.loadSemReports(); // Refresh SEM reports if one was uploaded
         this.closeGrapheneForm();
       } catch (error) {
         console.error('Failed to save graphene record:', error);
@@ -708,6 +708,27 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to delete graphene record:', error);
         alert(`Failed to delete record: ${error.message}`);
+      }
+    },
+
+    async removeSemReportAssociation(semReportId) {
+      if (!confirm('Remove the association between this SEM report and the graphene experiment?')) return;
+      
+      try {
+        await API.semReport.removeGrapheneAssociation(semReportId, this.editingGraphene.id);
+        
+        // Update the editingGraphene record to reflect the change
+        this.editingGraphene.semReports = this.editingGraphene.semReports.filter(
+          sr => sr.semReport.id !== semReportId
+        );
+        
+        // Also refresh the main graphene list
+        await this.loadGrapheneRecords();
+        
+        alert('SEM report association removed successfully');
+      } catch (error) {
+        console.error('Failed to remove SEM report association:', error);
+        alert(`Failed to remove association: ${error.message}`);
       }
     },
     
@@ -1047,8 +1068,7 @@ window.grapheneApp = function() {
         }
         
         const data = {
-          description: this.semReportForm.description,
-          uploadDate: this.semReportForm.uploadDate,
+          reportDate: this.semReportForm.reportDate,
           grapheneIds: this.semReportForm.grapheneIds
         };
         
@@ -1069,8 +1089,7 @@ window.grapheneApp = function() {
     editSemReport(record) {
       this.editingSemReport = record;
       this.semReportForm = {
-        description: record.description || '',
-        uploadDate: record.uploadDate ? new Date(record.uploadDate).toISOString().split('T')[0] : '',
+        reportDate: record.reportDate ? new Date(record.reportDate).toISOString().split('T')[0] : '',
         grapheneIds: record.grapheneReports ? record.grapheneReports.map(gr => gr.graphene.id) : [],
         semFiles: null
       };
