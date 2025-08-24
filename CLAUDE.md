@@ -235,9 +235,13 @@ npm run backup:cleanup
 - **Copy/Duplicate**: Clone records with auto-incremented test order
 - **Dropdown Management**: Dynamic addition of new options
 - **Base Types**: KOH, NaOH (supports dual base experiments)
-- **Appearance Tags**: Multiple selectable tags for graphene characterization
+- **Appearance Tags**: Multiple selectable tags for graphene characterization including "Dull" option
 - **Calculated Fields**: Density (specific volume in ml/g) automatically calculated from volume/output ratio
-- **Grinding Options**: Manual, Mill, Ball Mill methods with conditional frequency field (Hz) for Ball Mill only
+- **Grinding Options**: Manual, Mill, Ball Mill, Blender methods with conditional fields
+  - **# of Grinds**: Universal field for milling/blending repetitions (e.g., "5 millings, 3 mins each")
+  - **Time Field**: Grinding/blending duration in minutes per cycle
+  - **Frequency Field**: Hz setting for Ball Mill only
+  - **Smart Enabling**: Fields auto-enable/disable based on method selection
 - **Objective Parser**: Paste full experiment text, auto-extracts into 5 structured fields
   - Uses `/client/src/js/utils/objectiveParser.js`
   - Handles variations: "Objective:", "OBJECTIVE", with/without colons
@@ -245,7 +249,7 @@ npm run backup:cleanup
 
 ### Column Sorting System
 - **Biochar Table**: Sortable columns include Order, Exp #, Date, Reactor, Raw Material, Start (g), Temp, Time, Output (g)
-- **Graphene Table**: Sortable columns include Order, Exp #, Date, Oven, Qty (g), Biochar, Species, Rate, Max, Time, Vol(ml), Out(g)
+- **Graphene Table**: Sortable columns include Order, Exp #, Date, Oven, Qty (g), Biochar, Species, # Grinds, Rate, Max, Time, Vol(ml), Out(g)
 - **Client-Side Sorting**: Instant response with proper data type detection (numeric, date, string)
 - **Visual Indicators**: Sort arrows show current column and direction (ascending/descending)
 - **Smart Null Handling**: Empty values always sort to end regardless of direction
@@ -433,7 +437,8 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - **Drying Pressure**: "atm. Pressure" 
 - **Time Units**: Biochar (hours), Graphene (minutes)
 - **Base Types**: KOH, NaOH
-- **Appearance Tags**: Shiny, Somewhat Shiny, Barely Shiny, Black, Black/Grey, Grey, Voluminous, Very Voluminous, Brittle
+- **Grinding Methods**: Manual, Mill, Ball Mill, Blender
+- **Appearance Tags**: Shiny, Somewhat Shiny, Barely Shiny, Dull, Black, Black/Grey, Grey, Voluminous, Very Voluminous, Brittle
 
 ### Data Constraints
 - **Experiment numbers**: Unique per table
