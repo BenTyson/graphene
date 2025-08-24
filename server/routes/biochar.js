@@ -42,7 +42,13 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   });
   
-  res.json(biochars);
+  // Convert dates to date-only strings to avoid timezone issues
+  const biocharsWithFixedDates = biochars.map(b => ({
+    ...b,
+    experimentDate: b.experimentDate ? b.experimentDate.toISOString().split('T')[0] : null
+  }));
+  
+  res.json(biocharsWithFixedDates);
 }));
 
 // Get all lots - MUST BE BEFORE /:id route

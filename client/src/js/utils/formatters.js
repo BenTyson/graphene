@@ -9,14 +9,15 @@
 export const formatDate = (dateString) => {
   if (!dateString) return 'Unknown';
   
-  // Handle date-only strings (YYYY-MM-DD) to avoid timezone issues
+  // Handle date-only strings (YYYY-MM-DD) - create local date to avoid timezone issues
   if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
     const [year, month, day] = dateString.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: 'America/Denver' // MST/MDT timezone
     });
   }
   
@@ -25,7 +26,8 @@ export const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 
-    day: 'numeric' 
+    day: 'numeric',
+    timeZone: 'America/Denver' // MST/MDT timezone
   });
 };
 

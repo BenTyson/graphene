@@ -93,7 +93,13 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   });
   
-  res.json(graphenes);
+  // Convert dates to date-only strings to avoid timezone issues
+  const graphenesWithFixedDates = graphenes.map(g => ({
+    ...g,
+    experimentDate: g.experimentDate ? g.experimentDate.toISOString().split('T')[0] : null
+  }));
+  
+  res.json(graphenesWithFixedDates);
 }));
 
 // Get single graphene record
@@ -123,7 +129,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
     throw new Error('Graphene record not found');
   }
   
-  res.json(graphene);
+  // Convert date to date-only string to avoid timezone issues
+  const grapheneWithFixedDate = {
+    ...graphene,
+    experimentDate: graphene.experimentDate ? graphene.experimentDate.toISOString().split('T')[0] : null
+  };
+  
+  res.json(grapheneWithFixedDate);
 }));
 
 // Get graphene records by biochar experiment
@@ -149,7 +161,13 @@ router.get('/by-biochar/:biocharExperiment', asyncHandler(async (req, res) => {
     }
   });
   
-  res.json(graphenes);
+  // Convert dates to date-only strings to avoid timezone issues
+  const graphenesWithFixedDates = graphenes.map(g => ({
+    ...g,
+    experimentDate: g.experimentDate ? g.experimentDate.toISOString().split('T')[0] : null
+  }));
+  
+  res.json(graphenesWithFixedDates);
 }));
 
 // Get related data for a graphene experiment - MUST BE BEFORE /:id route
