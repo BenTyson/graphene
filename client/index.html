@@ -1500,16 +1500,18 @@
                 })"></div>
               </div>
               <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Initial Pressure (bar)</label>
-                  <input type="number" step="0.1" x-model="biocharForm.pressureInitial"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Final Pressure (bar)</label>
-                  <input type="number" step="0.1" x-model="biocharForm.pressureFinal"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Initial Pressure',
+                  unit: 'bar',
+                  modelVariable: 'biocharForm.pressureInitial',
+                  step: '0.1'
+                })"></div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Final Pressure',
+                  unit: 'bar',
+                  modelVariable: 'biocharForm.pressureFinal',
+                  step: '0.1'
+                })"></div>
               </div>
             </div>
             
@@ -1517,11 +1519,12 @@
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Post-Processing</h4>
               <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Wash Amount (g)</label>
-                  <input type="number" step="0.01" x-model="biocharForm.washAmount"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Wash Amount',
+                  unit: 'g',
+                  modelVariable: 'biocharForm.washAmount',
+                  step: '0.01'
+                })"></div>
                 <div x-html="getSelectFieldHtml({
                   label: 'Wash Medium',
                   modelVariable: 'biocharForm.washMedium',
@@ -1655,11 +1658,12 @@
                   addNewText: 'Oven',
                   resetValue: ''
                 })"></div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (g)</label>
-                  <input type="number" step="0.01" x-model="grapheneForm.quantity"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Quantity',
+                  unit: 'g',
+                  modelVariable: 'grapheneForm.quantity',
+                  step: '0.01'
+                })"></div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Biochar Source</label>
                   <div class="relative">
@@ -1717,11 +1721,12 @@
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Base Treatment</h4>
               <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Amount (g)</label>
-                  <input type="number" step="0.01" x-model="grapheneForm.baseAmount"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                </div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Amount',
+                  unit: 'g',
+                  modelVariable: 'grapheneForm.baseAmount',
+                  step: '0.01'
+                })"></div>
                 <div x-html="getSelectFieldHtml({
                   label: 'Type',
                   modelVariable: 'grapheneForm.baseType',
@@ -2552,20 +2557,20 @@
             </div>
             
             <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Multipoint BET Area (m²/g)</label>
-                <input type="text" x-model="betForm.multipointBetArea" 
-                       placeholder="1.520e3 or 1520"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                <p class="text-xs text-gray-500 mt-1">Scientific notation: 1.520e3 = 1.520 × 10³</p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Langmuir Surface Area (m²/g)</label>
-                <input type="text" x-model="betForm.langmuirSurfaceArea" 
-                       placeholder="2.340e3 or 2340"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                <p class="text-xs text-gray-500 mt-1">Scientific notation: 2.340e3 = 2.340 × 10³</p>
-              </div>
+              <div x-html="getNumericFieldHtml({
+                label: 'Multipoint BET Area',
+                unit: 'm²/g',
+                modelVariable: 'betForm.multipointBetArea',
+                inputType: 'text',
+                placeholder: '1.520e3 or 1520'
+              })"></div>
+              <div x-html="getNumericFieldHtml({
+                label: 'Langmuir Surface Area',
+                unit: 'm²/g',
+                modelVariable: 'betForm.langmuirSurfaceArea',
+                inputType: 'text',
+                placeholder: '2.340e3 or 2340'
+              })"></div>
             </div>
             
             <div>
