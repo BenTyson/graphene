@@ -9,6 +9,7 @@ import objectiveParser from './utils/objectiveParser.js';
 import modalHelpers from './components/modals/modalHelpers.js';
 import dateFieldHelpers from './components/forms/dateFieldHelpers.js';
 import selectFieldHelpers from './components/forms/selectFieldHelpers.js';
+import numericFieldHelpers from './components/forms/numericFieldHelpers.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -1626,6 +1627,11 @@ window.grapheneApp = function() {
     // Select field HTML generation using helpers
     getSelectFieldHtml(config) {
       return selectFieldHelpers.createSelectWithAdd(config);
+    },
+
+    // Numeric field HTML generation using helpers
+    getNumericFieldHtml(config) {
+      return numericFieldHelpers.createNumericFieldWithUnit(config);
     }
   };
 };
