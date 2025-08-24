@@ -562,7 +562,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
   
   const headers = [
-    'Experiment #', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
+    'Experiment #', 'Title Note', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
     'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)', 'Grinding Frequency (Hz)', 'Homogeneous',
     'Gas', 'Temp Rate', 'Temp Max (°C)', 'Time (min)', 'Wash Amount (g)',
     'Wash Solution', 'Wash Concentration (%)', 'Wash Water', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
@@ -574,6 +574,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   graphenes.forEach(g => {
     const row = [
       g.experimentNumber,
+      g.titleNote || '',
       g.oven || '',
       g.quantity || '',
       g.biocharExperiment || '',

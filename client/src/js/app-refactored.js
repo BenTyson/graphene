@@ -35,6 +35,7 @@ const DEFAULT_FORMS = {
   },
   graphene: {
     experimentNumber: '',
+    titleNote: '',
     testOrder: '',
     experimentDate: '',
     dateUnknown: false,
@@ -166,7 +167,7 @@ const DEFAULT_FORMS = {
 window.grapheneApp = function() {
   return {
     // Tab management
-    activeTab: 'biochar',
+    activeTab: 'graphene',
     
     // Data storage
     biocharRecords: [],
@@ -252,6 +253,22 @@ window.grapheneApp = function() {
     ovens: ['A', 'B', 'C'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
     appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
+    grapheneComments: [
+      'ground biochar (brown powder) NOT compacted',
+      'ground biochar (brown powder) compacted to two pellets of equal size',
+      'Rotating oven, powder not compacted'
+    ],
+    titleNotes: [
+      '(2% Water)',
+      '(+ H20)',
+      '(Pilot Plant #1)',
+      '(Pilot Plant #1 + H20)',
+      '(Pilot Plant #2)',
+      '(Pilot Plants 1 & 2)',
+      '(Pilot Plant #2 + H20)',
+      '(Pilot Plant #3)',
+      '(Pilot Plant #3 + H20)'
+    ],
     
     // Modal states for adding new dropdown options
     showAddMaterial: false,
@@ -266,6 +283,7 @@ window.grapheneApp = function() {
     showAddDryingPressure: false,
     showAddOven: false,
     showAddAppearanceTag: false,
+    showAddGrapheneComment: false,
     
     // New values for dropdowns
     newMaterial: '',
@@ -280,6 +298,7 @@ window.grapheneApp = function() {
     newDryingPressure: '',
     newOven: '',
     newAppearanceTag: '',
+    newGrapheneComment: '',
     
     // Import utilities as methods
     ...formatters,
@@ -1444,6 +1463,15 @@ window.grapheneApp = function() {
         this.appearanceTags.push(this.newAppearanceTag);
         this.newAppearanceTag = '';
         this.showAddAppearanceTag = false;
+      }
+    },
+    
+    addNewGrapheneComment() {
+      if (this.newGrapheneComment && !this.grapheneComments.includes(this.newGrapheneComment)) {
+        this.grapheneComments.push(this.newGrapheneComment);
+        this.grapheneForm.comments = this.newGrapheneComment;
+        this.newGrapheneComment = '';
+        this.showAddGrapheneComment = false;
       }
     }
   };

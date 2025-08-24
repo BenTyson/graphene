@@ -26,18 +26,18 @@
       <div class="border-b border-gray-200">
         <nav class="-mb-px flex space-x-8">
           <button
-            @click="activeTab = 'biochar'"
-            :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Biochar
-          </button>
-          <button
             @click="activeTab = 'graphene'"
             :class="activeTab === 'graphene' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             Graphene
+          </button>
+          <button
+            @click="activeTab = 'biochar'"
+            :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Biochar
           </button>
           <button
             @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'"
@@ -387,7 +387,7 @@
             <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="grapheneForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingTime: '', grindingFrequency: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="grapheneForm = {experimentNumber: '', titleNote: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingTime: '', grindingFrequency: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -467,8 +467,9 @@
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
                     <button 
                       @click="toggleGrapheneExpansion(record.experimentNumber)" 
-                      class="text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                      x-text="record.experimentNumber">
+                      class="text-blue-600 hover:text-blue-800 underline cursor-pointer">
+                      <span x-text="record.experimentNumber"></span>
+                      <span x-show="record.titleNote" x-text="' ' + record.titleNote" class="text-gray-600"></span>
                     </button>
                   </td>
                   <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.experimentDate)"></td>
@@ -554,6 +555,7 @@
                     <div class="bg-white border border-gray-300 rounded-lg p-4 space-y-4">
                       <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
                         Material Journey: <span class="font-mono text-black" x-text="record.experimentNumber"></span>
+                        <span x-show="record.titleNote" x-text="record.titleNote" class="text-gray-600 font-normal"></span>
                       </h3>
                       
                       <template x-if="loadingGrapheneRelated[record.experimentNumber]">
@@ -1637,11 +1639,28 @@
             <!-- Basic Information -->
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-4 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Experiment #</label>
                   <input type="text" x-model="grapheneForm.experimentNumber" required
                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Title Note</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.titleNote"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">None</option>
+                      <template x-for="note in titleNotes" :key="note">
+                        <option :value="note" x-text="note"></option>
+                      </template>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Test Order</label>
@@ -1739,6 +1758,29 @@
                     </div>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">Select individual experiment or combined lot</p>
+                </div>
+              </div>
+              
+              <!-- Comments row -->
+              <div class="grid grid-cols-1 gap-4 mt-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                  <div class="relative">
+                    <select x-model="grapheneForm.comments"
+                            @change="if($event.target.value === 'add_new') { showAddGrapheneComment = true; grapheneForm.comments = ''; }"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select comment...</option>
+                      <template x-for="comment in grapheneComments" :key="comment">
+                        <option :value="comment" x-text="comment"></option>
+                      </template>
+                      <option value="add_new" class="font-semibold">+ Add New Comment</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2243,13 +2285,6 @@
                 </template>
               </div>
               <p class="text-xs text-gray-500 mt-1">Select update reports that mention this experiment</p>
-            </div>
-            
-            <!-- Comments -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
-              <textarea x-model="grapheneForm.comments" rows="2"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
             </div>
             
             <div class="flex justify-end space-x-2 pt-4">
@@ -3305,6 +3340,35 @@
               </button>
               <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
                 Add Team
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Graphene Comment Modal -->
+    <div x-show="showAddGrapheneComment" x-cloak
+         @click.away="showAddGrapheneComment = false; newGrapheneComment = ''"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Comment Option</h3>
+          <form @submit.prevent="addNewGrapheneComment()" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comment Text</label>
+              <textarea x-model="newGrapheneComment" required rows="3"
+                        placeholder="Enter the comment text that will be available for selection..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddGrapheneComment = false; newGrapheneComment = ''"
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Add Comment
               </button>
             </div>
           </form>

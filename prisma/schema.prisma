@@ -101,6 +101,7 @@ model Graphene {
   recommendedAction    String?                @map("recommended_action")
   result               String?
   grindingFrequency    Decimal?               @map("grinding_frequency") @db.Decimal(10, 2)
+  titleNote            String?                @map("title_note")
   betTests             BET[]
   conductivityTests    ConductivityTest[]
   biocharExperimentRef Biochar?               @relation(fields: [biocharExperiment], references: [experimentNumber])
