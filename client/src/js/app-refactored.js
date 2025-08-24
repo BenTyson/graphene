@@ -196,6 +196,10 @@ window.grapheneApp = function() {
     updateReportSearch: '',
     semReportSearch: '',
     
+    // Sorting states
+    biocharSortColumn: null,
+    biocharSortDirection: 'asc',
+    
     // Modal states
     showAddBiochar: false,
     showAddGraphene: false,
@@ -332,6 +336,7 @@ window.grapheneApp = function() {
     async loadBiocharRecords() {
       try {
         this.biocharRecords = await API.biochar.getAll(this.biocharSearch);
+        this.applySortingToBiochar();
         this.loadAvailableExperiments();
         await this.loadAvailableLots();
       } catch (error) {
@@ -495,6 +500,68 @@ window.grapheneApp = function() {
         }, 300);
       }
       this._debouncedSearchSemReports();
+    },
+    
+    // Sorting methods
+    sortBiochar(column) {
+      if (this.biocharSortColumn === column) {
+        this.biocharSortDirection = this.biocharSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.biocharSortColumn = column;
+        this.biocharSortDirection = 'asc';
+      }
+      this.applySortingToBiochar();
+    },
+    
+    applySortingToBiochar() {
+      if (!this.biocharSortColumn) return;
+      
+      this.biocharRecords.sort((a, b) => {
+        let aVal = a[this.biocharSortColumn];
+        let bVal = b[this.biocharSortColumn];
+        
+        // Handle null/undefined values - always sort to end
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        
+        // Convert to appropriate types for comparison
+        if (this.biocharSortColumn === 'experimentDate') {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        } else if (this.isNumericColumn(this.biocharSortColumn)) {
+          aVal = parseFloat(aVal) || 0;
+          bVal = parseFloat(bVal) || 0;
+        } else {
+          aVal = String(aVal).toLowerCase();
+          bVal = String(bVal).toLowerCase();
+        }
+        
+        let result = 0;
+        if (aVal < bVal) result = -1;
+        else if (aVal > bVal) result = 1;
+        
+        return this.biocharSortDirection === 'desc' ? -result : result;
+      });
+    },
+    
+    isNumericColumn(column) {
+      const numericColumns = ['testOrder', 'startingAmount', 'acidAmount', 'acidConcentration', 
+                             'acidMolarity', 'temperature', 'time', 'pressureInitial', 'pressureFinal', 
+                             'washAmount', 'output', 'dryingTemp', 'kftPercentage'];
+      return numericColumns.includes(column);
+    },
+    
+    getSortIcon(column) {
+      if (this.biocharSortColumn !== column) {
+        return '<svg class="w-3 h-3 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
+      }
+      
+      if (this.biocharSortDirection === 'asc') {
+        return '<svg class="w-3 h-3 ml-1 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4"></path></svg>';
+      } else {
+        return '<svg class="w-3 h-3 ml-1 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v12m0 0l4-4m-4 4l-4-4"></path></svg>';
+      }
     },
     
     // Expandable row methods

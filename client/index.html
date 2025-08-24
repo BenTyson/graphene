@@ -142,27 +142,71 @@
               <!-- Sub-Header Row -->
               <tr class="bg-gray-50">
                 <!-- Basic Info sub-headers -->
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Order</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Exp #</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Date</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Reactor</th>
-                <!-- Material sub-headers -->
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Raw Material</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Start (g)</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('testOrder')" class="flex items-center hover:text-gray-700">
+                    Order
+                    <span x-html="getSortIcon('testOrder')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('experimentNumber')" class="flex items-center hover:text-gray-700">
+                    Exp #
+                    <span x-html="getSortIcon('experimentNumber')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('experimentDate')" class="flex items-center hover:text-gray-700">
+                    Date
+                    <span x-html="getSortIcon('experimentDate')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  <button @click="sortBiochar('reactor')" class="flex items-center hover:text-gray-700">
+                    Reactor
+                    <span x-html="getSortIcon('reactor')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('rawMaterial')" class="flex items-center hover:text-gray-700">
+                    Raw Material
+                    <span x-html="getSortIcon('rawMaterial')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  <button @click="sortBiochar('startingAmount')" class="flex items-center hover:text-gray-700">
+                    Start (g)
+                    <span x-html="getSortIcon('startingAmount')"></span>
+                  </button>
+                </th>
                 <!-- Process sub-headers -->
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid Amt</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid %</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Molarity</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Acid Type</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Temp</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Time</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('temperature')" class="flex items-center hover:text-gray-700">
+                    Temp
+                    <span x-html="getSortIcon('temperature')"></span>
+                  </button>
+                </th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('time')" class="flex items-center hover:text-gray-700">
+                    Time
+                    <span x-html="getSortIcon('time')"></span>
+                  </button>
+                </th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">P Initial</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">P Final</th>
                 <!-- Output sub-headers -->
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Wash Amt</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Wash Med</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Drying</th>
-                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Output (g)</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortBiochar('output')" class="flex items-center hover:text-gray-700">
+                    Output (g)
+                    <span x-html="getSortIcon('output')"></span>
+                  </button>
+                </th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">KFT %</th>
               </tr>
             </thead>
