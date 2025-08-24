@@ -65,6 +65,7 @@ model Graphene {
   baseType             String?                @map("base_type")
   baseConcentration    Decimal?               @map("base_concentration") @db.Decimal(5, 2)
   grindingMethod       GrindingMethod?        @map("grinding_method")
+  grindingCount        Int?                   @map("grinding_count")
   grindingTime         Decimal?               @map("grinding_time") @db.Decimal(10, 2)
   gas                  String?
   tempRate             String?                @map("temp_rate")
@@ -261,4 +262,5 @@ enum GrindingMethod {
   manual
   mill
   ball_mill
+  blender
 }

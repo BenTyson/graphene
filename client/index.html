@@ -431,7 +431,7 @@
             <button @click="exportData('graphene')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="grapheneForm = {experimentNumber: '', titleNote: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingTime: '', grindingFrequency: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="grapheneForm = {experimentNumber: '', titleNote: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', oven: '', quantity: '', biocharExperiment: '', biocharLotNumber: '', biocharSource: '', baseAmount: '', baseType: '', baseConcentration: '', base2Amount: '', base2Type: '', base2Concentration: '', grindingMethod: '', grindingCount: '', grindingTime: '', grindingFrequency: '', homogeneous: '', gas: '', tempRate: '', tempMax: '', time: '', washAmount: '', washSolution: '', washConcentration: '', washWater: '', dryingTemp: '', dryingAtmosphere: '', dryingPressure: 'atm. Pressure', volumeMl: '', density: '', species: '', appearanceTags: [], semReportFile: null, removeSemReport: false, replaceSemReport: false, output: '', comments: ''}; editingGraphene = null; showAddGraphene = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -491,7 +491,7 @@
                   </button>
                 </th>
                 <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Base</th>
-                <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
+                <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Homog.</th>
                 <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Gas</th>
                 <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Temperature</th>
@@ -515,6 +515,12 @@
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Conc%</th>
                 <!-- Grinding sub-headers -->
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Method</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                  <button @click="sortGraphene('grindingCount')" class="flex items-center hover:text-gray-700">
+                    # Grinds
+                    <span x-html="getSortIcon('grindingCount')"></span>
+                  </button>
+                </th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Time</th>
                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Freq</th>
                 <!-- Temperature sub-headers -->
@@ -598,6 +604,7 @@
                   </td>
                   <!-- Grinding columns -->
                   <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.grindingMethod"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.grindingCount || ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.grindingTime ? record.grindingTime + 'min' : ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-300" x-text="record.grindingFrequency ? record.grindingFrequency + 'Hz' : ''"></td>
                   <!-- Homogeneous -->
@@ -1889,13 +1896,21 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Method</label>
                   <select x-model="grapheneForm.grindingMethod"
-                          @change="if (grapheneForm.grindingMethod !== 'ball_mill') grapheneForm.grindingFrequency = ''"
+                          @change="if (grapheneForm.grindingMethod === 'manual') { grapheneForm.grindingFrequency = ''; grapheneForm.grindingCount = ''; grapheneForm.grindingTime = ''; } else if (grapheneForm.grindingMethod !== 'ball_mill') { grapheneForm.grindingFrequency = ''; }"
                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
                     <option value="">Select...</option>
                     <option value="manual">Manual</option>
                     <option value="mill">Mill</option>
                     <option value="ball_mill">Ball Mill</option>
+                    <option value="blender">Blender</option>
                   </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"># of Grinds</label>
+                  <input type="number" step="1" min="1" x-model="grapheneForm.grindingCount"
+                         :disabled="!grapheneForm.grindingMethod || grapheneForm.grindingMethod === 'manual'"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100"
+                         placeholder="Number of grinding cycles">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Grinding Time (min)</label>

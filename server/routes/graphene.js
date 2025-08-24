@@ -264,7 +264,7 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   
   // Convert numeric fields from strings to proper types
   const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
-                        'base2Amount', 'base2Concentration', 'grindingTime', 'grindingFrequency',
+                        'base2Amount', 'base2Concentration', 'grindingCount', 'grindingTime', 'grindingFrequency',
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
                         'volumeMl', 'output'];
   
@@ -421,7 +421,7 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   
   // Convert numeric fields from strings to proper types
   const numericFields = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 
-                        'base2Amount', 'base2Concentration', 'grindingTime', 'grindingFrequency',
+                        'base2Amount', 'base2Concentration', 'grindingCount', 'grindingTime', 'grindingFrequency',
                         'tempMax', 'time', 'washAmount', 'washConcentration', 'dryingTemp', 
                         'volumeMl', 'output'];
   
@@ -563,7 +563,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   
   const headers = [
     'Experiment #', 'Title Note', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
-    'Base Type', 'Base Concentration (%)', 'Grinding Method', 'Grinding Time (min)', 'Grinding Frequency (Hz)', 'Homogeneous',
+    'Base Type', 'Base Concentration (%)', 'Grinding Method', '# of Grinds', 'Grinding Time (min)', 'Grinding Frequency (Hz)', 'Homogeneous',
     'Gas', 'Temp Rate', 'Temp Max (°C)', 'Time (min)', 'Wash Amount (g)',
     'Wash Solution', 'Wash Concentration (%)', 'Wash Water', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
     'Volume (ml)', 'Density (ml/g)', 'Species', 'Appearance Tags', 'Output (g)', 'Comments', 'Created At'
@@ -582,6 +582,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       g.baseType || '',
       g.baseConcentration || '',
       g.grindingMethod || '',
+      g.grindingCount || '',
       g.grindingTime || '',
       g.grindingFrequency || '',
       g.homogeneous !== null ? (g.homogeneous ? 'Yes' : 'No') : '',

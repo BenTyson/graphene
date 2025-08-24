@@ -58,6 +58,7 @@ const DEFAULT_FORMS = {
     base2Type: '',
     base2Concentration: '',
     grindingMethod: '',
+    grindingCount: '',
     grindingTime: '',
     grindingFrequency: '',
     homogeneous: '',
@@ -264,7 +265,7 @@ window.grapheneApp = function() {
     dryingPressures: ['atm. Pressure'],
     ovens: ['A', 'B', 'C'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
-    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Black', 'Black/Grey', 'Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
+    appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Dull', 'Black', 'Black/Grey', 'Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
     grapheneComments: [
       'ground biochar (brown powder) NOT compacted',
       'ground biochar (brown powder) compacted to two pellets of equal size',
@@ -599,7 +600,7 @@ window.grapheneApp = function() {
     
     isGrapheneNumericColumn(column) {
       const numericColumns = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'base2Amount', 
-                             'base2Concentration', 'grindingTime', 'grindingFrequency', 'tempRate', 'tempMax', 
+                             'base2Concentration', 'grindingCount', 'grindingTime', 'grindingFrequency', 'tempRate', 'tempMax', 
                              'time', 'washAmount', 'washConcentration', 'washWater', 'dryingTemp', 
                              'volumeMl', 'output'];
       return numericColumns.includes(column);
