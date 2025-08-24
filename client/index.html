@@ -1466,25 +1466,15 @@
                   <input type="number" step="0.01" x-model="biocharForm.acidMolarity"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <div class="relative">
-                    <select x-model="biocharForm.acidType" 
-                            @change="if($event.target.value === 'add_new') { showAddAcidType = true; biocharForm.acidType = ''; }"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                      <option value="">Select...</option>
-                      <template x-for="acid in acidTypes" :key="acid">
-                        <option :value="acid" x-text="acid"></option>
-                      </template>
-                      <option value="add_new" class="font-semibold">+ Add New</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+                <div x-html="getSelectFieldHtml({
+                  label: 'Type',
+                  modelVariable: 'biocharForm.acidType',
+                  optionsArray: 'acidTypes',
+                  showModalVariable: 'showAddAcidType',
+                  placeholder: 'Select...',
+                  addNewText: 'Acid Type',
+                  resetValue: ''
+                })"></div>
               </div>
             </div>
             
@@ -1526,25 +1516,15 @@
                   <input type="number" step="0.01" x-model="biocharForm.washAmount"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Wash Medium</label>
-                  <div class="relative">
-                    <select x-model="biocharForm.washMedium" 
-                            @change="if($event.target.value === 'add_new') { showAddWashMedium = true; biocharForm.washMedium = ''; }"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                      <option value="">Select medium...</option>
-                      <template x-for="medium in washMediums" :key="medium">
-                        <option :value="medium" x-text="medium"></option>
-                      </template>
-                      <option value="add_new" class="font-semibold">+ Add New Medium</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+                <div x-html="getSelectFieldHtml({
+                  label: 'Wash Medium',
+                  modelVariable: 'biocharForm.washMedium',
+                  optionsArray: 'washMediums',
+                  showModalVariable: 'showAddWashMedium',
+                  placeholder: 'Select medium...',
+                  addNewText: 'Medium',
+                  resetValue: ''
+                })"></div>
               </div>
               <div class="grid grid-cols-3 gap-4">
                 <div>
@@ -1736,25 +1716,15 @@
                   <input type="number" step="0.01" x-model="grapheneForm.baseAmount"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <div class="relative">
-                    <select x-model="grapheneForm.baseType" 
-                            @change="if($event.target.value === 'add_new') { showAddBaseType = true; grapheneForm.baseType = ''; }"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none">
-                      <option value="">Select...</option>
-                      <template x-for="base in baseTypes" :key="base">
-                        <option :value="base" x-text="base"></option>
-                      </template>
-                      <option value="add_new" class="font-semibold">+ Add New</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
+                <div x-html="getSelectFieldHtml({
+                  label: 'Type',
+                  modelVariable: 'grapheneForm.baseType',
+                  optionsArray: 'baseTypes',
+                  showModalVariable: 'showAddBaseType',
+                  placeholder: 'Select...',
+                  addNewText: 'Base Type',
+                  resetValue: ''
+                })"></div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Concentration (%)</label>
                   <input type="number" step="0.01" x-model="grapheneForm.baseConcentration"
