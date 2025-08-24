@@ -7,9 +7,11 @@ import validators from './utils/validators.js';
 import dataHelpers from './utils/dataHelpers.js';
 import objectiveParser from './utils/objectiveParser.js';
 import modalHelpers from './components/modals/modalHelpers.js';
+import pdfViewerHelpers from './components/modals/pdfViewerHelpers.js';
 import dateFieldHelpers from './components/forms/dateFieldHelpers.js';
 import selectFieldHelpers from './components/forms/selectFieldHelpers.js';
 import numericFieldHelpers from './components/forms/numericFieldHelpers.js';
+import fileFieldHelpers from './components/forms/fileFieldHelpers.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -1632,6 +1634,16 @@ window.grapheneApp = function() {
     // Numeric field HTML generation using helpers
     getNumericFieldHtml(config) {
       return numericFieldHelpers.createNumericFieldWithUnit(config);
+    },
+
+    // File upload field HTML generation using helpers
+    getFileFieldHtml(config) {
+      return fileFieldHelpers.createFileUploadField(config);
+    },
+
+    // PDF viewer modal HTML generation using helpers
+    getPdfViewerModalHtml(config) {
+      return pdfViewerHelpers.createPdfViewerModal(config);
     }
   };
 };
