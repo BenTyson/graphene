@@ -6,6 +6,8 @@ import formatters from './utils/formatters.js';
 import validators from './utils/validators.js';
 import dataHelpers from './utils/dataHelpers.js';
 import objectiveParser from './utils/objectiveParser.js';
+import modalHelpers from './components/modals/modalHelpers.js';
+import dateFieldHelpers from './components/forms/dateFieldHelpers.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -1473,6 +1475,151 @@ window.grapheneApp = function() {
         this.newGrapheneComment = '';
         this.showAddGrapheneComment = false;
       }
+    },
+    
+    // Modal HTML generation using helpers
+    getModalHtml(modalType) {
+      // This method generates modal HTML dynamically
+      // We'll use this to gradually replace hardcoded modals
+      switch(modalType) {
+        case 'addResearchTeam':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Research Team',
+            showVariable: 'showAddResearchTeam',
+            modelVariable: 'newResearchTeam',
+            submitMethod: 'addNewResearchTeam',
+            inputLabel: 'Team Name',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addGrapheneComment':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Comment Option',
+            showVariable: 'showAddGrapheneComment',
+            modelVariable: 'newGrapheneComment',
+            submitMethod: 'addNewGrapheneComment',
+            inputLabel: 'Comment Text',
+            inputType: 'textarea',
+            placeholder: 'Enter the comment text that will be available for selection...'
+          });
+        case 'addMaterial':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Raw Material',
+            showVariable: 'showAddMaterial',
+            modelVariable: 'newMaterial',
+            submitMethod: 'addNewMaterial',
+            inputLabel: 'Material Name',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addReactor':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Reactor',
+            showVariable: 'showAddReactor',
+            modelVariable: 'newReactor',
+            submitMethod: 'addNewReactor',
+            inputLabel: 'Reactor Name',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addBaseType':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Base Type',
+            showVariable: 'showAddBaseType',
+            modelVariable: 'newBaseType',
+            submitMethod: 'addNewBaseType',
+            inputLabel: 'Base Type',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addOven':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Oven',
+            showVariable: 'showAddOven',
+            modelVariable: 'newOven',
+            submitMethod: 'addNewOven',
+            inputLabel: 'Oven Name',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addAppearanceTag':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Appearance Tag',
+            showVariable: 'showAddAppearanceTag',
+            modelVariable: 'newAppearanceTag',
+            submitMethod: 'addNewAppearanceTag',
+            inputLabel: 'Tag Name',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addAcidType':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Acid Type',
+            showVariable: 'showAddAcidType',
+            modelVariable: 'newAcidType',
+            submitMethod: 'addNewAcidType',
+            inputLabel: 'Acid Type',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addWashMedium':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Wash Medium',
+            showVariable: 'showAddWashMedium',
+            modelVariable: 'newWashMedium',
+            submitMethod: 'addNewWashMedium',
+            inputLabel: 'Wash Medium',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addGas':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Gas',
+            showVariable: 'showAddGas',
+            modelVariable: 'newGas',
+            submitMethod: 'addNewGas',
+            inputLabel: 'Gas Type',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addWashSolution':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Wash Solution',
+            showVariable: 'showAddWashSolution',
+            modelVariable: 'newWashSolution',
+            submitMethod: 'addNewWashSolution',
+            inputLabel: 'Wash Solution',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addDryingAtmosphere':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Drying Atmosphere',
+            showVariable: 'showAddDryingAtmosphere',
+            modelVariable: 'newDryingAtmosphere',
+            submitMethod: 'addNewDryingAtmosphere',
+            inputLabel: 'Drying Atmosphere',
+            inputType: 'text',
+            placeholder: ''
+          });
+        case 'addDryingPressure':
+          return modalHelpers.createAddItemModal({
+            itemType: 'Drying Pressure',
+            showVariable: 'showAddDryingPressure',
+            modelVariable: 'newDryingPressure',
+            submitMethod: 'addNewDryingPressure',
+            inputLabel: 'Drying Pressure',
+            inputType: 'text',
+            placeholder: ''
+          });
+        default:
+          return '';
+      }
+    },
+
+    // Date field HTML generation using helpers
+    getDateFieldHtml(config) {
+      return dateFieldHelpers.createDateFieldWithUnknown(config);
     }
   };
 };
