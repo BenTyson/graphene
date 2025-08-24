@@ -213,7 +213,7 @@
             <!-- Each record gets its own tbody containing both main and expandable rows -->
             <template x-for="record in biocharRecords" :key="record.id">
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr class="hover:bg-gray-50" :class="{'bg-blue-50': record.lotNumber}">
+                <tr class="hover:bg-gray-50" :class="{'bg-link-light': record.lotNumber}">
                   <!-- Select checkbox -->
                   <td class="px-2 py-2 text-xs border-r border-gray-300">
                     <input type="checkbox" x-model="selectedBiocharIds" :value="record.id" 
@@ -226,7 +226,7 @@
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
                     <button 
                       @click="toggleBiocharExpansion(record.experimentNumber)" 
-                      class="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      class="text-link text-link-hover underline cursor-pointer font-bold"
                       x-text="record.experimentNumber">
                     </button>
                   </td>
@@ -253,7 +253,7 @@
                   <!-- Lot Number -->
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
                     <span x-text="record.lotNumber || ''" 
-                          :class="{'text-blue-600 font-semibold': record.lotNumber}"></span>
+                          :class="{'text-link font-semibold': record.lotNumber}"></span>
                   </td>
                   <!-- Actions -->
                   <td class="px-2 py-2 text-xs">
@@ -268,7 +268,7 @@
                           </div>
                         </div>
                       </template>
-                      <button @click="copyBiochar(record)" class="text-blue-600 hover:text-blue-900 text-xs">Copy</button>
+                      <button @click="copyBiochar(record)" class="text-link text-link-hover text-xs">Copy</button>
                       <button @click="editBiochar(record)" class="text-gray-600 hover:text-gray-900 text-xs">Edit</button>
                       <button @click="deleteBiochar(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
                     </div>
@@ -571,8 +571,8 @@
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
                     <button 
                       @click="toggleGrapheneExpansion(record.experimentNumber)" 
-                      class="text-blue-600 hover:text-blue-800 underline cursor-pointer">
-                      <span x-text="record.experimentNumber"></span>
+                      class="text-link text-link-hover underline cursor-pointer">
+                      <span x-text="record.experimentNumber" class="font-bold"></span>
                       <span x-show="record.titleNote" x-text="' ' + record.titleNote" class="text-gray-600"></span>
                     </button>
                   </td>
@@ -581,7 +581,7 @@
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.quantity ? record.quantity + 'g' : ''"></td>
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
                     <span x-text="record.biocharExperiment || (record.biocharLotNumber ? 'LOT: ' + record.biocharLotNumber : (!record.biocharExperiment && !record.biocharLotNumber ? 'Various' : ''))"
-                          :class="{'text-blue-600 font-semibold': record.biocharLotNumber, 'text-gray-500 italic': !record.biocharExperiment && !record.biocharLotNumber}"></span>
+                          :class="{'text-link font-semibold': record.biocharLotNumber, 'text-gray-500 italic': !record.biocharExperiment && !record.biocharLotNumber}"></span>
                   </td>
                   <!-- Base columns -->
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
@@ -638,8 +638,8 @@
                           </div>
                         </div>
                       </template>
-                      <button x-show="record.semReportPath" @click="viewSemReport(record.semReportPath)" class="text-blue-600 hover:text-blue-900 text-xs mr-2">View SEM</button>
-                      <button @click="copyGraphene(record)" class="text-blue-600 hover:text-blue-900 text-xs">Copy</button>
+                      <button x-show="record.semReportPath" @click="viewSemReport(record.semReportPath)" class="text-link text-link-hover text-xs mr-2">View SEM</button>
+                      <button @click="copyGraphene(record)" class="text-link text-link-hover text-xs">Copy</button>
                       <button @click="editGraphene(record)" class="text-gray-600 hover:text-gray-900 text-xs">Edit</button>
                       <button @click="deleteGraphene(record.id)" class="text-red-600 hover:text-red-900 text-xs">Delete</button>
                     </div>
@@ -692,7 +692,7 @@
                             </template>
                             
                             <template x-if="grapheneRelatedData[record.experimentNumber].lotBiocharExperiments && grapheneRelatedData[record.experimentNumber].lotBiocharExperiments.length > 0">
-                              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div class="bg-link-light border border-link rounded-lg p-3">
                                 <p class="font-medium text-sm mb-2">Lot Biochar Experiments:</p>
                                 <div class="space-y-2">
                                   <template x-for="biochar in grapheneRelatedData[record.experimentNumber].lotBiocharExperiments">
@@ -744,7 +744,7 @@
                                           <div class="flex items-center justify-between">
                                             <span class="text-xs font-medium text-gray-700">BET Report:</span>
                                             <button @click="window.open('/uploads/' + bet.betReportPath, '_blank')" 
-                                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center">
+                                                    class="text-link text-link-hover text-xs font-medium flex items-center">
                                               <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                               </svg>
@@ -828,7 +828,7 @@
                                           <div class="flex items-center justify-between">
                                             <span class="text-xs font-medium text-gray-700">RAMAN Report:</span>
                                             <button @click="viewRamanPdf(raman.ramanReportPath)" 
-                                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center">
+                                                    class="text-link text-link-hover text-xs font-medium flex items-center">
                                               <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                               </svg>
@@ -865,7 +865,7 @@
                                     <div class="bg-white rounded p-2 text-xs border">
                                       <div class="flex justify-between mb-1">
                                         <button @click="viewUpdateReport(updateReport.updateReport.filePath)" 
-                                                class="font-medium text-blue-600 hover:text-blue-800 text-left">
+                                                class="font-medium text-link text-link-hover text-left">
                                           <span x-text="updateReport.updateReport.originalName"></span>
                                         </button>
                                         <span class="text-gray-500" x-text="updateReport.updateReport.weekOf ? 'Week of ' + new Date(updateReport.updateReport.weekOf).toLocaleDateString() : 'No date'"></span>
@@ -904,7 +904,7 @@
                                 <div class="bg-white rounded p-2 text-xs border">
                                   <div class="flex justify-between items-center">
                                     <button @click="viewSemReport(record.semReportPath)" 
-                                            class="font-medium text-blue-600 hover:text-blue-800 text-left">
+                                            class="font-medium text-link text-link-hover text-left">
                                       <span x-text="record.semReportPath.split('/').pop().replace(/_\d+\.pdf$/, '.pdf')"></span>
                                     </button>
                                     <span class="text-gray-500 text-xs">Uploaded with record</span>
@@ -922,7 +922,7 @@
                                       <div class="flex justify-between items-center">
                                         <div>
                                           <button @click="viewSemPdf('/uploads/' + semReport.semReport.filePath)" 
-                                                  class="font-medium text-blue-600 hover:text-blue-800 text-left">
+                                                  class="font-medium text-link text-link-hover text-left">
                                             <span x-text="semReport.semReport.originalName"></span>
                                           </button>
                                           <div x-show="semReport.semReport.description" class="text-gray-500 text-xs mt-1" x-text="semReport.semReport.description"></div>
@@ -950,7 +950,7 @@
                               </svg>
                               Experiment Objective & Results
                             </h4>
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                            <div class="bg-link-light border border-link rounded-lg p-3 space-y-3">
                               <div x-show="record.objective">
                                 <h5 class="font-semibold text-sm text-gray-700">Objective:</h5>
                                 <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.objective"></p>
@@ -1039,7 +1039,7 @@
                   <td class="px-4 py-3 text-sm">
                     <template x-if="record.betReportPath">
                       <button @click="window.open('/uploads/' + record.betReportPath, '_blank')" 
-                              class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                              class="text-link text-link-hover text-sm font-medium">
                         View PDF
                       </button>
                     </template>
@@ -1115,7 +1115,7 @@
                   <tr class="hover:bg-gray-50">
                     <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
                     <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
-                      <button @click="toggleExpanded('conductivity', record.id)" class="text-blue-600 hover:text-blue-900 font-medium">
+                      <button @click="toggleExpanded('conductivity', record.id)" class="text-link text-link-hover font-medium">
                         <span x-text="record.grapheneSample"></span>
                         <svg class="w-4 h-4 inline ml-1" :class="{'transform rotate-180': expandedRows['conductivity_' + record.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -1129,7 +1129,7 @@
                     <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="record.conductivity20kN || ''"></td>
                     <td class="px-2 py-2 text-xs">
                       <div class="flex space-x-2">
-                        <button @click="editConductivity(record)" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button @click="editConductivity(record)" class="text-link text-link-hover">Edit</button>
                         <button @click="deleteConductivity(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
                       </div>
                     </td>
@@ -1200,7 +1200,7 @@
                   <tr class="hover:bg-gray-50">
                     <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
                     <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
-                      <button @click="toggleExpanded('raman', record.id)" class="text-blue-600 hover:text-blue-900 font-medium">
+                      <button @click="toggleExpanded('raman', record.id)" class="text-link text-link-hover font-medium">
                         <span x-text="record.grapheneSample"></span>
                         <svg class="w-4 h-4 inline ml-1" :class="{'transform rotate-180': expandedRows['raman_' + record.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -1214,7 +1214,7 @@
                     <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypADG1 && record.integralTypADG2) ? `${record.integralTypADG1},${record.integralTypADG2}` : ''"></td>
                     <td class="px-2 py-2 text-xs">
                       <div class="flex space-x-2">
-                        <button @click="editRaman(record)" class="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button @click="editRaman(record)" class="text-link text-link-hover">Edit</button>
                         <button @click="deleteRaman(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
                       </div>
                     </td>
@@ -1268,7 +1268,7 @@
                             <template x-if="record.ramanReportPath">
                               <div class="mb-2">
                                 <strong>RAMAN Report:</strong>
-                                <button @click="viewRamanPdf(record.ramanReportPath)" class="text-blue-600 hover:text-blue-900 ml-1">
+                                <button @click="viewRamanPdf(record.ramanReportPath)" class="text-link text-link-hover ml-1">
                                   View PDF
                                 </button>
                               </div>
@@ -1373,7 +1373,7 @@
                     </div>
                   </td>
                   <td class="px-4 py-3 text-sm space-x-2">
-                    <button @click="viewSemPdf('/uploads/' + report.filePath)" class="text-blue-600 hover:text-blue-800">
+                    <button @click="viewSemPdf('/uploads/' + report.filePath)" class="text-link text-link-hover">
                       View PDF
                     </button>
                     <button @click="editSemReport(report)" class="text-gray-600 hover:text-gray-800">
@@ -1430,7 +1430,7 @@
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 text-sm">
                     <button @click="viewUpdateReport(report.filePath)" 
-                            class="text-blue-600 hover:text-blue-800 font-medium">
+                            class="text-link text-link-hover font-medium">
                       <span x-text="report.originalName"></span>
                     </button>
                   </td>
@@ -1459,7 +1459,7 @@
                   <td class="px-4 py-3 text-sm">
                     <div class="flex space-x-2">
                       <button @click="editUpdateReport(report)" 
-                              class="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                              class="text-link text-link-hover text-sm">Edit</button>
                       <button @click="deleteUpdateReport(report.id)" 
                               class="text-red-600 hover:text-red-800 text-sm">Delete</button>
                     </div>
@@ -2115,7 +2115,7 @@
                   </div>
                   <div class="flex items-center space-x-2">
                     <button type="button" @click="showAddAppearanceTag = true" 
-                            class="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded-full border border-blue-200 hover:bg-blue-100">
+                            class="px-3 py-1 text-sm bg-link-light text-link-medium rounded-full border border-link hover:bg-link-light">
                       + Add New Tag
                     </button>
                   </div>
@@ -2136,15 +2136,15 @@
                 
                 <!-- Direct SEM Report -->
                 <template x-if="editingGraphene?.semReportPath && !grapheneForm.removeSemReport">
-                  <div class="mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                  <div class="mb-2 p-2 bg-link-light border border-link rounded">
                     <div class="flex items-center justify-between">
                       <div class="text-sm">
-                        <span class="text-blue-800 font-medium" x-text="editingGraphene?.semReportPath?.split('/').pop().replace(/_\d+\.pdf$/, '.pdf')"></span>
-                        <span class="text-xs text-blue-600 block">Direct upload</span>
+                        <span class="text-link-dark font-medium" x-text="editingGraphene?.semReportPath?.split('/').pop().replace(/_\d+\.pdf$/, '.pdf')"></span>
+                        <span class="text-xs text-link block">Direct upload</span>
                       </div>
                       <div class="flex space-x-2">
                         <button type="button" @click="viewSemReport(editingGraphene?.semReportPath)" 
-                                class="text-blue-600 hover:text-blue-900 text-sm">
+                                class="text-link text-link-hover text-sm">
                           View
                         </button>
                         <button type="button" @click="grapheneForm.removeSemReport = true" 
@@ -2169,7 +2169,7 @@
                           </div>
                           <div class="flex space-x-2">
                             <button type="button" @click="viewSemPdf('/uploads/' + semReport.semReport.filePath)" 
-                                    class="text-blue-600 hover:text-blue-900 text-sm">
+                                    class="text-link text-link-hover text-sm">
                               View
                             </button>
                             <button type="button" @click="removeSemReportAssociation(semReport.semReport.id)" 
@@ -2246,7 +2246,7 @@
                 <div class="flex justify-between mt-2">
                   <button type="button" 
                           @click="parseObjective()" 
-                          class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                          class="px-3 py-1 text-sm bg-link text-white rounded hover:bg-link-hover">
                     Parse Text
                   </button>
                   <button type="button" 
@@ -3006,12 +3006,12 @@
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">RAMAN Report</h4>
               <template x-if="editingRaman && editingRaman.ramanReportPath">
-                <div class="mb-3 p-3 bg-blue-50 rounded-md">
+                <div class="mb-3 p-3 bg-link-light rounded-md">
                   <div class="flex items-center justify-between">
-                    <span class="text-sm text-blue-800">Current report: RAMAN Report PDF</span>
+                    <span class="text-sm text-link-dark">Current report: RAMAN Report PDF</span>
                     <div class="flex space-x-2">
                       <button type="button" @click="viewRamanPdf(editingRaman.ramanReportPath)" 
-                              class="text-blue-600 hover:text-blue-800 text-sm">View</button>
+                              class="text-link text-link-hover text-sm">View</button>
                       <button type="button" @click="ramanForm.removeRamanReport = true; ramanForm.replacementFile = null" 
                               class="text-red-600 hover:text-red-800 text-sm">Remove</button>
                     </div>

@@ -196,6 +196,16 @@ npm run backup:cleanup
 - **Professional appearance** suitable for laboratory use
 - **No unnecessary comments in code**
 
+## Global Color System
+- **CSS Custom Properties**: Centralized color management using CSS variables in `:root`
+- **Primary Link Color**: `--link-primary: #B87333` (Bronze)
+- **Hover State**: `--link-hover: #95611F` (Darker bronze)
+- **Semantic Classes**: `.text-link`, `.text-link-hover`, `.bg-link`, `.bg-link-light`, etc.
+- **Single Point Control**: Change all link colors by updating CSS variables only
+- **Consistent Application**: All interactive elements use the same color system
+- **Theme Flexibility**: Easy to implement theme variations or dark mode
+- **Maintainability**: No hardcoded colors throughout HTML/JS codebase
+
 ## Core Features
 
 ### Material Journey Tracking
@@ -232,6 +242,16 @@ npm run backup:cleanup
   - Uses `/client/src/js/utils/objectiveParser.js`
   - Handles variations: "Objective:", "OBJECTIVE", with/without colons
   - Preserves multi-line formatting in each section
+
+### Column Sorting System
+- **Biochar Table**: Sortable columns include Order, Exp #, Date, Reactor, Raw Material, Start (g), Temp, Time, Output (g)
+- **Graphene Table**: Sortable columns include Order, Exp #, Date, Oven, Qty (g), Biochar, Species, Rate, Max, Time, Vol(ml), Out(g)
+- **Client-Side Sorting**: Instant response with proper data type detection (numeric, date, string)
+- **Visual Indicators**: Sort arrows show current column and direction (ascending/descending)
+- **Smart Null Handling**: Empty values always sort to end regardless of direction
+- **Search Integration**: Sorting works seamlessly with existing search functionality
+- **State Management**: Separate sort states for each table (`biocharSortColumn`, `grapheneSortColumn`)
+- **Toggle Sorting**: Click once for ascending, twice for descending, preserves lot highlighting
 
 ## Common Issues & Solutions
 

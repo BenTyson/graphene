@@ -39,11 +39,11 @@ export function createFileUploadField(config) {
                ${requiredAttr}
                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
         <template x-if="${editingVariable} && ${editingVariable}.${currentFilePathField}">
-          <div class="flex items-center justify-between bg-blue-50 p-2 rounded">
-            <span class="text-sm text-blue-800">Current ${label.toLowerCase()} attached</span>
+          <div class="flex items-center justify-between bg-link-light p-2 rounded">
+            <span class="text-sm text-link-dark">Current ${label.toLowerCase()} attached</span>
             <div class="flex space-x-2">
               <button type="button" @click="window.open('/uploads/' + ${editingVariable}.${currentFilePathField}, '_blank')" 
-                      class="text-blue-600 hover:text-blue-800 text-sm">View</button>
+                      class="text-link text-link-hover text-sm">View</button>
               <button type="button" @click="${removeFileVariable} = true" 
                       class="text-red-600 hover:text-red-800 text-sm">Remove</button>
             </div>

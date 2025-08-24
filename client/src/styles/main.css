@@ -28,3 +28,45 @@
 .modal-backdrop {
   background-color: rgba(0, 0, 0, 0.5);
 }
+
+/* Global color variables */
+:root {
+  --link-primary: #B87333;
+  --link-hover: #95611F;
+  --link-light: #F5F0E8;
+  --link-medium: #7A5528;
+  --link-dark: #654423;
+}
+
+/* Global link utility classes */
+.text-link {
+  color: var(--link-primary);
+}
+
+.text-link-hover:hover {
+  color: var(--link-hover);
+}
+
+.bg-link {
+  background-color: var(--link-primary);
+}
+
+.bg-link-hover:hover {
+  background-color: var(--link-hover);
+}
+
+.border-link {
+  border-color: var(--link-primary);
+}
+
+.bg-link-light {
+  background-color: var(--link-light);
+}
+
+.text-link-medium {
+  color: var(--link-medium);
+}
+
+.text-link-dark {
+  color: var(--link-dark);
+}
