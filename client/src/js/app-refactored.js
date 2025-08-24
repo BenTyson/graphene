@@ -199,6 +199,8 @@ window.grapheneApp = function() {
     // Sorting states
     biocharSortColumn: null,
     biocharSortDirection: 'asc',
+    grapheneSortColumn: null,
+    grapheneSortDirection: 'asc',
     
     // Modal states
     showAddBiochar: false,
@@ -348,6 +350,7 @@ window.grapheneApp = function() {
     async loadGrapheneRecords() {
       try {
         this.grapheneRecords = await API.graphene.getAll(this.grapheneSearch);
+        this.applySortingToGraphene();
         this.loadAvailableGrapheneSamples();
       } catch (error) {
         console.error('Failed to load graphene records:', error);
@@ -552,12 +555,65 @@ window.grapheneApp = function() {
       return numericColumns.includes(column);
     },
     
+    sortGraphene(column) {
+      if (this.grapheneSortColumn === column) {
+        this.grapheneSortDirection = this.grapheneSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.grapheneSortColumn = column;
+        this.grapheneSortDirection = 'asc';
+      }
+      this.applySortingToGraphene();
+    },
+    
+    applySortingToGraphene() {
+      if (!this.grapheneSortColumn) return;
+      
+      this.grapheneRecords.sort((a, b) => {
+        let aVal = a[this.grapheneSortColumn];
+        let bVal = b[this.grapheneSortColumn];
+        
+        // Handle null/undefined values - always sort to end
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        
+        // Convert to appropriate types for comparison
+        if (this.grapheneSortColumn === 'experimentDate') {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        } else if (this.isGrapheneNumericColumn(this.grapheneSortColumn)) {
+          aVal = parseFloat(aVal) || 0;
+          bVal = parseFloat(bVal) || 0;
+        } else {
+          aVal = String(aVal).toLowerCase();
+          bVal = String(bVal).toLowerCase();
+        }
+        
+        let result = 0;
+        if (aVal < bVal) result = -1;
+        else if (aVal > bVal) result = 1;
+        
+        return this.grapheneSortDirection === 'desc' ? -result : result;
+      });
+    },
+    
+    isGrapheneNumericColumn(column) {
+      const numericColumns = ['testOrder', 'quantity', 'baseAmount', 'baseConcentration', 'base2Amount', 
+                             'base2Concentration', 'grindingTime', 'grindingFrequency', 'tempRate', 'tempMax', 
+                             'time', 'washAmount', 'washConcentration', 'washWater', 'dryingTemp', 
+                             'volumeMl', 'output'];
+      return numericColumns.includes(column);
+    },
+    
     getSortIcon(column) {
-      if (this.biocharSortColumn !== column) {
+      const currentColumn = this.activeTab === 'biochar' ? this.biocharSortColumn : this.grapheneSortColumn;
+      const currentDirection = this.activeTab === 'biochar' ? this.biocharSortDirection : this.grapheneSortDirection;
+      
+      if (currentColumn !== column) {
         return '<svg class="w-3 h-3 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
       }
       
-      if (this.biocharSortDirection === 'asc') {
+      if (currentDirection === 'asc') {
         return '<svg class="w-3 h-3 ml-1 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4"></path></svg>';
       } else {
         return '<svg class="w-3 h-3 ml-1 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v12m0 0l4-4m-4 4l-4-4"></path></svg>';
