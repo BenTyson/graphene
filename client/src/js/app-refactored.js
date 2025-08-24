@@ -8,6 +8,7 @@ import dataHelpers from './utils/dataHelpers.js';
 import objectiveParser from './utils/objectiveParser.js';
 import modalHelpers from './components/modals/modalHelpers.js';
 import dateFieldHelpers from './components/forms/dateFieldHelpers.js';
+import selectFieldHelpers from './components/forms/selectFieldHelpers.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -1620,6 +1621,11 @@ window.grapheneApp = function() {
     // Date field HTML generation using helpers
     getDateFieldHtml(config) {
       return dateFieldHelpers.createDateFieldWithUnknown(config);
+    },
+
+    // Select field HTML generation using helpers
+    getSelectFieldHtml(config) {
+      return selectFieldHelpers.createSelectWithAdd(config);
     }
   };
 };
