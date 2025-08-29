@@ -12,6 +12,11 @@ import dateFieldHelpers from './components/forms/dateFieldHelpers.js';
 import selectFieldHelpers from './components/forms/selectFieldHelpers.js';
 import numericFieldHelpers from './components/forms/numericFieldHelpers.js';
 import fileFieldHelpers from './components/forms/fileFieldHelpers.js';
+import testResultsHelper from './components/dropdownSections/testResultsHelper.js';
+import reportsHelper from './components/dropdownSections/reportsHelper.js';
+import sourceDataHelper from './components/dropdownSections/sourceDataHelper.js';
+import objectivesHelper from './components/dropdownSections/objectivesHelper.js';
+import shipmentsHelper from './components/dropdownSections/shipmentsHelper.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -93,11 +98,11 @@ const DEFAULT_FORMS = {
     testDate: '',
     dateUnknown: false,
     grapheneSample: '',
+    mass: '',
     researchTeam: 'Curia - Germany',
     testingLab: 'Fraunhofer-Institut',
     multipointBetArea: '',
     langmuirSurfaceArea: '',
-    species: '',
     betReportFile: null,
     removeBetReport: false,
     replaceBetReport: false,
@@ -152,6 +157,17 @@ const DEFAULT_FORMS = {
     replaceRamanReport: false,
     comments: ''
   },
+  tem: {
+    testDate: '',
+    dateUnknown: false,
+    grapheneSample: '',
+    researchTeam: 'Curia - Germany',
+    testingLab: '',
+    temReportFile: null,
+    removeTEMReport: false,
+    replaceTEMReport: false,
+    comments: ''
+  },
   combine: {
     lotNumber: '',
     lotName: '',
@@ -167,6 +183,32 @@ const DEFAULT_FORMS = {
     reportDate: '',
     grapheneIds: [],
     semFiles: null
+  },
+  compoundBatch: {
+    batchNumber: '',
+    batchName: '',
+    createdDate: '',
+    dateUnknown: false,
+    totalOutput: '',
+    description: '',
+    experimentIds: []
+  },
+  shipment: {
+    shipmentNumber: '',
+    shipFromLocation: 'Curia Frankfurt',
+    shipToLocation: '',
+    shipmentDate: '',
+    dateUnknown: false,
+    receivedDate: '',
+    receivedDateUnknown: false,
+    materialType: 'graphene',
+    grapheneSample: '',
+    compoundBatchNumber: '',
+    amountShipped: '',
+    unit: 'g',
+    purpose: '',
+    status: 'shipped',
+    comments: ''
   }
 };
 
@@ -182,11 +224,21 @@ window.grapheneApp = function() {
     betRecords: [],
     conductivityRecords: [],
     ramanRecords: [],
+    temRecords: [],
     updateReports: [],
     semReports: [],
+    compoundBatches: [],
+    compoundBatchRecords: [],
+    shipments: [],
     availableExperiments: [],
     availableLots: [],
     availableGrapheneSamples: [],
+    availableCompoundBatches: [],
+    
+    // Expansion states
+    expandedCompoundBatches: {},
+    compoundBatchRelatedData: {},
+    loadingCompoundBatchRelated: {},
     
     // Search states
     biocharSearch: '',
@@ -194,8 +246,11 @@ window.grapheneApp = function() {
     betSearch: '',
     conductivitySearch: '',
     ramanSearch: '',
+    temSearch: '',
     updateReportSearch: '',
     semReportSearch: '',
+    compoundBatchSearch: '',
+    shipmentSearch: '',
     
     // Sorting states
     biocharSortColumn: null,
@@ -209,15 +264,22 @@ window.grapheneApp = function() {
     showAddBet: false,
     showAddConductivity: false,
     showAddRaman: false,
+    showAddTem: false,
     showCombineModal: false,
+    showCompoundBatchModal: false,
     showSemModal: false,
     currentSemPdf: null,
     showRamanModal: false,
     currentRamanPdf: null,
+    showBetModal: false,
+    currentBetPdf: null,
+    showTemModal: false,
+    currentTemPdf: null,
     showAddUpdateReport: false,
     showAddSemReport: false,
     showUpdateReportModal: false,
     currentUpdateReport: null,
+    showAddShipment: false,
     
     // Editing states
     editingBiochar: null,
@@ -225,8 +287,11 @@ window.grapheneApp = function() {
     editingBet: null,
     editingConductivity: null,
     editingRaman: null,
+    editingTem: null,
     editingUpdateReport: null,
     editingSemReport: null,
+    editingCompoundBatch: null,
+    editingShipment: null,
     
     // Forms
     biocharForm: { ...DEFAULT_FORMS.biochar },
@@ -234,21 +299,35 @@ window.grapheneApp = function() {
     betForm: { ...DEFAULT_FORMS.bet },
     conductivityForm: { ...DEFAULT_FORMS.conductivity },
     ramanForm: { ...DEFAULT_FORMS.raman },
+    temForm: { ...DEFAULT_FORMS.tem },
     combineForm: { ...DEFAULT_FORMS.combine },
     updateReportForm: { ...DEFAULT_FORMS.updateReport },
     semReportForm: { ...DEFAULT_FORMS.semReport },
+    compoundBatchForm: { ...DEFAULT_FORMS.compoundBatch },
+    shipmentForm: { ...DEFAULT_FORMS.shipment },
     
     // Selection states
     selectedBiocharIds: [],
+    selectedGrapheneIds: [],
     
     // Expandable row states
     expandedRows: {},
     expandedBiocharRows: {},
     expandedGrapheneRows: {},
+    expandedCompoundBatches: {},
     biocharRelatedData: {},
     grapheneRelatedData: {},
+    compoundBatchRelatedData: {},
     loadingBiocharRelated: {},
     loadingGrapheneRelated: {},
+    loadingCompoundBatchRelated: {},
+    
+    // Compound batch state
+    compoundBatchRecords: [],
+    compoundBatchSearch: '',
+    compoundBatchSortColumn: 'batchNumber',
+    compoundBatchSortOrder: 'asc',
+    experimentSearchTerm: '',
     
     // Dropdown options
     rawMaterials: ['BAFA neu Hemp Fibre VF', 'Canadian Rockies Hemp'],
@@ -282,6 +361,13 @@ window.grapheneApp = function() {
       '(Pilot Plant #3)',
       '(Pilot Plant #3 + H20)'
     ],
+    shipmentLocations: [
+      'Curia Frankfurt',
+      'Curia Albany',
+      'Mork Technologies',
+      'GEIC',
+      'Maxwell'
+    ],
     
     // Modal states for adding new dropdown options
     showAddMaterial: false,
@@ -297,6 +383,7 @@ window.grapheneApp = function() {
     showAddOven: false,
     showAddAppearanceTag: false,
     showAddGrapheneComment: false,
+    showAddShipmentLocation: false,
     
     // New values for dropdowns
     newMaterial: '',
@@ -312,6 +399,7 @@ window.grapheneApp = function() {
     newOven: '',
     newAppearanceTag: '',
     newGrapheneComment: '',
+    newShipmentLocation: '',
     
     // Import utilities as methods
     ...formatters,
@@ -329,8 +417,11 @@ window.grapheneApp = function() {
         this.loadBetRecords(),
         this.loadConductivityRecords(),
         this.loadRamanRecords(),
+        this.loadTemRecords(),
         this.loadUpdateReports(),
-        this.loadSemReports()
+        this.loadSemReports(),
+        this.loadCompoundBatches(),
+        this.loadShipments()
       ]);
       this.loadDropdownOptions();
     },
@@ -390,6 +481,16 @@ window.grapheneApp = function() {
         this.ramanRecords = [];
       }
     },
+
+    async loadTemRecords() {
+      try {
+        this.temRecords = await API.tem.getAll(this.temSearch);
+        console.log('Loaded TEM records:', this.temRecords);
+      } catch (error) {
+        console.error('Failed to load TEM records:', error);
+        this.temRecords = [];
+      }
+    },
     
     async loadUpdateReports() {
       try {
@@ -406,6 +507,25 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load SEM reports:', error);
         this.semReports = [];
+      }
+    },
+    
+    async loadCompoundBatches() {
+      try {
+        this.compoundBatchRecords = await API.compoundBatch.getAll(this.compoundBatchSearch);
+        this.loadAvailableCompoundBatches();
+      } catch (error) {
+        console.error('Failed to load compound batches:', error);
+        this.compoundBatchRecords = [];
+      }
+    },
+
+    async loadShipments() {
+      try {
+        this.shipments = await API.shipment.getAll(this.shipmentSearch);
+      } catch (error) {
+        console.error('Failed to load shipments:', error);
+        this.shipments = [];
       }
     },
     
@@ -440,6 +560,11 @@ window.grapheneApp = function() {
     loadAvailableGrapheneSamples() {
       const samples = dataHelpers.getUniqueValues(this.grapheneRecords, 'experimentNumber');
       this.availableGrapheneSamples = samples;
+    },
+    
+    loadAvailableCompoundBatches() {
+      const batches = dataHelpers.getUniqueValues(this.compoundBatchRecords, 'batchNumber');
+      this.availableCompoundBatches = batches;
     },
     
     // Search methods (debounced)
@@ -504,6 +629,24 @@ window.grapheneApp = function() {
         }, 300);
       }
       this._debouncedSearchSemReports();
+    },
+    
+    searchCompoundBatches() {
+      if (!this._debouncedSearchCompoundBatches) {
+        this._debouncedSearchCompoundBatches = dataHelpers.debounce(async () => {
+          await this.loadCompoundBatches();
+        }, 300);
+      }
+      this._debouncedSearchCompoundBatches();
+    },
+
+    searchShipments() {
+      if (!this._debouncedSearchShipments) {
+        this._debouncedSearchShipments = dataHelpers.debounce(async () => {
+          await this.loadShipments();
+        }, 300);
+      }
+      this._debouncedSearchShipments();
     },
     
     // Sorting methods
@@ -620,6 +763,15 @@ window.grapheneApp = function() {
         return '<svg class="w-3 h-3 ml-1 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v12m0 0l4-4m-4 4l-4-4"></path></svg>';
       }
     },
+
+    // Computed properties (getters)
+    get filteredShipments() {
+      return this.shipments;
+    },
+
+    get compoundBatches() {
+      return this.compoundBatchRecords;
+    },
     
     // Expandable row methods
     async toggleBiocharExpansion(experimentNumber) {
@@ -692,6 +844,45 @@ window.grapheneApp = function() {
         this.loadingGrapheneRelated = {
           ...this.loadingGrapheneRelated,
           [experimentNumber]: false
+        };
+      }
+    },
+
+    async toggleCompoundBatchExpansion(batchId) {
+      // Toggle the expansion state using Alpine.js reactive assignment
+      const newState = !this.expandedCompoundBatches[batchId];
+      this.expandedCompoundBatches = {
+        ...this.expandedCompoundBatches,
+        [batchId]: newState
+      };
+      
+      // Force Alpine.js to detect the change and re-render
+      await this.$nextTick();
+      
+      // If expanding and we don't have data yet, fetch it
+      if (this.expandedCompoundBatches[batchId] && !this.compoundBatchRelatedData[batchId]) {
+        await this.loadCompoundBatchRelatedData(batchId);
+      }
+    },
+
+    async loadCompoundBatchRelatedData(batchId) {
+      try {
+        this.loadingCompoundBatchRelated = {
+          ...this.loadingCompoundBatchRelated,
+          [batchId]: true
+        };
+        const relatedData = await API.compoundBatch.getRelated(batchId);
+        this.compoundBatchRelatedData = {
+          ...this.compoundBatchRelatedData,
+          [batchId]: relatedData
+        };
+      } catch (error) {
+        console.error('Failed to load compound batch related data:', error);
+        alert(`Failed to load related data: ${error.message}`);
+      } finally {
+        this.loadingCompoundBatchRelated = {
+          ...this.loadingCompoundBatchRelated,
+          [batchId]: false
         };
       }
     },
@@ -901,11 +1092,11 @@ window.grapheneApp = function() {
         testDate: record.testDate ? record.testDate.split('T')[0] : '',
         dateUnknown: !record.testDate,
         grapheneSample: record.grapheneSample || '',
+        mass: record.mass || '',
         researchTeam: record.researchTeam || 'Curia - Germany',
         testingLab: record.testingLab || 'Fraunhofer-Institut',
         multipointBetArea: record.multipointBetArea || '',
         langmuirSurfaceArea: record.langmuirSurfaceArea || '',
-        species: record.species || '',
         betReportFile: null,
         removeBetReport: false,
         replaceBetReport: false,
@@ -916,17 +1107,11 @@ window.grapheneApp = function() {
     
     async saveBet() {
       try {
-        const data = { ...this.betForm };
+        // Extract file before processing
+        const file = this.betForm.betReportFile;
         
-        // Handle date
-        if (data.dateUnknown) {
-          data.testDate = null;
-        }
-        delete data.dateUnknown;
-        
-        // Extract file from form data
-        const file = data.betReportFile;
-        delete data.betReportFile;
+        // Process form data through validator
+        const data = validators.processBetForm(this.betForm);
         
         if (this.editingBet) {
           await API.bet.update(this.editingBet.id, data, file);
@@ -1107,6 +1292,72 @@ window.grapheneApp = function() {
       this.showAddRaman = false;
       this.editingRaman = null;
       this.ramanForm = { ...DEFAULT_FORMS.raman };
+    },
+
+    // TEM CRUD operations
+    editTem(record) {
+      this.editingTem = record;
+      this.temForm = {
+        testDate: record.testDate ? record.testDate.split('T')[0] : '',
+        dateUnknown: !record.testDate,
+        grapheneSample: record.grapheneSample || '',
+        researchTeam: record.researchTeam || 'Curia - Germany',
+        testingLab: record.testingLab || '',
+        temReportFile: null,
+        removeTEMReport: false,
+        replaceTEMReport: false,
+        comments: record.comments || ''
+      };
+      this.showAddTem = true;
+    },
+
+    async saveTem() {
+      try {
+        // Extract file before processing
+        const file = this.temForm.temReportFile;
+        
+        // Create clean data object
+        const data = { ...this.temForm };
+        
+        // Remove file and UI fields
+        delete data.temReportFile;
+        
+        // Handle report removal
+        if (data.removeTEMReport) {
+          data.removeTEMReport = 'true';
+        }
+        
+        let result;
+        if (this.editingTem) {
+          result = await API.tem.update(this.editingTem.id, data, file);
+        } else {
+          result = await API.tem.create(data, file);
+        }
+        
+        await this.loadTemRecords();
+        this.closeTemForm();
+      } catch (error) {
+        console.error('Failed to save TEM record:', error);
+        alert(`Failed to save record: ${error.message}`);
+      }
+    },
+
+    async deleteTem(id) {
+      if (!confirm('Are you sure you want to delete this record?')) return;
+      
+      try {
+        await API.tem.delete(id);
+        await this.loadTemRecords();
+      } catch (error) {
+        console.error('Failed to delete TEM record:', error);
+        alert(`Failed to delete record: ${error.message}`);
+      }
+    },
+
+    closeTemForm() {
+      this.showAddTem = false;
+      this.editingTem = null;
+      this.temForm = { ...DEFAULT_FORMS.tem };
     },
     
     // Update Report CRUD operations
@@ -1318,6 +1569,318 @@ window.grapheneApp = function() {
       }
     },
     
+    // Compound Batch CRUD operations
+    async saveCompoundBatch() {
+      try {
+        const data = { ...this.compoundBatchForm };
+        delete data.experimentIds;
+        delete data.dateUnknown;
+        
+        // Handle date field
+        if (data.createdDate === '' || this.compoundBatchForm.dateUnknown) {
+          data.createdDate = null;
+        }
+        
+        let result;
+        if (this.editingCompoundBatch) {
+          result = await API.compoundBatch.update(this.editingCompoundBatch.id, {
+            ...data,
+            experimentIds: this.compoundBatchForm.experimentIds
+          });
+        } else {
+          result = await API.compoundBatch.create({
+            ...data,
+            experimentIds: this.compoundBatchForm.experimentIds
+          });
+        }
+        
+        await this.loadCompoundBatches();
+        this.closeCompoundBatchForm();
+      } catch (error) {
+        console.error('Failed to save compound batch:', error);
+        alert(`Failed to save compound batch: ${error.message}`);
+      }
+    },
+    
+    editCompoundBatch(batch) {
+      this.editingCompoundBatch = batch;
+      this.compoundBatchForm = {
+        batchNumber: batch.batchNumber || '',
+        batchName: batch.batchName || '',
+        createdDate: batch.createdDate ? new Date(batch.createdDate).toISOString().split('T')[0] : '',
+        dateUnknown: !batch.createdDate,
+        totalOutput: batch.totalOutput || '',
+        description: batch.description || '',
+        experimentIds: batch.experiments ? batch.experiments.map(exp => exp.grapheneId) : []
+      };
+      this.showCompoundBatchModal = true;
+    },
+    
+    async deleteCompoundBatch(id) {
+      if (confirm('Are you sure you want to delete this compound batch? This will not delete the individual graphene experiments.')) {
+        try {
+          await API.compoundBatch.delete(id);
+          await this.loadCompoundBatches();
+        } catch (error) {
+          console.error('Failed to delete compound batch:', error);
+          alert(`Failed to delete compound batch: ${error.message}`);
+        }
+      }
+    },
+    
+    closeCompoundBatchForm() {
+      this.showCompoundBatchModal = false;
+      this.editingCompoundBatch = null;
+      this.compoundBatchForm = { ...DEFAULT_FORMS.compoundBatch };
+      this.selectedGrapheneIds = [];
+      this.experimentSearchTerm = '';
+    },
+    
+    toggleGrapheneSelection(grapheneId) {
+      const index = this.selectedGrapheneIds.indexOf(grapheneId);
+      if (index > -1) {
+        this.selectedGrapheneIds.splice(index, 1);
+      } else {
+        this.selectedGrapheneIds.push(grapheneId);
+      }
+      
+      // Update form
+      this.compoundBatchForm.experimentIds = [...this.selectedGrapheneIds];
+    },
+    
+    // Compound Batch Management Tab Functions
+    openCompoundBatchForm() {
+      this.compoundBatchForm = { ...DEFAULT_FORMS.compoundBatch };
+      this.editingCompoundBatch = null;
+      this.experimentSearchTerm = '';
+      this.showCompoundBatchModal = true;
+    },
+    
+    
+    async searchCompoundBatches() {
+      try {
+        this.compoundBatchRecords = await API.compoundBatch.getAll(this.compoundBatchSearch);
+      } catch (error) {
+        console.error('Failed to search compound batches:', error);
+      }
+    },
+    
+    sortCompoundBatches(column) {
+      if (this.compoundBatchSortColumn === column) {
+        this.compoundBatchSortOrder = this.compoundBatchSortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.compoundBatchSortColumn = column;
+        this.compoundBatchSortOrder = 'asc';
+      }
+      
+      this.compoundBatchRecords.sort((a, b) => {
+        let aVal = a[column] || '';
+        let bVal = b[column] || '';
+        
+        // Handle dates
+        if (column === 'createdDate') {
+          aVal = new Date(aVal || '1900-01-01');
+          bVal = new Date(bVal || '1900-01-01');
+        }
+        
+        // Handle numbers
+        if (column === 'totalOutput') {
+          aVal = parseFloat(aVal) || 0;
+          bVal = parseFloat(bVal) || 0;
+        }
+        
+        if (aVal < bVal) return this.compoundBatchSortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return this.compoundBatchSortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    },
+    
+    getCompoundBatchSortIcon(column) {
+      if (this.compoundBatchSortColumn !== column) return '';
+      return this.compoundBatchSortOrder === 'asc' 
+        ? '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>'
+        : '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>';
+    },
+    
+    // Modal experiment selection functions
+    getFilteredExperiments() {
+      if (!this.grapheneRecords || this.grapheneRecords.length === 0) {
+        return [];
+      }
+      
+      if (!this.experimentSearchTerm) {
+        return this.grapheneRecords;
+      }
+      
+      const searchTerm = this.experimentSearchTerm.toLowerCase();
+      return this.grapheneRecords.filter(record => {
+        return (
+          (record.experimentNumber && record.experimentNumber.toLowerCase().includes(searchTerm)) ||
+          (record.species && record.species.toLowerCase().includes(searchTerm)) ||
+          (record.biocharExperiment && record.biocharExperiment.toLowerCase().includes(searchTerm)) ||
+          (record.biocharLotNumber && record.biocharLotNumber.toLowerCase().includes(searchTerm)) ||
+          (record.experimentDate && record.experimentDate.includes(searchTerm))
+        );
+      });
+    },
+    
+    toggleExperimentSelection(experimentId) {
+      const index = this.compoundBatchForm.experimentIds.indexOf(experimentId);
+      if (index > -1) {
+        this.compoundBatchForm.experimentIds.splice(index, 1);
+      } else {
+        this.compoundBatchForm.experimentIds.push(experimentId);
+      }
+      
+      // Recalculate total output
+      this.updateCompoundBatchTotalOutput();
+    },
+    
+    updateCompoundBatchTotalOutput() {
+      const totalOutput = this.compoundBatchForm.experimentIds.reduce((sum, experimentId) => {
+        const experiment = this.grapheneRecords.find(record => record.id === experimentId);
+        return sum + (experiment && experiment.output ? Number(experiment.output) : 0);
+      }, 0);
+      
+      this.compoundBatchForm.totalOutput = totalOutput.toFixed(2);
+    },
+    
+    createCompoundBatchFromSelected() {
+      if (this.selectedGrapheneIds.length === 0) {
+        alert('Please select at least one graphene experiment to create a compound batch.');
+        return;
+      }
+      
+      // Calculate total output from selected experiments
+      const totalOutput = this.selectedGrapheneIds.reduce((sum, grapheneId) => {
+        const experiment = this.grapheneRecords.find(record => record.id === grapheneId);
+        return sum + (experiment && experiment.output ? Number(experiment.output) : 0);
+      }, 0);
+      
+      this.compoundBatchForm = {
+        ...DEFAULT_FORMS.compoundBatch,
+        experimentIds: [...this.selectedGrapheneIds],
+        totalOutput: totalOutput.toFixed(2)
+      };
+      
+      this.showCompoundBatchModal = true;
+    },
+
+    // Shipment CRUD operations
+    openShipmentForm(shipment = null) {
+      if (shipment) {
+        this.editingShipment = shipment;
+        this.shipmentForm = {
+          shipmentNumber: shipment.shipmentNumber || '',
+          shipFromLocation: shipment.shipFromLocation || 'Curia Frankfurt',
+          shipToLocation: shipment.shipToLocation || '',
+          shipmentDate: shipment.shipmentDate ? new Date(shipment.shipmentDate).toISOString().split('T')[0] : '',
+          dateUnknown: !shipment.shipmentDate,
+          receivedDate: shipment.receivedDate ? new Date(shipment.receivedDate).toISOString().split('T')[0] : '',
+          receivedDateUnknown: !shipment.receivedDate,
+          materialType: shipment.grapheneSample ? 'graphene' : 'compound',
+          grapheneSample: shipment.grapheneSample || '',
+          compoundBatchNumber: shipment.compoundBatchNumber || '',
+          amountShipped: shipment.amountShipped || '',
+          unit: shipment.unit || 'g',
+          purpose: shipment.purpose || '',
+          status: shipment.status || 'shipped',
+          comments: shipment.comments || ''
+        };
+      } else {
+        this.editingShipment = null;
+        this.shipmentForm = { ...DEFAULT_FORMS.shipment };
+      }
+      this.showAddShipment = true;
+    },
+
+    async saveShipment() {
+      try {
+        const data = { ...this.shipmentForm };
+        
+        // Remove UI-only fields
+        delete data.materialType;
+        delete data.dateUnknown;
+        delete data.receivedDateUnknown;
+        
+        // Handle date fields
+        if (data.shipmentDate === '' || this.shipmentForm.dateUnknown) {
+          data.shipmentDate = null;
+        }
+        if (data.receivedDate === '' || this.shipmentForm.receivedDateUnknown) {
+          data.receivedDate = null;
+        }
+
+        // Clear the non-selected material reference
+        if (this.shipmentForm.materialType === 'graphene') {
+          data.compoundBatchNumber = null;
+        } else {
+          data.grapheneSample = null;
+        }
+
+        if (this.editingShipment) {
+          await API.shipment.update(this.editingShipment.id, data);
+        } else {
+          await API.shipment.create(data);
+        }
+
+        await this.loadShipments();
+        this.closeShipmentForm();
+      } catch (error) {
+        console.error('Failed to save shipment:', error);
+        alert(`Failed to save shipment: ${error.message}`);
+      }
+    },
+
+    async deleteShipment(id) {
+      if (confirm('Are you sure you want to delete this shipment record?')) {
+        try {
+          await API.shipment.delete(id);
+          await this.loadShipments();
+        } catch (error) {
+          console.error('Failed to delete shipment:', error);
+          alert(`Failed to delete shipment: ${error.message}`);
+        }
+      }
+    },
+
+    duplicateShipment(shipment) {
+      this.editingShipment = null;
+      this.shipmentForm = {
+        shipmentNumber: '', // Clear shipment number for new shipment
+        shipFromLocation: shipment.shipFromLocation || 'Curia Frankfurt',
+        shipToLocation: shipment.shipToLocation || '',
+        shipmentDate: new Date().toISOString().split('T')[0], // Today's date
+        dateUnknown: false,
+        receivedDate: '',
+        receivedDateUnknown: true,
+        materialType: shipment.grapheneSample ? 'graphene' : 'compound',
+        grapheneSample: shipment.grapheneSample || '',
+        compoundBatchNumber: shipment.compoundBatchNumber || '',
+        amountShipped: shipment.amountShipped || '',
+        unit: shipment.unit || 'g',
+        purpose: shipment.purpose || '',
+        status: 'pending', // Default to pending for new shipment
+        comments: shipment.comments || ''
+      };
+      this.showAddShipment = true;
+    },
+
+    closeShipmentForm() {
+      this.showAddShipment = false;
+      this.editingShipment = null;
+      this.shipmentForm = { ...DEFAULT_FORMS.shipment };
+    },
+
+    addShipmentLocation() {
+      if (this.newShipmentLocation.trim()) {
+        this.shipmentLocations.push(this.newShipmentLocation.trim());
+        this.shipmentLocations.sort();
+        this.newShipmentLocation = '';
+        this.showAddShipmentLocation = false;
+      }
+    },
+    
     // Export methods
     exportData(type) {
       if (type === 'biochar') {
@@ -1330,6 +1893,12 @@ window.grapheneApp = function() {
         API.conductivity.exportCSV();
       } else if (type === 'raman' || type === 'test-raman') {
         API.raman.exportCSV();
+      } else if (type === 'tem' || type === 'test-tem') {
+        API.tem.exportCSV();
+      } else if (type === 'compound-batches') {
+        API.compoundBatch.exportCSV();
+      } else if (type === 'shipments') {
+        API.shipment.exportCSV();
       }
     },
     
@@ -1406,6 +1975,30 @@ window.grapheneApp = function() {
     closeRamanModal() {
       this.showRamanModal = false;
       this.currentRamanPdf = null;
+    },
+
+    viewTemPdf(temReportPath) {
+      if (temReportPath) {
+        this.currentTemPdf = '/uploads/' + temReportPath + '#navpanes=0&toolbar=0';
+        this.showTemModal = true;
+      }
+    },
+
+    closeTemModal() {
+      this.showTemModal = false;
+      this.currentTemPdf = null;
+    },
+
+    viewBetPdf(betReportPath) {
+      if (betReportPath) {
+        this.currentBetPdf = '/uploads/' + betReportPath + '#navpanes=0&toolbar=0';
+        this.showBetModal = true;
+      }
+    },
+
+    closeBetModal() {
+      this.showBetModal = false;
+      this.currentBetPdf = null;
     },
     
     // Biochar source handling for graphene form
@@ -1763,6 +2356,31 @@ window.grapheneApp = function() {
     // File upload field HTML generation using helpers
     getFileFieldHtml(config) {
       return fileFieldHelpers.createFileUploadField(config);
+    },
+
+    // Test results section HTML generation using helpers
+    getTestResultsSectionHtml(config) {
+      return testResultsHelper.createTestResultsSection(config);
+    },
+
+    // Reports section HTML generation using helpers
+    getReportsSectionHtml(config) {
+      return reportsHelper.createReportsSection(config);
+    },
+
+    // Source data section HTML generation using helpers
+    getSourceDataSectionHtml(config) {
+      return sourceDataHelper.createSourceDataSection(config);
+    },
+
+    // Objectives section HTML generation using helpers
+    getObjectivesSectionHtml(config) {
+      return objectivesHelper.createObjectivesSection(config);
+    },
+
+    // Shipments section HTML generation using helpers
+    getShipmentsSectionHtml(config) {
+      return shipmentsHelper.createShipmentsSection(config);
     },
 
     // PDF viewer modal HTML generation using helpers

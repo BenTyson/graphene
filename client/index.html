@@ -33,6 +33,20 @@
             Graphene
           </button>
           <button
+            @click="activeTab = 'compound-batches'"
+            :class="activeTab === 'compound-batches' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Compound Batches
+          </button>
+          <button
+            @click="activeTab = 'shipments'"
+            :class="activeTab === 'shipments' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Shipments
+          </button>
+          <button
             @click="activeTab = 'biochar'"
             :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
@@ -83,6 +97,13 @@
             RAMAN
           </button>
           <button
+            @click="activeTab = 'test-tem'"
+            :class="activeTab === 'test-tem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            TEM
+          </button>
+          <button
             @click="activeTab = 'test-sem'"
             :class="activeTab === 'test-sem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
             class="text-sm transition-colors"
@@ -95,6 +116,331 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- Compound Batches Tab -->
+      <div x-show="activeTab === 'compound-batches'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Compound Batch Management</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('compound-batches')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="openCompoundBatchForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Create Batch
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="compoundBatchSearch"
+            @input="searchCompoundBatches()"
+            placeholder="Search batch numbers, names, descriptions..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Compound Batches Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Batch Number
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Batch Name
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Created Date
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Total Output (g)
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Experiments
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Description
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <!-- Each compound batch gets its own tbody containing both main and expandable rows -->
+            <template x-for="batch in compoundBatchRecords" :key="batch.id">
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <button @click="toggleCompoundBatchExpansion(batch.id)" 
+                            class="text-link text-link-hover underline cursor-pointer font-bold">
+                      <span x-text="batch.batchNumber"></span>
+                    </button>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="batch.batchName || '-'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="batch.createdDate || '-'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="batch.totalOutput ? batch.totalOutput + 'g' : '-'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="batch.experiments ? batch.experiments.length : '0'" 
+                          class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="batch.description || '-'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs">
+                    <button @click="editCompoundBatch(batch)" 
+                            class="text-link text-link-hover text-xs mr-2">
+                      Edit
+                    </button>
+                    <button @click="deleteCompoundBatch(batch.id)" 
+                            class="text-red-600 hover:text-red-800 text-xs">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                
+                <!-- Expandable Related Data Row - Directly below the main row -->
+                <tr x-show="expandedCompoundBatches[batch.id]" 
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 transform scale-95"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-95"
+                    class="bg-gray-50">
+                  <td colspan="7" class="px-4 py-4">
+                    <div class="bg-white border border-gray-300 rounded-lg p-4 space-y-4">
+                      <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                        Compound Batch Journey: <span class="font-mono text-black" x-text="batch.batchNumber"></span>
+                        <span x-show="batch.batchName" x-text="' - ' + batch.batchName" class="text-gray-600 font-normal"></span>
+                      </h3>
+                      
+                      <template x-if="loadingCompoundBatchRelated[batch.id]">
+                        <div class="text-center py-4">
+                          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                          <p class="mt-2 text-gray-600">Loading related test data...</p>
+                        </div>
+                      </template>
+                      
+                      <template x-if="!loadingCompoundBatchRelated[batch.id] && compoundBatchRelatedData[batch.id]">
+                        <div class="space-y-6">
+                          <!-- Constituent Experiments Section -->
+                          <div x-html="getObjectivesSectionHtml({
+                            sectionType: 'compound-batches',
+                            dataPath: 'compoundBatchRelatedData[batch.id].compoundBatch.experiments'
+                          })"></div>
+                          
+                          <!-- SEM Reports Section -->
+                          <div x-html="getReportsSectionHtml({
+                            reportType: 'sem',
+                            dataPath: 'compoundBatchRelatedData[batch.id].compoundBatch.semReports',
+                            record: 'compoundBatchRelatedData[batch.id].compoundBatch'
+                          })"></div>
+                          
+                          <!-- Test Results Grid -->
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- BET Test Results -->
+                            <div x-html="getTestResultsSectionHtml({
+                              testType: 'bet',
+                              dataPath: 'compoundBatchRelatedData[batch.id].betTests'
+                            })"></div>
+
+                            <!-- Conductivity Test Results -->
+                            <div x-html="getTestResultsSectionHtml({
+                              testType: 'conductivity',
+                              dataPath: 'compoundBatchRelatedData[batch.id].conductivityTests'
+                            })"></div>
+
+                            <!-- RAMAN Analysis Results -->
+                            <div x-html="getTestResultsSectionHtml({
+                              testType: 'raman',
+                              dataPath: 'compoundBatchRelatedData[batch.id].ramanTests'
+                            })"></div>
+
+                            <!-- TEM Test Results -->
+                            <div x-html="getTestResultsSectionHtml({
+                              testType: 'tem',
+                              dataPath: 'compoundBatchRelatedData[batch.id].temTests'
+                            })"></div>
+                          </div>
+
+                          <!-- Shipment History -->
+                          <div x-html="getShipmentsSectionHtml({
+                            dataPath: 'compoundBatchRelatedData[batch.id].shipments',
+                            materialType: 'compound'
+                          })"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+              
+            <!-- Empty State -->
+            <template x-if="compoundBatchRecords.length === 0">
+              <tbody>
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                      <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                      </svg>
+                      <p class="text-sm">No compound batches found</p>
+                      <p class="text-xs text-gray-400 mt-1">Create your first compound batch to get started</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- Shipments Tab -->
+      <div x-show="activeTab === 'shipments'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Material Shipment Tracking</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('shipments')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="openShipmentForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Shipment
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="shipmentSearch"
+            @input="searchShipments()"
+            placeholder="Search shipment numbers, locations, materials, purposes..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Shipments Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Shipment #
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  From
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  To
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Date
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Material
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Purpose
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Status
+                </th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-for="shipment in filteredShipments" :key="shipment.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm">
+                    <span class="font-medium" x-text="shipment.shipmentNumber"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span x-text="shipment.shipFromLocation"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span x-text="shipment.shipToLocation"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    <span x-text="shipment.shipmentDate ? new Date(shipment.shipmentDate).toLocaleDateString() : 'Unknown'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span x-text="shipment.amountShipped ? `${shipment.amountShipped} ${shipment.unit}` : '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="flex items-center space-x-2">
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                            :class="shipment.grapheneSample ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
+                            x-text="shipment.grapheneSample ? 'G' : 'CB'"></span>
+                      <span class="text-gray-600" x-text="shipment.grapheneSample || shipment.compoundBatchNumber || '—'"></span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    <span x-text="shipment.purpose || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          :class="{
+                            'bg-gray-100 text-gray-800': shipment.status === 'pending',
+                            'bg-blue-100 text-blue-800': shipment.status === 'shipped',
+                            'bg-yellow-100 text-yellow-800': shipment.status === 'in_transit',
+                            'bg-green-100 text-green-800': shipment.status === 'received'
+                          }"
+                          x-text="shipment.status ? shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1).replace('_', ' ') : 'Shipped'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right text-sm">
+                    <div class="flex justify-end space-x-2">
+                      <button @click="openShipmentForm(shipment)" class="text-link hover:text-link-hover" title="Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button @click="duplicateShipment(shipment)" class="text-gray-400 hover:text-gray-600" title="Duplicate">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                      </button>
+                      <button @click="deleteShipment(shipment.id)" class="text-red-400 hover:text-red-600" title="Delete">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="filteredShipments.length === 0" class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2.586a1 1 0 00-.707.293L16 16.586a1 1 0 01-.707.293h-2.586a1 1 0 01-.707-.293L9 13.586a1 1 0 00-.707-.293H6"></path>
+          </svg>
+          <p>No shipments found</p>
+        </div>
+
+      </div>
+
       <!-- Biochar Tab -->
       <div x-show="activeTab === 'biochar'" x-cloak>
         <div class="mb-6 flex justify-between items-center">
@@ -589,6 +935,7 @@
                     <span x-text="record.biocharExperiment || (record.biocharLotNumber ? 'LOT: ' + record.biocharLotNumber : (!record.biocharExperiment && !record.biocharLotNumber ? 'Various' : ''))"
                           :class="{'text-link font-semibold': record.biocharLotNumber, 'text-gray-500 italic': !record.biocharExperiment && !record.biocharLotNumber}"></span>
                   </td>
+                  
                   <!-- Base columns -->
                   <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
                     <span x-text="record.baseAmount ? record.baseAmount + 'g' : ''"></span>
@@ -679,307 +1026,58 @@
                       <template x-if="!loadingGrapheneRelated[record.experimentNumber] && grapheneRelatedData[record.experimentNumber]">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <!-- Source Biochar Data -->
-                          <div>
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                              </svg>
-                              Source Biochar
-                            </h4>
-                            <template x-if="grapheneRelatedData[record.experimentNumber].sourceBiochar">
-                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                <table class="min-w-full text-xs">
-                                  <tr><td class="font-medium">Experiment:</td><td x-text="grapheneRelatedData[record.experimentNumber].sourceBiochar.experimentNumber"></td></tr>
-                                  <tr><td class="font-medium">Date:</td><td x-text="formatDate(grapheneRelatedData[record.experimentNumber].sourceBiochar.experimentDate)"></td></tr>
-                                  <tr><td class="font-medium">Material:</td><td x-text="grapheneRelatedData[record.experimentNumber].sourceBiochar.rawMaterial"></td></tr>
-                                  <tr><td class="font-medium">Reactor:</td><td x-text="grapheneRelatedData[record.experimentNumber].sourceBiochar.reactor"></td></tr>
-                                  <tr><td class="font-medium">Output:</td><td x-text="grapheneRelatedData[record.experimentNumber].sourceBiochar.output ? grapheneRelatedData[record.experimentNumber].sourceBiochar.output + 'g' : ''"></td></tr>
-                                </table>
-                              </div>
-                            </template>
-                            
-                            <template x-if="grapheneRelatedData[record.experimentNumber].lotBiocharExperiments && grapheneRelatedData[record.experimentNumber].lotBiocharExperiments.length > 0">
-                              <div class="bg-link-light border border-link rounded-lg p-3">
-                                <p class="font-medium text-sm mb-2">Lot Biochar Experiments:</p>
-                                <div class="space-y-2">
-                                  <template x-for="biochar in grapheneRelatedData[record.experimentNumber].lotBiocharExperiments">
-                                    <div class="bg-white rounded p-2 text-xs border">
-                                      <div class="flex justify-between">
-                                        <span class="font-medium" x-text="biochar.experimentNumber"></span>
-                                        <span x-text="formatDate(biochar.experimentDate)"></span>
-                                      </div>
-                                      <div class="text-gray-600">
-                                        <span x-text="biochar.rawMaterial"></span> - 
-                                        <span x-text="biochar.output ? biochar.output + 'g' : 'No output'"></span>
-                                      </div>
-                                    </div>
-                                  </template>
-                                </div>
-                              </div>
-                            </template>
-                          </div>
+                          <div x-html="getSourceDataSectionHtml({
+                            dataPath: 'grapheneRelatedData[record.experimentNumber]'
+                          })"></div>
                           
                           <!-- BET Test Results -->
-                          <div>
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                              </svg>
-                              BET Test Results
-                            </h4>
-                            <template x-if="grapheneRelatedData[record.experimentNumber].betTests && grapheneRelatedData[record.experimentNumber].betTests.length > 0">
-                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                <div class="space-y-2">
-                                  <template x-for="bet in grapheneRelatedData[record.experimentNumber].betTests">
-                                    <div class="bg-white rounded p-2 text-xs border">
-                                      <div class="flex justify-between mb-1">
-                                        <span class="font-medium">BET Test</span>
-                                        <span x-text="formatDate(bet.testDate)"></span>
-                                      </div>
-                                      <table class="w-full">
-                                        <tr><td class="font-medium">Multipoint BET:</td><td x-text="bet.multipointBetArea ? formatScientific(bet.multipointBetArea) + ' m²/g' : 'N/A'"></td></tr>
-                                        <tr><td class="font-medium">Langmuir:</td><td x-text="bet.langmuirSurfaceArea ? formatScientific(bet.langmuirSurfaceArea) + ' m²/g' : 'N/A'"></td></tr>
-                                        <tr><td class="font-medium">Species:</td><td x-text="bet.species || 'N/A'"></td></tr>
-                                        <tr x-show="bet.researchTeam"><td class="font-medium">Research Team:</td><td x-text="bet.researchTeam || 'N/A'"></td></tr>
-                                        <tr x-show="bet.testingLab"><td class="font-medium">Testing Lab:</td><td x-text="bet.testingLab || 'N/A'"></td></tr>
-                                      </table>
-                                      <template x-if="bet.comments">
-                                        <p class="text-gray-600 mt-1" x-text="bet.comments"></p>
-                                      </template>
-                                      <template x-if="bet.betReportPath">
-                                        <div class="mt-2 pt-2 border-t border-gray-200">
-                                          <div class="flex items-center justify-between">
-                                            <span class="text-xs font-medium text-gray-700">BET Report:</span>
-                                            <button @click="window.open('/uploads/' + bet.betReportPath, '_blank')" 
-                                                    class="text-link text-link-hover text-xs font-medium flex items-center">
-                                              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                              </svg>
-                                              View PDF
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </template>
-                                    </div>
-                                  </template>
-                                </div>
-                              </div>
-                            </template>
-                            
-                            <template x-if="!grapheneRelatedData[record.experimentNumber].betTests || grapheneRelatedData[record.experimentNumber].betTests.length === 0">
-                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
-                                No BET tests found for this graphene sample
-                              </div>
-                            </template>
-                          </div>
+                          <div x-html="getTestResultsSectionHtml({
+                            testType: 'bet',
+                            dataPath: 'grapheneRelatedData[record.experimentNumber].betTests'
+                          })"></div>
+                          
+                          <!-- Conductivity Test Results -->
+                          <div x-html="getTestResultsSectionHtml({
+                            testType: 'conductivity',
+                            dataPath: 'grapheneRelatedData[record.experimentNumber].conductivityTests'
+                          })"></div>
                           
                           <!-- RAMAN Analysis Results -->
-                          <div>
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                              </svg>
-                              RAMAN Analysis
-                            </h4>
-                            <template x-if="grapheneRelatedData[record.experimentNumber].ramanTests && grapheneRelatedData[record.experimentNumber].ramanTests.length > 0">
-                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                <div class="space-y-2">
-                                  <template x-for="raman in grapheneRelatedData[record.experimentNumber].ramanTests">
-                                    <div class="bg-white rounded p-2 text-xs border">
-                                      <div class="flex justify-between mb-1">
-                                        <span class="font-medium">RAMAN Test</span>
-                                        <span x-text="formatDate(raman.testDate)"></span>
-                                      </div>
-                                      <div class="mb-2">
-                                        <div class="text-xs mb-1"><strong>Research Team:</strong> <span x-text="raman.researchTeam || 'N/A'"></span> | <strong>Testing Lab:</strong> <span x-text="raman.testingLab || 'N/A'"></span></div>
-                                        <table class="w-full text-xs border border-gray-200">
-                                          <thead class="bg-gray-50">
-                                            <tr>
-                                              <th class="px-1 py-1 text-left border-r border-gray-200 text-xs"></th>
-                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">2D</th>
-                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">G</th>
-                                              <th class="px-1 py-1 text-center border-r border-gray-200 text-xs">D</th>
-                                              <th class="px-1 py-1 text-center text-xs">D/G</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            <tr class="border-t border-gray-200">
-                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Int. Range</td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRange2DLow && raman.integrationRange2DHigh) ? `${raman.integrationRange2DLow}-${raman.integrationRange2DHigh}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRangeGLow && raman.integrationRangeGHigh) ? `${raman.integrationRangeGLow}-${raman.integrationRangeGHigh}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integrationRangeDLow && raman.integrationRangeDHigh) ? `${raman.integrationRangeDLow}-${raman.integrationRangeDHigh}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.integrationRangeDGLow && raman.integrationRangeDGHigh) ? `${raman.integrationRangeDGLow}-${raman.integrationRangeDGHigh}` : '-'"></td>
-                                            </tr>
-                                            <tr class="border-t border-gray-200">
-                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Integral A</td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypA2D1 && raman.integralTypA2D2) ? `${raman.integralTypA2D1},${raman.integralTypA2D2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypAG1 && raman.integralTypAG2) ? `${raman.integralTypAG1},${raman.integralTypAG2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.integralTypAD1 && raman.integralTypAD2) ? `${raman.integralTypAD1},${raman.integralTypAD2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.integralTypADG1 && raman.integralTypADG2) ? `${raman.integralTypADG1},${raman.integralTypADG2}` : '-'"></td>
-                                            </tr>
-                                            <tr class="border-t border-gray-200">
-                                              <td class="px-1 py-1 font-medium border-r border-gray-200 text-xs">Peak J</td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJ2D1 && raman.peakHighTypJ2D2) ? `${raman.peakHighTypJ2D1},${raman.peakHighTypJ2D2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJG1 && raman.peakHighTypJG2) ? `${raman.peakHighTypJG1},${raman.peakHighTypJG2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center border-r border-gray-200 font-mono text-xs" x-text="(raman.peakHighTypJD1 && raman.peakHighTypJD2) ? `${raman.peakHighTypJD1},${raman.peakHighTypJD2}` : '-'"></td>
-                                              <td class="px-1 py-1 text-center font-mono text-xs" x-text="(raman.peakHighTypJDG1 && raman.peakHighTypJDG2) ? `${raman.peakHighTypJDG1},${raman.peakHighTypJDG2}` : '-'"></td>
-                                            </tr>
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                      <template x-if="raman.comments">
-                                        <p class="text-gray-600 mt-1" x-text="raman.comments"></p>
-                                      </template>
-                                      <template x-if="raman.ramanReportPath">
-                                        <div class="mt-2 pt-2 border-t border-gray-200">
-                                          <div class="flex items-center justify-between">
-                                            <span class="text-xs font-medium text-gray-700">RAMAN Report:</span>
-                                            <button @click="viewRamanPdf(raman.ramanReportPath)" 
-                                                    class="text-link text-link-hover text-xs font-medium flex items-center">
-                                              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                              </svg>
-                                              View PDF
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </template>
-                                    </div>
-                                  </template>
-                                </div>
-                              </div>
-                            </template>
-                            
-                            <template x-if="!grapheneRelatedData[record.experimentNumber].ramanTests || grapheneRelatedData[record.experimentNumber].ramanTests.length === 0">
-                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
-                                No RAMAN analysis found for this graphene sample
-                              </div>
-                            </template>
-                          </div>
+                          <div x-html="getTestResultsSectionHtml({
+                            testType: 'raman',
+                            dataPath: 'grapheneRelatedData[record.experimentNumber].ramanTests'
+                          })"></div>
                           
                           <!-- Update Reports -->
-                          <div>
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                              </svg>
-                              Update Reports
-                            </h4>
-                            <template x-if="record.updateReports && record.updateReports.length > 0">
-                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                <div class="space-y-2">
-                                  <template x-for="updateReport in record.updateReports">
-                                    <div class="bg-white rounded p-2 text-xs border">
-                                      <div class="flex justify-between mb-1">
-                                        <button @click="viewUpdateReport(updateReport.updateReport.filePath)" 
-                                                class="font-medium text-link text-link-hover text-left">
-                                          <span x-text="updateReport.updateReport.originalName"></span>
-                                        </button>
-                                        <span class="text-gray-500" x-text="updateReport.updateReport.weekOf ? 'Week of ' + new Date(updateReport.updateReport.weekOf).toLocaleDateString() : 'No date'"></span>
-                                      </div>
-                                      <div x-show="updateReport.updateReport.description" class="text-gray-600">
-                                        <span x-text="updateReport.updateReport.description"></span>
-                                      </div>
-                                      <div class="text-gray-400 text-xs mt-1">
-                                        Uploaded: <span x-text="formatDate(updateReport.updateReport.createdAt)"></span>
-                                      </div>
-                                    </div>
-                                  </template>
-                                </div>
-                              </div>
-                            </template>
-                            
-                            <template x-if="!record.updateReports || record.updateReports.length === 0">
-                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
-                                No update reports associated with this experiment
-                              </div>
-                            </template>
-                          </div>
+                          <div x-html="getReportsSectionHtml({
+                            reportType: 'update',
+                            dataPath: 'record.updateReports'
+                          })"></div>
                           
                           <!-- SEM Reports -->
-                          <div>
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                              </svg>
-                              SEM Reports
-                            </h4>
-                            
-                            <!-- Direct attachment -->
-                            <template x-if="record.semReportPath">
-                              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-2">
-                                <div class="bg-white rounded p-2 text-xs border">
-                                  <div class="flex justify-between items-center">
-                                    <button @click="viewSemReport(record.semReportPath)" 
-                                            class="font-medium text-link text-link-hover text-left">
-                                      <span x-text="record.semReportPath.split('/').pop().replace(/_\d+\.pdf$/, '.pdf')"></span>
-                                    </button>
-                                    <span class="text-gray-500 text-xs">Uploaded with record</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </template>
-                            
-                            <!-- Associated SEM reports -->
-                            <template x-if="record.semReports && record.semReports.length > 0">
-                              <div class="space-y-2">
-                                <template x-for="semReport in record.semReports">
-                                  <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                    <div class="bg-white rounded p-2 text-xs border">
-                                      <div class="flex justify-between items-center">
-                                        <div>
-                                          <button @click="viewSemPdf('/uploads/' + semReport.semReport.filePath)" 
-                                                  class="font-medium text-link text-link-hover text-left">
-                                            <span x-text="semReport.semReport.originalName"></span>
-                                          </button>
-                                          <div x-show="semReport.semReport.description" class="text-gray-500 text-xs mt-1" x-text="semReport.semReport.description"></div>
-                                        </div>
-                                        <span class="text-gray-500 text-xs">Associated report</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </template>
-                              </div>
-                            </template>
-                            
-                            <template x-if="!record.semReportPath && (!record.semReports || record.semReports.length === 0)">
-                              <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
-                                No SEM reports available for this experiment
-                              </div>
-                            </template>
-                          </div>
+                          <div x-html="getReportsSectionHtml({
+                            reportType: 'sem',
+                            dataPath: 'record.semReports',
+                            record: 'record'
+                          })"></div>
+                          
+                          <!-- Shipment History -->
+                          <div x-html="getShipmentsSectionHtml({
+                            dataPath: 'grapheneRelatedData[record.experimentNumber].shipments',
+                            materialType: 'graphene'
+                          })"></div>
                           
                           <!-- Experiment Objective & Results -->
-                          <div x-show="record.objective || record.experimentDetails || record.result || record.conclusion || record.recommendedAction">
-                            <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
-                              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                              </svg>
-                              Experiment Objective & Results
-                            </h4>
-                            <div class="bg-link-light border border-link rounded-lg p-3 space-y-3">
-                              <div x-show="record.objective">
-                                <h5 class="font-semibold text-sm text-gray-700">Objective:</h5>
-                                <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.objective"></p>
-                              </div>
-                              <div x-show="record.experimentDetails">
-                                <h5 class="font-semibold text-sm text-gray-700">Experiment Details:</h5>
-                                <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.experimentDetails"></p>
-                              </div>
-                              <div x-show="record.result">
-                                <h5 class="font-semibold text-sm text-gray-700">Result:</h5>
-                                <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.result"></p>
-                              </div>
-                              <div x-show="record.conclusion">
-                                <h5 class="font-semibold text-sm text-gray-700">Conclusion:</h5>
-                                <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.conclusion"></p>
-                              </div>
-                              <div x-show="record.recommendedAction">
-                                <h5 class="font-semibold text-sm text-gray-700">Recommended Action:</h5>
-                                <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="record.recommendedAction"></p>
-                              </div>
-                            </div>
-                          </div>
+                          <div x-html="getObjectivesSectionHtml({
+                            sectionType: 'objectives',
+                            record: 'record'
+                          })"></div>
+                          
+                          <!-- Compound Batch Information -->
+                          <div x-html="getObjectivesSectionHtml({
+                            sectionType: 'compound-batches',
+                            dataPath: 'grapheneRelatedData[record.experimentNumber]'
+                          })"></div>
                         </div>
                       </template>
                     </div>
@@ -1000,7 +1098,7 @@
             <button @click="exportData('test-bet')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="betForm = {testDate: '', dateUnknown: false, grapheneSample: '', multipointBetArea: '', langmuirSurfaceArea: '', species: '', comments: ''}; editingBet = null; showAddBet = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="betForm = {testDate: '', dateUnknown: false, grapheneSample: '', mass: '', multipointBetArea: '', langmuirSurfaceArea: '', comments: ''}; editingBet = null; showAddBet = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -1020,59 +1118,77 @@
         <!-- BET Table -->
         <div class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="bg-gray-100">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Graphene Sample</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Research Team</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Testing Lab</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multipoint BET Area (m²/g)</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Langmuir Surface Area (m²/g)</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Species</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BET Report</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Test Date</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Graphene Sample</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Multipoint BET Area (m²/g)</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Langmuir Surface Area (m²/g)</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Mass (g)</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Research Team</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Testing Lab</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">BET Report</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <template x-for="record in betRecords" :key="record.id">
+            <template x-for="record in betRecords" :key="record.id">
+              <tbody class="bg-white divide-y divide-gray-200">
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm" x-text="formatDate(record.testDate)"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="record.grapheneSample"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.researchTeam"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.testingLab"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.multipointBetArea)"></td>
-                  <td class="px-4 py-3 text-sm font-mono" x-text="formatScientificNotation(record.langmuirSurfaceArea)"></td>
-                  <td class="px-4 py-3 text-sm" x-text="record.species"></td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.testDate)"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
+                    <button @click="toggleExpanded('bet', record.id)" class="text-link text-link-hover font-medium">
+                      <span x-text="record.grapheneSample"></span>
+                      <svg class="w-4 h-4 inline ml-1" :class="{'transform rotate-180': expandedRows['bet_' + record.id]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </button>
+                  </td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="formatScientificNotation(record.multipointBetArea)"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="formatScientificNotation(record.langmuirSurfaceArea)"></td>
+                  <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.mass ? record.mass + 'g' : ''"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.researchTeam"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testingLab"></td>
+                  <td class="px-2 py-2 text-xs border-r border-gray-200">
                     <template x-if="record.betReportPath">
-                      <button @click="window.open('/uploads/' + record.betReportPath, '_blank')" 
-                              class="text-link text-link-hover text-sm font-medium">
+                      <button @click="viewBetPdf(record.betReportPath)" 
+                              class="text-link text-link-hover text-xs font-medium">
                         View PDF
                       </button>
                     </template>
                     <template x-if="!record.betReportPath">
-                      <span class="text-gray-400 text-sm">No report</span>
+                      <span class="text-gray-400 text-xs">No report</span>
                     </template>
                   </td>
-                  <td class="px-4 py-3 text-sm">
-                    <div class="flex items-center space-x-2">
-                      <template x-if="record.comments">
-                        <div class="relative group">
-                          <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                          </svg>
-                          <div class="absolute bottom-full left-0 mb-1 hidden group-hover:block z-10 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg">
-                            <span x-text="record.comments"></span>
-                          </div>
-                        </div>
-                      </template>
-                      <button @click="editBet(record)" class="text-gray-600 hover:text-gray-900">Edit</button>
+                  <td class="px-2 py-2 text-xs">
+                    <div class="flex space-x-2">
+                      <button @click="editBet(record)" class="text-link text-link-hover">Edit</button>
                       <button @click="deleteBet(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
                     </div>
                   </td>
                 </tr>
-              </template>
-            </tbody>
+                <tr x-show="expandedRows['bet_' + record.id]" class="bg-gray-50">
+                  <td colspan="9" class="px-2 py-2 text-xs">
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <div class="mb-2"><strong>Research Team:</strong> <span x-text="record.researchTeam || 'N/A'"></span></div>
+                        <template x-if="record.betReportPath">
+                          <div class="mb-2">
+                            <strong>BET Report:</strong>
+                            <button @click="viewBetPdf(record.betReportPath)" class="text-link text-link-hover ml-1">
+                              View PDF
+                            </button>
+                          </div>
+                        </template>
+                      </div>
+                      <div>
+                        <div class="mb-2"><strong>Comments:</strong> <span x-text="record.comments || 'None'"></span></div>
+                        <div class="text-xs text-gray-500">Created: <span x-text="new Date(record.createdAt).toLocaleString()"></span></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
           </table>
         </div>
       </div>
@@ -1188,6 +1304,7 @@
                 <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Test Date</th>
                 <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Graphene Sample</th>
                 <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Testing Lab</th>
+                <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300" colspan="4">Integration Range</th>
                 <th class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300" colspan="4">Integral Typ A</th>
                 <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
@@ -1195,6 +1312,10 @@
                 <th class="px-2 py-1 border-r border-gray-300"></th>
                 <th class="px-2 py-1 border-r border-gray-300"></th>
                 <th class="px-2 py-1 border-r border-gray-300"></th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">2D Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">G Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">D Band</th>
+                <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-300">D/G Ratio</th>
                 <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">2D Band</th>
                 <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">G Band</th>
                 <th class="px-2 py-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200">D Band</th>
@@ -1215,6 +1336,10 @@
                       </button>
                     </td>
                     <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.testingLab"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integrationRange2DLow && record.integrationRange2DHigh) ? `${record.integrationRange2DLow}-${record.integrationRange2DHigh}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integrationRangeGLow && record.integrationRangeGHigh) ? `${record.integrationRangeGLow}-${record.integrationRangeGHigh}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integrationRangeDLow && record.integrationRangeDHigh) ? `${record.integrationRangeDLow}-${record.integrationRangeDHigh}` : ''"></td>
+                    <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integrationRangeDGLow && record.integrationRangeDGHigh) ? `${record.integrationRangeDGLow}-${record.integrationRangeDGHigh}` : ''"></td>
                     <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypA2D1 && record.integralTypA2D2) ? `${record.integralTypA2D1},${record.integralTypA2D2}` : ''"></td>
                     <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypAG1 && record.integralTypAG2) ? `${record.integralTypAG1},${record.integralTypAG2}` : ''"></td>
                     <td class="px-2 py-2 text-xs font-mono text-center border-r border-gray-200" x-text="(record.integralTypAD1 && record.integralTypAD2) ? `${record.integralTypAD1},${record.integralTypAD2}` : ''"></td>
@@ -1227,7 +1352,7 @@
                     </td>
                   </tr>
                   <tr x-show="expandedRows['raman_' + record.id]" class="bg-gray-50">
-                    <td colspan="8" class="px-2 py-2 text-xs">
+                    <td colspan="12" class="px-2 py-2 text-xs">
                       <div class="space-y-3">
                         <!-- RAMAN Data Matrix -->
                         <div>
@@ -1291,6 +1416,81 @@
                   </tr>
                 </tbody>
               </template>
+          </table>
+        </div>
+      </div>
+
+      <!-- TEM Test Results Tab -->
+      <div x-show="activeTab === 'test-tem'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">TEM Analysis Results</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('test-tem')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="temForm = {testDate: '', dateUnknown: false, grapheneSample: '', researchTeam: 'Curia - Germany', testingLab: '', temReportFile: null, removeTEMReport: false, replaceTEMReport: false, comments: ''}; editingTem = null; showAddTem = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Record
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="temSearch"
+            @input="loadTemRecords()"
+            placeholder="Search samples, labs, teams..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- TEM Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Test Date</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Graphene Sample</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Testing Lab</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PDF Report</th>
+                <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-if="temRecords.length === 0">
+                <tr>
+                  <td colspan="5" class="px-2 py-8 text-center text-sm text-gray-500">
+                    No TEM records found
+                  </td>
+                </tr>
+              </template>
+              <template x-for="record in temRecords" :key="record.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-2 py-2 text-xs" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
+                  <td class="px-2 py-2 text-xs font-mono">
+                    <span x-text="record.grapheneSample" class="text-link font-medium"></span>
+                  </td>
+                  <td class="px-2 py-2 text-xs" x-text="record.testingLab"></td>
+                  <td class="px-2 py-2 text-xs">
+                    <template x-if="record.temReportPath">
+                      <button @click="viewTemPdf(record.temReportPath)" class="text-link text-link-hover">
+                        View PDF
+                      </button>
+                    </template>
+                    <template x-if="!record.temReportPath">
+                      <span class="text-gray-400">No report</span>
+                    </template>
+                  </td>
+                  <td class="px-2 py-2 text-xs">
+                    <div class="flex space-x-2">
+                      <button @click="editTem(record)" class="text-link text-link-hover">Edit</button>
+                      <button @click="deleteTem(record.id)" class="text-red-600 hover:text-red-900">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
           </table>
         </div>
       </div>
@@ -2344,6 +2544,134 @@
       </div>
     </div>
     
+    <!-- Compound Batch Modal -->
+    <div x-show="showCompoundBatchModal" x-cloak
+         @click.away="closeCompoundBatchForm()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingCompoundBatch ? 'Edit Compound Batch' : 'Create Compound Batch'"></h3>
+          
+          <form @submit.prevent="saveCompoundBatch()" class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Batch Number *</label>
+                  <input type="text" x-model="compoundBatchForm.batchNumber" required
+                         placeholder="CB001"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Batch Name</label>
+                  <input type="text" x-model="compoundBatchForm.batchName"
+                         placeholder="Optional descriptive name"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Date -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Date</h4>
+              <div class="grid grid-cols-1 gap-4">
+                <div x-html="getDateFieldHtml({
+                  label: 'Created Date',
+                  dateModelVariable: 'compoundBatchForm.createdDate',
+                  unknownModelVariable: 'compoundBatchForm.dateUnknown'
+                })"></div>
+              </div>
+            </div>
+            
+            <!-- Select Experiments -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Select Graphene Experiments</h4>
+              
+              <!-- Search bar for experiments -->
+              <div class="mb-3">
+                <input
+                  type="text"
+                  x-model="experimentSearchTerm"
+                  placeholder="Search experiments by number, species, date..."
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                >
+              </div>
+              
+              <!-- Experiment selection list -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                <div class="space-y-2">
+                  <template x-for="record in getFilteredExperiments()" :key="record.id">
+                    <div class="flex items-center space-x-3 p-2 bg-white border border-gray-200 rounded hover:bg-blue-50">
+                      <input 
+                        type="checkbox" 
+                        :checked="compoundBatchForm.experimentIds.includes(record.id)"
+                        @change="toggleExperimentSelection(record.id)"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      >
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                          <span class="font-mono font-semibold text-sm text-gray-900" x-text="record.experimentNumber"></span>
+                          <span class="text-xs text-gray-500" x-text="record.output ? record.output + 'g' : 'No output'"></span>
+                        </div>
+                        <div class="flex items-center space-x-4 mt-1">
+                          <span class="text-xs text-gray-500" x-text="record.experimentDate ? new Date(record.experimentDate).toLocaleDateString() : 'No date'"></span>
+                          <span class="text-xs text-gray-500" x-text="record.species || 'No species'"></span>
+                          <span class="text-xs text-gray-500" x-text="record.biocharExperiment ? 'Biochar: ' + record.biocharExperiment : (record.biocharLotNumber ? 'Lot: ' + record.biocharLotNumber : 'Various biochar')"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                
+                <!-- No experiments found -->
+                <div x-show="getFilteredExperiments().length === 0" class="text-center py-4 text-gray-500">
+                  <p class="text-sm">No experiments found</p>
+                </div>
+              </div>
+              
+              <!-- Selected count -->
+              <div class="mt-2 text-sm text-gray-600">
+                <span x-text="compoundBatchForm.experimentIds.length"></span> experiment<span x-show="compoundBatchForm.experimentIds.length !== 1">s</span> selected
+              </div>
+            </div>
+            
+            <!-- Output and Details -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Output & Details</h4>
+              <div class="grid grid-cols-1 gap-4">
+                <div x-html="getNumericFieldHtml({
+                  label: 'Total Output',
+                  unit: 'g',
+                  modelVariable: 'compoundBatchForm.totalOutput',
+                  inputType: 'number',
+                  step: '0.01',
+                  placeholder: 'Calculated from selected experiments'
+                })"></div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea x-model="compoundBatchForm.description" rows="3"
+                            placeholder="Purpose or description of this compound batch..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="closeCompoundBatchForm()" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingCompoundBatch ? 'Update' : 'Create'"></span> Compound Batch
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
     <!-- Add New Material Modal -->
     <div x-show="showAddMaterial" x-cloak
          @click.away="showAddMaterial = false; newMaterial = ''"
@@ -2411,9 +2739,9 @@
     </div>
     
     <!-- Add New Reactor Modal -->
-    <div x-show="showAddReactor" x-cloak @click.away="showAddReactor = false; newReactor = ''" class="fixed inset-0 z-50 overflow-y-auto">
+    <div x-show="showAddReactor" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="fixed inset-0 bg-black opacity-50" @click="showAddReactor = false; newReactor = ''"></div>
         <div class="relative bg-white rounded-lg max-w-md w-full p-6">
           <h3 class="text-lg font-semibold mb-4">Add New Reactor</h3>
           <form @submit.prevent="addNewReactor()">
@@ -2642,16 +2970,14 @@
                   </template>
                 </select>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
-                <select x-model="betForm.species" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                  <option value="">Select species...</option>
-                  <template x-for="spec in species" :key="spec">
-                    <option :value="spec" x-text="spec"></option>
-                  </template>
-                </select>
-              </div>
+              <div x-html="getNumericFieldHtml({
+                label: 'Mass',
+                unit: 'g',
+                modelVariable: 'betForm.mass',
+                inputType: 'number',
+                step: '0.0001',
+                placeholder: 'Sample mass in grams'
+              })"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
@@ -2681,14 +3007,14 @@
                 unit: 'm²/g',
                 modelVariable: 'betForm.multipointBetArea',
                 inputType: 'text',
-                placeholder: '1.520e3 or 1520'
+                placeholder: 'e.g., 1.88e3 or 1880'
               })"></div>
               <div x-html="getNumericFieldHtml({
                 label: 'Langmuir Surface Area',
                 unit: 'm²/g',
                 modelVariable: 'betForm.langmuirSurfaceArea',
                 inputType: 'text',
-                placeholder: '2.340e3 or 2340'
+                placeholder: 'e.g., 2.34e3 or 2340'
               })"></div>
             </div>
             
@@ -3082,6 +3408,284 @@
       </div>
     </div>
 
+    <!-- TEM Add/Edit Modal -->
+    <div x-show="showAddTem" x-cloak
+         @click.away="showAddTem = false; editingTem = null"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingTem ? 'Edit TEM Test' : 'Add TEM Test'"></h3>
+          
+          <form @submit.prevent="saveTem()" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <div x-html="getDateFieldHtml({
+                label: 'Test Date', 
+                dateModelVariable: 'temForm.testDate',
+                unknownModelVariable: 'temForm.dateUnknown'
+              })"></div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
+              <select x-model="temForm.grapheneSample" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <option value="">Select graphene sample...</option>
+                <template x-for="exp in availableGrapheneSamples" :key="exp">
+                  <option :value="exp" x-text="exp"></option>
+                </template>
+              </select>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Research Team</label>
+                <select x-model="temForm.researchTeam" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <template x-for="team in researchTeams" :key="team">
+                    <option :value="team" x-text="team"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Testing Lab</label>
+                <select x-model="temForm.testingLab" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <template x-for="lab in testingLabs" :key="lab">
+                    <option :value="lab" x-text="lab"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+            
+            <div x-html="getFileFieldHtml({
+              label: 'TEM Report (PDF)',
+              fileModelVariable: 'temForm.temReportFile',
+              editingVariable: 'editingTem',
+              currentFilePathField: 'temReportPath',
+              removeFileVariable: 'temForm.removeTEMReport'
+            })"></div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea x-model="temForm.comments" rows="3"
+                        placeholder="Additional notes about the TEM analysis..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="showAddTem = false; editingTem = null; temForm = {}" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingTem ? 'Update' : 'Create'"></span> Record
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shipment Add/Edit Modal -->
+    <div x-show="showAddShipment" x-cloak
+         @click.away="closeShipmentForm()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <h3 class="text-lg font-semibold mb-4" 
+              x-text="editingShipment ? 'Edit Shipment' : 'Add New Shipment'"></h3>
+          <form @submit.prevent="saveShipment()">
+            
+            <!-- Row 1: Shipment Number and Locations -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Shipment Number</label>
+                <input
+                  type="text"
+                  x-model="shipmentForm.shipmentNumber"
+                  placeholder="Auto-generated if empty"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                >
+              </div>
+              <div x-html="getSelectFieldHtml({
+                label: 'Ship From Location',
+                modelVariable: 'shipmentForm.shipFromLocation',
+                optionsArray: 'shipmentLocations',
+                showModalVariable: 'showAddShipmentLocation',
+                addNewText: 'Location',
+                required: true
+              })"></div>
+              <div x-html="getSelectFieldHtml({
+                label: 'Ship To Location',
+                modelVariable: 'shipmentForm.shipToLocation',
+                optionsArray: 'shipmentLocations',
+                showModalVariable: 'showAddShipmentLocation',
+                addNewText: 'Location',
+                required: true
+              })"></div>
+            </div>
+
+            <!-- Row 2: Dates -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div x-html="getDateFieldHtml({
+                label: 'Shipment Date',
+                dateModelVariable: 'shipmentForm.shipmentDate',
+                unknownModelVariable: 'shipmentForm.dateUnknown'
+              })"></div>
+              <div x-html="getDateFieldHtml({
+                label: 'Received Date',
+                dateModelVariable: 'shipmentForm.receivedDate',
+                unknownModelVariable: 'shipmentForm.receivedDateUnknown'
+              })"></div>
+            </div>
+
+            <!-- Row 3: Material Selection -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Material Source</label>
+              <div class="flex space-x-4">
+                <label class="flex items-center">
+                  <input type="radio" x-model="shipmentForm.materialType" value="graphene" class="mr-2">
+                  <span>Individual Graphene Batch</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="shipmentForm.materialType" value="compound" class="mr-2">
+                  <span>Compound Batch</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Row 4: Batch Selection and Amount -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div x-show="shipmentForm.materialType === 'graphene'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Batch</label>
+                <select
+                  x-model="shipmentForm.grapheneSample"
+                  name="grapheneSample"
+                  @change="shipmentForm.compoundBatchNumber = ''"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  :required="shipmentForm.materialType === 'graphene'"
+                >
+                  <option value="">Select graphene batch...</option>
+                  <template x-for="record in grapheneRecords" :key="record.id">
+                    <option :value="record.experimentNumber" 
+                            x-text="`${record.experimentNumber} - ${record.species || 'Unknown'} (${record.output || 0}g)`"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="shipmentForm.materialType === 'compound'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+                <select
+                  x-model="shipmentForm.compoundBatchNumber"
+                  name="compoundBatchNumber"
+                  @change="shipmentForm.grapheneSample = ''"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  :required="shipmentForm.materialType === 'compound'"
+                >
+                  <option value="">Select compound batch...</option>
+                  <template x-for="batch in compoundBatches" :key="batch.id">
+                    <option :value="batch.batchNumber" 
+                            x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-html="getNumericFieldHtml({
+                label: 'Amount Shipped',
+                modelVariable: 'shipmentForm.amountShipped',
+                unit: 'g'
+              })"></div>
+            </div>
+
+            <!-- Row 5: Purpose and Status -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+                <select
+                  x-model="shipmentForm.purpose"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                >
+                  <option value="">Select purpose...</option>
+                  <option value="Testing">Testing</option>
+                  <option value="Micronization">Micronization</option>
+                  <option value="Storage">Storage</option>
+                  <option value="Processing">Processing</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  x-model="shipmentForm.status"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="in_transit">In Transit</option>
+                  <option value="received">Received</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 6: Comments -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+              <textarea
+                x-model="shipmentForm.comments"
+                rows="3"
+                placeholder="Additional notes about this shipment..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+              ></textarea>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="closeShipmentForm()" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingShipment ? 'Update' : 'Create'"></span> Shipment
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Shipment Location Modal -->
+    <div x-show="showAddShipmentLocation" x-cloak
+         @click.away="showAddShipmentLocation = false"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold mb-4">Add New Location</h3>
+          <form @submit.prevent="addShipmentLocation()">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Location Name</label>
+              <input
+                type="text"
+                x-model="newShipmentLocation"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                placeholder="Enter location name"
+              >
+            </div>
+            <div class="flex justify-end space-x-2">
+              <button type="button" @click="showAddShipmentLocation = false" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                Add Location
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Add/Edit Update Report Modal -->
     <div x-show="showAddUpdateReport" x-cloak
          @click.away="closeUpdateReportForm()"
@@ -3248,6 +3852,22 @@
       pdfSourceVariable: 'currentRamanPdf',
       closeMethod: 'closeRamanModal',
       title: 'RAMAN Report'
+    })"></div>
+
+    <!-- BET Report Modal (Using Dynamic Helper) -->
+    <div x-html="getPdfViewerModalHtml({
+      showVariable: 'showBetModal',
+      pdfSourceVariable: 'currentBetPdf',
+      closeMethod: 'closeBetModal',
+      title: 'BET Report'
+    })"></div>
+
+    <!-- TEM Report Modal (Using Dynamic Helper) -->
+    <div x-html="getPdfViewerModalHtml({
+      showVariable: 'showTemModal',
+      pdfSourceVariable: 'currentTemPdf',
+      closeMethod: 'closeTemModal',
+      title: 'TEM Report'
     })"></div>
 
     <!-- Add New Research Team Modal (Using Dynamic Helper) -->

@@ -49,7 +49,6 @@ router.get('/', asyncHandler(async (req, res) => {
     where = {
       OR: [
         { grapheneSample: { contains: search, mode: 'insensitive' } },
-        { species: { contains: search, mode: 'insensitive' } },
         { comments: { contains: search, mode: 'insensitive' } }
       ]
     };
@@ -71,7 +70,7 @@ router.get('/', asyncHandler(async (req, res) => {
     orderBy,
     include: {
       grapheneRef: {
-        select: { experimentNumber: true, species: true }
+        select: { experimentNumber: true }
       }
     }
   });
@@ -79,6 +78,7 @@ router.get('/', asyncHandler(async (req, res) => {
   // Convert Decimal fields to numbers for frontend
   const processedRecords = betRecords.map(record => ({
     ...record,
+    mass: record.mass ? Number(record.mass) : null,
     multipointBetArea: record.multipointBetArea ? Number(record.multipointBetArea) : null,
     langmuirSurfaceArea: record.langmuirSurfaceArea ? Number(record.langmuirSurfaceArea) : null
   }));
@@ -104,6 +104,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
     ...betRecord,
+    mass: betRecord.mass ? Number(betRecord.mass) : null,
     multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
     langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
   };
@@ -117,7 +118,7 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   
   // Convert numeric fields from strings to proper types
   const data = { ...req.body };
-  const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
+  const numericFields = ['mass', 'multipointBetArea', 'langmuirSurfaceArea'];
   
   numericFields.forEach(field => {
     if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
@@ -147,6 +148,7 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   delete data.removeBetReport;
   delete data.replaceBetReport;
   delete data.grapheneRef;
+  delete data.species; // Remove legacy species field
   
   // Remove id and timestamps if present
   delete data.id;
@@ -160,6 +162,7 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
     ...betRecord,
+    mass: betRecord.mass ? Number(betRecord.mass) : null,
     multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
     langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
   };
@@ -174,7 +177,7 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   
   // Convert numeric fields from strings to proper types
   const data = { ...req.body };
-  const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
+  const numericFields = ['mass', 'multipointBetArea', 'langmuirSurfaceArea'];
   
   numericFields.forEach(field => {
     if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
@@ -230,6 +233,7 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   delete data.removeBetReport;
   delete data.replaceBetReport;
   delete data.grapheneRef; // Remove any relational data
+  delete data.species; // Remove legacy species field
   
   // Remove id and timestamps if present (Prisma handles these automatically)
   delete data.id;
@@ -244,6 +248,7 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
     ...betRecord,
+    mass: betRecord.mass ? Number(betRecord.mass) : null,
     multipointBetArea: betRecord.multipointBetArea ? Number(betRecord.multipointBetArea) : null,
     langmuirSurfaceArea: betRecord.langmuirSurfaceArea ? Number(betRecord.langmuirSurfaceArea) : null
   };
@@ -285,9 +290,9 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
   
   const headers = [
-    'Test Date', 'Graphene Sample', 'Research Team', 'Testing Lab',
+    'Test Date', 'Graphene Sample', 'Mass (g)', 'Research Team', 'Testing Lab',
     'Multipoint BET Area (m²/g)', 'Langmuir Surface Area (m²/g)', 
-    'Species', 'BET Report', 'Comments', 'Created At'
+    'BET Report', 'Comments', 'Created At'
   ];
   
   let csv = headers.join(',') + '\n';
@@ -296,11 +301,11 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     const row = [
       b.testDate ? b.testDate.toISOString().split('T')[0] : '',
       b.grapheneSample || '',
+      b.mass || '',
       b.researchTeam || '',
       b.testingLab || '',
       b.multipointBetArea || '',
       b.langmuirSurfaceArea || '',
-      b.species || '',
       b.betReportPath ? 'Yes' : 'No',
       `"${(b.comments || '').replace(/"/g, '""')}"`,
       b.createdAt.toISOString()

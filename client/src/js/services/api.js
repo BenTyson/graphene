@@ -269,6 +269,74 @@ export const conductivityAPI = {
   }
 };
 
+// TEM API endpoints
+export const temAPI = {
+  // Get all TEM records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/tem${query}`).then(handleResponse);
+  },
+
+  // Get single TEM record
+  getById: (id) => {
+    return fetch(`${API_BASE}/tem/${id}`).then(handleResponse);
+  },
+
+  // Create new TEM record (with file upload support)
+  create: async (data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'temReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('temReport', file);
+    }
+    
+    return fetch(`${API_BASE}/tem`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update TEM record (with file upload support)
+  update: async (id, data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'temReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('temReport', file);
+    }
+    
+    return fetch(`${API_BASE}/tem/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete TEM record
+  delete: (id) => {
+    return fetch(`${API_BASE}/tem/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/tem/export/csv`, '_blank');
+  }
+};
+
 // RAMAN API endpoints
 export const ramanAPI = {
   // Get all RAMAN records with optional search
@@ -489,13 +557,151 @@ export const semReportAPI = {
   }
 };
 
+// Compound Batch API endpoints
+export const compoundBatchAPI = {
+  // Get all compound batches with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/compound-batches${query}`).then(handleResponse);
+  },
+
+  // Get single compound batch
+  getById: (id) => {
+    return fetch(`${API_BASE}/compound-batches/${id}`).then(handleResponse);
+  },
+
+  // Get compound batch by batch number
+  getByBatchNumber: (batchNumber) => {
+    return fetch(`${API_BASE}/compound-batches/by-number/${batchNumber}`).then(handleResponse);
+  },
+
+  // Create compound batch
+  create: (data) => {
+    const payload = { ...data };
+    
+    // Convert experimentIds array to JSON string if needed
+    if (payload.experimentIds && Array.isArray(payload.experimentIds)) {
+      payload.experimentIds = JSON.stringify(payload.experimentIds);
+    }
+    
+    return jsonRequest(`${API_BASE}/compound-batches`, 'POST', payload);
+  },
+
+  // Update compound batch
+  update: (id, data) => {
+    const payload = { ...data };
+    
+    // Convert experimentIds array to JSON string if needed
+    if (payload.experimentIds && Array.isArray(payload.experimentIds)) {
+      payload.experimentIds = JSON.stringify(payload.experimentIds);
+    }
+    
+    return jsonRequest(`${API_BASE}/compound-batches/${id}`, 'PUT', payload);
+  },
+
+  // Delete compound batch
+  delete: (id) => {
+    return fetch(`${API_BASE}/compound-batches/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Add graphene experiment to compound batch
+  addExperiment: (batchId, grapheneId) => {
+    return fetch(`${API_BASE}/compound-batches/${batchId}/experiments/${grapheneId}`, {
+      method: 'POST'
+    }).then(handleResponse);
+  },
+
+  // Remove graphene experiment from compound batch
+  removeExperiment: (batchId, grapheneId) => {
+    return fetch(`${API_BASE}/compound-batches/${batchId}/experiments/${grapheneId}`, {
+      method: 'DELETE'
+    }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/compound-batches/export/csv`, '_blank');
+  },
+
+  // Get related test data for a compound batch
+  getRelated: (batchId) => {
+    return fetch(`${API_BASE}/compound-batches/${batchId}/related`).then(handleResponse);
+  },
+
+  // Add SEM report association to compound batch
+  addSemReportAssociation: (batchId, semReportId) => {
+    return fetch(`${API_BASE}/compound-batches/${batchId}/sem-reports/${semReportId}`, {
+      method: 'POST'
+    }).then(handleResponse);
+  },
+
+  // Remove SEM report association from compound batch
+  removeSemReportAssociation: (batchId, semReportId) => {
+    return fetch(`${API_BASE}/compound-batches/${batchId}/sem-reports/${semReportId}`, {
+      method: 'DELETE'
+    }).then(handleResponse);
+  }
+};
+
+// Shipment API endpoints
+export const shipmentAPI = {
+  // Get all shipments with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/shipments${query}`).then(handleResponse);
+  },
+
+  // Get single shipment
+  getById: (id) => {
+    return fetch(`${API_BASE}/shipments/${id}`).then(handleResponse);
+  },
+
+  // Create new shipment
+  create: (data) => {
+    return jsonRequest(`${API_BASE}/shipments`, 'POST', data);
+  },
+
+  // Update shipment
+  update: (id, data) => {
+    return jsonRequest(`${API_BASE}/shipments/${id}`, 'PUT', data);
+  },
+
+  // Delete shipment
+  delete: (id) => {
+    return fetch(`${API_BASE}/shipments/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/shipments/export/csv`, '_blank');
+  },
+
+  // Get shipments for specific graphene experiment
+  getByGraphene: (experimentNumber) => {
+    return fetch(`${API_BASE}/shipments/graphene/${experimentNumber}`).then(handleResponse);
+  },
+
+  // Get shipments for specific compound batch
+  getByCompoundBatch: (batchNumber) => {
+    return fetch(`${API_BASE}/shipments/compound-batch/${batchNumber}`).then(handleResponse);
+  },
+
+  // Get unique locations
+  getLocations: () => {
+    return fetch(`${API_BASE}/shipments/locations`).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
   graphene: grapheneAPI,
   bet: betAPI,
   conductivity: conductivityAPI,
+  tem: temAPI,
   raman: ramanAPI,
   updateReport: updateReportAPI,
-  semReport: semReportAPI
+  semReport: semReportAPI,
+  compoundBatch: compoundBatchAPI,
+  shipment: shipmentAPI
 };

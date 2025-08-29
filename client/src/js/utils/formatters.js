@@ -91,10 +91,23 @@ export const formatScientificNotation = (value) => {
   const num = parseFloat(value);
   if (isNaN(num)) return value;
   
-  // If the number is large (>= 1000), show in scientific notation
-  if (num >= 1000) {
-    return num.toExponential(3);
+  // If the number is large (>= 1000) or small (<= 0.001), show in scientific notation
+  if (num >= 1000 || (num > 0 && num <= 0.001)) {
+    const exp = num.toExponential(2);
+    const [coefficient, exponent] = exp.split('e');
+    const expNum = parseInt(exponent, 10);
+    
+    // Convert to mathematical notation with proper superscript
+    const superscripts = {
+      '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+      '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+      '-': '⁻'
+    };
+    
+    const superscriptExp = expNum.toString().split('').map(char => superscripts[char] || char).join('');
+    return `${parseFloat(coefficient).toString()} × 10${superscriptExp}`;
   }
+  
   // Otherwise show as regular number with appropriate decimal places
   return num.toFixed(3);
 };

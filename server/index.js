@@ -10,8 +10,11 @@ import grapheneRoutes from './routes/graphene.js';
 import betRoutes from './routes/bet.js';
 import conductivityRoutes from './routes/conductivity.js';
 import ramanRoutes from './routes/raman.js';
+import temRoutes from './routes/tem.js';
 import updateReportRoutes from './routes/updateReports.js';
 import semReportRoutes from './routes/semReports.js';
+import compoundBatchRoutes from './routes/compoundBatch.js';
+import shipmentRoutes from './routes/shipments.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -39,8 +42,11 @@ app.use('/api/graphene', grapheneRoutes);
 app.use('/api/bet', betRoutes);
 app.use('/api/conductivity', conductivityRoutes);
 app.use('/api/raman', ramanRoutes);
+app.use('/api/tem', temRoutes);
 app.use('/api/update-reports', updateReportRoutes);
 app.use('/api/sem-reports', semReportRoutes);
+app.use('/api/compound-batches', compoundBatchRoutes);
+app.use('/api/shipments', shipmentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

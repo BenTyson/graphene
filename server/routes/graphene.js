@@ -226,12 +226,79 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
     where: { grapheneSample: experimentNumber },
     orderBy: { createdAt: 'desc' }
   });
+
+  // Get conductivity tests for this graphene
+  const conductivityTests = await prisma.conductivityTest.findMany({
+    where: { grapheneSample: experimentNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Get shipments for this graphene
+  const shipments = await prisma.materialShipment.findMany({
+    where: { grapheneSample: experimentNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Get compound batches that include this graphene experiment
+  const compoundBatches = await prisma.grapheneCompoundBatch.findMany({
+    where: { grapheneId: graphene.id },
+    include: {
+      compoundBatch: {
+        include: {
+          experiments: {
+            include: {
+              graphene: {
+                select: {
+                  experimentNumber: true,
+                  output: true
+                }
+              }
+            }
+          },
+          betTests: true,
+          conductivityTests: true,
+          ramanTests: true,
+          temTests: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Process decimal fields for frontend display
+  const processedBetTests = betTests.map(record => ({
+    ...record,
+    mass: record.mass ? Number(record.mass) : null,
+    multipointBetArea: record.multipointBetArea ? Number(record.multipointBetArea) : null,
+    langmuirSurfaceArea: record.langmuirSurfaceArea ? Number(record.langmuirSurfaceArea) : null
+  }));
+
+  const processedConductivityTests = conductivityTests.map(record => ({
+    ...record,
+    conductivity1kN: record.conductivity1kN ? Number(record.conductivity1kN) : null,
+    conductivity8kN: record.conductivity8kN ? Number(record.conductivity8kN) : null,
+    conductivity12kN: record.conductivity12kN ? Number(record.conductivity12kN) : null,
+    conductivity20kN: record.conductivity20kN ? Number(record.conductivity20kN) : null
+  }));
+
+  // Process compound batches to convert decimal fields
+  const processedCompoundBatches = compoundBatches.map(cb => ({
+    ...cb,
+    compoundBatch: {
+      ...cb.compoundBatch,
+      totalOutput: cb.compoundBatch.totalOutput ? Number(cb.compoundBatch.totalOutput) : null,
+      createdDate: cb.compoundBatch.createdDate ? cb.compoundBatch.createdDate.toISOString().split('T')[0] : null
+    }
+  }));
   
   res.json({
     sourceBiochar,
     lotBiocharExperiments,
-    betTests,
+    betTests: processedBetTests,
     ramanTests,
+    conductivityTests: processedConductivityTests,
+    compoundBatches: processedCompoundBatches,
+    shipments,
     lotInfo: graphene.biocharLotRef
   });
 }));

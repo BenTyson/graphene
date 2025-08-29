@@ -207,8 +207,13 @@ export const processGrapheneForm = (formData) => {
 export const processBetForm = (formData) => {
   let data = processTestDateField(formData);
   
-  const numericFields = ['multipointBetArea', 'langmuirSurfaceArea'];
+  const numericFields = ['mass', 'multipointBetArea', 'langmuirSurfaceArea'];
   data = processNumericFields(data, numericFields);
+  
+  // Remove file from data (handled separately)
+  delete data.betReportFile;
+  delete data.removeBetReport;
+  delete data.replaceBetReport;
   
   return data;
 };
