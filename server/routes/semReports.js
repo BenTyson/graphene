@@ -57,6 +57,18 @@ router.get('/', asyncHandler(async (req, res) => {
             }
           }
         }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              id: true,
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true
+            }
+          }
+        }
       }
     }
   });
@@ -75,6 +87,11 @@ router.get('/:id', asyncHandler(async (req, res) => {
       grapheneReports: {
         include: {
           graphene: true
+        }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: true
         }
       }
     }
@@ -135,8 +152,9 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
     throw new Error('No files uploaded');
   }
   
-  const { reportDate, grapheneIds } = req.body;
+  const { reportDate, grapheneIds, compoundBatchIds } = req.body;
   let parsedGrapheneIds = [];
+  let parsedCompoundBatchIds = [];
   
   // Parse graphene IDs if provided
   if (grapheneIds) {
@@ -144,6 +162,15 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
       parsedGrapheneIds = Array.isArray(grapheneIds) ? grapheneIds : JSON.parse(grapheneIds);
     } catch (error) {
       console.error('Error parsing grapheneIds:', error);
+    }
+  }
+  
+  // Parse compound batch IDs if provided
+  if (compoundBatchIds) {
+    try {
+      parsedCompoundBatchIds = Array.isArray(compoundBatchIds) ? compoundBatchIds : JSON.parse(compoundBatchIds);
+    } catch (error) {
+      console.error('Error parsing compoundBatchIds:', error);
     }
   }
   
@@ -172,6 +199,18 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
       
       await prisma.grapheneSemReport.createMany({
         data: associations
+      });
+    }
+    
+    // Create associations with compound batches if provided
+    if (parsedCompoundBatchIds.length > 0) {
+      const compoundAssociations = parsedCompoundBatchIds.map(compoundBatchId => ({
+        semReportId: semReport.id,
+        compoundBatchId: compoundBatchId
+      }));
+      
+      await prisma.compoundBatchSemReport.createMany({
+        data: compoundAssociations
       });
     }
     
@@ -205,14 +244,24 @@ router.post('/', upload.array('semFiles', 10), asyncHandler(async (req, res) => 
 router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
-  const { reportDate, grapheneIds } = req.body;
+  const { reportDate, grapheneIds, compoundBatchIds } = req.body;
   
   let parsedGrapheneIds = [];
+  let parsedCompoundBatchIds = [];
+  
   if (grapheneIds) {
     try {
       parsedGrapheneIds = Array.isArray(grapheneIds) ? grapheneIds : JSON.parse(grapheneIds);
     } catch (error) {
       console.error('Error parsing grapheneIds:', error);
+    }
+  }
+  
+  if (compoundBatchIds) {
+    try {
+      parsedCompoundBatchIds = Array.isArray(compoundBatchIds) ? compoundBatchIds : JSON.parse(compoundBatchIds);
+    } catch (error) {
+      console.error('Error parsing compoundBatchIds:', error);
     }
   }
   
@@ -226,12 +275,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
   
   // Update associations if grapheneIds provided
   if (grapheneIds !== undefined) {
-    // Delete existing associations
+    // Delete existing graphene associations
     await prisma.grapheneSemReport.deleteMany({
       where: { semReportId: id }
     });
     
-    // Create new associations
+    // Create new graphene associations
     if (parsedGrapheneIds.length > 0) {
       const associations = parsedGrapheneIds.map(grapheneId => ({
         semReportId: id,
@@ -240,6 +289,26 @@ router.put('/:id', asyncHandler(async (req, res) => {
       
       await prisma.grapheneSemReport.createMany({
         data: associations
+      });
+    }
+  }
+  
+  // Update compound batch associations if compoundBatchIds provided
+  if (compoundBatchIds !== undefined) {
+    // Delete existing compound batch associations
+    await prisma.compoundBatchSemReport.deleteMany({
+      where: { semReportId: id }
+    });
+    
+    // Create new compound batch associations
+    if (parsedCompoundBatchIds.length > 0) {
+      const compoundAssociations = parsedCompoundBatchIds.map(compoundBatchId => ({
+        semReportId: id,
+        compoundBatchId: compoundBatchId
+      }));
+      
+      await prisma.compoundBatchSemReport.createMany({
+        data: compoundAssociations
       });
     }
   }
@@ -255,6 +324,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
               id: true, 
               experimentNumber: true, 
               species: true 
+            }
+          }
+        }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              id: true,
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true
             }
           }
         }

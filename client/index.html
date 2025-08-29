@@ -40,6 +40,13 @@
             Compound Batches
           </button>
           <button
+            @click="activeTab = 'micronization'"
+            :class="activeTab === 'micronization' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Micronization
+          </button>
+          <button
             @click="activeTab = 'shipments'"
             :class="activeTab === 'shipments' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
@@ -59,13 +66,6 @@
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             Test Results
-          </button>
-          <button
-            @click="activeTab = 'updates'"
-            :class="activeTab === 'updates' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Curia Updates
           </button>
         </nav>
       </div>
@@ -109,6 +109,13 @@
             class="text-sm transition-colors"
           >
             SEM Reports
+          </button>
+          <button
+            @click="activeTab = 'test-updates'"
+            :class="activeTab === 'test-updates' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            Curia Updates
           </button>
         </nav>
       </div>
@@ -370,33 +377,33 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <template x-for="shipment in filteredShipments" :key="shipment.id">
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span class="font-medium" x-text="shipment.shipmentNumber"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span x-text="shipment.shipFromLocation"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span x-text="shipment.shipToLocation"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span x-text="shipment.shipmentDate ? new Date(shipment.shipmentDate).toLocaleDateString() : 'Unknown'"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span x-text="shipment.amountShipped ? `${shipment.amountShipped} ${shipment.unit}` : '—'"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <div class="flex items-center space-x-2">
                       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                             :class="shipment.grapheneSample ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
                             x-text="shipment.grapheneSample ? 'G' : 'CB'"></span>
-                      <span class="text-gray-600" x-text="shipment.grapheneSample || shipment.compoundBatchNumber || '—'"></span>
+                      <span x-text="shipment.grapheneSample || shipment.compoundBatchNumber || '—'"></span>
                     </div>
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span x-text="shipment.purpose || '—'"></span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                           :class="{
                             'bg-gray-100 text-gray-800': shipment.status === 'pending',
@@ -406,7 +413,7 @@
                           }"
                           x-text="shipment.status ? shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1).replace('_', ' ') : 'Shipped'"></span>
                   </td>
-                  <td class="px-4 py-3 text-right text-sm">
+                  <td class="px-4 py-3 text-right text-xs font-mono" style="color: #212121;">
                     <div class="flex justify-end space-x-2">
                       <button @click="openShipmentForm(shipment)" class="text-link hover:text-link-hover" title="Edit">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,6 +444,150 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2.586a1 1 0 00-.707.293L16 16.586a1 1 0 01-.707.293h-2.586a1 1 0 01-.707-.293L9 13.586a1 1 0 00-.707-.293H6"></path>
           </svg>
           <p>No shipments found</p>
+        </div>
+
+      </div>
+
+      <!-- Micronization Tab -->
+      <div x-show="activeTab === 'micronization'" x-cloak>
+        <div class="mb-6 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Micronization Processing</h2>
+          <div class="flex space-x-2">
+            <button @click="exportData('micronization')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+              Export CSV
+            </button>
+            <button @click="openMicronizationForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+              Add Micronization
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <input
+            type="text"
+            x-model="micronizationSearch"
+            @input="searchMicronizations()"
+            placeholder="Search micronization numbers, SKUs, materials..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+        </div>
+
+        <!-- Micronizations Table -->
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Micronization #
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Date
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Material Source
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  SKU
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Starting Amount (g)
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Recovered Amount (g)
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Recovery %
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Grind Pressure (psi)
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Report
+                </th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <template x-for="micronization in filteredMicronizations" :key="micronization.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span class="font-medium" x-text="micronization.micronizationNumber"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="micronization.date ? new Date(micronization.date).toLocaleDateString() : 'Unknown'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <div class="flex items-center space-x-2">
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                            :class="micronization.grapheneSample ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
+                            x-text="micronization.grapheneSample ? 'G' : 'CB'"></span>
+                      <span x-text="micronization.grapheneSample || micronization.compoundBatchNumber || '—'"></span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span class="font-medium" x-text="micronization.sku || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="micronization.startingMaterialAmount || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="micronization.recoveredAmount || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span class="font-medium" 
+                          x-text="(micronization.startingMaterialAmount && micronization.recoveredAmount) ? 
+                          ((micronization.recoveredAmount / micronization.startingMaterialAmount * 100).toFixed(1) + '%') : '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <span x-text="micronization.grindPressure || '—'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
+                    <template x-if="micronization.micronizationReportPath">
+                      <button @click="openPDFModal(micronization.micronizationReportPath, 'Micronization Report')" 
+                              class="text-link hover:text-link-hover" title="View PDF">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                    </template>
+                    <template x-if="!micronization.micronizationReportPath">
+                      <span class="text-gray-400">—</span>
+                    </template>
+                  </td>
+                  <td class="px-4 py-3 text-right text-xs font-mono" style="color: #212121;">
+                    <div class="flex justify-end space-x-2">
+                      <button @click="openMicronizationForm(micronization)" class="text-link hover:text-link-hover" title="Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button @click="duplicateMicronization(micronization)" class="text-gray-400 hover:text-gray-600" title="Duplicate">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                      </button>
+                      <button @click="deleteMicronization(micronization.id)" class="text-red-400 hover:text-red-600" title="Delete">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="filteredMicronizations.length === 0" class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+          </svg>
+          <p>No micronizations found</p>
         </div>
 
       </div>
@@ -1098,7 +1249,7 @@
             <button @click="exportData('test-bet')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="betForm = {testDate: '', dateUnknown: false, grapheneSample: '', mass: '', multipointBetArea: '', langmuirSurfaceArea: '', comments: ''}; editingBet = null; showAddBet = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="initBetForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -1201,7 +1352,7 @@
             <button @click="exportData('test-conductivity')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="conductivityForm = {testDate: '', dateUnknown: false, grapheneSample: '', description: '', conductivity1kN: '', conductivity8kN: '', conductivity12kN: '', conductivity20kN: '', comments: ''}; editingConductivity = null; showAddConductivity = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="initConductivityForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -1279,7 +1430,7 @@
             <button @click="exportData('test-raman')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="ramanForm = {testDate: '', dateUnknown: false, grapheneSample: '', researchTeam: 'Curia - Germany', testingLab: '', integrationRange2DLow: '', integrationRange2DHigh: '', integrationRangeGLow: '', integrationRangeGHigh: '', integrationRangeDLow: '', integrationRangeDHigh: '', integrationRangeDGLow: '', integrationRangeDGHigh: '', integralTypA2D1: '', integralTypA2D2: '', integralTypAG1: '', integralTypAG2: '', integralTypAD1: '', integralTypAD2: '', integralTypADG1: '', integralTypADG2: '', peakHighTypJ2D1: '', peakHighTypJ2D2: '', peakHighTypJG1: '', peakHighTypJG2: '', peakHighTypJD1: '', peakHighTypJD2: '', peakHighTypJDG1: '', peakHighTypJDG2: '', ramanReportFile: null, comments: ''}; editingRaman = null; showAddRaman = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="initRamanForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -1428,7 +1579,7 @@
             <button @click="exportData('test-tem')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
               Export CSV
             </button>
-            <button @click="temForm = {testDate: '', dateUnknown: false, grapheneSample: '', researchTeam: 'Curia - Germany', testingLab: '', temReportFile: null, removeTEMReport: false, replaceTEMReport: false, comments: ''}; editingTem = null; showAddTem = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+            <button @click="initTemForm()" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
               Add Record
             </button>
           </div>
@@ -1540,7 +1691,7 @@
               <template x-for="report in semReports" :key="report.id">
                 <tr class="hover:bg-gray-50">
                   <!-- Sample # Column -->
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard">
                     <template x-if="report.grapheneReports && report.grapheneReports.length > 0">
                       <div class="space-y-1">
                         <template x-for="gr in report.grapheneReports">
@@ -1554,10 +1705,10 @@
                   </td>
                   
                   <!-- Date Column -->
-                  <td class="px-4 py-3 text-sm text-gray-500" x-text="formatDate(report.reportDate)"></td>
+                  <td class="table-cell-standard" x-text="formatDate(report.reportDate)"></td>
                   
                   <!-- Species Column -->
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard">
                     <template x-if="report.grapheneReports && report.grapheneReports.length > 0">
                       <div class="space-y-1">
                         <template x-for="gr in report.grapheneReports">
@@ -1571,15 +1722,15 @@
                   </td>
                   
                   <!-- PDF Name Column -->
-                  <td class="px-4 py-3">
+                  <td class="table-cell-standard">
                     <div class="flex items-center">
                       <svg class="w-4 h-4 mr-2 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"></path>
                       </svg>
-                      <span class="text-sm font-medium" x-text="report.originalName"></span>
+                      <span class="font-medium" x-text="report.originalName"></span>
                     </div>
                   </td>
-                  <td class="px-4 py-3 text-sm space-x-2">
+                  <td class="table-cell-actions space-x-2">
                     <button @click="viewSemPdf('/uploads/' + report.filePath)" class="text-link text-link-hover">
                       View PDF
                     </button>
@@ -1597,8 +1748,8 @@
         </div>
       </div>
 
-      <!-- Update Reports Tab -->
-      <div x-show="activeTab === 'updates'" x-cloak>
+      <!-- Curia Updates Tab -->
+      <div x-show="activeTab === 'test-updates'" x-cloak>
         <div class="mb-6 flex justify-between items-center">
           <h2 class="text-xl font-semibold">Weekly Update Reports</h2>
           <div class="flex space-x-2">
@@ -1635,17 +1786,17 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <template x-for="report in updateReports" :key="report.id">
                 <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard">
                     <button @click="viewUpdateReport(report.filePath)" 
                             class="text-link text-link-hover font-medium">
                       <span x-text="report.originalName"></span>
                     </button>
                   </td>
-                  <td class="px-4 py-3 text-sm" x-text="report.weekOf ? new Date(report.weekOf).toLocaleDateString() : '-'"></td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard" x-text="report.weekOf ? new Date(report.weekOf).toLocaleDateString() : '-'"></td>
+                  <td class="table-cell-standard">
                     <div class="max-w-xs truncate" x-text="report.description || '-'"></div>
                   </td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard">
                     <div class="max-w-xs">
                       <template x-if="report.grapheneReports && report.grapheneReports.length > 0">
                         <div>
@@ -1662,13 +1813,13 @@
                       </template>
                     </div>
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-500" x-text="formatDate(report.createdAt)"></td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="table-cell-standard" x-text="formatDate(report.createdAt)"></td>
+                  <td class="table-cell-actions">
                     <div class="flex space-x-2">
                       <button @click="editUpdateReport(report)" 
-                              class="text-link text-link-hover text-sm">Edit</button>
+                              class="text-link text-link-hover">Edit</button>
                       <button @click="deleteUpdateReport(report.id)" 
-                              class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                              class="text-red-600 hover:text-red-800">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -2672,6 +2823,180 @@
       </div>
     </div>
     
+    <!-- Micronization Modal -->
+    <div x-show="showMicronizationModal" x-cloak
+         @click.away="closeMicronizationForm()"
+         class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <h3 class="text-lg font-semibold mb-4" x-text="editingMicronization ? 'Edit Micronization' : 'Add Micronization'"></h3>
+          
+          <form @submit.prevent="saveMicronization()" class="space-y-6">
+            <!-- Basic Information -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Basic Information</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Micronization # *</label>
+                  <input type="text" x-model="micronizationForm.micronizationNumber" required
+                         placeholder="M001"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                  <input type="text" x-model="micronizationForm.sku"
+                         placeholder="Unique SKU for this micronized product"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Date -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Date</h4>
+              <div class="grid grid-cols-1 gap-4">
+                <div x-html="getDateFieldHtml({
+                  label: 'Processing Date',
+                  dateModelVariable: 'micronizationForm.date',
+                  unknownModelVariable: 'micronizationForm.dateUnknown'
+                })"></div>
+              </div>
+            </div>
+            
+            <!-- Material Selection -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Material Source *</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" x-model="micronizationForm.materialType" value="graphene"
+                           class="text-black focus:ring-black border-gray-300">
+                    <span class="text-sm">Individual Graphene Sample</span>
+                  </label>
+                </div>
+                <div>
+                  <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="radio" x-model="micronizationForm.materialType" value="compound"
+                           class="text-black focus:ring-black border-gray-300">
+                    <span class="text-sm">Compound Batch</span>
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Graphene Sample Selection -->
+              <div x-show="micronizationForm.materialType === 'graphene'" class="mt-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
+                  <div class="relative">
+                    <select x-model="micronizationForm.grapheneSample" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select graphene experiment...</option>
+                      <template x-for="item in availableGrapheneSamples" :key="item">
+                        <option :value="item" x-text="item"></option>
+                      </template>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Compound Batch Selection -->
+              <div x-show="micronizationForm.materialType === 'compound'" class="mt-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+                  <div class="relative">
+                    <select x-model="micronizationForm.compoundBatchNumber" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black appearance-none">
+                      <option value="">Select compound batch...</option>
+                      <template x-for="item in availableCompoundBatches" :key="item">
+                        <option :value="item" x-text="item"></option>
+                      </template>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Processing Parameters -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Processing Parameters</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div x-html="getNumericFieldHtml({
+                  label: 'Starting Material Amount',
+                  unit: 'g',
+                  modelVariable: 'micronizationForm.startingMaterialAmount',
+                  inputType: 'number',
+                  step: '0.01',
+                  placeholder: 'Amount sent for processing'
+                })"></div>
+                <div x-html="getNumericFieldHtml({
+                  label: 'Recovered Amount',
+                  unit: 'g',
+                  modelVariable: 'micronizationForm.recoveredAmount',
+                  inputType: 'number',
+                  step: '0.01',
+                  placeholder: 'Amount recovered after processing'
+                })"></div>
+              </div>
+              <div class="grid grid-cols-1 gap-4 mt-4">
+                <div x-html="getNumericFieldHtml({
+                  label: 'Grind Pressure',
+                  unit: 'psi',
+                  modelVariable: 'micronizationForm.grindPressure',
+                  inputType: 'number',
+                  step: '1',
+                  placeholder: 'Processing pressure'
+                })"></div>
+              </div>
+            </div>
+            
+            <!-- Recovery Rate Display -->
+            <div x-show="micronizationForm.startingMaterialAmount && micronizationForm.recoveredAmount" class="bg-gray-50 p-3 rounded-md">
+              <div class="text-sm text-gray-700">
+                <strong>Recovery Rate:</strong> 
+                <span class="font-medium text-green-600" 
+                      x-text="((parseFloat(micronizationForm.recoveredAmount) / parseFloat(micronizationForm.startingMaterialAmount)) * 100).toFixed(1) + '%'"></span>
+              </div>
+            </div>
+            
+            <!-- Micronization Report -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Report</h4>
+              <div x-html="getFileFieldHtml({
+                label: 'Micronization Report',
+                fileModelVariable: 'micronizationForm.micronizationReportFile',
+                currentFilePath: 'editingMicronization ? editingMicronization.micronizationReportPath : null',
+                removeModelVariable: 'micronizationForm.removeMicronizationReport',
+                replaceModelVariable: 'micronizationForm.replaceMicronizationReport',
+                accept: 'application/pdf',
+                modalTitle: 'Micronization Report'
+              })"></div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+              <button type="button" @click="closeMicronizationForm()" 
+                      class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
+                <span x-text="editingMicronization ? 'Update' : 'Add'"></span> Micronization
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
     <!-- Add New Material Modal -->
     <div x-show="showAddMaterial" x-cloak
          @click.away="showAddMaterial = false; newMaterial = ''"
@@ -2958,15 +3283,47 @@
                 unknownModelVariable: 'betForm.dateUnknown'
               })"></div>
             </div>
+
+            <!-- Material Type Selection -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Sample Source</label>
+              <div class="flex space-x-4">
+                <label class="flex items-center">
+                  <input type="radio" x-model="betForm.materialType" value="graphene" class="mr-2">
+                  <span>Individual Graphene Batch</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="betForm.materialType" value="compound" class="mr-2">
+                  <span>Compound Batch</span>
+                </label>
+              </div>
+            </div>
             
             <div class="grid grid-cols-2 gap-4">
-              <div>
+              <div x-show="betForm.materialType === 'graphene'">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
                 <select x-model="betForm.grapheneSample" 
+                        name="grapheneSample"
+                        @change="betForm.compoundBatchNumber = ''"
+                        :required="betForm.materialType === 'graphene'"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                   <option value="">Select graphene sample...</option>
                   <template x-for="exp in availableGrapheneSamples" :key="exp">
                     <option :value="exp" x-text="exp"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="betForm.materialType === 'compound'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+                <select x-model="betForm.compoundBatchNumber"
+                        name="compoundBatchNumber"
+                        @change="betForm.grapheneSample = ''"
+                        :required="betForm.materialType === 'compound'"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <option value="">Select compound batch...</option>
+                  <template x-for="batch in compoundBatches" :key="batch.id">
+                    <option :value="batch.batchNumber" 
+                            x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
                   </template>
                 </select>
               </div>
@@ -3064,14 +3421,46 @@
                 unknownModelVariable: 'conductivityForm.dateUnknown'
               })"></div>
             </div>
+
+            <!-- Material Type Selection -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Sample Source</label>
+              <div class="flex space-x-4">
+                <label class="flex items-center">
+                  <input type="radio" x-model="conductivityForm.materialType" value="graphene" class="mr-2">
+                  <span>Individual Graphene Batch</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="conductivityForm.materialType" value="compound" class="mr-2">
+                  <span>Compound Batch</span>
+                </label>
+              </div>
+            </div>
             
-            <div>
+            <div x-show="conductivityForm.materialType === 'graphene'">
               <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
               <select x-model="conductivityForm.grapheneSample" 
+                      name="grapheneSample"
+                      @change="conductivityForm.compoundBatchNumber = ''"
+                      :required="conductivityForm.materialType === 'graphene'"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                 <option value="">Select graphene sample...</option>
                 <template x-for="exp in availableGrapheneSamples" :key="exp">
                   <option :value="exp" x-text="exp"></option>
+                </template>
+              </select>
+            </div>
+            <div x-show="conductivityForm.materialType === 'compound'">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+              <select x-model="conductivityForm.compoundBatchNumber"
+                      name="compoundBatchNumber"
+                      @change="conductivityForm.grapheneSample = ''"
+                      :required="conductivityForm.materialType === 'compound'"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <option value="">Select compound batch...</option>
+                <template x-for="batch in compoundBatches" :key="batch.id">
+                  <option :value="batch.batchNumber" 
+                          x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
                 </template>
               </select>
             </div>
@@ -3153,13 +3542,48 @@
                   dateModelVariable: 'ramanForm.testDate',
                   unknownModelVariable: 'ramanForm.dateUnknown'
                 })"></div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample *</label>
-                  <select x-model="ramanForm.grapheneSample" required
+              </div>
+              
+              <!-- Sample Source Selection -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Sample Source</label>
+                <div class="flex space-x-4">
+                  <label class="flex items-center">
+                    <input type="radio" x-model="ramanForm.materialType" value="graphene" class="mr-2">
+                    <span>Individual Graphene Batch</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input type="radio" x-model="ramanForm.materialType" value="compound" class="mr-2">
+                    <span>Compound Batch</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div x-show="ramanForm.materialType === 'graphene'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
+                  <select x-model="ramanForm.grapheneSample" 
+                          name="grapheneSample"
+                          @change="ramanForm.compoundBatchNumber = ''"
+                          :required="ramanForm.materialType === 'graphene'"
                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                     <option value="">Select graphene sample...</option>
                     <template x-for="exp in availableGrapheneSamples" :key="exp">
                       <option :value="exp" x-text="exp"></option>
+                    </template>
+                  </select>
+                </div>
+                <div x-show="ramanForm.materialType === 'compound'">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+                  <select x-model="ramanForm.compoundBatchNumber"
+                          name="compoundBatchNumber"
+                          @change="ramanForm.grapheneSample = ''"
+                          :required="ramanForm.materialType === 'compound'"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                    <option value="">Select compound batch...</option>
+                    <template x-for="batch in compoundBatches" :key="batch.id">
+                      <option :value="batch.batchNumber" 
+                              x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
                     </template>
                   </select>
                 </div>
@@ -3426,15 +3850,49 @@
               })"></div>
             </div>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
-              <select x-model="temForm.grapheneSample" 
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                <option value="">Select graphene sample...</option>
-                <template x-for="exp in availableGrapheneSamples" :key="exp">
-                  <option :value="exp" x-text="exp"></option>
-                </template>
-              </select>
+            <!-- Sample Source Selection -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Sample Source</label>
+              <div class="flex space-x-4">
+                <label class="flex items-center">
+                  <input type="radio" x-model="temForm.materialType" value="graphene" class="mr-2">
+                  <span>Individual Graphene Batch</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="temForm.materialType" value="compound" class="mr-2">
+                  <span>Compound Batch</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4">
+              <div x-show="temForm.materialType === 'graphene'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Graphene Sample</label>
+                <select x-model="temForm.grapheneSample" 
+                        name="grapheneSample"
+                        @change="temForm.compoundBatchNumber = ''"
+                        :required="temForm.materialType === 'graphene'"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <option value="">Select graphene sample...</option>
+                  <template x-for="exp in availableGrapheneSamples" :key="exp">
+                    <option :value="exp" x-text="exp"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="temForm.materialType === 'compound'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Compound Batch</label>
+                <select x-model="temForm.compoundBatchNumber"
+                        name="compoundBatchNumber"
+                        @change="temForm.grapheneSample = ''"
+                        :required="temForm.materialType === 'compound'"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <option value="">Select compound batch...</option>
+                  <template x-for="batch in compoundBatches" :key="batch.id">
+                    <option :value="batch.batchNumber" 
+                            x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
+                  </template>
+                </select>
+              </div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
@@ -3553,6 +4011,10 @@
                   <input type="radio" x-model="shipmentForm.materialType" value="compound" class="mr-2">
                   <span>Compound Batch</span>
                 </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="shipmentForm.materialType" value="micronized" class="mr-2">
+                  <span>Micronized SKU</span>
+                </label>
               </div>
             </div>
 
@@ -3563,7 +4025,7 @@
                 <select
                   x-model="shipmentForm.grapheneSample"
                   name="grapheneSample"
-                  @change="shipmentForm.compoundBatchNumber = ''"
+                  @change="shipmentForm.compoundBatchNumber = ''; shipmentForm.micronizationSku = ''"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
                   :required="shipmentForm.materialType === 'graphene'"
                 >
@@ -3579,7 +4041,7 @@
                 <select
                   x-model="shipmentForm.compoundBatchNumber"
                   name="compoundBatchNumber"
-                  @change="shipmentForm.grapheneSample = ''"
+                  @change="shipmentForm.grapheneSample = ''; shipmentForm.micronizationSku = ''"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
                   :required="shipmentForm.materialType === 'compound'"
                 >
@@ -3587,6 +4049,22 @@
                   <template x-for="batch in compoundBatches" :key="batch.id">
                     <option :value="batch.batchNumber" 
                             x-text="`${batch.batchNumber} - ${batch.batchName || 'Unnamed'} (${batch.totalOutput || 0}g)`"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="shipmentForm.materialType === 'micronized'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Micronized SKU</label>
+                <select
+                  x-model="shipmentForm.micronizationSku"
+                  name="micronizationSku"
+                  @change="shipmentForm.grapheneSample = ''; shipmentForm.compoundBatchNumber = ''"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  :required="shipmentForm.materialType === 'micronized'"
+                >
+                  <option value="">Select micronized SKU...</option>
+                  <template x-for="micronization in micronizations" :key="micronization.id">
+                    <option :value="micronization.sku" 
+                            x-text="`${micronization.sku} - ${micronization.micronizationNumber} (${micronization.recoveredAmount || 0}g)`"></option>
                   </template>
                 </select>
               </div>
@@ -3810,6 +4288,28 @@
                 </template>
                 <template x-if="grapheneRecords.length === 0">
                   <p class="text-sm text-gray-500">No graphene experiments available</p>
+                </template>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Associated Compound Batches</label>
+              <div class="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
+                <template x-for="batch in compoundBatches" :key="batch.id">
+                  <label class="flex items-center space-x-2 py-1">
+                    <input type="checkbox" 
+                           :checked="semReportForm.compoundBatchIds.includes(batch.id)"
+                           @change="toggleSemCompoundBatchSelection(batch.id)"
+                           class="rounded border-gray-300 focus:ring-black">
+                    <span class="text-sm">
+                      <strong x-text="batch.batchNumber"></strong>
+                      <span class="text-gray-500" x-show="batch.batchName"> - <span x-text="batch.batchName"></span></span>
+                      <span class="text-gray-500"> (<span x-text="batch.totalOutput || 0"></span>g)</span>
+                    </span>
+                  </label>
+                </template>
+                <template x-if="compoundBatches.length === 0">
+                  <p class="text-sm text-gray-500">No compound batches available</p>
                 </template>
               </div>
             </div>

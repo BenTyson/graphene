@@ -97,7 +97,9 @@ const DEFAULT_FORMS = {
   bet: {
     testDate: '',
     dateUnknown: false,
+    materialType: 'graphene',
     grapheneSample: '',
+    compoundBatchNumber: '',
     mass: '',
     researchTeam: 'Curia - Germany',
     testingLab: 'Fraunhofer-Institut',
@@ -111,7 +113,9 @@ const DEFAULT_FORMS = {
   conductivity: {
     testDate: '',
     dateUnknown: false,
+    materialType: 'graphene',
     grapheneSample: '',
+    compoundBatchNumber: '',
     description: '',
     conductivity1kN: '',
     conductivity8kN: '',
@@ -122,7 +126,9 @@ const DEFAULT_FORMS = {
   raman: {
     testDate: '',
     dateUnknown: false,
+    materialType: 'graphene',
     grapheneSample: '',
+    compoundBatchNumber: '',
     researchTeam: 'Curia - Germany',
     testingLab: '',
     // Integration range row (low and high for each)
@@ -160,7 +166,9 @@ const DEFAULT_FORMS = {
   tem: {
     testDate: '',
     dateUnknown: false,
+    materialType: 'graphene',
     grapheneSample: '',
+    compoundBatchNumber: '',
     researchTeam: 'Curia - Germany',
     testingLab: '',
     temReportFile: null,
@@ -182,6 +190,7 @@ const DEFAULT_FORMS = {
   semReport: {
     reportDate: '',
     grapheneIds: [],
+    compoundBatchIds: [],
     semFiles: null
   },
   compoundBatch: {
@@ -204,11 +213,27 @@ const DEFAULT_FORMS = {
     materialType: 'graphene',
     grapheneSample: '',
     compoundBatchNumber: '',
+    micronizationSku: '',
     amountShipped: '',
     unit: 'g',
     purpose: '',
     status: 'shipped',
     comments: ''
+  },
+  micronization: {
+    micronizationNumber: '',
+    date: '',
+    dateUnknown: false,
+    sku: '',
+    materialType: 'graphene',
+    grapheneSample: '',
+    compoundBatchNumber: '',
+    startingMaterialAmount: '',
+    recoveredAmount: '',
+    grindPressure: '',
+    micronizationReportFile: null,
+    removeMicronizationReport: false,
+    replaceMicronizationReport: false
   }
 };
 
@@ -230,6 +255,7 @@ window.grapheneApp = function() {
     compoundBatches: [],
     compoundBatchRecords: [],
     shipments: [],
+    micronizations: [],
     availableExperiments: [],
     availableLots: [],
     availableGrapheneSamples: [],
@@ -251,6 +277,7 @@ window.grapheneApp = function() {
     semReportSearch: '',
     compoundBatchSearch: '',
     shipmentSearch: '',
+    micronizationSearch: '',
     
     // Sorting states
     biocharSortColumn: null,
@@ -280,6 +307,7 @@ window.grapheneApp = function() {
     showUpdateReportModal: false,
     currentUpdateReport: null,
     showAddShipment: false,
+    showMicronizationModal: false,
     
     // Editing states
     editingBiochar: null,
@@ -292,6 +320,7 @@ window.grapheneApp = function() {
     editingSemReport: null,
     editingCompoundBatch: null,
     editingShipment: null,
+    editingMicronization: null,
     
     // Forms
     biocharForm: { ...DEFAULT_FORMS.biochar },
@@ -305,6 +334,7 @@ window.grapheneApp = function() {
     semReportForm: { ...DEFAULT_FORMS.semReport },
     compoundBatchForm: { ...DEFAULT_FORMS.compoundBatch },
     shipmentForm: { ...DEFAULT_FORMS.shipment },
+    micronizationForm: { ...DEFAULT_FORMS.micronization },
     
     // Selection states
     selectedBiocharIds: [],
@@ -421,7 +451,8 @@ window.grapheneApp = function() {
         this.loadUpdateReports(),
         this.loadSemReports(),
         this.loadCompoundBatches(),
-        this.loadShipments()
+        this.loadShipments(),
+        this.loadMicronizations()
       ]);
       this.loadDropdownOptions();
     },
@@ -526,6 +557,15 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load shipments:', error);
         this.shipments = [];
+      }
+    },
+
+    async loadMicronizations() {
+      try {
+        this.micronizations = await API.micronization.getAll(this.micronizationSearch);
+      } catch (error) {
+        console.error('Failed to load micronizations:', error);
+        this.micronizations = [];
       }
     },
     
@@ -648,6 +688,15 @@ window.grapheneApp = function() {
       }
       this._debouncedSearchShipments();
     },
+
+    searchMicronizations() {
+      if (!this._debouncedSearchMicronizations) {
+        this._debouncedSearchMicronizations = dataHelpers.debounce(async () => {
+          await this.loadMicronizations();
+        }, 300);
+      }
+      this._debouncedSearchMicronizations();
+    },
     
     // Sorting methods
     sortBiochar(column) {
@@ -767,6 +816,10 @@ window.grapheneApp = function() {
     // Computed properties (getters)
     get filteredShipments() {
       return this.shipments;
+    },
+
+    get filteredMicronizations() {
+      return this.micronizations;
     },
 
     get compoundBatches() {
@@ -894,6 +947,10 @@ window.grapheneApp = function() {
         ...this.expandedRows,
         [key]: !this.expandedRows[key]
       };
+    },
+
+    toggleMicronizationExpansion(id) {
+      this.toggleExpanded('micronization', id);
     },
     
     // Biochar CRUD operations
@@ -1469,7 +1526,8 @@ window.grapheneApp = function() {
         
         const data = {
           reportDate: this.semReportForm.reportDate,
-          grapheneIds: this.semReportForm.grapheneIds
+          grapheneIds: this.semReportForm.grapheneIds,
+          compoundBatchIds: this.semReportForm.compoundBatchIds
         };
         
         if (this.editingSemReport) {
@@ -1491,6 +1549,7 @@ window.grapheneApp = function() {
       this.semReportForm = {
         reportDate: record.reportDate ? new Date(record.reportDate).toISOString().split('T')[0] : '',
         grapheneIds: record.grapheneReports ? record.grapheneReports.map(gr => gr.graphene.id) : [],
+        compoundBatchIds: record.compoundBatchReports ? record.compoundBatchReports.map(cbr => cbr.compoundBatch.id) : [],
         semFiles: null
       };
       this.showAddSemReport = true;
@@ -1566,6 +1625,15 @@ window.grapheneApp = function() {
         this.semReportForm.grapheneIds.splice(index, 1);
       } else {
         this.semReportForm.grapheneIds.push(grapheneId);
+      }
+    },
+
+    toggleSemCompoundBatchSelection(compoundBatchId) {
+      const index = this.semReportForm.compoundBatchIds.indexOf(compoundBatchId);
+      if (index > -1) {
+        this.semReportForm.compoundBatchIds.splice(index, 1);
+      } else {
+        this.semReportForm.compoundBatchIds.push(compoundBatchId);
       }
     },
     
@@ -1778,9 +1846,10 @@ window.grapheneApp = function() {
           dateUnknown: !shipment.shipmentDate,
           receivedDate: shipment.receivedDate ? new Date(shipment.receivedDate).toISOString().split('T')[0] : '',
           receivedDateUnknown: !shipment.receivedDate,
-          materialType: shipment.grapheneSample ? 'graphene' : 'compound',
+          materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
           grapheneSample: shipment.grapheneSample || '',
           compoundBatchNumber: shipment.compoundBatchNumber || '',
+          micronizationSku: shipment.micronizationSku || '',
           amountShipped: shipment.amountShipped || '',
           unit: shipment.unit || 'g',
           purpose: shipment.purpose || '',
@@ -1854,9 +1923,10 @@ window.grapheneApp = function() {
         dateUnknown: false,
         receivedDate: '',
         receivedDateUnknown: true,
-        materialType: shipment.grapheneSample ? 'graphene' : 'compound',
+        materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
         grapheneSample: shipment.grapheneSample || '',
         compoundBatchNumber: shipment.compoundBatchNumber || '',
+        micronizationSku: shipment.micronizationSku || '',
         amountShipped: shipment.amountShipped || '',
         unit: shipment.unit || 'g',
         purpose: shipment.purpose || '',
@@ -1881,6 +1951,109 @@ window.grapheneApp = function() {
       }
     },
     
+    // Micronization CRUD operations
+    openMicronizationForm(micronization = null) {
+      if (micronization) {
+        this.editingMicronization = micronization;
+        this.micronizationForm = {
+          micronizationNumber: micronization.micronizationNumber || '',
+          date: micronization.date ? new Date(micronization.date).toISOString().split('T')[0] : '',
+          dateUnknown: !micronization.date,
+          sku: micronization.sku || '',
+          materialType: micronization.grapheneSample ? 'graphene' : 'compound',
+          grapheneSample: micronization.grapheneSample || '',
+          compoundBatchNumber: micronization.compoundBatchNumber || '',
+          startingMaterialAmount: micronization.startingMaterialAmount || '',
+          recoveredAmount: micronization.recoveredAmount || '',
+          grindPressure: micronization.grindPressure || '',
+          micronizationReportFile: null,
+          removeMicronizationReport: false,
+          replaceMicronizationReport: false
+        };
+      } else {
+        this.editingMicronization = null;
+        this.micronizationForm = { ...DEFAULT_FORMS.micronization };
+      }
+      this.showMicronizationModal = true;
+    },
+
+    async saveMicronization() {
+      try {
+        const data = { ...this.micronizationForm };
+        
+        // Remove UI-only fields
+        delete data.materialType;
+        delete data.dateUnknown;
+        delete data.micronizationReportFile;
+        delete data.removeMicronizationReport;
+        delete data.replaceMicronizationReport;
+        
+        // Handle date field
+        if (data.date === '' || this.micronizationForm.dateUnknown) {
+          data.date = null;
+        }
+
+        // Clear the non-selected material reference
+        if (this.micronizationForm.materialType === 'graphene') {
+          data.compoundBatchNumber = null;
+        } else {
+          data.grapheneSample = null;
+        }
+
+        const file = this.micronizationForm.micronizationReportFile;
+
+        if (this.editingMicronization) {
+          await API.micronization.update(this.editingMicronization.id, data, file);
+        } else {
+          await API.micronization.create(data, file);
+        }
+
+        await this.loadMicronizations();
+        this.closeMicronizationForm();
+      } catch (error) {
+        console.error('Failed to save micronization:', error);
+        alert(`Failed to save micronization: ${error.message}`);
+      }
+    },
+
+    async deleteMicronization(id) {
+      if (confirm('Are you sure you want to delete this micronization record?')) {
+        try {
+          await API.micronization.delete(id);
+          await this.loadMicronizations();
+        } catch (error) {
+          console.error('Failed to delete micronization:', error);
+          alert(`Failed to delete micronization: ${error.message}`);
+        }
+      }
+    },
+
+    duplicateMicronization(micronization) {
+      this.editingMicronization = null;
+      this.micronizationForm = {
+        micronizationNumber: '', // Clear number for new record
+        date: new Date().toISOString().split('T')[0], // Today's date
+        dateUnknown: false,
+        sku: '', // Clear SKU for new record
+        materialType: micronization.grapheneSample ? 'graphene' : 'compound',
+        grapheneSample: micronization.grapheneSample || '',
+        compoundBatchNumber: micronization.compoundBatchNumber || '',
+        startingMaterialAmount: micronization.startingMaterialAmount || '',
+        recoveredAmount: '', // Clear recovered amount
+        grindPressure: micronization.grindPressure || '',
+        micronizationReportFile: null,
+        removeMicronizationReport: false,
+        replaceMicronizationReport: false
+      };
+      this.showMicronizationModal = true;
+    },
+
+    closeMicronizationForm() {
+      this.showMicronizationModal = false;
+      this.editingMicronization = null;
+      this.micronizationForm = { ...DEFAULT_FORMS.micronization };
+    },
+    
     // Export methods
     exportData(type) {
       if (type === 'biochar') {
@@ -1899,6 +2072,8 @@ window.grapheneApp = function() {
         API.compoundBatch.exportCSV();
       } else if (type === 'shipments') {
         API.shipment.exportCSV();
+      } else if (type === 'micronization') {
+        API.micronization.exportCSV();
       }
     },
     
@@ -2336,6 +2511,31 @@ window.grapheneApp = function() {
         default:
           return '';
       }
+    },
+
+    // Form initialization helpers
+    initBetForm() {
+      this.betForm = { ...DEFAULT_FORMS.bet };
+      this.editingBet = null;
+      this.showAddBet = true;
+    },
+
+    initConductivityForm() {
+      this.conductivityForm = { ...DEFAULT_FORMS.conductivity };
+      this.editingConductivity = null;
+      this.showAddConductivity = true;
+    },
+
+    initRamanForm() {
+      this.ramanForm = { ...DEFAULT_FORMS.raman };
+      this.editingRaman = null;
+      this.showAddRaman = true;
+    },
+
+    initTemForm() {
+      this.temForm = { ...DEFAULT_FORMS.tem };
+      this.editingTem = null;
+      this.showAddTem = true;
     },
 
     // Date field HTML generation using helpers

@@ -1,7 +1,9 @@
 # Graphene Production Control System - Claude Agent Guide
 
 ## Project Overview
-A full-stack web application for tracking the complete production journey of materials from biochar to graphene to BET surface area testing, including comprehensive material shipment tracking. Built with Node.js, Express, PostgreSQL, Prisma ORM, and Alpine.js.
+A full-stack web application for tracking the complete production journey of materials from biochar to graphene to micronization to testing, including comprehensive material shipment tracking. Built with Node.js, Express, PostgreSQL, Prisma ORM, and Alpine.js.
+
+**Complete Material Pipeline**: Raw materials → Biochar → Graphene → Compound Batch/Micronization → Testing → Shipment
 
 ## Critical Commands
 Always run these commands after making code changes:
@@ -92,9 +94,10 @@ npm run backup:cleanup
 │   │   ├── raman.js        # RAMAN test CRUD
 │   │   ├── tem.js          # TEM test CRUD
 │   │   ├── compoundBatch.js # Compound batch CRUD + experiment associations
+│   │   ├── micronization.js # Micronization CRUD + PDF reports + SKU tracking
 │   │   ├── updateReports.js # Update report management + associations
 │   │   ├── semReports.js   # SEM report management + associations
-│   │   └── shipments.js    # Material shipment tracking + location management
+│   │   └── shipments.js    # Material shipment tracking + location management + micronization SKU support
 │   └── middleware/
 ├── client/
 │   ├── index.html          # Main UI with Alpine.js templates (3300+ lines)
@@ -131,6 +134,7 @@ npm run backup:cleanup
 │   ├── bet-reports/        # BET test PDF storage
 │   ├── raman-reports/      # RAMAN test PDF storage
 │   ├── tem-reports/        # TEM test PDF storage
+│   ├── micronization-reports/ # Micronization PDF storage
 │   └── update-reports/     # Weekly update report PDFs
 ├── backups/                # Database backups (gitignored)
 └── vite.config.js          # Vite dev server with proxy for /api and /uploads
@@ -164,6 +168,22 @@ npm run backup:cleanup
   - Maintains full traceability to original experiments
   - Can be referenced by test results just like individual experiments
 - **Use Case**: Combine existing graphene batches for downstream testing without losing original data
+
+### Micronization System
+- **Micronization Model**: Tracks graphene/compound batch materials sent to labs for micronization processing
+- **Key Fields**: `micronizationNumber`, `date`, `sku`, `startingMaterialAmount`, `recoveredAmount`, `grindPressure`, `micronizationReportPath`
+- **Material Source**: Links to either individual graphene experiments OR compound batches
+- **SKU Tracking**: Unique SKU identifiers for each micronized product batch
+- **Recovery Rate**: Automatically calculated percentage (recovered/starting * 100%)
+- **PDF Reports**: Stored in `/uploads/micronization-reports/` with 10MB file size limit
+- **Shipment Integration**: Micronized SKUs can be selected as material source in shipment system
+- **Data Fields**:
+  - `micronizationNumber` - User-provided identifier (e.g., M001, M002)
+  - `sku` - Unique SKU for inventory tracking
+  - `startingMaterialAmount` - Input material amount in grams (Decimal 10,2)
+  - `recoveredAmount` - Output material amount in grams (Decimal 10,2)
+  - `grindPressure` - Processing pressure in PSI (Integer)
+- **Material Pipeline**: Extends the flow to Raw materials → Biochar → Graphene → Compound Batch → **Micronization** → Shipment
 
 ### Update Reports System
 - **UpdateReport Model**: Stores weekly PDF reports with metadata (filename, description, week date)
@@ -233,12 +253,16 @@ npm run backup:cleanup
 - Biochar ↔ Graphene: Via `biocharExperiment` (direct) or `biocharLotNumber` (lot-based)
 - Graphene → Tests: Via `grapheneSample` field (BET, Conductivity, RAMAN, TEM)
 - CompoundBatch → Tests: Via `compoundBatchNumber` field (BET, Conductivity, RAMAN, TEM)
+- Graphene → Micronization: Via `grapheneSample` field for individual experiments
+- CompoundBatch → Micronization: Via `compoundBatchNumber` field for compound batches
+- Micronization → Shipment: Via `micronizationSku` field for shipping micronized materials
 - Graphene ↔ CompoundBatch: Many-to-many via `GrapheneCompoundBatch` junction table
 - Graphene ↔ Update Reports: Many-to-many via `GrapheneUpdateReport` junction table
 - Graphene ↔ SEM Reports: Many-to-many via `GrapheneSemReport` junction table
 - All test types include `researchTeam`, `testingLab`, and PDF report paths
-- Files use soft references (experiment/batch numbers) not hard foreign keys for flexibility
+- Files use soft references (experiment/batch/SKU identifiers) not hard foreign keys for flexibility
 - **Dual Testing Architecture**: Tests can reference either individual experiments OR compound batches
+- **Triple Shipment Architecture**: Shipments can reference graphene experiments, compound batches, OR micronized SKUs
 
 ## UI Design Principles
 - **Monochrome styling** with minimal color accents
@@ -257,6 +281,15 @@ npm run backup:cleanup
 - **Consistent Application**: All interactive elements use the same color system
 - **Theme Flexibility**: Easy to implement theme variations or dark mode
 - **Maintainability**: No hardcoded colors throughout HTML/JS codebase
+
+## Global Table Cell Styles
+- **Standardized Classes**: Consistent table cell formatting across all tables
+- **Standard Cells**: `.table-cell-standard` - `px-4 py-3 text-xs font-mono` with `#212121` color
+- **Compact Cells**: `.table-cell-compact` - `px-2 py-2 text-xs font-mono` with `#212121` color  
+- **Action Cells**: `.table-cell-actions` - Standard with right alignment
+- **Compact Action Cells**: `.table-cell-actions-compact` - Compact with right alignment
+- **Future-Proof**: New tables automatically inherit consistent styling
+- **Maintenance**: Single CSS change updates all table styling globally
 
 ## Core Features
 
@@ -499,6 +532,17 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - `DELETE /api/sem-reports/:id/graphene/:grapheneId` - Remove experiment association
 - **Note**: Direct uploads through graphene modal automatically create SEM report entries
 
+### Micronization
+- `GET /api/micronization` - List all micronization records with search and filtering (default sort: desc)
+- `POST /api/micronization` - Create new micronization record with PDF upload (10MB max)
+- `PUT /api/micronization/:id` - Update micronization record with PDF upload support
+- `DELETE /api/micronization/:id` - Delete micronization record and associated files
+- `GET /api/micronization/export/csv` - Export micronization records to CSV
+- **Auto-calculated Recovery Rate**: Percentage automatically calculated from starting and recovered amounts
+- **Dual Material Source**: Can reference either individual graphene experiments OR compound batches
+- **SKU Management**: Unique SKU identifiers for inventory tracking and shipment integration
+- **PDF Reports**: File upload/view/replace/remove with proper cleanup on record deletion
+
 ### Material Shipments
 - `GET /api/shipments` - List all shipments with search and filtering (default sort: desc)
 - `POST /api/shipments` - Create new shipment record
@@ -508,7 +552,7 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - `GET /api/shipments/locations/from` - Get all unique 'from' locations for dropdown
 - `GET /api/shipments/locations/to` - Get all unique 'to' locations for dropdown
 - **Auto-generated Numbers**: Shipment numbers automatically generated using SHIP-YYYY-MM-HHMMSS format
-- **Dual Material Support**: Can reference either grapheneSample OR compoundBatchNumber (mutually exclusive)
+- **Triple Material Support**: Can reference grapheneSample, compoundBatchNumber, OR micronizationSku (mutually exclusive)
 - **Status Management**: Four status levels (pending, shipped, in_transit, received) with proper validation
 
 ## Code Style Guidelines
@@ -670,6 +714,25 @@ The codebase has been fully componentized to improve maintainability and elimina
 - **Functionality**: 100% preserved with enhanced reliability and Alpine.js compatibility
 
 ## Recent Updates (August 2025)
+
+### Micronization System Implementation (Latest)
+- **Complete Material Pipeline**: Extended system to support Raw materials → Biochar → Graphene → Compound Batch → **Micronization** → Shipment
+- **Database Schema**: Added `Micronization` model with relationships to Graphene and CompoundBatch models
+- **Backend API**: Full CRUD operations at `/api/micronization` with PDF upload support and CSV export
+- **Frontend Integration**: New Micronization tab with table view, add/edit modal, search functionality, and recovery rate calculation
+- **SKU Tracking**: Unique SKU identifiers for inventory management and downstream shipment integration
+- **File Management**: PDF upload/view/replace/remove functionality with 10MB file size limits
+- **Triple Shipment Support**: Updated shipment system to support graphene experiments, compound batches, AND micronized SKUs
+- **Data Fields**: Micronization number, date, SKU, starting/recovered amounts, grind pressure, PDF reports
+- **Recovery Rate Calculation**: Real-time percentage calculation displayed in table view
+
+### Global Table Styling System (Latest)
+- **CSS Architecture**: Implemented global table cell classes for consistent styling across all tables
+- **Standardized Classes**: `.table-cell-standard`, `.table-cell-compact`, `.table-cell-actions`, `.table-cell-actions-compact`
+- **Consistent Appearance**: All tables now use `text-xs font-mono` with `#212121` color for professional laboratory interface
+- **Future-Proof Design**: New tables automatically inherit consistent styling without manual updates
+- **Maintenance Efficiency**: Single CSS change updates all table formatting globally
+- **Applied To**: All main tables (Biochar, Graphene, Compound Batches, Micronization, Shipments) and test results tables (BET, Conductivity, RAMAN, TEM, SEM Reports, Update Reports)
 
 ### BET Test System Enhancements
 - **Species Field Removal**: Removed unnecessary `species` field from BET model and all related functionality

@@ -504,7 +504,7 @@ export const semReportAPI = {
     // Add all data fields
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined) {
-        if (key === 'grapheneIds' && Array.isArray(data[key])) {
+        if ((key === 'grapheneIds' || key === 'compoundBatchIds') && Array.isArray(data[key])) {
           formData.append(key, JSON.stringify(data[key]));
         } else {
           formData.append(key, data[key]);
@@ -532,6 +532,11 @@ export const semReportAPI = {
     // Convert grapheneIds array to JSON string if needed
     if (payload.grapheneIds && Array.isArray(payload.grapheneIds)) {
       payload.grapheneIds = JSON.stringify(payload.grapheneIds);
+    }
+    
+    // Convert compoundBatchIds array to JSON string if needed
+    if (payload.compoundBatchIds && Array.isArray(payload.compoundBatchIds)) {
+      payload.compoundBatchIds = JSON.stringify(payload.compoundBatchIds);
     }
     
     return jsonRequest(`${API_BASE}/sem-reports/${id}`, 'PUT', payload);
@@ -643,7 +648,84 @@ export const compoundBatchAPI = {
   }
 };
 
-// Shipment API endpoints
+// Micronization API endpoints
+export const micronizationAPI = {
+  // Get all micronization records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/micronization${query}`).then(handleResponse);
+  },
+
+  // Get single micronization record
+  getById: (id) => {
+    return fetch(`${API_BASE}/micronization/${id}`).then(handleResponse);
+  },
+
+  // Create new micronization record (with file upload support)
+  create: async (data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields except the file object
+    Object.keys(data).forEach(key => {
+      if (key !== 'micronizationReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('micronizationReport', file);
+    }
+    
+    return fetch(`${API_BASE}/micronization`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update micronization record (with file upload support)
+  update: async (id, data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields except the file object
+    Object.keys(data).forEach(key => {
+      if (key !== 'micronizationReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('micronizationReport', file);
+    }
+    
+    return fetch(`${API_BASE}/micronization/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete micronization record
+  delete: (id) => {
+    return fetch(`${API_BASE}/micronization/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/micronization/export/csv`, '_blank');
+  },
+
+  // Get micronizations for specific graphene experiment
+  getByGraphene: (experimentNumber) => {
+    return fetch(`${API_BASE}/micronization/graphene/${experimentNumber}`).then(handleResponse);
+  },
+
+  // Get micronizations for specific compound batch
+  getByCompoundBatch: (batchNumber) => {
+    return fetch(`${API_BASE}/micronization/compound-batch/${batchNumber}`).then(handleResponse);
+  }
+};
+
 export const shipmentAPI = {
   // Get all shipments with optional search
   getAll: (search = '') => {
@@ -686,6 +768,11 @@ export const shipmentAPI = {
     return fetch(`${API_BASE}/shipments/compound-batch/${batchNumber}`).then(handleResponse);
   },
 
+  // Get shipments for specific micronization SKU
+  getByMicronization: (sku) => {
+    return fetch(`${API_BASE}/shipments/micronization/${sku}`).then(handleResponse);
+  },
+
   // Get unique locations
   getLocations: () => {
     return fetch(`${API_BASE}/shipments/locations`).then(handleResponse);
@@ -703,5 +790,6 @@ export default {
   updateReport: updateReportAPI,
   semReport: semReportAPI,
   compoundBatch: compoundBatchAPI,
+  micronization: micronizationAPI,
   shipment: shipmentAPI
 };

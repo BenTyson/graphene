@@ -113,6 +113,7 @@ model Graphene {
   shipments            MaterialShipment[]
   ramanTests           RamanTest[]
   temTests             TEMTest[]
+  micronizations       Micronization[]
 
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
@@ -138,6 +139,7 @@ model CompoundBatch {
   shipments         MaterialShipment[]
   ramanTests        RamanTest[]
   temTests          TEMTest[]
+  micronizations    Micronization[]
 
   @@index([createdAt])
   @@index([createdDate])
@@ -349,6 +351,7 @@ model MaterialShipment {
   purpose             String?
   grapheneSample      String?        @map("graphene_sample")
   compoundBatchNumber String?        @map("compound_batch_number")
+  micronizationSku    String?        @map("micronization_sku")
   comments            String?
   status              String?        @default("shipped")
   receivedDate        DateTime?      @map("received_date")
@@ -356,11 +359,37 @@ model MaterialShipment {
   updatedAt           DateTime       @updatedAt @map("updated_at")
   compoundBatchRef    CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
   grapheneRef         Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
+  micronizationRef    Micronization? @relation("MicronizationShipments", fields: [micronizationSku], references: [sku])
 
   @@index([shipmentDate])
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
+  @@index([micronizationSku])
   @@map("material_shipments")
+}
+
+model Micronization {
+  id                     String         @id @default(cuid())
+  micronizationNumber    String         @unique @map("micronization_number")
+  date                   DateTime?      @map("date")
+  sku                    String?        @unique
+  startingMaterialAmount Decimal?       @map("starting_material_amount") @db.Decimal(10, 2)
+  recoveredAmount        Decimal?       @map("recovered_amount") @db.Decimal(10, 2)
+  grindPressure          Int?           @map("grind_pressure")
+  micronizationReportPath String?       @map("micronization_report_path")
+  grapheneSample         String?        @map("graphene_sample")
+  compoundBatchNumber    String?        @map("compound_batch_number")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+  compoundBatchRef       CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef            Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
+  shipments              MaterialShipment[] @relation("MicronizationShipments")
+  
+  @@index([date])
+  @@index([grapheneSample])
+  @@index([compoundBatchNumber])
+  @@index([sku])
+  @@map("micronizations")
 }
 
 enum GrindingMethod {

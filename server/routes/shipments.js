@@ -38,6 +38,7 @@ router.get('/', async (req, res) => {
           { shipToLocation: { contains: search, mode: 'insensitive' } },
           { grapheneSample: { contains: search, mode: 'insensitive' } },
           { compoundBatchNumber: { contains: search, mode: 'insensitive' } },
+          { micronizationSku: { contains: search, mode: 'insensitive' } },
           { purpose: { contains: search, mode: 'insensitive' } },
           { status: { contains: search, mode: 'insensitive' } }
         ]
@@ -55,6 +56,13 @@ router.get('/', async (req, res) => {
             batchNumber: true,
             batchName: true,
             totalOutput: true
+          }
+        },
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true,
+            recoveredAmount: true
           }
         }
       },
@@ -152,6 +160,31 @@ router.get('/compound-batch/:batchNumber', async (req, res) => {
   }
 });
 
+router.get('/micronization/:sku', async (req, res) => {
+  try {
+    const { sku } = req.params;
+    
+    const shipments = await prisma.materialShipment.findMany({
+      where: { micronizationSku: sku },
+      include: {
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true,
+            recoveredAmount: true
+          }
+        }
+      },
+      orderBy: { shipmentDate: 'desc' }
+    });
+
+    res.json(shipments);
+  } catch (error) {
+    console.error('Error fetching micronization shipments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/export/csv', async (req, res) => {
   try {
     const shipments = await prisma.materialShipment.findMany({
@@ -166,6 +199,12 @@ router.get('/export/csv', async (req, res) => {
           select: {
             batchNumber: true,
             batchName: true
+          }
+        },
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true
           }
         }
       },
@@ -189,22 +228,42 @@ router.get('/export/csv', async (req, res) => {
       'Created At'
     ];
 
-    const csvRows = shipments.map(shipment => [
-      shipment.shipmentNumber,
-      shipment.shipFromLocation,
-      shipment.shipToLocation,
-      shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : '',
-      shipment.amountShipped || '',
-      shipment.unit,
-      shipment.grapheneSample ? 'Graphene' : 'Compound Batch',
-      shipment.grapheneSample || shipment.compoundBatchNumber || '',
-      shipment.grapheneRef?.species || shipment.compoundBatchRef?.batchName || '',
-      shipment.purpose || '',
-      shipment.status || '',
-      shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : '',
-      shipment.comments || '',
-      shipment.createdAt.toISOString().split('T')[0]
-    ]);
+    const csvRows = shipments.map(shipment => {
+      let materialType = '';
+      let materialReference = '';
+      let materialSpeciesName = '';
+      
+      if (shipment.grapheneSample) {
+        materialType = 'Graphene';
+        materialReference = shipment.grapheneSample;
+        materialSpeciesName = shipment.grapheneRef?.species || '';
+      } else if (shipment.compoundBatchNumber) {
+        materialType = 'Compound Batch';
+        materialReference = shipment.compoundBatchNumber;
+        materialSpeciesName = shipment.compoundBatchRef?.batchName || '';
+      } else if (shipment.micronizationSku) {
+        materialType = 'Micronized';
+        materialReference = shipment.micronizationSku;
+        materialSpeciesName = shipment.micronizationRef?.micronizationNumber || '';
+      }
+      
+      return [
+        shipment.shipmentNumber,
+        shipment.shipFromLocation,
+        shipment.shipToLocation,
+        shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : '',
+        shipment.amountShipped || '',
+        shipment.unit,
+        materialType,
+        materialReference,
+        materialSpeciesName,
+        shipment.purpose || '',
+        shipment.status || '',
+        shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : '',
+        shipment.comments || '',
+        shipment.createdAt.toISOString().split('T')[0]
+      ];
+    });
 
     const csvContent = [csvHeaders, ...csvRows]
       .map(row => row.map(field => `"${field}"`).join(','))
@@ -238,6 +297,13 @@ router.get('/:id', async (req, res) => {
             batchNumber: true,
             batchName: true,
             totalOutput: true
+          }
+        },
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true,
+            recoveredAmount: true
           }
         }
       }
@@ -292,6 +358,13 @@ router.post('/', async (req, res) => {
             batchName: true,
             totalOutput: true
           }
+        },
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true,
+            recoveredAmount: true
+          }
         }
       }
     });
@@ -342,6 +415,13 @@ router.put('/:id', async (req, res) => {
             batchNumber: true,
             batchName: true,
             totalOutput: true
+          }
+        },
+        micronizationRef: {
+          select: {
+            micronizationNumber: true,
+            sku: true,
+            recoveredAmount: true
           }
         }
       }

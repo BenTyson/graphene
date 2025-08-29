@@ -24,6 +24,27 @@
   background: #555;
 }
 
+/* Global table cell styles for consistent formatting */
+.table-cell-standard {
+  @apply px-4 py-3 text-xs font-mono;
+  color: #212121;
+}
+
+.table-cell-compact {
+  @apply px-2 py-2 text-xs font-mono;
+  color: #212121;
+}
+
+.table-cell-actions {
+  @apply px-4 py-3 text-xs font-mono text-right;
+  color: #212121;
+}
+
+.table-cell-actions-compact {
+  @apply px-2 py-2 text-xs text-right;
+  color: #212121;
+}
+
 /* Modal backdrop */
 .modal-backdrop {
   background-color: rgba(0, 0, 0, 0.5);
