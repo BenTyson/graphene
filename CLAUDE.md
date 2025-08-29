@@ -11,11 +11,10 @@ Always run these commands after making code changes:
 # Development server
 npm run dev
 
-# Lint checking (if available)
-npm run lint
+# Database backup (HIGHLY RECOMMENDED before schema changes)
+npm run backup:create
 
-# Type checking (if available) 
-npm run typecheck
+# Note: lint and typecheck commands not configured in this project
 
 # Database backup (HIGHLY RECOMMENDED before schema changes)
 npm run backup:create
@@ -100,10 +99,10 @@ npm run backup:cleanup
 │   │   └── shipments.js    # Material shipment tracking + location management + micronization SKU support
 │   └── middleware/
 ├── client/
-│   ├── index.html          # Main UI with Alpine.js templates (3300+ lines)
+│   ├── index.html          # Main UI with Alpine.js templates (4400+ lines)
 │   ├── src/
 │   │   ├── js/
-│   │   │   ├── app-refactored.js    # Main Alpine.js application (1477 lines)
+│   │   │   ├── app-refactored.js    # Main Alpine.js application (2600+ lines)
 │   │   │   ├── services/api.js      # API client
 │   │   │   ├── components/          # Reusable UI components (COMPLETE)
 │   │   │   │   ├── modals/

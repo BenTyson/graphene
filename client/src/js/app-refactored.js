@@ -493,10 +493,6 @@ window.grapheneApp = function() {
     async loadConductivityRecords() {
       try {
         this.conductivityRecords = await API.conductivity.getAll(this.conductivitySearch);
-        console.log('Loaded conductivity records:', this.conductivityRecords);
-        if (this.conductivityRecords.length > 0) {
-          console.log('First record structure:', this.conductivityRecords[0]);
-        }
       } catch (error) {
         console.error('Failed to load conductivity records:', error);
         this.conductivityRecords = [];
@@ -506,7 +502,6 @@ window.grapheneApp = function() {
     async loadRamanRecords() {
       try {
         this.ramanRecords = await API.raman.getAll(this.ramanSearch);
-        console.log('Loaded RAMAN records:', this.ramanRecords);
       } catch (error) {
         console.error('Failed to load RAMAN records:', error);
         this.ramanRecords = [];
@@ -516,7 +511,6 @@ window.grapheneApp = function() {
     async loadTemRecords() {
       try {
         this.temRecords = await API.tem.getAll(this.temSearch);
-        console.log('Loaded TEM records:', this.temRecords);
       } catch (error) {
         console.error('Failed to load TEM records:', error);
         this.temRecords = [];

@@ -1,68 +1,34 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
-import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
+import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
+import { prepareDataForDB } from '../utils/dataConversion.js';
 
 const router = express.Router();
 
-// Configure multer for BET report uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'bet-reports');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Create unique filename with timestamp
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${timestamp}${ext}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    // Only allow PDF files
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'), false);
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
+// Configure file upload middleware
+const upload = createFileUploadMiddleware('bet-reports');
 
 // Get all BET records
 router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { sortBy = 'chronological', order = 'desc', search } = req.query;
   
-  let where = {};
-  if (search) {
-    where = {
-      OR: [
-        { grapheneSample: { contains: search, mode: 'insensitive' } },
-        { comments: { contains: search, mode: 'insensitive' } }
-      ]
-    };
-  }
+  const searchFields = ['grapheneSample', 'comments'];
+  const where = buildSearchQuery(searchFields, search);
   
-  let orderBy;
+  const sortMappings = {
+    chronological: 'testDate'
+  };
+  let orderBy = buildOrderBy(sortBy, order, sortMappings);
+  
+  // For chronological, use multiple sort fields
   if (sortBy === 'chronological') {
-    // Sort by date first, then by creation time
     orderBy = [
       { testDate: order },
       { createdAt: order }
     ];
-  } else {
-    orderBy = { [sortBy]: order };
   }
   
   const betRecords = await prisma.bET.findMany({
@@ -116,41 +82,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
-  // Convert numeric fields from strings to proper types
-  const data = { ...req.body };
-  const numericFields = ['mass', 'multipointBetArea', 'langmuirSurfaceArea'];
-  
-  numericFields.forEach(field => {
-    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
-      const num = parseFloat(data[field]);
-      if (!isNaN(num)) {
-        data[field] = num;
-      }
-    } else {
-      data[field] = null;
-    }
+  // Prepare data using utility function
+  const data = prepareDataForDB(req.body, {
+    numericFields: ['mass', 'multipointBetArea', 'langmuirSurfaceArea'],
+    dateFields: ['testDate'],
+    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species']
   });
   
-  // Handle date field
-  if (data.testDate && data.testDate !== '') {
-    data.testDate = new Date(data.testDate);
-  } else {
-    data.testDate = null;
-  }
-  
-  // Handle BET report file upload
+  // Handle file upload
   if (req.file) {
     data.betReportPath = path.join('bet-reports', req.file.filename);
   }
   
-  // Remove UI-only fields from data
-  delete data.betReportFile;
-  delete data.removeBetReport;
-  delete data.replaceBetReport;
-  delete data.grapheneRef;
-  delete data.species; // Remove legacy species field
-  
-  // Remove id and timestamps if present
+  // Remove system fields
   delete data.id;
   delete data.createdAt;
   delete data.updatedAt;
@@ -175,29 +119,7 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
-  // Convert numeric fields from strings to proper types
-  const data = { ...req.body };
-  const numericFields = ['mass', 'multipointBetArea', 'langmuirSurfaceArea'];
-  
-  numericFields.forEach(field => {
-    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
-      const num = parseFloat(data[field]);
-      if (!isNaN(num)) {
-        data[field] = num;
-      }
-    } else {
-      data[field] = null;
-    }
-  });
-  
-  // Handle date field
-  if (data.testDate && data.testDate !== '') {
-    data.testDate = new Date(data.testDate);
-  } else {
-    data.testDate = null;
-  }
-  
-  // Get existing record to handle file operations
+  // Get existing record for file operations
   const existingRecord = await prisma.bET.findUnique({
     where: { id }
   });
@@ -207,35 +129,26 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
     throw new Error('BET record not found');
   }
   
-  // Handle BET report file operations
-  if (data.removeBetReport === 'true') {
+  // Prepare data using utility function
+  const data = prepareDataForDB(req.body, {
+    numericFields: ['mass', 'multipointBetArea', 'langmuirSurfaceArea'],
+    dateFields: ['testDate'],
+    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species']
+  });
+  
+  // Handle file operations
+  if (req.body.removeBetReport === 'true') {
     // Remove existing file
     if (existingRecord.betReportPath) {
-      const filePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      deleteFile(path.join(process.cwd(), 'uploads', existingRecord.betReportPath));
     }
     data.betReportPath = null;
   } else if (req.file) {
     // Replace existing file
-    if (existingRecord.betReportPath) {
-      const oldFilePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
-    }
-    data.betReportPath = path.join('bet-reports', req.file.filename);
+    data.betReportPath = replaceFile(existingRecord.betReportPath, req.file);
   }
   
-  // Remove UI-only fields and relational fields from data
-  delete data.betReportFile;
-  delete data.removeBetReport;
-  delete data.replaceBetReport;
-  delete data.grapheneRef; // Remove any relational data
-  delete data.species; // Remove legacy species field
-  
-  // Remove id and timestamps if present (Prisma handles these automatically)
+  // Remove system fields
   delete data.id;
   delete data.createdAt;
   delete data.updatedAt;
@@ -267,10 +180,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   });
   
   if (existingRecord && existingRecord.betReportPath) {
-    const filePath = path.join(process.cwd(), 'uploads', existingRecord.betReportPath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    deleteFile(path.join(process.cwd(), 'uploads', existingRecord.betReportPath));
   }
   
   await prisma.bET.delete({
