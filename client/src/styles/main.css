@@ -91,3 +91,54 @@
 .text-link-dark {
   color: var(--link-dark);
 }
+
+/* Mobile-specific utilities */
+@media (max-width: 768px) {
+  /* Hide scrollbar on mobile for better UX */
+  .mobile-scroll-hidden::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .mobile-scroll-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Mobile card styles for tables */
+  .mobile-card {
+    @apply border border-gray-200 rounded-lg p-4 mb-3 bg-white;
+  }
+  
+  .mobile-card-header {
+    @apply font-semibold text-sm text-gray-900 mb-2;
+  }
+  
+  .mobile-card-row {
+    @apply flex justify-between py-1 text-xs;
+  }
+  
+  .mobile-card-label {
+    @apply text-gray-600 font-medium;
+  }
+  
+  .mobile-card-value {
+    @apply text-gray-900 font-mono text-right;
+  }
+  
+  /* Touch-friendly button sizing */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile navigation styles */
+  .mobile-nav-scroll {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-nav-item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+}
