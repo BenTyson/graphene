@@ -3,6 +3,9 @@ import asyncHandler from 'express-async-handler';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { buildQueryOptions, buildResponseMeta, formatResponse } from '../utils/queryHelpers.js';
+import { buildFilterWhere, buildFilterAwareOrderBy, getFilterOptions } from '../utils/filterQueryBuilder.js';
+import { getFilterConfig } from '../utils/filterConfig.js';
 
 const router = express.Router();
 
@@ -39,67 +42,73 @@ const upload = multer({
   }
 });
 
-// Get all graphene records
+// Get all graphene records with advanced filtering
 router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  const { sortBy = 'chronological', order = 'desc', search, biocharExperiment } = req.query;
+  const tableName = 'graphene';
   
-  let where = {};
-  
-  if (biocharExperiment) {
-    where.biocharExperiment = biocharExperiment;
-  }
-  
-  if (search) {
-    where = {
-      ...where,
-      OR: [
-        { experimentNumber: { contains: search, mode: 'insensitive' } },
-        { biocharExperiment: { contains: search, mode: 'insensitive' } },
-        { oven: { contains: search, mode: 'insensitive' } },
-        { species: { contains: search, mode: 'insensitive' } },
-        { comments: { contains: search, mode: 'insensitive' } }
-      ]
+  try {
+    // Parse request parameters using the new query helpers
+    const queryOptions = buildQueryOptions(req, tableName);
+    const { filters, search, pagination, sort } = queryOptions;
+    
+    // Build enhanced where clause using the filter system
+    const where = buildFilterWhere(tableName, filters, search);
+    
+    // Build enhanced order by clause
+    const sortMappings = {
+      chronological: 'experimentDate'
     };
-  }
-  
-  let orderBy;
-  if (sortBy === 'chronological') {
-    // Sort by test order first, then by date, then by creation time
-    orderBy = [
-      { testOrder: order },
-      { experimentDate: order },
-      { createdAt: order }
-    ];
-  } else {
-    orderBy = { [sortBy]: order };
-  }
-  
-  const graphenes = await prisma.graphene.findMany({
-    where,
-    orderBy,
-    include: { 
-      biocharLotRef: true,
-      updateReports: {
-        include: {
-          updateReport: true
-        }
-      },
-      semReports: {
-        include: {
-          semReport: true
+    const orderBy = buildFilterAwareOrderBy(sort.sortBy, sort.order, sortMappings);
+    
+    // Get total count before filtering for metadata
+    const totalCount = await prisma.graphene.count();
+    
+    // Get filtered count
+    const filteredCount = await prisma.graphene.count({ where });
+    
+    // Build pagination options
+    const paginationOptions = pagination.page ? {
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit
+    } : {};
+    
+    // Execute main query with filtering
+    const graphenes = await prisma.graphene.findMany({
+      where,
+      orderBy,
+      ...paginationOptions,
+      include: { 
+        biocharLotRef: true,
+        updateReports: {
+          include: {
+            updateReport: true
+          }
+        },
+        semReports: {
+          include: {
+            semReport: true
+          }
         }
       }
-    }
-  });
-  
-  // Convert dates to date-only strings to avoid timezone issues
-  const graphenesWithFixedDates = graphenes.map(g => ({
-    ...g,
-    experimentDate: g.experimentDate ? g.experimentDate.toISOString().split('T')[0] : null
-  }));
-  
-  res.json(graphenesWithFixedDates);
+    });
+    
+    // Convert dates to date-only strings to avoid timezone issues
+    const graphenesWithFixedDates = graphenes.map(g => ({
+      ...g,
+      experimentDate: g.experimentDate ? g.experimentDate.toISOString().split('T')[0] : null
+    }));
+    
+    // Build response metadata
+    const meta = buildResponseMeta(totalCount, filteredCount, pagination, filters);
+    
+    // Return formatted response with metadata
+    res.json(formatResponse(graphenesWithFixedDates, meta));
+    
+  } catch (error) {
+    console.error('Error in graphene filtering:', error);
+    res.status(500).json({ error: 'Failed to retrieve graphene records', details: error.message });
+  }
 }));
 
 // Get single graphene record
@@ -678,6 +687,34 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="graphene_export.csv"');
   res.send(csv);
+}));
+
+// Get filter configuration for graphene table
+router.get('/filters/config', asyncHandler(async (req, res) => {
+  try {
+    const config = getFilterConfig('graphene');
+    if (!config) {
+      return res.status(404).json({ error: 'Filter configuration not found for graphene table' });
+    }
+    res.json(config);
+  } catch (error) {
+    console.error('Error getting filter config:', error);
+    res.status(500).json({ error: 'Failed to get filter configuration', details: error.message });
+  }
+}));
+
+// Get filter options for specific field
+router.get('/filters/:filterField/options', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { filterField } = req.params;
+  
+  try {
+    const options = await getFilterOptions(prisma, 'graphene', filterField);
+    res.json(options);
+  } catch (error) {
+    console.error(`Error getting filter options for ${filterField}:`, error);
+    res.status(500).json({ error: `Failed to get options for ${filterField}`, details: error.message });
+  }
 }));
 
 export default router;

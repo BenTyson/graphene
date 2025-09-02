@@ -1131,6 +1131,78 @@
           >
         </div>
 
+        <!-- Filter Panel -->
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm mb-6" x-data="{ showFilters: false }">
+          <!-- Filter Header -->
+          <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-700 flex items-center">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586a1 1 0 01-.293.707l-2 2A1 1 0 0111 21v-6.586a1 1 0 00-.293-.707L4.293 7.293A1 1 0 014 6.586V4z"></path>
+              </svg>
+              Filters
+            </h3>
+            
+            <div class="flex items-center space-x-2">
+              <!-- Active Filter Count -->
+              <span x-show="getActiveFilterCount(grapheneFilterState) > 0" 
+                    x-text="getActiveFilterCount(grapheneFilterState) + ' active'"
+                    class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              </span>
+              
+              <!-- Clear All Filters -->
+              <button type="button" 
+                      x-show="getActiveFilterCount(grapheneFilterState) > 0"
+                      @click="clearAllFilters('graphene')"
+                      class="text-xs text-gray-500 hover:text-gray-700">
+                Clear All
+              </button>
+              
+              <!-- Toggle Button -->
+              <button type="button" 
+                      @click="showFilters = !showFilters"
+                      class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+                <span x-text="showFilters ? 'Hide' : 'Show'"></span>
+                <svg class="w-4 h-4 ml-1 transform transition-transform duration-200" 
+                     :class="showFilters ? 'rotate-180' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Filter Content -->
+          <div x-show="showFilters" 
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 transform scale-95"
+               x-transition:enter-end="opacity-100 transform scale-100"
+               x-transition:leave="transition ease-in duration-100"
+               x-transition:leave-start="opacity-100 transform scale-100"
+               x-transition:leave-end="opacity-0 transform scale-95"
+               class="p-4">
+            
+            <!-- Filter Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
+                 x-html="generateFilterFields('graphene', 'grapheneFilterState', 'applyFilters()')">
+            </div>
+            
+            <!-- Filter Actions -->
+            <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+              <div class="text-xs text-gray-500">
+                <span x-text="'Showing ' + (grapheneFilterState.meta?.filteredRecords || grapheneRecords.length || 0) + ' of ' + (grapheneFilterState.meta?.totalRecords || grapheneRecords.length || 0) + ' records'"></span>
+              </div>
+              
+              <div class="flex space-x-2">
+                <button type="button"
+                        @click="clearAllFilters('graphene')"
+                        class="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50">
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Graphene Table - Desktop -->
         <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
