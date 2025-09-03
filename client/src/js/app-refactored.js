@@ -227,13 +227,14 @@ const DEFAULT_FORMS = {
     micronizationNumber: '',
     date: '',
     dateUnknown: false,
-    sku: '',
+    skuSuffix: '',  // Changed from sku to skuSuffix
     materialType: 'graphene',
     grapheneSample: '',
     compoundBatchNumber: '',
     startingMaterialAmount: '',
     recoveredAmount: '',
     grindPressure: '',
+    dx50: '',
     micronizationReportFile: null,
     removeMicronizationReport: false,
     replaceMicronizationReport: false

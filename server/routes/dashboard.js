@@ -148,6 +148,13 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
     // Calculate inventory at each location
     const locationInventory = {};
     
+    // Get total production for Curia Frankfurt (origin location)
+    const totalProduction = await prisma.graphene.aggregate({
+      _sum: {
+        output: true
+      }
+    });
+    
     for (const location of uniqueLocations) {
       // Materials shipped TO this location
       const shipmentsIn = await prisma.materialShipment.aggregate({
@@ -174,11 +181,18 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       const inAmount = shipmentsIn._sum.amountShipped || 0;
       const outAmount = shipmentsOut._sum.amountShipped || 0;
       
+      // For Curia Frankfurt, add total production to the inventory calculation
+      let currentInventory = inAmount - outAmount;
+      if (location === 'Curia Frankfurt') {
+        currentInventory = (totalProduction._sum.output || 0) + inAmount - outAmount;
+      }
+      
       locationInventory[location] = {
         location,
         received: inAmount,
         shipped: outAmount,
-        currentInventory: inAmount - outAmount
+        currentInventory,
+        isProductionOrigin: location === 'Curia Frankfurt'
       };
     }
     
@@ -194,12 +208,6 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
     });
     
     // Unshipped graphene (produced but not shipped)
-    const totalProduced = await prisma.graphene.aggregate({
-      _sum: {
-        output: true
-      }
-    });
-    
     const totalShipped = await prisma.materialShipment.aggregate({
       where: {
         grapheneSample: { not: null }
@@ -209,7 +217,7 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       }
     });
     
-    const unshipped = (totalProduced._sum.output || 0) - (totalShipped._sum.amountShipped || 0);
+    const unshipped = (totalProduction._sum.output || 0) - (totalShipped._sum.amountShipped || 0);
     
     res.json({
       locations: Object.values(locationInventory),
@@ -218,7 +226,7 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
         count: inTransit._count || 0
       },
       unshipped,
-      totalInventory: totalProduced._sum.output || 0
+      totalInventory: totalProduction._sum.output || 0
     });
   } catch (error) {
     console.error('Error fetching inventory by location:', error);

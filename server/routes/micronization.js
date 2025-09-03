@@ -81,7 +81,8 @@ router.get('/', asyncHandler(async (req, res) => {
         { micronizationNumber: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { grapheneSample: { contains: search, mode: 'insensitive' } },
-        { compoundBatchNumber: { contains: search, mode: 'insensitive' } }
+        { compoundBatchNumber: { contains: search, mode: 'insensitive' } },
+        { dx50: { contains: search, mode: 'insensitive' } }
       ]
     };
   }
@@ -156,6 +157,17 @@ router.get('/:id', asyncHandler(async (req, res) => {
     recoveredAmount: micronization.recoveredAmount ? Number(micronization.recoveredAmount) : null
   };
   
+  // Extract SKU suffix for editing (split based on material source)
+  if (micronization.sku) {
+    const baseSku = micronization.grapheneSample || micronization.compoundBatchNumber || '';
+    if (baseSku && micronization.sku.startsWith(baseSku + '_')) {
+      processedRecord.skuSuffix = micronization.sku.substring(baseSku.length + 1);
+    } else {
+      // If SKU doesn't match expected pattern, use the whole SKU as suffix
+      processedRecord.skuSuffix = micronization.sku;
+    }
+  }
+  
   res.json(processedRecord);
 }));
 
@@ -176,6 +188,13 @@ router.post('/', upload.single('micronizationReport'), asyncHandler(async (req, 
   // Handle micronization report file upload
   if (req.file) {
     data.micronizationReportPath = path.join('micronization-reports', req.file.filename);
+  }
+  
+  // Generate full SKU from base material + suffix
+  if (data.skuSuffix) {
+    const baseSku = data.grapheneSample || data.compoundBatchNumber || '';
+    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix;
+    delete data.skuSuffix;
   }
   
   // Remove UI-only fields from data
@@ -267,6 +286,13 @@ router.put('/:id', upload.single('micronizationReport'), asyncHandler(async (req
       }
     }
     data.micronizationReportPath = path.join('micronization-reports', req.file.filename);
+  }
+  
+  // Generate full SKU from base material + suffix
+  if (data.skuSuffix) {
+    const baseSku = data.grapheneSample || data.compoundBatchNumber || '';
+    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix;
+    delete data.skuSuffix;
   }
   
   // Remove UI-only fields and relational fields from data

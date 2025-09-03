@@ -152,9 +152,12 @@ export function createInventoryWidget(data) {
         ${sortedLocations.slice(0, 5).map(loc => `
           <div class="flex justify-between items-center">
             <div>
-              <div class="text-sm font-medium text-gray-900">${loc.location}</div>
+              <div class="text-sm font-medium text-gray-900">
+                ${loc.location}
+                ${loc.isProductionOrigin ? '<span class="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Production Origin</span>' : ''}
+              </div>
               <div class="text-xs text-gray-500">
-                In: ${formatMetricValue(loc.received)}g | Out: ${formatMetricValue(loc.shipped)}g
+                ${loc.isProductionOrigin ? 'Produced + ' : ''}In: ${formatMetricValue(loc.received)}g | Out: ${formatMetricValue(loc.shipped)}g
               </div>
             </div>
             <div class="text-lg font-mono font-bold text-gray-900">

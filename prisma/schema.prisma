@@ -393,6 +393,7 @@ model Micronization {
   startingMaterialAmount Decimal?       @map("starting_material_amount") @db.Decimal(10, 2)
   recoveredAmount        Decimal?       @map("recovered_amount") @db.Decimal(10, 2)
   grindPressure          Int?           @map("grind_pressure")
+  dx50                   String?        @map("dx50")
   micronizationReportPath String?       @map("micronization_report_path")
   grapheneSample         String?        @map("graphene_sample")
   compoundBatchNumber    String?        @map("compound_batch_number")
