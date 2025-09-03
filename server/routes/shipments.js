@@ -1,8 +1,7 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import asyncHandler from 'express-async-handler';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 function convertNumericFields(data) {
   const numericFields = ['amountShipped'];
@@ -26,11 +25,11 @@ function generateShipmentNumber() {
   return `SHIP-${year}-${month}-${timestamp}`;
 }
 
-router.get('/', async (req, res) => {
-  try {
-    const { search = '' } = req.query;
-    
-    const shipments = await prisma.materialShipment.findMany({
+router.get('/', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { search = '' } = req.query;
+  
+  const shipments = await prisma.materialShipment.findMany({
       where: search ? {
         OR: [
           { shipmentNumber: { contains: search, mode: 'insensitive' } },
@@ -70,15 +69,12 @@ router.get('/', async (req, res) => {
     });
 
     res.json(shipments);
-  } catch (error) {
-    console.error('Error fetching shipments:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/locations', async (req, res) => {
-  try {
-    const fromLocations = await prisma.materialShipment.findMany({
+router.get('/locations', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  
+  const fromLocations = await prisma.materialShipment.findMany({
       select: { shipFromLocation: true },
       distinct: ['shipFromLocation']
     });
@@ -104,17 +100,13 @@ router.get('/locations', async (req, res) => {
     defaultLocations.forEach(loc => uniqueLocations.add(loc));
     
     res.json(Array.from(uniqueLocations).sort());
-  } catch (error) {
-    console.error('Error fetching locations:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/graphene/:experimentNumber', async (req, res) => {
-  try {
-    const { experimentNumber } = req.params;
-    
-    const shipments = await prisma.materialShipment.findMany({
+router.get('/graphene/:experimentNumber', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { experimentNumber } = req.params;
+  
+  const shipments = await prisma.materialShipment.findMany({
       where: { grapheneSample: experimentNumber },
       include: {
         grapheneRef: {
@@ -129,17 +121,13 @@ router.get('/graphene/:experimentNumber', async (req, res) => {
     });
 
     res.json(shipments);
-  } catch (error) {
-    console.error('Error fetching graphene shipments:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/compound-batch/:batchNumber', async (req, res) => {
-  try {
-    const { batchNumber } = req.params;
-    
-    const shipments = await prisma.materialShipment.findMany({
+router.get('/compound-batch/:batchNumber', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { batchNumber } = req.params;
+  
+  const shipments = await prisma.materialShipment.findMany({
       where: { compoundBatchNumber: batchNumber },
       include: {
         compoundBatchRef: {
@@ -154,17 +142,13 @@ router.get('/compound-batch/:batchNumber', async (req, res) => {
     });
 
     res.json(shipments);
-  } catch (error) {
-    console.error('Error fetching compound batch shipments:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/micronization/:sku', async (req, res) => {
-  try {
-    const { sku } = req.params;
-    
-    const shipments = await prisma.materialShipment.findMany({
+router.get('/micronization/:sku', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { sku } = req.params;
+  
+  const shipments = await prisma.materialShipment.findMany({
       where: { micronizationSku: sku },
       include: {
         micronizationRef: {
@@ -179,15 +163,12 @@ router.get('/micronization/:sku', async (req, res) => {
     });
 
     res.json(shipments);
-  } catch (error) {
-    console.error('Error fetching micronization shipments:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/export/csv', async (req, res) => {
-  try {
-    const shipments = await prisma.materialShipment.findMany({
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  
+  const shipments = await prisma.materialShipment.findMany({
       include: {
         grapheneRef: {
           select: {
@@ -272,17 +253,13 @@ router.get('/export/csv', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="material_shipments.csv"');
     res.send(csvContent);
-  } catch (error) {
-    console.error('Error exporting shipments CSV:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const shipment = await prisma.materialShipment.findUnique({
+router.get('/:id', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { id } = req.params;
+  
+  const shipment = await prisma.materialShipment.findUnique({
       where: { id },
       include: {
         grapheneRef: {
@@ -314,21 +291,28 @@ router.get('/:id', async (req, res) => {
     }
 
     res.json(shipment);
-  } catch (error) {
-    console.error('Error fetching shipment:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
-router.post('/', async (req, res) => {
-  try {
-    let data = { ...req.body };
+router.post('/', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  let data = { ...req.body };
     
     data = convertNumericFields(data);
     
     delete data.materialType;
     delete data.dateUnknown;
     delete data.receivedDateUnknown;
+    
+    // Handle material selection - only one should be set, others should be null
+    if (!data.grapheneSample || data.grapheneSample === '') {
+      data.grapheneSample = null;
+    }
+    if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+      data.compoundBatchNumber = null;
+    }
+    if (!data.micronizationSku || data.micronizationSku === '') {
+      data.micronizationSku = null;
+    }
     
     if (!data.shipmentNumber) {
       data.shipmentNumber = generateShipmentNumber();
@@ -370,26 +354,29 @@ router.post('/', async (req, res) => {
     });
 
     res.status(201).json(shipment);
-  } catch (error) {
-    console.error('Error creating shipment:', error);
-    if (error.code === 'P2002') {
-      res.status(400).json({ error: 'Shipment number already exists' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
+}));
 
-router.put('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    let data = { ...req.body };
+router.put('/:id', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { id } = req.params;
+  let data = { ...req.body };
     
     data = convertNumericFields(data);
     
     delete data.materialType;
     delete data.dateUnknown;
     delete data.receivedDateUnknown;
+    
+    // Handle material selection - only one should be set, others should be null
+    if (!data.grapheneSample || data.grapheneSample === '') {
+      data.grapheneSample = null;
+    }
+    if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+      data.compoundBatchNumber = null;
+    }
+    if (!data.micronizationSku || data.micronizationSku === '') {
+      data.micronizationSku = null;
+    }
     
     if (data.shipmentDate === null || data.shipmentDate === '') {
       data.shipmentDate = null;
@@ -428,35 +415,17 @@ router.put('/:id', async (req, res) => {
     });
 
     res.json(shipment);
-  } catch (error) {
-    console.error('Error updating shipment:', error);
-    if (error.code === 'P2025') {
-      res.status(404).json({ error: 'Shipment not found' });
-    } else if (error.code === 'P2002') {
-      res.status(400).json({ error: 'Shipment number already exists' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
+}));
 
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { id } = req.params;
 
-    await prisma.materialShipment.delete({
-      where: { id }
-    });
+  await prisma.materialShipment.delete({
+    where: { id }
+  });
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting shipment:', error);
-    if (error.code === 'P2025') {
-      res.status(404).json({ error: 'Shipment not found' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
+  res.json({ success: true });
+}));
 
 export default router;

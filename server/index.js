@@ -16,6 +16,7 @@ import semReportRoutes from './routes/semReports.js';
 import compoundBatchRoutes from './routes/compoundBatch.js';
 import shipmentRoutes from './routes/shipments.js';
 import micronizationRoutes from './routes/micronization.js';
+import dashboardRoutes from './routes/dashboard.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -49,6 +50,7 @@ app.use('/api/sem-reports', semReportRoutes);
 app.use('/api/compound-batches', compoundBatchRoutes);
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/micronization', micronizationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

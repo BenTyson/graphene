@@ -19,6 +19,7 @@ import objectivesHelper from './components/dropdownSections/objectivesHelper.js'
 import shipmentsHelper from './components/dropdownSections/shipmentsHelper.js';
 import { getFilterPanelHtml } from './components/tables/filterHelper.js';
 import { filterMixin } from './components/tables/filterStateManager.js';
+import { createProductionWidget, createInventoryWidget, createTestResultsWidget, createActivityWidget, createLoadingSkeleton, createErrorWidget } from './components/dashboard/dashboardWidgets.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -243,7 +244,22 @@ const DEFAULT_FORMS = {
 window.grapheneApp = function() {
   return {
     // Tab management
-    activeTab: 'graphene',
+    activeTab: 'dashboard',
+    
+    // Dashboard data
+    dashboardData: {
+      production: null,
+      inventory: null,
+      testResults: null,
+      activity: null
+    },
+    dashboardLoading: {
+      production: false,
+      inventory: false,
+      testResults: false,
+      activity: false
+    },
+    dashboardError: null,
     
     // Data storage
     biocharRecords: [],
@@ -352,7 +368,11 @@ window.grapheneApp = function() {
     
     // Filter states
     grapheneFilterState: {
-      filters: {},
+      filters: {
+        experimentDate: { from: '', to: '' },
+        tempMax: { min: '', max: '' },
+        output: { min: '', max: '' }
+      },
       meta: {}
     },
     filterConfigs: {},
@@ -360,6 +380,9 @@ window.grapheneApp = function() {
     activeFilters: {},
     filterLoading: false,
     filterError: null,
+    
+    // Tooltip state
+    showTooltip: null,
     compoundBatchRelatedData: {},
     loadingBiocharRelated: {},
     loadingGrapheneRelated: {},
@@ -454,6 +477,11 @@ window.grapheneApp = function() {
     
     // Initialization
     async init() {
+      // Load dashboard data first if dashboard is active
+      if (this.activeTab === 'dashboard') {
+        await this.loadDashboardData();
+      }
+      
       // Initialize filter system for graphene table
       await this.initFilters('graphene');
       
@@ -495,6 +523,7 @@ window.grapheneApp = function() {
         }
         
         const params = this.buildFilterQueryParams('graphene', baseParams);
+        params.limit = '500'; // Request all records
         const response = await fetch(`/api/graphene?${new URLSearchParams(params)}`);
         
         if (!response.ok) {
@@ -2904,6 +2933,133 @@ window.grapheneApp = function() {
     
     applyFilters() {
       this.loadGrapheneRecords();
+    },
+    
+    // Dashboard methods
+    async loadDashboardData() {
+      try {
+        // Load all dashboard data in parallel
+        await Promise.all([
+          this.loadProductionMetrics(),
+          this.loadInventoryData(), 
+          this.loadTestResultsData(),
+          this.loadActivityData()
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        this.dashboardError = 'Failed to load dashboard data';
+      }
+    },
+    
+    async loadProductionMetrics() {
+      this.dashboardLoading.production = true;
+      try {
+        const response = await fetch('/api/dashboard/production-metrics');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.dashboardData.production = await response.json();
+      } catch (error) {
+        console.error('Error loading production metrics:', error);
+        this.dashboardData.production = null;
+      } finally {
+        this.dashboardLoading.production = false;
+      }
+    },
+    
+    async loadInventoryData() {
+      this.dashboardLoading.inventory = true;
+      try {
+        const response = await fetch('/api/dashboard/inventory-by-location');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.dashboardData.inventory = await response.json();
+      } catch (error) {
+        console.error('Error loading inventory data:', error);
+        this.dashboardData.inventory = null;
+      } finally {
+        this.dashboardLoading.inventory = false;
+      }
+    },
+    
+    async loadTestResultsData() {
+      this.dashboardLoading.testResults = true;
+      try {
+        const response = await fetch('/api/dashboard/best-test-results');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.dashboardData.testResults = await response.json();
+      } catch (error) {
+        console.error('Error loading test results data:', error);
+        this.dashboardData.testResults = null;
+      } finally {
+        this.dashboardLoading.testResults = false;
+      }
+    },
+    
+    async loadActivityData() {
+      this.dashboardLoading.activity = true;
+      try {
+        const response = await fetch('/api/dashboard/recent-activity');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.dashboardData.activity = await response.json();
+      } catch (error) {
+        console.error('Error loading activity data:', error);
+        this.dashboardData.activity = null;
+      } finally {
+        this.dashboardLoading.activity = false;
+      }
+    },
+    
+    // Dashboard widget generators
+    getProductionWidget() {
+      if (this.dashboardLoading.production) {
+        return createLoadingSkeleton();
+      }
+      if (!this.dashboardData.production) {
+        return createErrorWidget('Failed to load production metrics');
+      }
+      return createProductionWidget(this.dashboardData.production);
+    },
+    
+    getInventoryWidget() {
+      if (this.dashboardLoading.inventory) {
+        return createLoadingSkeleton();
+      }
+      if (!this.dashboardData.inventory) {
+        return createErrorWidget('Failed to load inventory data');
+      }
+      return createInventoryWidget(this.dashboardData.inventory);
+    },
+    
+    getTestResultsWidget() {
+      if (this.dashboardLoading.testResults) {
+        return createLoadingSkeleton();
+      }
+      if (!this.dashboardData.testResults) {
+        return createErrorWidget('Failed to load test results');
+      }
+      return createTestResultsWidget(this.dashboardData.testResults);
+    },
+    
+    getActivityWidget() {
+      if (this.dashboardLoading.activity) {
+        return createLoadingSkeleton();
+      }
+      if (!this.dashboardData.activity) {
+        return createErrorWidget('Failed to load recent activity');
+      }
+      return createActivityWidget(this.dashboardData.activity);
+    },
+    
+    // Refresh dashboard data
+    async refreshDashboard() {
+      this.dashboardError = null;
+      await this.loadDashboardData();
+    },
+    
+    // Handle tab change to load dashboard if needed
+    async switchTab(tab) {
+      this.activeTab = tab;
+      if (tab === 'dashboard' && !this.dashboardData.production) {
+        await this.loadDashboardData();
+      }
     }
   };
 };

@@ -131,7 +131,7 @@ export function parseFilters(query) {
  */
 export function parsePagination(query) {
   const page = parseInt(query.page) || 1;
-  const limit = Math.min(parseInt(query.limit) || 20, 100); // Cap at 100
+  const limit = Math.min(parseInt(query.limit) || 20, 500); // Cap at 500
   
   return { page, limit };
 }

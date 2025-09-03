@@ -376,9 +376,33 @@ router.put('/:id', asyncHandler(async (req, res) => {
         skipDuplicates: true
       });
     }
+    
+    // Recalculate total output based on associated experiments
+    const associatedExperiments = await prisma.graphene.findMany({
+      where: {
+        id: { in: experimentIds }
+      },
+      select: {
+        output: true
+      }
+    });
+    
+    const calculatedTotal = associatedExperiments.reduce((sum, exp) => {
+      return sum + (parseFloat(exp.output || 0));
+    }, 0);
+    
+    // Update the compound batch with the recalculated total
+    const updatedBatch = await prisma.compoundBatch.update({
+      where: { id },
+      data: {
+        totalOutput: calculatedTotal
+      }
+    });
+    
+    res.json(updatedBatch);
+  } else {
+    res.json(compoundBatch);
   }
-  
-  res.json(compoundBatch);
 }));
 
 // Delete compound batch

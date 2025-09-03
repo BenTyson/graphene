@@ -74,8 +74,10 @@ export const biocharAPI = {
 export const grapheneAPI = {
   // Get all graphene records with optional search
   getAll: (search = '') => {
-    const query = search ? `?search=${encodeURIComponent(search)}` : '';
-    return fetch(`${API_BASE}/graphene${query}`).then(handleResponse);
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('limit', '500'); // Request higher limit to get all records
+    return fetch(`${API_BASE}/graphene?${params.toString()}`).then(handleResponse);
   },
 
   // Get single graphene record

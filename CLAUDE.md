@@ -96,7 +96,8 @@ npm run backup:cleanup
 │   │   ├── micronization.js # Micronization CRUD + PDF reports + SKU tracking
 │   │   ├── updateReports.js # Update report management + associations
 │   │   ├── semReports.js   # SEM report management + associations
-│   │   └── shipments.js    # Material shipment tracking + location management + micronization SKU support
+│   │   ├── shipments.js    # Material shipment tracking + location management + micronization SKU support
+│   │   └── dashboard.js    # Dashboard metrics API endpoints
 │   └── middleware/
 ├── client/
 │   ├── index.html          # Main UI with Alpine.js templates (4400+ lines)
@@ -119,6 +120,8 @@ npm run backup:cleanup
 │   │   │   │   │   ├── sourceDataHelper.js    # Biochar source data display
 │   │   │   │   │   ├── objectivesHelper.js    # Experiment objectives & compound batch info
 │   │   │   │   │   └── shipmentsHelper.js     # Material shipment history display
+│   │   │   │   ├── dashboard/       # Dashboard widget components
+│   │   │   │   │   └── dashboardWidgets.js    # Modular dashboard widget system
 │   │   │   │   └── tables/          # Table components (reserved for future)
 │   │   │   └── utils/               # Formatters, validators, helpers
 │   │   └── styles/main.css          # Tailwind CSS
@@ -371,6 +374,92 @@ npm run backup:cleanup
 - **State Management**: Separate sort states for each table (`biocharSortColumn`, `grapheneSortColumn`)
 - **Toggle Sorting**: Click once for ascending, twice for descending, preserves lot highlighting
 
+## Dashboard System (September 2025)
+
+### Overview
+Comprehensive production dashboard providing real-time visibility into graphene production metrics, inventory distribution, and best test results. Designed with a clean, modular architecture for easy expansion.
+
+### Dashboard Features
+- **Production Metrics**: Total graphene production (1,156.37g across 240 experiments), monthly trends, average output per experiment
+- **Inventory by Location**: Real-time distribution tracking across shipping locations with in-transit materials
+- **Best Test Results**: Showcase of top performing results across all test types (BET, Conductivity, RAMAN, TEM)
+- **Responsive Design**: Clean 3-widget layout that adapts from mobile to desktop
+- **Real-time Data**: Refresh functionality with loading states and error handling
+
+### Implementation Architecture
+
+#### Backend API (`/server/routes/dashboard.js`)
+- **Production Metrics Endpoint**: `/api/dashboard/production-metrics`
+  - Aggregates total production, experiment counts, monthly trends
+  - Calculates current vs previous month comparisons
+  - Returns 6-month production history
+- **Inventory Tracking Endpoint**: `/api/dashboard/inventory-by-location`
+  - Tracks materials received vs shipped per location
+  - Calculates current inventory balances
+  - Monitors in-transit shipments and unshipped production
+- **Best Test Results Endpoint**: `/api/dashboard/best-test-results`
+  - Highest BET surface area (2,090 m²/g from MRa333A)
+  - Best conductivity (18.4 S/cm at 20kN from MRa389A)
+  - Lowest RAMAN D/G ratio (best quality indicator)
+  - TEM test counts and latest results
+
+#### Frontend Components (`/client/src/js/components/dashboard/dashboardWidgets.js`)
+- **Modular Widget System**: Reusable components for each dashboard section
+- **Production Widget**: Compact display of total production, averages, and monthly trends
+- **Inventory Widget**: Location-based distribution with in-transit tracking
+- **Test Results Widget**: Best results showcase with sample identification
+- **Loading & Error States**: Comprehensive state management with user feedback
+
+#### Navigation Integration
+- **Default Landing Page**: Dashboard set as first tab and default active state
+- **Lazy Loading**: Dashboard data loads on tab activation for performance
+- **Alpine.js Integration**: Seamless state management with existing application architecture
+
+### Key Benefits
+- **Executive Overview**: Quick visibility into production status and capabilities
+- **Quality Tracking**: Immediate access to best test results for customer discussions
+- **Inventory Management**: Real-time location tracking for logistics planning
+- **Modular Design**: Easy to add new widgets and metrics as requirements evolve
+
+### Technical Implementation
+- **Clean Separation**: Dashboard logic isolated in dedicated route and component files
+- **Error Handling**: Comprehensive error states with user-friendly messages
+- **Performance**: Efficient database aggregation queries with proper indexing
+- **Scalability**: Widget system designed for easy expansion and customization
+
+## Data Pagination System
+
+### Issue Resolution (September 2025)
+Fixed critical pagination limit that was preventing display of graphene experiments below #215.
+
+### Problem
+- **Server Limit**: Hard cap of 100 records in `/server/utils/queryHelpers.js`
+- **Frontend Request**: Default limit of 20 records from API calls
+- **Result**: Only showing most recent 100 experiments (testOrder #135-234)
+
+### Solution
+- **Server Capacity**: Increased maximum record limit from 100 to 500
+- **API Service**: Updated `grapheneAPI.getAll()` to request limit=500
+- **Direct Fetch**: Updated `loadGrapheneRecords()` method with limit=500 parameter
+- **Result**: All 240 graphene records now accessible (testOrder #1-234)
+
+### Implementation Details
+```javascript
+// Server: /server/utils/queryHelpers.js
+const limit = Math.min(parseInt(query.limit) || 20, 500); // Cap at 500
+
+// Frontend API: /client/src/js/services/api.js  
+params.append('limit', '500'); // Request higher limit
+
+// Frontend Direct: /client/src/js/app-refactored.js
+params.limit = '500'; // Request all records
+```
+
+### Impact
+- **Data Completeness**: All historical experiments now visible
+- **User Experience**: No missing data in production interface
+- **Scalability**: System now handles larger datasets efficiently
+
 ## Common Issues & Solutions
 
 ### Alpine.js Multiple Rows in Template
@@ -554,6 +643,26 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 - **Triple Material Support**: Can reference grapheneSample, compoundBatchNumber, OR micronizationSku (mutually exclusive)
 - **Status Management**: Four status levels (pending, shipped, in_transit, received) with proper validation
 
+### Dashboard
+- `GET /api/dashboard/production-metrics` - Get production overview and monthly trends
+  - Total graphene production, experiment counts, average output
+  - Current vs previous month comparison with percentage changes
+  - 6-month production trend data for visualization
+  - Recent experiment counts (last 7 days)
+- `GET /api/dashboard/inventory-by-location` - Get inventory distribution by location
+  - Materials shipped TO and FROM each location
+  - Current inventory balance calculations (received - shipped)
+  - In-transit materials and shipment counts
+  - Unshipped graphene production totals
+- `GET /api/dashboard/best-test-results` - Get top performing test results
+  - Highest BET surface area measurements with sample identification
+  - Best conductivity results at all pressure levels (1kN, 8kN, 12kN, 20kN)
+  - Lowest RAMAN D/G ratios (quality indicators) with testing lab info
+  - TEM test counts and latest analysis information
+- **Real-time Metrics**: All endpoints provide current production status
+- **Error Handling**: Comprehensive error responses with fallback data
+- **Performance**: Optimized database aggregation queries
+
 ## Code Style Guidelines
 
 1. **No unnecessary comments** - Code should be self-documenting
@@ -712,9 +821,25 @@ The codebase has been fully componentized to improve maintainability and elimina
 - **Complete Reusability**: Dropdown components work seamlessly across graphene and compound batch tables
 - **Functionality**: 100% preserved with enhanced reliability and Alpine.js compatibility
 
-## Recent Updates (August 2025)
+## Recent Updates (September 2025)
 
-### Micronization System Implementation (Latest)
+### Production Dashboard Implementation (Latest)
+- **Complete Dashboard System**: Added comprehensive production overview with real-time metrics and best test results tracking
+- **Backend API**: New `/api/dashboard` endpoints providing production metrics, inventory distribution, and performance data
+- **Frontend Widgets**: Modular dashboard components with responsive design and loading states
+- **Navigation Integration**: Dashboard set as default landing page with lazy loading for optimal performance
+- **Executive Overview**: Quick visibility into total production (1,156.37g across 240 experiments), inventory distribution, and top test results
+- **Data Visualization**: Clean 3-widget layout showcasing production trends, location-based inventory, and quality achievements
+- **Modular Architecture**: Widget system designed for easy expansion and future customization
+
+### Data Pagination System Resolution (Latest)
+- **Critical Fix**: Resolved pagination limit preventing display of graphene experiments below #215
+- **Server Enhancement**: Increased record limit capacity from 100 to 500 in query helpers
+- **Frontend Updates**: Modified API calls to request all available records with higher limits
+- **Data Completeness**: All 240 graphene records now accessible (testOrder #1-234)
+- **User Experience**: Eliminated missing historical data in production interface
+
+### Micronization System Implementation
 - **Complete Material Pipeline**: Extended system to support Raw materials → Biochar → Graphene → Compound Batch → **Micronization** → Shipment
 - **Database Schema**: Added `Micronization` model with relationships to Graphene and CompoundBatch models
 - **Backend API**: Full CRUD operations at `/api/micronization` with PDF upload support and CSV export
