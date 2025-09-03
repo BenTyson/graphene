@@ -82,7 +82,8 @@ router.get('/', asyncHandler(async (req, res) => {
         { sku: { contains: search, mode: 'insensitive' } },
         { grapheneSample: { contains: search, mode: 'insensitive' } },
         { compoundBatchNumber: { contains: search, mode: 'insensitive' } },
-        { dx50: { contains: search, mode: 'insensitive' } }
+        { dx50: { contains: search, mode: 'insensitive' } },
+        { micronizationLocation: { contains: search, mode: 'insensitive' } }
       ]
     };
   }
@@ -185,6 +186,11 @@ router.post('/', upload.single('micronizationReport'), asyncHandler(async (req, 
     data.date = null;
   }
   
+  // Set default micronization location if not provided
+  if (!data.micronizationLocation || data.micronizationLocation === '') {
+    data.micronizationLocation = 'Curia Albany';
+  }
+  
   // Handle micronization report file upload
   if (req.file) {
     data.micronizationReportPath = path.join('micronization-reports', req.file.filename);
@@ -255,6 +261,11 @@ router.put('/:id', upload.single('micronizationReport'), asyncHandler(async (req
     data.date = new Date(data.date);
   } else {
     data.date = null;
+  }
+  
+  // Set default micronization location if not provided
+  if (!data.micronizationLocation || data.micronizationLocation === '') {
+    data.micronizationLocation = 'Curia Albany';
   }
   
   // Get existing record to handle file operations

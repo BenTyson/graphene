@@ -173,19 +173,23 @@ npm run backup:cleanup
 
 ### Micronization System
 - **Micronization Model**: Tracks graphene/compound batch materials sent to labs for micronization processing
-- **Key Fields**: `micronizationNumber`, `date`, `sku`, `startingMaterialAmount`, `recoveredAmount`, `grindPressure`, `micronizationReportPath`
+- **Key Fields**: `micronizationNumber`, `date`, `sku`, `startingMaterialAmount`, `recoveredAmount`, `grindPressure`, `micronizationLocation`, `dx50`, `micronizationReportPath`
 - **Material Source**: Links to either individual graphene experiments OR compound batches
-- **SKU Tracking**: Unique SKU identifiers for each micronized product batch
+- **SKU Tracking**: Unique SKU identifiers for each micronized product batch (auto-generated from base material + suffix)
+- **Location Tracking**: `micronizationLocation` field tracks WHERE processing occurs (defaults to "Curia Albany")
 - **Recovery Rate**: Automatically calculated percentage (recovered/starting * 100%)
 - **PDF Reports**: Stored in `/uploads/micronization-reports/` with 10MB file size limit
 - **Shipment Integration**: Micronized SKUs can be selected as material source in shipment system
 - **Data Fields**:
   - `micronizationNumber` - User-provided identifier (e.g., M001, M002)
-  - `sku` - Unique SKU for inventory tracking
+  - `sku` - Unique SKU for inventory tracking (base_material_suffix format)
   - `startingMaterialAmount` - Input material amount in grams (Decimal 10,2)
   - `recoveredAmount` - Output material amount in grams (Decimal 10,2)
   - `grindPressure` - Processing pressure in PSI (Integer)
+  - `micronizationLocation` - Processing location for accurate inventory tracking
+  - `dx50` - Median particle size measurement (e.g., "3.88µm")
 - **Material Pipeline**: Extends the flow to Raw materials → Biochar → Graphene → Compound Batch → **Micronization** → Shipment
+- **Inventory Accuracy**: Dashboard accounts for location-based processing to show accurate material distribution
 
 ### Update Reports System
 - **UpdateReport Model**: Stores weekly PDF reports with metadata (filename, description, week date)
@@ -832,7 +836,21 @@ The codebase has been fully componentized to improve maintainability and elimina
 - **Data Visualization**: Clean 3-widget layout showcasing production trends, location-based inventory, and quality achievements
 - **Modular Architecture**: Widget system designed for easy expansion and future customization
 
-### Data Pagination System Resolution (Latest)
+### Inventory Accuracy Enhancement with Micronization Location Tracking (Latest)
+- **Critical Issue Resolved**: Dashboard incorrectly showed Albany with 1,016g instead of expected 1,896g total inventory
+- **Root Cause**: System assumed all micronization occurred at Frankfurt, not tracking actual processing locations
+- **Database Enhancement**: Added `micronizationLocation` field to Micronization model with proper indexing
+- **Data Migration**: Retroactively updated all existing records (16 total) to "Curia Albany" as processing location
+- **Location-Based Logic**: Dashboard now groups micronization by actual processing location and allocates recovered material correctly
+- **Form Integration**: Added location dropdown to micronization form using existing location management system
+- **API Updates**: Enhanced search, CRUD operations, and CSV export to include location field
+- **Accurate Results**: 
+  - **Albany**: 1,895.76g (1,032g compound + 863.76g micronized available)
+  - **Frankfurt**: 135.17g (1,178.37g produced - 1,043.2g shipped for processing)
+  - **GEIC**: 17.15g (1.2g compound + 15.95g micronized received)
+- **Future-Proof Design**: Any location can become micronization hub with accurate tracking
+
+### Data Pagination System Resolution
 - **Critical Fix**: Resolved pagination limit preventing display of graphene experiments below #215
 - **Server Enhancement**: Increased record limit capacity from 100 to 500 in query helpers
 - **Frontend Updates**: Modified API calls to request all available records with higher limits
@@ -844,11 +862,13 @@ The codebase has been fully componentized to improve maintainability and elimina
 - **Database Schema**: Added `Micronization` model with relationships to Graphene and CompoundBatch models
 - **Backend API**: Full CRUD operations at `/api/micronization` with PDF upload support and CSV export
 - **Frontend Integration**: New Micronization tab with table view, add/edit modal, search functionality, and recovery rate calculation
-- **SKU Tracking**: Unique SKU identifiers for inventory management and downstream shipment integration
+- **SKU Tracking**: Auto-generated unique SKU identifiers (base_material_suffix) for inventory management and downstream shipment integration
+- **Location Tracking**: Added `micronizationLocation` field for accurate inventory accounting at processing locations
 - **File Management**: PDF upload/view/replace/remove functionality with 10MB file size limits
 - **Triple Shipment Support**: Updated shipment system to support graphene experiments, compound batches, AND micronized SKUs
-- **Data Fields**: Micronization number, date, SKU, starting/recovered amounts, grind pressure, PDF reports
+- **Data Fields**: Micronization number, date, location, SKU, starting/recovered amounts, grind pressure, Dx50 particle size, PDF reports
 - **Recovery Rate Calculation**: Real-time percentage calculation displayed in table view
+- **Inventory Integration**: Dashboard accurately reflects material transformations and location-based distribution
 
 ### Global Table Styling System (Latest)
 - **CSS Architecture**: Implemented global table cell classes for consistent styling across all tables

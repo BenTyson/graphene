@@ -125,7 +125,7 @@ router.get('/production-metrics', asyncHandler(async (req, res) => {
   }
 }));
 
-// Get inventory by location
+// Get inventory by location with micronization accounting
 router.get('/inventory-by-location', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
@@ -145,9 +145,6 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       if (l.shipFromLocation) uniqueLocations.add(l.shipFromLocation);
     });
     
-    // Calculate inventory at each location
-    const locationInventory = {};
-    
     // Get total production for Curia Frankfurt (origin location)
     const totalProduction = await prisma.graphene.aggregate({
       _sum: {
@@ -155,51 +152,163 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       }
     });
     
+    // Get all micronization data grouped by location to track transformations
+    const micronizations = await prisma.micronization.findMany({
+      select: {
+        startingMaterialAmount: true,
+        recoveredAmount: true,
+        micronizationLocation: true,
+        grapheneSample: true,
+        compoundBatchNumber: true
+      }
+    });
+    
+    // Calculate micronization totals by location
+    const micronizationByLocation = {};
+    let totalMicronizationInput = 0;
+    let totalMicronizationRecovered = 0;
+    
+    micronizations.forEach(m => {
+      const input = m.startingMaterialAmount ? parseFloat(m.startingMaterialAmount) : 0;
+      const recovered = m.recoveredAmount ? parseFloat(m.recoveredAmount) : 0;
+      const location = m.micronizationLocation || 'Unknown';
+      
+      if (!micronizationByLocation[location]) {
+        micronizationByLocation[location] = { input: 0, recovered: 0 };
+      }
+      
+      micronizationByLocation[location].input += input;
+      micronizationByLocation[location].recovered += recovered;
+      
+      totalMicronizationInput += input;
+      totalMicronizationRecovered += recovered;
+    });
+    
+    const micronizationLoss = totalMicronizationInput - totalMicronizationRecovered;
+    
+    // Calculate true physical inventory at each location
+    const locationInventory = {};
+    
     for (const location of uniqueLocations) {
-      // Materials shipped TO this location
-      const shipmentsIn = await prisma.materialShipment.aggregate({
+      // Raw graphene shipments IN and OUT
+      const rawGrapheneIn = await prisma.materialShipment.aggregate({
         where: {
           shipToLocation: location,
-          status: 'received'
+          status: 'received',
+          grapheneSample: { not: null }
         },
-        _sum: {
-          amountShipped: true
-        }
+        _sum: { amountShipped: true }
       });
       
-      // Materials shipped FROM this location
-      const shipmentsOut = await prisma.materialShipment.aggregate({
+      const rawGrapheneOut = await prisma.materialShipment.aggregate({
         where: {
           shipFromLocation: location,
-          status: { in: ['shipped', 'in_transit', 'received'] }
+          status: { in: ['shipped', 'in_transit', 'received'] },
+          grapheneSample: { not: null }
         },
-        _sum: {
-          amountShipped: true
-        }
+        _sum: { amountShipped: true }
       });
       
-      const inAmount = shipmentsIn._sum.amountShipped || 0;
-      const outAmount = shipmentsOut._sum.amountShipped || 0;
+      // Compound batch shipments IN
+      const compoundBatchIn = await prisma.materialShipment.aggregate({
+        where: {
+          shipToLocation: location,
+          status: 'received',
+          compoundBatchNumber: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
       
-      // For Curia Frankfurt, add total production to the inventory calculation
-      let currentInventory = inAmount - outAmount;
+      // Compound batch shipments OUT  
+      const compoundBatchOut = await prisma.materialShipment.aggregate({
+        where: {
+          shipFromLocation: location,
+          status: { in: ['shipped', 'in_transit', 'received'] },
+          compoundBatchNumber: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
+      
+      // Micronized material shipments IN and OUT
+      const micronizedIn = await prisma.materialShipment.aggregate({
+        where: {
+          shipToLocation: location,
+          status: 'received',
+          micronizationSku: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
+      
+      const micronizedOut = await prisma.materialShipment.aggregate({
+        where: {
+          shipFromLocation: location,
+          status: { in: ['shipped', 'in_transit', 'received'] },
+          micronizationSku: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
+      
+      const rawGrapheneInAmount = rawGrapheneIn._sum.amountShipped || 0;
+      const rawGrapheneOutAmount = rawGrapheneOut._sum.amountShipped || 0;
+      const compoundBatchInAmount = compoundBatchIn._sum.amountShipped || 0;
+      const compoundBatchOutAmount = compoundBatchOut._sum.amountShipped || 0;
+      const micronizedInAmount = micronizedIn._sum.amountShipped || 0;
+      const micronizedOutAmount = micronizedOut._sum.amountShipped || 0;
+      
+      // Calculate PHYSICAL inventory currently at location
+      let rawGraphenePhysical = rawGrapheneInAmount - rawGrapheneOutAmount;
+      let compoundBatchPhysical = compoundBatchInAmount - compoundBatchOutAmount;
+      let micronizedPhysical = micronizedInAmount - micronizedOutAmount;
+      
+      // For Curia Frankfurt (production origin), add total production
       if (location === 'Curia Frankfurt') {
-        currentInventory = (totalProduction._sum.output || 0) + inAmount - outAmount;
+        rawGraphenePhysical = (totalProduction._sum.output || 0) - (compoundBatchOutAmount - compoundBatchInAmount);
+        // Frankfurt compound batch physical = 0 (all shipped out for processing)
+        compoundBatchPhysical = Math.max(0, compoundBatchInAmount - compoundBatchOutAmount);
       }
+      
+      // For locations with micronization processing
+      if (micronizationByLocation[location]) {
+        const locationMicronization = micronizationByLocation[location];
+        
+        // Compound batch physical = received - what was actually processed
+        compoundBatchPhysical = Math.max(0, compoundBatchInAmount - locationMicronization.input);
+        
+        // Micronized physical = local processing recovered + received - shipped out
+        micronizedPhysical = locationMicronization.recovered + micronizedInAmount - micronizedOutAmount;
+      }
+      
+      const totalPhysicalInventory = rawGraphenePhysical + compoundBatchPhysical + micronizedPhysical;
       
       locationInventory[location] = {
         location,
-        received: inAmount,
-        shipped: outAmount,
-        currentInventory,
+        rawGraphene: {
+          received: rawGrapheneInAmount,
+          shipped: rawGrapheneOutAmount,
+          current: rawGraphenePhysical
+        },
+        compoundBatch: {
+          received: compoundBatchInAmount,
+          shipped: compoundBatchOutAmount,
+          processed: micronizationByLocation[location]?.input || 0,
+          current: compoundBatchPhysical
+        },
+        micronized: {
+          received: micronizedInAmount,
+          shipped: micronizedOutAmount,
+          producedHere: micronizationByLocation[location]?.recovered || 0,
+          current: micronizedPhysical
+        },
+        totalCurrent: totalPhysicalInventory,
         isProductionOrigin: location === 'Curia Frankfurt'
       };
     }
     
-    // Materials in transit
-    const inTransit = await prisma.materialShipment.aggregate({
+    // Materials in transit by type
+    const rawGrapheneInTransit = await prisma.materialShipment.aggregate({
       where: {
-        status: 'in_transit'
+        status: 'in_transit',
+        grapheneSample: { not: null }
       },
       _sum: {
         amountShipped: true
@@ -207,8 +316,30 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       _count: true
     });
     
-    // Unshipped graphene (produced but not shipped)
-    const totalShipped = await prisma.materialShipment.aggregate({
+    const compoundBatchInTransit = await prisma.materialShipment.aggregate({
+      where: {
+        status: 'in_transit',
+        compoundBatchNumber: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      },
+      _count: true
+    });
+    
+    const micronizedInTransit = await prisma.materialShipment.aggregate({
+      where: {
+        status: 'in_transit',
+        micronizationSku: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      },
+      _count: true
+    });
+    
+    // Unshipped materials
+    const totalRawShipped = await prisma.materialShipment.aggregate({
       where: {
         grapheneSample: { not: null }
       },
@@ -217,16 +348,68 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       }
     });
     
-    const unshipped = (totalProduction._sum.output || 0) - (totalShipped._sum.amountShipped || 0);
+    const totalCompoundShipped = await prisma.materialShipment.aggregate({
+      where: {
+        compoundBatchNumber: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      }
+    });
+    
+    const totalMicronizedShipped = await prisma.materialShipment.aggregate({
+      where: {
+        micronizationSku: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      }
+    });
+    
+    // Calculate unshipped amounts accounting for materials sent for processing
+    const totalRawGrapheneShipped = (totalRawShipped._sum.amountShipped || 0) + (totalCompoundShipped._sum.amountShipped || 0);
+    const unshippedRaw = (totalProduction._sum.output || 0) - totalRawGrapheneShipped;
+    const unshippedMicronized = totalMicronizationRecovered - (totalMicronizedShipped._sum.amountShipped || 0);
     
     res.json({
       locations: Object.values(locationInventory),
       inTransit: {
-        amount: inTransit._sum.amountShipped || 0,
-        count: inTransit._count || 0
+        rawGraphene: {
+          amount: rawGrapheneInTransit._sum.amountShipped || 0,
+          count: rawGrapheneInTransit._count || 0
+        },
+        compoundBatch: {
+          amount: compoundBatchInTransit._sum.amountShipped || 0,
+          count: compoundBatchInTransit._count || 0
+        },
+        micronized: {
+          amount: micronizedInTransit._sum.amountShipped || 0,
+          count: micronizedInTransit._count || 0
+        },
+        total: {
+          amount: (rawGrapheneInTransit._sum.amountShipped || 0) + 
+                  (compoundBatchInTransit._sum.amountShipped || 0) + 
+                  (micronizedInTransit._sum.amountShipped || 0),
+          count: (rawGrapheneInTransit._count || 0) + 
+                 (compoundBatchInTransit._count || 0) + 
+                 (micronizedInTransit._count || 0)
+        }
       },
-      unshipped,
-      totalInventory: totalProduction._sum.output || 0
+      unshipped: {
+        rawGraphene: unshippedRaw,
+        micronized: unshippedMicronized,
+        total: unshippedRaw + unshippedMicronized
+      },
+      micronizationSummary: {
+        totalInput: totalMicronizationInput,
+        totalRecovered: totalMicronizationRecovered,
+        totalLoss: micronizationLoss,
+        recoveryRate: totalMicronizationInput > 0 ? (totalMicronizationRecovered / totalMicronizationInput * 100) : 0
+      },
+      totalInventory: {
+        original: totalProduction._sum.output || 0,
+        accounting: (totalProduction._sum.output || 0) - micronizationLoss
+      }
     });
   } catch (error) {
     console.error('Error fetching inventory by location:', error);

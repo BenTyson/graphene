@@ -394,6 +394,7 @@ model Micronization {
   recoveredAmount        Decimal?       @map("recovered_amount") @db.Decimal(10, 2)
   grindPressure          Int?           @map("grind_pressure")
   dx50                   String?        @map("dx50")
+  micronizationLocation  String?        @map("micronization_location")
   micronizationReportPath String?       @map("micronization_report_path")
   grapheneSample         String?        @map("graphene_sample")
   compoundBatchNumber    String?        @map("compound_batch_number")
@@ -407,9 +408,11 @@ model Micronization {
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
   @@index([sku])
+  @@index([micronizationLocation])
   @@index([grapheneSample, date])
   @@index([compoundBatchNumber, date])
   @@index([sku, date])
+  @@index([micronizationLocation, date])
   @@map("micronizations")
 }
 

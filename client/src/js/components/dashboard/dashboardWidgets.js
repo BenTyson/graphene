@@ -132,53 +132,121 @@ function createMonthlyTrendChart(monthlyData) {
 
 /**
  * Create inventory location widget
- * @param {object} data - Location inventory data
+ * @param {object} data - Location inventory data with micronization accounting
  * @returns {string} HTML for inventory widget
  */
 export function createInventoryWidget(data) {
-  const { locations = [], inTransit = {}, unshipped = 0 } = data;
+  const { 
+    locations = [], 
+    inTransit = {}, 
+    unshipped = {}, 
+    micronizationSummary = {},
+    totalInventory = {} 
+  } = data;
   
-  // Sort locations by current inventory
-  const sortedLocations = locations.sort((a, b) => b.currentInventory - a.currentInventory);
+  // Sort locations by total current inventory
+  const sortedLocations = locations.sort((a, b) => (b.totalCurrent || 0) - (a.totalCurrent || 0));
   
   return `
     <div class="bg-white border border-gray-200 rounded-lg p-6 col-span-1 md:col-span-2 dashboard-widget">
       <div class="mb-4">
         <h3 class="text-lg font-semibold text-gray-800">Inventory by Location</h3>
-        <p class="text-sm text-gray-500">Current graphene distribution</p>
+        <p class="text-sm text-gray-500">Raw graphene vs micronized distribution</p>
       </div>
       
       <div class="space-y-4">
         ${sortedLocations.slice(0, 5).map(loc => `
-          <div class="flex justify-between items-center">
-            <div>
+          <div class="border border-gray-100 rounded-lg p-3">
+            <div class="flex justify-between items-center mb-2">
               <div class="text-sm font-medium text-gray-900">
                 ${loc.location}
-                ${loc.isProductionOrigin ? '<span class="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Production Origin</span>' : ''}
+                ${loc.isProductionOrigin ? '<span class="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Origin</span>' : ''}
               </div>
-              <div class="text-xs text-gray-500">
-                ${loc.isProductionOrigin ? 'Produced + ' : ''}In: ${formatMetricValue(loc.received)}g | Out: ${formatMetricValue(loc.shipped)}g
+              <div class="text-lg font-mono font-bold text-gray-900">
+                ${formatMetricValue(loc.totalCurrent || 0)} g
               </div>
             </div>
-            <div class="text-lg font-mono font-bold text-gray-900">
-              ${formatMetricValue(loc.currentInventory)} g
+            
+            <!-- Material breakdown -->
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <div class="text-center">
+                <div class="text-gray-500">Raw</div>
+                <div class="font-mono font-semibold text-gray-800">${formatMetricValue(loc.rawGraphene?.current || 0)}</div>
+              </div>
+              <div class="text-center">
+                <div class="text-gray-500">Compound</div>
+                <div class="font-mono font-semibold text-gray-800">${formatMetricValue(loc.compoundBatch?.current || 0)}</div>
+                ${loc.compoundBatch?.processed > 0 ? `<div class="text-xs text-gray-400">${formatMetricValue(loc.compoundBatch.processed)} processed</div>` : ''}
+              </div>
+              <div class="text-center">
+                <div class="text-gray-500">Micronized</div>
+                <div class="font-mono font-semibold text-blue-600">${formatMetricValue(loc.micronized?.current || 0)}</div>
+                ${loc.micronized?.producedHere > 0 ? `<div class="text-xs text-gray-400">${formatMetricValue(loc.micronized.producedHere)} produced</div>` : ''}
+              </div>
             </div>
           </div>
         `).join('')}
         
         <div class="pt-4 border-t border-gray-200 space-y-3">
-          <div class="flex justify-between items-center">
-            <div class="text-sm text-gray-600">In Transit</div>
-            <div class="font-mono font-bold text-gray-900">
-              ${formatMetricValue(inTransit.amount || 0)} g
+          <!-- In Transit Summary -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">In Transit</div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-gray-600">Raw</span>
+                  <span class="font-mono">${formatMetricValue(inTransit.rawGraphene?.amount || 0)}</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-gray-600">Micronized</span>
+                  <span class="font-mono text-blue-600">${formatMetricValue(inTransit.micronized?.amount || 0)}</span>
+                </div>
+                <div class="flex justify-between text-xs font-semibold border-t pt-1">
+                  <span class="text-gray-700">Total</span>
+                  <span class="font-mono">${formatMetricValue(inTransit.total?.amount || 0)}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Unshipped</div>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-gray-600">Raw</span>
+                  <span class="font-mono">${formatMetricValue(unshipped.rawGraphene || 0)}</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-gray-600">Micronized</span>
+                  <span class="font-mono text-blue-600">${formatMetricValue(unshipped.micronized || 0)}</span>
+                </div>
+                <div class="flex justify-between text-xs font-semibold border-t pt-1">
+                  <span class="text-gray-700">Total</span>
+                  <span class="font-mono">${formatMetricValue(unshipped.total || 0)}</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="flex justify-between items-center">
-            <div class="text-sm text-gray-600">Unshipped</div>
-            <div class="font-mono font-bold text-gray-900">
-              ${formatMetricValue(unshipped)} g
+          
+          <!-- Micronization Summary -->
+          ${micronizationSummary.totalInput ? `
+            <div class="bg-gray-50 rounded p-3">
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Micronization Summary</div>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="text-center">
+                  <div class="text-gray-500">Input</div>
+                  <div class="font-mono font-semibold">${formatMetricValue(micronizationSummary.totalInput)}</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-gray-500">Recovered</div>
+                  <div class="font-mono font-semibold text-blue-600">${formatMetricValue(micronizationSummary.totalRecovered)}</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-gray-500">Recovery</div>
+                  <div class="font-mono font-semibold">${micronizationSummary.recoveryRate.toFixed(1)}%</div>
+                </div>
+              </div>
             </div>
-          </div>
+          ` : ''}
         </div>
       </div>
     </div>
