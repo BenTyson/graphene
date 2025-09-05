@@ -140,6 +140,7 @@ model CompoundBatch {
   ramanTests        RamanTest[]
   temTests          TEMTest[]
   micronizations    Micronization[]
+  updateReports     CompoundBatchUpdateReport[]
 
   @@index([createdAt])
   @@index([createdDate])
@@ -302,6 +303,7 @@ model UpdateReport {
   createdAt       DateTime               @default(now()) @map("created_at")
   updatedAt       DateTime               @updatedAt @map("updated_at")
   grapheneReports GrapheneUpdateReport[]
+  compoundBatchReports CompoundBatchUpdateReport[]
 
   @@index([createdAt])
   @@index([weekOf])
@@ -359,6 +361,18 @@ model CompoundBatchSemReport {
 
   @@unique([compoundBatchId, semReportId])
   @@map("compound_batch_sem_reports")
+}
+
+model CompoundBatchUpdateReport {
+  id              String        @id @default(cuid())
+  compoundBatchId String        @map("compound_batch_id")
+  updateReportId  String        @map("update_report_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  compoundBatch   CompoundBatch @relation(fields: [compoundBatchId], references: [id], onDelete: Cascade)
+  updateReport    UpdateReport  @relation(fields: [updateReportId], references: [id], onDelete: Cascade)
+
+  @@unique([compoundBatchId, updateReportId])
+  @@map("compound_batch_update_reports")
 }
 
 model MaterialShipment {

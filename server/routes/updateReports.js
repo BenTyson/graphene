@@ -55,6 +55,17 @@ router.get('/', asyncHandler(async (req, res) => {
             }
           }
         }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true
+            }
+          }
+        }
       }
     }
   });
@@ -81,6 +92,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
             }
           }
         }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              id: true,
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true,
+              createdAt: true
+            }
+          }
+        }
       }
     }
   });
@@ -102,7 +126,7 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
     throw new Error('Update report file is required');
   }
   
-  const { description, weekOf, grapheneIds } = req.body;
+  const { description, weekOf, grapheneIds, compoundBatchIds } = req.body;
   
   // Parse grapheneIds if provided as JSON string
   let parsedGrapheneIds = [];
@@ -111,6 +135,16 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
       parsedGrapheneIds = JSON.parse(grapheneIds);
     } catch (e) {
       parsedGrapheneIds = Array.isArray(grapheneIds) ? grapheneIds : [grapheneIds];
+    }
+  }
+  
+  // Parse compoundBatchIds if provided as JSON string
+  let parsedCompoundBatchIds = [];
+  if (compoundBatchIds) {
+    try {
+      parsedCompoundBatchIds = JSON.parse(compoundBatchIds);
+    } catch (e) {
+      parsedCompoundBatchIds = Array.isArray(compoundBatchIds) ? compoundBatchIds : [compoundBatchIds];
     }
   }
   
@@ -138,6 +172,19 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
     });
   }
   
+  // Create associations with compound batches if provided
+  if (parsedCompoundBatchIds.length > 0) {
+    const compoundBatchReportData = parsedCompoundBatchIds.map(compoundBatchId => ({
+      compoundBatchId,
+      updateReportId: updateReport.id
+    }));
+    
+    await prisma.compoundBatchUpdateReport.createMany({
+      data: compoundBatchReportData,
+      skipDuplicates: true
+    });
+  }
+  
   // Fetch the complete report with associations
   const completeReport = await prisma.updateReport.findUnique({
     where: { id: updateReport.id },
@@ -148,6 +195,17 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
             select: {
               experimentNumber: true,
               species: true
+            }
+          }
+        }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true
             }
           }
         }
@@ -162,7 +220,7 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
 router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
-  const { description, weekOf, grapheneIds } = req.body;
+  const { description, weekOf, grapheneIds, compoundBatchIds } = req.body;
   
   // Check if update report exists
   const existingReport = await prisma.updateReport.findUnique({
@@ -213,6 +271,36 @@ router.put('/:id', asyncHandler(async (req, res) => {
     }
   }
   
+  // Handle compound batch associations if provided
+  if (compoundBatchIds !== undefined) {
+    let parsedCompoundBatchIds = [];
+    if (compoundBatchIds) {
+      try {
+        parsedCompoundBatchIds = JSON.parse(compoundBatchIds);
+      } catch (e) {
+        parsedCompoundBatchIds = Array.isArray(compoundBatchIds) ? compoundBatchIds : [compoundBatchIds];
+      }
+    }
+    
+    // Remove existing associations
+    await prisma.compoundBatchUpdateReport.deleteMany({
+      where: { updateReportId: id }
+    });
+    
+    // Create new associations
+    if (parsedCompoundBatchIds.length > 0) {
+      const compoundBatchReportData = parsedCompoundBatchIds.map(compoundBatchId => ({
+        compoundBatchId,
+        updateReportId: id
+      }));
+      
+      await prisma.compoundBatchUpdateReport.createMany({
+        data: compoundBatchReportData,
+        skipDuplicates: true
+      });
+    }
+  }
+  
   // Fetch the complete updated report
   const completeReport = await prisma.updateReport.findUnique({
     where: { id },
@@ -223,6 +311,17 @@ router.put('/:id', asyncHandler(async (req, res) => {
             select: {
               experimentNumber: true,
               species: true
+            }
+          }
+        }
+      },
+      compoundBatchReports: {
+        include: {
+          compoundBatch: {
+            select: {
+              batchNumber: true,
+              batchName: true,
+              totalOutput: true
             }
           }
         }

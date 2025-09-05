@@ -192,6 +192,7 @@ const DEFAULT_FORMS = {
     description: '',
     weekOf: '',
     grapheneIds: [],
+    compoundBatchIds: [],
     updateFile: null
   },
   semReport: {
@@ -399,6 +400,11 @@ window.grapheneApp = function() {
     compoundBatchSortColumn: 'batchNumber',
     compoundBatchSortOrder: 'asc',
     experimentSearchTerm: '',
+    
+    // Update Report filtering
+    updateReportSearchTerm: '',
+    filteredGrapheneForUpdate: [],
+    filteredCompoundBatchesForUpdate: [],
     
     // Dropdown options
     rawMaterials: ['BAFA neu Hemp Fibre VF', 'Canadian Rockies Hemp'],
@@ -1588,6 +1594,51 @@ window.grapheneApp = function() {
         this.updateReportForm.grapheneIds.splice(index, 1);
       } else {
         this.updateReportForm.grapheneIds.push(grapheneId);
+      }
+    },
+    
+    // New Update Report functions for compound batch support
+    toggleUpdateReportGraphene(grapheneId) {
+      const index = this.updateReportForm.grapheneIds.indexOf(grapheneId);
+      if (index > -1) {
+        this.updateReportForm.grapheneIds.splice(index, 1);
+      } else {
+        this.updateReportForm.grapheneIds.push(grapheneId);
+      }
+    },
+    
+    toggleUpdateReportCompoundBatch(batchId) {
+      const index = this.updateReportForm.compoundBatchIds.indexOf(batchId);
+      if (index > -1) {
+        this.updateReportForm.compoundBatchIds.splice(index, 1);
+      } else {
+        this.updateReportForm.compoundBatchIds.push(batchId);
+      }
+    },
+    
+    filterUpdateReportMaterials() {
+      const searchTerm = this.updateReportSearchTerm.toLowerCase();
+      
+      // Filter graphene experiments
+      if (!searchTerm) {
+        this.filteredGrapheneForUpdate = this.grapheneRecords;
+      } else {
+        this.filteredGrapheneForUpdate = this.grapheneRecords.filter(g => 
+          g.experimentNumber?.toLowerCase().includes(searchTerm) ||
+          g.species?.toLowerCase().includes(searchTerm) ||
+          (g.experimentDate && formatters.formatDate(g.experimentDate).toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      // Filter compound batches
+      if (!searchTerm) {
+        this.filteredCompoundBatchesForUpdate = this.compoundBatchRecords;
+      } else {
+        this.filteredCompoundBatchesForUpdate = this.compoundBatchRecords.filter(b => 
+          b.batchNumber?.toLowerCase().includes(searchTerm) ||
+          b.batchName?.toLowerCase().includes(searchTerm) ||
+          b.description?.toLowerCase().includes(searchTerm)
+        );
       }
     },
     
