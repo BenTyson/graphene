@@ -216,8 +216,8 @@ router.post('/', upload.single('updateFile'), asyncHandler(async (req, res) => {
   res.status(201).json(completeReport);
 }));
 
-// Update update report (metadata only, not file)
-router.put('/:id', asyncHandler(async (req, res) => {
+// Update update report (with optional file replacement)
+router.put('/:id', upload.single('updateFile'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   const { description, weekOf, grapheneIds, compoundBatchIds } = req.body;
@@ -232,13 +232,30 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new Error('Update report not found');
   }
   
-  // Update the report metadata
+  // Prepare update data
+  const updateData = {
+    description: description || null,
+    weekOf: weekOf ? new Date(weekOf) : null
+  };
+  
+  // Handle file replacement if new file is uploaded
+  if (req.file) {
+    // Delete the old file
+    const oldFilePath = path.join(process.cwd(), 'uploads', 'update-reports', existingReport.filename);
+    if (fs.existsSync(oldFilePath)) {
+      fs.unlinkSync(oldFilePath);
+    }
+    
+    // Update with new file info
+    updateData.filename = req.file.filename;
+    updateData.originalName = req.file.originalname;
+    updateData.filePath = `/uploads/update-reports/${req.file.filename}`;
+  }
+  
+  // Update the report
   const updateReport = await prisma.updateReport.update({
     where: { id },
-    data: {
-      description: description || null,
-      weekOf: weekOf ? new Date(weekOf) : null
-    }
+    data: updateData
   });
   
   // Handle graphene associations if provided

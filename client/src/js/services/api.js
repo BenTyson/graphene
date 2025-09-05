@@ -465,7 +465,7 @@ export const updateReportAPI = {
     // Add all data fields
     Object.keys(data).forEach(key => {
       if (data[key] !== null && data[key] !== undefined) {
-        if (key === 'grapheneIds' && Array.isArray(data[key])) {
+        if ((key === 'grapheneIds' || key === 'compoundBatchIds') && Array.isArray(data[key])) {
           formData.append(key, JSON.stringify(data[key]));
         } else {
           formData.append(key, data[key]);
@@ -484,16 +484,44 @@ export const updateReportAPI = {
     }).then(handleResponse);
   },
 
-  // Update update report metadata and associations
-  update: (id, data) => {
-    const payload = { ...data };
-    
-    // Convert grapheneIds array to JSON string if needed
-    if (payload.grapheneIds && Array.isArray(payload.grapheneIds)) {
-      payload.grapheneIds = JSON.stringify(payload.grapheneIds);
+  // Update update report metadata and associations (with optional file)
+  update: (id, data, file = null) => {
+    // If there's a file, use FormData; otherwise use JSON
+    if (file) {
+      const formData = new FormData();
+      
+      // Add all data fields
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null && data[key] !== undefined) {
+          if ((key === 'grapheneIds' || key === 'compoundBatchIds') && Array.isArray(data[key])) {
+            formData.append(key, JSON.stringify(data[key]));
+          } else {
+            formData.append(key, data[key]);
+          }
+        }
+      });
+      
+      // Add the file
+      formData.append('updateFile', file);
+      
+      return fetch(`${API_BASE}/update-reports/${id}`, {
+        method: 'PUT',
+        body: formData
+      }).then(handleResponse);
+    } else {
+      // No file, use JSON
+      const payload = { ...data };
+      
+      // Convert arrays to JSON strings if needed
+      if (payload.grapheneIds && Array.isArray(payload.grapheneIds)) {
+        payload.grapheneIds = JSON.stringify(payload.grapheneIds);
+      }
+      if (payload.compoundBatchIds && Array.isArray(payload.compoundBatchIds)) {
+        payload.compoundBatchIds = JSON.stringify(payload.compoundBatchIds);
+      }
+      
+      return jsonRequest(`${API_BASE}/update-reports/${id}`, 'PUT', payload);
     }
-    
-    return jsonRequest(`${API_BASE}/update-reports/${id}`, 'PUT', payload);
   },
 
   // Delete update report

@@ -289,6 +289,7 @@ window.grapheneApp = function() {
     expandedCompoundBatches: {},
     compoundBatchRelatedData: {},
     loadingCompoundBatchRelated: {},
+    expandedUpdateReportDetails: null,
     
     // Search states
     biocharSearch: '',
@@ -484,6 +485,38 @@ window.grapheneApp = function() {
     // Alias for scientific notation formatting (used in HTML)
     formatScientific(value) {
       return formatters.formatScientificNotation(value);
+    },
+    
+    // Computed property for filtered SEM reports
+    get filteredSemReports() {
+      if (!this.semReportSearch || this.semReportSearch.trim() === '') {
+        return this.semReports;
+      }
+      
+      const searchTerm = this.semReportSearch.toLowerCase();
+      return this.semReports.filter(report => {
+        // Search in filename
+        if (report.originalName && report.originalName.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+        
+        // Search in associated experiment numbers
+        if (report.grapheneReports && report.grapheneReports.length > 0) {
+          for (const gr of report.grapheneReports) {
+            if (gr.graphene.experimentNumber && 
+                gr.graphene.experimentNumber.toLowerCase().includes(searchTerm)) {
+              return true;
+            }
+            // Search in species
+            if (gr.graphene.species && 
+                gr.graphene.species.toLowerCase().includes(searchTerm)) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      });
     },
     
     // Initialization
@@ -1526,7 +1559,8 @@ window.grapheneApp = function() {
         delete data.updateFile;
         
         if (this.editingUpdateReport) {
-          await API.updateReport.update(this.editingUpdateReport.id, data);
+          // For edit, file is optional
+          await API.updateReport.update(this.editingUpdateReport.id, data, file);
         } else {
           if (!file) {
             alert('Please select an update report file');

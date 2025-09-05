@@ -843,6 +843,34 @@ The codebase has been fully componentized to improve maintainability and elimina
 - **Complete Reusability**: Dropdown components work seamlessly across graphene and compound batch tables
 - **Functionality**: 100% preserved with enhanced reliability and Alpine.js compatibility
 
+## Recent Updates (January 2025)
+
+### Curia Updates Table Enhancement (Latest)
+- **Column Reorganization**: Reordered columns to Week Of | File Name | Associated Experiments | Uploaded | Description | Actions
+- **Date Formatting Consistency**: Both "Week Of" and "Uploaded" columns now use identical `toLocaleDateString()` format
+- **Enhanced Associated Experiments Display**: 
+  - Added expandable "Details" button for reports with associations
+  - Expandable section shows full experiment details (number, species, date, output, biochar source)
+  - Support for both graphene experiments and compound batches
+  - Clean card-based layout with responsive grid design
+  - Smooth transition animations for expand/collapse
+- **Table Structure Fix**: Corrected tbody structure for proper expandable row functionality
+- **State Management**: Added `expandedUpdateReportDetails` state variable for tracking expanded rows
+
+### SEM Reports Search Functionality Fix (Latest)
+- **Search Implementation**: Added functional search bar for SEM reports table
+- **Computed Property**: Created `filteredSemReports` computed property for real-time filtering
+- **Search Scope**: Searches across PDF filenames, experiment numbers, and species names
+- **User Feedback**: Contextual empty state messages ("No SEM reports found" vs "No reports matching your search")
+- **Case-Insensitive**: Search is case-insensitive for better user experience
+
+### Update Report Association Sync Fix (Latest)
+- **Bidirectional Sync**: Fixed issue where update reports selected in graphene modal weren't appearing in Curia Updates table
+- **Root Cause**: `loadUpdateReports()` function existed but was never called during initialization
+- **Update Report Selection**: Graphene modal now properly loads and displays available update reports for association
+- **Backend Support**: Both CREATE and UPDATE routes properly handle `updateReportIds` array
+- **Compound Batch Support**: Update reports can now be associated with both graphene experiments and compound batches
+
 ## Recent Updates (September 2025)
 
 ### RAMAN Integral Typ B Implementation (Latest)
