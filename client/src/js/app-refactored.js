@@ -119,12 +119,16 @@ const DEFAULT_FORMS = {
     materialType: 'graphene',
     grapheneSample: '',
     compoundBatchNumber: '',
+    name: '',
     description: '',
     conductivity1kN: '',
     conductivity8kN: '',
     conductivity12kN: '',
     conductivity20kN: '',
-    comments: ''
+    comments: '',
+    conductivityReportPath: '',
+    conductivityReportFile: null,
+    removeConductivityReport: false
   },
   raman: {
     testDate: '',
@@ -1274,30 +1278,42 @@ window.grapheneApp = function() {
       this.conductivityForm = {
         testDate: record.testDate ? record.testDate.split('T')[0] : '',
         dateUnknown: !record.testDate,
+        materialType: record.compoundBatchNumber ? 'compound' : 'graphene',
         grapheneSample: record.grapheneSample || '',
+        compoundBatchNumber: record.compoundBatchNumber || '',
+        name: record.name || '',
         description: record.description || '',
         conductivity1kN: record.conductivity1kN || '',
         conductivity8kN: record.conductivity8kN || '',
         conductivity12kN: record.conductivity12kN || '',
         conductivity20kN: record.conductivity20kN || '',
-        comments: record.comments || ''
+        comments: record.comments || '',
+        conductivityReportPath: record.conductivityReportPath || '',
+        conductivityReportFile: null,
+        removeConductivityReport: false
       };
       this.showAddConductivity = true;
     },
     
     async saveConductivity() {
       try {
+        // Extract file before processing
+        const file = this.conductivityForm.conductivityReportFile;
+        
         const data = { ...this.conductivityForm };
         
         if (data.dateUnknown) {
           data.testDate = null;
         }
         delete data.dateUnknown;
+        delete data.conductivityReportFile; // Remove file from data object
+        delete data.conductivityReportPath; // Don't send the path from frontend
+        delete data.replaceConductivityReport; // Remove UI-only field
         
         if (this.editingConductivity) {
-          await API.conductivity.update(this.editingConductivity.id, data);
+          await API.conductivity.update(this.editingConductivity.id, data, file);
         } else {
-          await API.conductivity.create(data);
+          await API.conductivity.create(data, file);
         }
         
         await this.loadConductivityRecords();

@@ -1,7 +1,23 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import path from 'path';
+import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
 
 const router = express.Router();
+
+// Configure file upload middleware
+const upload = createFileUploadMiddleware('conductivity-reports', {
+  allowedTypes: [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-excel', // .xls
+    'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm (Windows)
+    'application/vnd.ms-excel.sheet.macroenabled.12' // .xlsm (lowercase variant)
+  ],
+  allowedExtensions: ['.pdf', '.xlsx', '.xls', '.xlsm'],
+  maxSize: 10 * 1024 * 1024, // 10MB
+  validateContent: false // Disable content validation for Excel files
+});
 
 // Test endpoint
 router.get('/test', (req, res) => {
@@ -86,7 +102,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   res.json(processedRecord);
 }));
 
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', upload.single('conductivityReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
   const data = { ...req.body };
@@ -108,6 +124,31 @@ router.post('/', asyncHandler(async (req, res) => {
   } else {
     data.testDate = null;
   }
+  
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
+  
+  // Handle file upload
+  if (req.file) {
+    data.conductivityReportPath = path.join('conductivity-reports', req.file.filename);
+  }
+  
+  // Remove UI-only fields from data
+  delete data.materialType;
+  delete data.dateUnknown;
+  delete data.conductivityReportFile;
+  delete data.removeConductivityReport;
+  delete data.replaceConductivityReport;
+  
+  // Remove id and timestamps if present
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
   
   const conductivityRecord = await prisma.conductivityTest.create({
     data
@@ -125,9 +166,19 @@ router.post('/', asyncHandler(async (req, res) => {
   res.status(201).json(processedRecord);
 }));
 
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', upload.single('conductivityReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
+  
+  // Get existing record for file operations
+  const existingRecord = await prisma.conductivityTest.findUnique({
+    where: { id }
+  });
+  
+  if (!existingRecord) {
+    res.status(404);
+    throw new Error('Conductivity record not found');
+  }
   
   const data = { ...req.body };
   const numericFields = ['conductivity1kN', 'conductivity8kN', 'conductivity12kN', 'conductivity20kN'];
@@ -148,6 +199,38 @@ router.put('/:id', asyncHandler(async (req, res) => {
   } else {
     data.testDate = null;
   }
+  
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
+  
+  // Handle file operations
+  if (data.removeConductivityReport === 'true') {
+    // Remove existing file
+    if (existingRecord.conductivityReportPath) {
+      deleteFile(path.join(process.cwd(), 'uploads', existingRecord.conductivityReportPath));
+    }
+    data.conductivityReportPath = null;
+  } else if (req.file) {
+    // Replace existing file
+    data.conductivityReportPath = replaceFile(existingRecord.conductivityReportPath, req.file);
+  }
+  
+  // Remove UI-only fields from data
+  delete data.materialType;
+  delete data.dateUnknown;
+  delete data.conductivityReportFile;
+  delete data.removeConductivityReport;
+  delete data.replaceConductivityReport;
+  
+  // Remove id and timestamps if present
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
   
   const conductivityRecord = await prisma.conductivityTest.update({
     where: { id },
@@ -170,6 +253,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
   
+  // Get existing record to delete associated file
+  const existingRecord = await prisma.conductivityTest.findUnique({
+    where: { id }
+  });
+  
+  if (existingRecord && existingRecord.conductivityReportPath) {
+    deleteFile(path.join(process.cwd(), 'uploads', existingRecord.conductivityReportPath));
+  }
+  
   await prisma.conductivityTest.delete({
     where: { id }
   });
@@ -186,10 +278,10 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
   
   const headers = [
-    'Test Date', 'Graphene Sample', 'Description',
+    'Test Date', 'Graphene Sample', 'Name', 'Description',
     'Conductivity 1kN (S/cm²)', 'Conductivity 8kN (S/cm²)', 
     'Conductivity 12kN (S/cm²)', 'Conductivity 20kN (S/cm²)', 
-    'Comments', 'Created At'
+    'Report', 'Comments', 'Created At'
   ];
   
   let csv = headers.join(',') + '\n';
@@ -198,11 +290,13 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     const row = [
       c.testDate ? c.testDate.toISOString().split('T')[0] : '',
       c.grapheneSample || '',
+      `"${(c.name || '').replace(/"/g, '""')}"`,
       `"${(c.description || '').replace(/"/g, '""')}"`,
       c.conductivity1kN || '',
       c.conductivity8kN || '',
       c.conductivity12kN || '',
       c.conductivity20kN || '',
+      c.conductivityReportPath ? 'Yes' : 'No',
       `"${(c.comments || '').replace(/"/g, '""')}"`,
       c.createdAt.toISOString()
     ];

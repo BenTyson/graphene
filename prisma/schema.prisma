@@ -186,20 +186,22 @@ model BET {
 }
 
 model ConductivityTest {
-  id                  String         @id @default(cuid())
-  testDate            DateTime?      @map("test_date")
-  grapheneSample      String?        @map("graphene_sample")
-  description         String?
-  conductivity1kN     Decimal?       @map("conductivity_1kn") @db.Decimal(12, 6)
-  conductivity8kN     Decimal?       @map("conductivity_8kn") @db.Decimal(12, 6)
-  conductivity12kN    Decimal?       @map("conductivity_12kn") @db.Decimal(12, 6)
-  conductivity20kN    Decimal?       @map("conductivity_20kn") @db.Decimal(12, 6)
-  comments            String?
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-  compoundBatchNumber String?        @map("compound_batch_number")
-  compoundBatchRef    CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef         Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
+  id                     String         @id @default(cuid())
+  testDate               DateTime?      @map("test_date")
+  grapheneSample         String?        @map("graphene_sample")
+  name                   String?
+  description            String?
+  conductivity1kN        Decimal?       @map("conductivity_1kn") @db.Decimal(12, 6)
+  conductivity8kN        Decimal?       @map("conductivity_8kn") @db.Decimal(12, 6)
+  conductivity12kN       Decimal?       @map("conductivity_12kn") @db.Decimal(12, 6)
+  conductivity20kN       Decimal?       @map("conductivity_20kn") @db.Decimal(12, 6)
+  comments               String?
+  conductivityReportPath String?        @map("conductivity_report_path")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+  compoundBatchNumber    String?        @map("compound_batch_number")
+  compoundBatchRef       CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef            Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
 
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
@@ -228,6 +230,14 @@ model RamanTest {
   integralTypADG2        Decimal?       @map("integral_typ_a_dg_2") @db.Decimal(10, 4)
   integralTypAG1         Decimal?       @map("integral_typ_a_g_1") @db.Decimal(10, 3)
   integralTypAG2         Decimal?       @map("integral_typ_a_g_2") @db.Decimal(10, 3)
+  integralTypB2D1        Decimal?       @map("integral_typ_b_2d_1") @db.Decimal(10, 3)
+  integralTypB2D2        Decimal?       @map("integral_typ_b_2d_2") @db.Decimal(10, 3)
+  integralTypBD1         Decimal?       @map("integral_typ_b_d_1") @db.Decimal(10, 3)
+  integralTypBD2         Decimal?       @map("integral_typ_b_d_2") @db.Decimal(10, 3)
+  integralTypBDG1        Decimal?       @map("integral_typ_b_dg_1") @db.Decimal(10, 4)
+  integralTypBDG2        Decimal?       @map("integral_typ_b_dg_2") @db.Decimal(10, 4)
+  integralTypBG1         Decimal?       @map("integral_typ_b_g_1") @db.Decimal(10, 3)
+  integralTypBG2         Decimal?       @map("integral_typ_b_g_2") @db.Decimal(10, 3)
   integrationRange2DHigh Decimal?       @map("integration_range_2d_high") @db.Decimal(10, 2)
   integrationRange2DLow  Decimal?       @map("integration_range_2d_low") @db.Decimal(10, 2)
   integrationRangeDHigh  Decimal?       @map("integration_range_d_high") @db.Decimal(10, 2)

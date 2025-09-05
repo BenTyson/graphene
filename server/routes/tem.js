@@ -97,11 +97,12 @@ router.post('/', upload.single('temReport'), asyncHandler(async (req, res) => {
   
   const data = { ...req.body };
   
-  // Remove file field from data (handled separately)
+  // Remove UI-only fields from data (handled separately)
   delete data.temReportFile;
   delete data.removeTEMReport;
   delete data.replaceTEMReport;
   delete data.dateUnknown;
+  delete data.materialType;
   
   // Convert empty strings to null
   Object.keys(data).forEach(key => {
@@ -179,6 +180,7 @@ router.put('/:id', upload.single('temReport'), asyncHandler(async (req, res) => 
   delete data.removeTEMReport;
   delete data.replaceTEMReport;
   delete data.dateUnknown;
+  delete data.materialType;
   
   // Convert empty strings to null
   Object.keys(data).forEach(key => {

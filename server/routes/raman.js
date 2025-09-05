@@ -58,9 +58,9 @@ router.get('/', asyncHandler(async (req, res) => {
   
   let orderBy;
   if (sortBy === 'chronological') {
-    // Sort by date first, then by creation time
+    // Sort by date first (nulls last), then by creation time
     orderBy = [
-      { testDate: order },
+      { testDate: { sort: order, nulls: 'last' } },
       { createdAt: order }
     ];
   } else {
@@ -122,6 +122,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
     'integrationRangeDLow', 'integrationRangeDHigh', 'integrationRangeDGLow', 'integrationRangeDGHigh',
     'integralTypA2D1', 'integralTypA2D2', 'integralTypAG1', 'integralTypAG2',
     'integralTypAD1', 'integralTypAD2', 'integralTypADG1', 'integralTypADG2',
+    'integralTypB2D1', 'integralTypB2D2', 'integralTypBG1', 'integralTypBG2',
+    'integralTypBD1', 'integralTypBD2', 'integralTypBDG1', 'integralTypBDG2',
     'peakHighTypJ2D1', 'peakHighTypJ2D2', 'peakHighTypJG1', 'peakHighTypJG2',
     'peakHighTypJD1', 'peakHighTypJD2', 'peakHighTypJDG1', 'peakHighTypJDG2'
   ];
@@ -148,6 +150,8 @@ router.post('/', upload.single('ramanReport'), asyncHandler(async (req, res) => 
     'integrationRangeDLow', 'integrationRangeDHigh', 'integrationRangeDGLow', 'integrationRangeDGHigh',
     'integralTypA2D1', 'integralTypA2D2', 'integralTypAG1', 'integralTypAG2',
     'integralTypAD1', 'integralTypAD2', 'integralTypADG1', 'integralTypADG2',
+    'integralTypB2D1', 'integralTypB2D2', 'integralTypBG1', 'integralTypBG2',
+    'integralTypBD1', 'integralTypBD2', 'integralTypBDG1', 'integralTypBDG2',
     'peakHighTypJ2D1', 'peakHighTypJ2D2', 'peakHighTypJG1', 'peakHighTypJG2',
     'peakHighTypJD1', 'peakHighTypJD2', 'peakHighTypJDG1', 'peakHighTypJDG2'
   ];
@@ -181,6 +185,15 @@ router.post('/', upload.single('ramanReport'), asyncHandler(async (req, res) => 
   delete data.replaceRamanReport;
   delete data.grapheneRef;
   delete data.dateUnknown;
+  delete data.materialType; // UI-only field for sample type selection
+  
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
   
   // Remove id and timestamps if present
   delete data.id;
@@ -201,6 +214,8 @@ router.post('/', upload.single('ramanReport'), asyncHandler(async (req, res) => 
     'integrationRangeDLow', 'integrationRangeDHigh', 'integrationRangeDGLow', 'integrationRangeDGHigh',
     'integralTypA2D1', 'integralTypA2D2', 'integralTypAG1', 'integralTypAG2',
     'integralTypAD1', 'integralTypAD2', 'integralTypADG1', 'integralTypADG2',
+    'integralTypB2D1', 'integralTypB2D2', 'integralTypBG1', 'integralTypBG2',
+    'integralTypBD1', 'integralTypBD2', 'integralTypBDG1', 'integralTypBDG2',
     'peakHighTypJ2D1', 'peakHighTypJ2D2', 'peakHighTypJG1', 'peakHighTypJG2',
     'peakHighTypJD1', 'peakHighTypJD2', 'peakHighTypJDG1', 'peakHighTypJDG2'
   ];
@@ -224,6 +239,8 @@ router.put('/:id', upload.single('ramanReport'), asyncHandler(async (req, res) =
     'integrationRangeDLow', 'integrationRangeDHigh', 'integrationRangeDGLow', 'integrationRangeDGHigh',
     'integralTypA2D1', 'integralTypA2D2', 'integralTypAG1', 'integralTypAG2',
     'integralTypAD1', 'integralTypAD2', 'integralTypADG1', 'integralTypADG2',
+    'integralTypB2D1', 'integralTypB2D2', 'integralTypBG1', 'integralTypBG2',
+    'integralTypBD1', 'integralTypBD2', 'integralTypBDG1', 'integralTypBDG2',
     'peakHighTypJ2D1', 'peakHighTypJ2D2', 'peakHighTypJG1', 'peakHighTypJG2',
     'peakHighTypJD1', 'peakHighTypJD2', 'peakHighTypJDG1', 'peakHighTypJDG2'
   ];
@@ -283,6 +300,15 @@ router.put('/:id', upload.single('ramanReport'), asyncHandler(async (req, res) =
   delete data.replaceRamanReport;
   delete data.grapheneRef;
   delete data.dateUnknown;
+  delete data.materialType; // UI-only field for sample type selection
+  
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
   
   // Remove id and timestamps if present
   delete data.id;
@@ -301,6 +327,8 @@ router.put('/:id', upload.single('ramanReport'), asyncHandler(async (req, res) =
     'integrationRangeDLow', 'integrationRangeDHigh', 'integrationRangeDGLow', 'integrationRangeDGHigh',
     'integralTypA2D1', 'integralTypA2D2', 'integralTypAG1', 'integralTypAG2',
     'integralTypAD1', 'integralTypAD2', 'integralTypADG1', 'integralTypADG2',
+    'integralTypB2D1', 'integralTypB2D2', 'integralTypBG1', 'integralTypBG2',
+    'integralTypBD1', 'integralTypBD2', 'integralTypBDG1', 'integralTypBDG2',
     'peakHighTypJ2D1', 'peakHighTypJ2D2', 'peakHighTypJG1', 'peakHighTypJG2',
     'peakHighTypJD1', 'peakHighTypJD2', 'peakHighTypJDG1', 'peakHighTypJDG2'
   ];

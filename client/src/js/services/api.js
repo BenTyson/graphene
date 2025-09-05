@@ -250,14 +250,48 @@ export const conductivityAPI = {
     return fetch(`${API_BASE}/conductivity/${id}`).then(handleResponse);
   },
 
-  // Create new conductivity record
-  create: (data) => {
-    return jsonRequest(`${API_BASE}/conductivity`, 'POST', data);
+  // Create new conductivity record (with file upload support)
+  create: async (data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('conductivityReport', file);
+    }
+    
+    return fetch(`${API_BASE}/conductivity`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
   },
 
-  // Update conductivity record
-  update: (id, data) => {
-    return jsonRequest(`${API_BASE}/conductivity/${id}`, 'PUT', data);
+  // Update conductivity record (with file upload support)
+  update: async (id, data, file = null) => {
+    const formData = new FormData();
+    
+    // Add all other fields
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    
+    // Add file if provided
+    if (file) {
+      formData.append('conductivityReport', file);
+    }
+    
+    return fetch(`${API_BASE}/conductivity/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
   },
 
   // Delete conductivity record

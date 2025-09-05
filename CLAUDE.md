@@ -211,19 +211,26 @@ npm run backup:cleanup
 
 #### Conductivity Tests
 - **Purpose**: Track electrical conductivity measurements at different pressures
-- **Key Fields**: `conductivity1kN`, `conductivity8kN`, `conductivity12kN`, `conductivity20kN`
+- **Key Fields**: `name`, `conductivity1kN`, `conductivity8kN`, `conductivity12kN`, `conductivity20kN`, `conductivityReportPath`
+- **Name Field**: Optional descriptive name for test identification
+- **File Support**: Multiple file types (.pdf, .xlsx, .xls, .xlsm) with 10MB file size limit
+- **PDF Reports**: Stored in `/uploads/conductivity-reports/` with view/download functionality
+- **Excel Support**: .xlsx, .xls, and .xlsm files supported with downloadable links (not embedded viewing)
+- **Testing Labs**: Same dropdown options as other test types
 - **Relationship**: Links to Graphene via `grapheneSample` field OR CompoundBatch via `compoundBatchNumber` field
 - **Dual Reference**: Can test either individual experiments or compound batches
 
 #### RAMAN Tests
 - **Purpose**: Track RAMAN spectroscopy analysis with absorption band measurements
-- **Matrix Structure**: 3×4 data matrix for absorption band analysis
-  - **Rows**: Integration Range, Integral Typ A, Peak High Typ J
+- **Matrix Structure**: 4×4 data matrix for absorption band analysis
+  - **Rows**: Integration Range, Integral Typ A, Integral Typ B, Peak High Typ J
   - **Columns**: 2D Band, G Band, D Band, D/G Ratio
-- **Data Storage**: 24 separate numeric fields for database analysis
+- **Data Storage**: 32 separate numeric fields for database analysis
   - Integration Range: Low/high pairs (e.g., `integrationRange2DLow`, `integrationRange2DHigh`)
   - Integral Typ A: Two values per band (e.g., `integralTypA2D1`, `integralTypA2D2`)
+  - Integral Typ B: Two values per band (e.g., `integralTypB2D1`, `integralTypB2D2`)
   - Peak High Typ J: Two values per band (e.g., `peakHighTypJ2D1`, `peakHighTypJ2D2`)
+- **Baseline Methods**: Typ A (standard baseline), Typ B (alternative baseline), Typ J (peak height)
 - **Display Format**: Combined values shown as "2791-2557" for ranges, "2581,228" for pairs
 - **Testing Labs**: Fraunhofer-Institut, Clariant
 - **PDF Reports**: Stored in `/uploads/raman-reports/`
@@ -544,6 +551,17 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 **Display Integration**: Both types appear in graphene expansions with original filenames
 **Table Refresh**: `loadSemReports()` called after graphene save operations
 
+### Prisma Client Not Recognizing Schema Changes
+**Problem**: After schema changes, getting "Unknown argument" errors even though field exists in schema
+**Solution**: Regenerate Prisma client and restart server
+```bash
+# After any schema change:
+npx prisma generate  # Regenerate Prisma client
+# Then restart the dev server to pick up the new client
+npm run dev
+```
+**Note**: The running server process caches the old Prisma client, so restart is required
+
 ## API Endpoints
 
 ### Biochar
@@ -573,8 +591,8 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 
 ### Conductivity
 - `GET /api/conductivity` - List all with filters (default sort: desc)
-- `POST /api/conductivity` - Create new record
-- `PUT /api/conductivity/:id` - Update record
+- `POST /api/conductivity` - Create new record (supports PDF/.xlsx/.xls/.xlsm upload, 10MB max)
+- `PUT /api/conductivity/:id` - Update record (supports PDF/.xlsx/.xls/.xlsm upload, 10MB max)
 - `DELETE /api/conductivity/:id` - Delete record
 - `GET /api/conductivity/export/csv` - Export to CSV
 
@@ -827,7 +845,48 @@ The codebase has been fully componentized to improve maintainability and elimina
 
 ## Recent Updates (September 2025)
 
-### Production Dashboard Implementation (Latest)
+### RAMAN Integral Typ B Implementation (Latest)
+- **Complete Matrix Expansion**: Added Integral Typ B section to RAMAN spectroscopy tests for alternative baseline correction measurements
+- **Database Schema**: Added 8 new Typ B fields (integralTypB2D1/2, integralTypBG1/2, integralTypBD1/2, integralTypBDG1/2) with proper decimal precision
+- **Frontend Form**: Added complete Typ B row in RAMAN form matrix with 8 input fields matching Typ A structure
+- **Table Display**: Added 4 Typ B columns to main RAMAN table (2D Band, G Band, D Band, D/G Ratio)
+- **Data Matrix**: Expanded from 3×4 to 4×4 matrix structure with 32 total numeric fields
+- **Baseline Methods**: Now supports Typ A (standard baseline), Typ B (alternative baseline), and Typ J (peak height)
+- **Zero Value Fix**: Resolved JavaScript falsy evaluation preventing zero values from displaying in table
+- **Documentation**: Updated to reflect complete RAMAN spectroscopy analysis capabilities
+
+### Test Results Sorting Enhancement (Latest)
+- **RAMAN Null Date Handling**: Modified sorting logic to always display records with unknown dates at bottom
+- **Prisma Query Update**: Implemented `{ sort: order, nulls: 'last' }` in RAMAN route for proper null handling
+- **Consistent Behavior**: Records with valid dates sort normally while null dates always appear last
+- **User Experience**: Improved data organization with clear separation between dated and undated records
+
+### UI Field Error Fixes (Latest)
+- **TEM Save Error Resolution**: Fixed "Unknown argument materialType" error by removing UI-only field from POST/PUT routes
+- **Conductivity Field Cleanup**: Removed materialType field from conductivity routes to prevent validation errors  
+- **RAMAN Field Filtering**: Added proper UI field removal for materialType to prevent Prisma errors
+- **Common Pattern**: Established consistent UI field filtering across all test result routes
+- **Error Prevention**: All test forms now properly separate UI fields from database fields
+
+### UI Icon System Implementation
+- **Complete Icon Replacement**: Replaced all text-based action buttons with clean SVG icons across all tables
+- **Tables Updated**: Conductivity, BET, RAMAN, TEM, Graphene, Biochar, Compound Batches, SEM Reports, and Curia Updates
+- **Consistent Design**: All tables now use uniform icon system matching micronization and shipments tables
+- **Icon Types**: Edit (pencil), Delete (trash), Copy (duplicate squares), View/Download (document)
+- **Enhanced UX**: Tooltips via title attributes, consistent hover colors, professional laboratory appearance
+- **Maintainability**: Single icon system across entire application for easy future updates
+
+### Conductivity Test System Enhancements (Latest)
+- **Name Field Addition**: Added optional `name` field to conductivity records for better test identification
+- **Multi-Format File Support**: Extended file upload to support .pdf, .xlsx, .xls, and .xlsm files (10MB max)
+- **Smart File Handling**: PDFs viewable in modal, Excel files downloadable with direct links
+- **Test Data Column**: Added dedicated "Test Data" column in conductivity table for file download access
+- **Database Schema**: Added `name` and `conductivityReportPath` fields to ConductivityTest model
+- **Backend API**: Enhanced POST/PUT endpoints with file upload middleware and proper MIME type validation
+- **File Storage**: Reports stored in `/uploads/conductivity-reports/` with automatic cleanup on record deletion
+- **Error Resolution**: Fixed UI-only field filtering to prevent database validation errors
+
+### Production Dashboard Implementation
 - **Complete Dashboard System**: Added comprehensive production overview with real-time metrics and best test results tracking
 - **Backend API**: New `/api/dashboard` endpoints providing production metrics, inventory distribution, and performance data
 - **Frontend Widgets**: Modular dashboard components with responsive design and loading states
