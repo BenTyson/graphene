@@ -23,6 +23,7 @@ import { createProductionWidget, createInventoryWidget, createTestResultsWidget,
 import { getDashboardTabHtml } from './components/tabs/DashboardTab.js';
 import { getShipmentsTabHtml } from './components/tabs/ShipmentsTab.js';
 import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
+import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -3273,6 +3274,10 @@ window.grapheneApp = function() {
     
     getMicronizationTabHtml() {
       return getMicronizationTabHtml();
+    },
+    
+    getCompoundBatchesTabHtml() {
+      return getCompoundBatchesTabHtml();
     },
     
     // Refresh dashboard data
