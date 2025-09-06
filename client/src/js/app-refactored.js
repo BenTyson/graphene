@@ -24,6 +24,7 @@ import { getDashboardTabHtml } from './components/tabs/DashboardTab.js';
 import { getShipmentsTabHtml } from './components/tabs/ShipmentsTab.js';
 import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
+import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -3278,6 +3279,10 @@ window.grapheneApp = function() {
     
     getCompoundBatchesTabHtml() {
       return getCompoundBatchesTabHtml();
+    },
+    
+    getBiocharTabHtml() {
+      return getBiocharTabHtml();
     },
     
     // Refresh dashboard data
