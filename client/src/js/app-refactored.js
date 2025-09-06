@@ -20,6 +20,7 @@ import shipmentsHelper from './components/dropdownSections/shipmentsHelper.js';
 import { getFilterPanelHtml } from './components/tables/filterHelper.js';
 import { filterMixin } from './components/tables/filterStateManager.js';
 import { createProductionWidget, createInventoryWidget, createTestResultsWidget, createActivityWidget, createLoadingSkeleton, createErrorWidget } from './components/dashboard/dashboardWidgets.js';
+import { getDashboardTabHtml } from './components/tabs/DashboardTab.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -3257,6 +3258,11 @@ window.grapheneApp = function() {
         return createErrorWidget('Failed to load recent activity');
       }
       return createActivityWidget(this.dashboardData.activity);
+    },
+    
+    // Tab component generators
+    getDashboardTabHtml() {
+      return getDashboardTabHtml();
     },
     
     // Refresh dashboard data
