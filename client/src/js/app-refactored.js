@@ -22,6 +22,7 @@ import { filterMixin } from './components/tables/filterStateManager.js';
 import { createProductionWidget, createInventoryWidget, createTestResultsWidget, createActivityWidget, createLoadingSkeleton, createErrorWidget } from './components/dashboard/dashboardWidgets.js';
 import { getDashboardTabHtml } from './components/tabs/DashboardTab.js';
 import { getShipmentsTabHtml } from './components/tabs/ShipmentsTab.js';
+import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -3268,6 +3269,10 @@ window.grapheneApp = function() {
     
     getShipmentsTabHtml() {
       return getShipmentsTabHtml();
+    },
+    
+    getMicronizationTabHtml() {
+      return getMicronizationTabHtml();
     },
     
     // Refresh dashboard data
