@@ -445,19 +445,60 @@ router.get('/best-test-results', asyncHandler(async (req, res) => {
       console.error('Conductivity query error:', condError);
     }
     
+    let bestRAMAN = null;
+    try {
+      // Best RAMAN is lowest D/G ratio (better quality)
+      bestRAMAN = await prisma.RamanTest.findFirst({
+        where: {
+          integralTypADG1: { not: null }
+        },
+        orderBy: {
+          integralTypADG1: 'asc'  // Lowest D/G ratio is best
+        }
+      });
+    } catch (ramanError) {
+      console.error('RAMAN query error:', ramanError);
+    }
+    
+    let latestTEM = null;
+    let temCount = 0;
+    try {
+      temCount = await prisma.TEMTest.count();
+      latestTEM = await prisma.TEMTest.findFirst({
+        orderBy: {
+          testDate: 'desc'
+        }
+      });
+    } catch (temError) {
+      console.error('TEM query error:', temError);
+    }
+    
     res.json({
       bet: bestBET ? {
         value: bestBET.multipointBetArea,
-        sample: bestBET.grapheneSample || bestBET.compoundBatchNumber,
+        experimentNumber: bestBET.grapheneSample || bestBET.compoundBatchNumber,
+        testingLab: bestBET.testingLab,
         date: bestBET.testDate
       } : null,
       conductivity: bestConductivity ? {
         value20kN: bestConductivity.conductivity20kN,
-        sample: bestConductivity.grapheneSample || bestConductivity.compoundBatchNumber,
+        experimentNumber: bestConductivity.grapheneSample || bestConductivity.compoundBatchNumber,
         date: bestConductivity.testDate
       } : null,
-      raman: null,
-      tem: { totalTests: 0, latest: null }
+      raman: bestRAMAN ? {
+        dgRatio: bestRAMAN.integralTypADG1,
+        experimentNumber: bestRAMAN.grapheneSample || bestRAMAN.compoundBatchNumber,
+        testingLab: bestRAMAN.testingLab,
+        date: bestRAMAN.testDate
+      } : null,
+      tem: {
+        totalTests: temCount,
+        latest: latestTEM ? {
+          experimentNumber: latestTEM.grapheneSample || latestTEM.compoundBatchNumber,
+          testDate: latestTEM.testDate,
+          testingLab: latestTEM.testingLab
+        } : null
+      }
     });
   } catch (error) {
     console.error('Error fetching best test results:', error);

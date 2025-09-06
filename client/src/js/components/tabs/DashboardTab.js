@@ -23,33 +23,25 @@ function getDashboardTabHtml() {
   return `
     <!-- Dashboard Tab -->
     <div x-show="activeTab === 'dashboard'" x-cloak>
-      <div class="mb-6 flex justify-between items-center">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900">Production Dashboard</h2>
-          <p class="text-sm text-gray-500 mt-1">Overview of graphene production, testing, and distribution</p>
-        </div>
-        <button @click="refreshDashboard()" 
-                class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 touch-target flex items-center space-x-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          <span>Refresh</span>
-        </button>
-      </div>
 
       <!-- Dashboard Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Production Metrics Widget -->
-        <div x-html="getProductionWidget()"></div>
+      <div class="space-y-8">
+        <!-- Production Metrics Widget - Full Width -->
+        <div class="grid grid-cols-1 gap-8">
+          <div x-html="getProductionWidget()"></div>
+        </div>
         
-        <!-- Inventory Location Widget -->
-        <div x-html="getInventoryWidget()"></div>
-        
-        <!-- Test Results Widget -->
-        <div x-html="getTestResultsWidget()"></div>
-        
-        <!-- Recent Activity Widget - Hidden for now but saved for later -->
-        <!-- <div x-html="getActivityWidget()"></div> -->
+        <!-- Secondary Widgets - Two Column Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- Inventory Location Widget -->
+          <div x-html="getInventoryWidget()"></div>
+          
+          <!-- Test Results Widget -->
+          <div x-html="getTestResultsWidget()"></div>
+          
+          <!-- Recent Activity Widget - Hidden for now but saved for later -->
+          <!-- <div x-html="getActivityWidget()"></div> -->
+        </div>
       </div>
 
       <!-- Error Display -->
