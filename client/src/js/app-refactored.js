@@ -26,6 +26,10 @@ import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
 import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 import { getGrapheneTabHtml } from './components/tabs/GrapheneTab.js';
+import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
+import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
+import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
+import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -323,6 +327,7 @@ window.grapheneApp = function() {
     showAddConductivity: false,
     showAddRaman: false,
     showAddTem: false,
+    showAddMicronization: false,
     showCombineModal: false,
     showCompoundBatchModal: false,
     showSemModal: false,
@@ -427,6 +432,7 @@ window.grapheneApp = function() {
     dryingAtmospheres: ['N2 stream'],
     dryingPressures: ['atm. Pressure'],
     ovens: ['A', 'B', 'C'],
+    micronizationLocations: ['Curia Albany', 'Curia Frankfurt'],
     species: ['1', '2', '1/2 Mix', 'Mostly 1', 'Mostly 2', 'Mostly 1/2 Mix', '1 + Fibres'],
     appearanceTags: ['Shiny', 'Somewhat Shiny', 'Barely Shiny', 'Dull', 'Black', 'Black/Grey', 'Grey', 'Voluminous', 'Very Voluminous', 'Brittle'],
     grapheneComments: [
@@ -3288,6 +3294,22 @@ window.grapheneApp = function() {
     
     getGrapheneTabHtml() {
       return getGrapheneTabHtml();
+    },
+    
+    getBiocharModalHtml() {
+      return getBiocharModalHtml();
+    },
+    
+    getCompoundBatchModalHtml() {
+      return getCompoundBatchModalHtml();
+    },
+    
+    getMicronizationModalHtml() {
+      return getMicronizationModalHtml();
+    },
+    
+    getRAMANModalHtml() {
+      return getRAMANModalHtml();
     },
     
     // Refresh dashboard data
