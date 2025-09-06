@@ -519,8 +519,111 @@ window.grapheneApp = function() {
       });
     },
     
+    // Testing Infrastructure
+    componentErrors: [],
+    stateValidationErrors: [],
+    
+    setupTestingInfrastructure() {
+      // Global error monitoring
+      window.addEventListener('error', (event) => {
+        const error = {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          timestamp: new Date().toISOString(),
+          type: 'javascript-error'
+        };
+        this.componentErrors.push(error);
+        console.error('Component Error Detected:', error);
+      });
+      
+      // Unhandled promise rejections
+      window.addEventListener('unhandledrejection', (event) => {
+        const error = {
+          message: event.reason?.message || 'Unhandled Promise Rejection',
+          reason: event.reason,
+          timestamp: new Date().toISOString(),
+          type: 'promise-rejection'
+        };
+        this.componentErrors.push(error);
+        console.error('Promise Rejection Detected:', error);
+      });
+      
+      console.log('🧪 Testing infrastructure initialized');
+    },
+    
+    validateApplicationState() {
+      const requiredStateProperties = [
+        'biocharRecords', 'grapheneRecords', 'betRecords', 'conductivityRecords',
+        'ramanRecords', 'temRecords', 'updateReports', 'semReports',
+        'compoundBatches', 'shipments', 'micronizations'
+      ];
+      
+      const errors = [];
+      requiredStateProperties.forEach(prop => {
+        if (!Array.isArray(this[prop])) {
+          errors.push(`State property '${prop}' is not an array or is undefined`);
+        }
+      });
+      
+      this.stateValidationErrors = errors;
+      if (errors.length > 0) {
+        console.error('State Validation Errors:', errors);
+      } else {
+        console.log('✅ Application state validation passed');
+      }
+      
+      return errors.length === 0;
+    },
+    
+    async performAPIHealthCheck() {
+      const endpoints = [
+        '/api/bet',
+        '/api/conductivity', 
+        '/api/raman',
+        '/api/tem',
+        '/api/update-reports',
+        '/api/sem-reports'
+      ];
+      
+      const results = {};
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint);
+          results[endpoint] = {
+            status: response.status,
+            ok: response.ok,
+            timestamp: new Date().toISOString()
+          };
+        } catch (error) {
+          results[endpoint] = {
+            status: 'error',
+            error: error.message,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }
+      
+      console.log('🏥 API Health Check Results:', results);
+      return results;
+    },
+    
+    getTestingReport() {
+      return {
+        componentErrors: this.componentErrors,
+        stateValidationErrors: this.stateValidationErrors,
+        timestamp: new Date().toISOString(),
+        errorCount: this.componentErrors.length,
+        stateValid: this.stateValidationErrors.length === 0
+      };
+    },
+    
     // Initialization
     async init() {
+      // Setup testing infrastructure first
+      this.setupTestingInfrastructure();
+      
       // Load dashboard data first if dashboard is active
       if (this.activeTab === 'dashboard') {
         await this.loadDashboardData();
@@ -543,6 +646,12 @@ window.grapheneApp = function() {
         this.loadMicronizations()
       ]);
       this.loadDropdownOptions();
+      
+      // Validate state after initialization
+      setTimeout(() => {
+        this.validateApplicationState();
+        this.performAPIHealthCheck();
+      }, 1000);
     },
     
     // Data loading methods

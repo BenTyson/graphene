@@ -44,7 +44,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   
   const updateReports = await prisma.updateReport.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      { weekOf: 'desc' },
+      { createdAt: 'desc' }
+    ],
     include: {
       grapheneReports: {
         include: {
@@ -441,7 +444,10 @@ router.get('/graphene/:experimentNumber', asyncHandler(async (req, res) => {
         }
       }
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      { weekOf: 'desc' },
+      { createdAt: 'desc' }
+    ],
     include: {
       grapheneReports: {
         where: {
