@@ -44,6 +44,52 @@ function getDashboardTabHtml() {
         </div>
       </div>
 
+      <!-- Data Card Test Section -->
+      <div class="mt-12 space-y-6">
+        <div class="flex items-center justify-between">
+          <h3 class="text-2xl font-bold text-gray-900">Data Card Preview</h3>
+          <div class="flex space-x-2">
+            <!-- View Mode Toggle -->
+            <div x-html="getCardToggleButton()"></div>
+            <!-- Test Card Popup Button -->
+            <button @click="showTestCardPopup = true"
+                    class="px-4 py-2 text-sm bg-link text-white rounded-lg hover:bg-link-hover transition-colors">
+              Test Popup Card
+            </button>
+          </div>
+        </div>
+        
+        <!-- Card Display Area -->
+        <template x-if="typeof viewMode === 'undefined' || viewMode === 'card'">
+          <div>
+            <!-- Two Column Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <!-- Inline Card Preview -->
+              <div x-html="getTestDataCard('inline')"></div>
+              
+              <!-- Compound Batch Card -->
+              <div x-html="getCompoundBatchCard()"></div>
+            </div>
+            
+            <!-- Full Width Card Example -->
+            <div class="space-y-4">
+              <h4 class="text-lg font-semibold text-gray-800">Full Width Example</h4>
+              <div x-html="getTestDataCard('fullwidth')"></div>
+            </div>
+          </div>
+        </template>
+        
+        <!-- Table View (when toggled) -->
+        <template x-if="viewMode === 'table'">
+          <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <p class="text-gray-600">Table view would be displayed here. Click "Card View" to see the data cards.</p>
+          </div>
+        </template>
+        
+        <!-- Test Popup Card -->
+        <div x-html="getTestPopupCard()"></div>
+      </div>
+
       <!-- Error Display -->
       <div x-show="dashboardError" x-cloak class="mt-6">
         <div class="bg-red-50 border border-red-200 rounded-lg p-4">

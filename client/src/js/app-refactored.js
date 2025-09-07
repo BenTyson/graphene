@@ -277,6 +277,10 @@ window.grapheneApp = function() {
     },
     dashboardError: null,
     
+    // Data Card state
+    viewMode: 'card',
+    showTestCardPopup: false,
+    
     // Data storage
     biocharRecords: [],
     grapheneRecords: [],
@@ -3269,6 +3273,175 @@ window.grapheneApp = function() {
         return createErrorWidget('Failed to load recent activity');
       }
       return createActivityWidget(this.dashboardData.activity);
+    },
+    
+    // Data Card functions
+    getTestDataCard(preset = 'tableView') {
+      // Sample graphene data for testing
+      const sampleData = {
+        experimentNumber: 'MRa389A',
+        experimentDate: '2024-01-15',
+        species: '1',
+        output: 5.23,
+        density: 1.85,
+        volumeMl: 2.83,
+        homogeneous: true,
+        // Base Treatment
+        baseAmount: 15.0,
+        baseType: 'KOH',
+        baseConcentration: 6.0,
+        base2Amount: 3.0,
+        base2Type: 'NaOH',
+        base2Concentration: 2.0,
+        // Grinding
+        grindingMethod: 'Mill',
+        grindingCount: 3,
+        grindingTime: 5.0,
+        grindingFrequency: 25.0,
+        // Temperature
+        tempRate: '10-15',
+        tempMax: 750,
+        time: 45,
+        gas: 'N2',
+        // Washing
+        washAmount: 500.0,
+        washSolution: 'HCl',
+        washConcentration: 1.0,
+        washWater: 'DI Water',
+        // Drying
+        dryingTemp: 105,
+        dryingAtmosphere: 'Air',
+        dryingPressure: 'atm. Pressure',
+        // Results & Source
+        appearanceTags: ['Shiny', 'Black'],
+        biocharLotNumber: 'LOT-MB3010',  // Real lot reference for MRa389A
+        biocharExperiment: null,  // Using lot reference instead
+        // Real biochar source data structure (as returned by API)
+        // These are the actual biochar experiments that make up this graphene batch
+        lotBiocharExperiments: [
+          {
+            experimentNumber: 'MB3010',
+            experimentDate: '2023-11-15',
+            rawMaterial: 'Miscanthus',
+            reactor: 'Reactor 3',
+            output: 145.2
+          },
+          {
+            experimentNumber: 'MB3008',
+            experimentDate: '2023-11-14',
+            rawMaterial: 'Miscanthus',
+            reactor: 'Reactor 3',
+            output: 142.8
+          }
+        ],
+        researchTeam: 'Curia - Germany',
+        oven: 'Oven 2',
+        quantity: 12.5,
+        titleNote: '(Pilot Plant #1)',
+        betTests: [
+          { multipointBetArea: '1.88e3', testDate: '2024-01-16', testingLab: 'Fraunhofer-Institut' }
+        ],
+        conductivityTests: [
+          { conductivity20kN: 18.4, testDate: '2024-01-17' }
+        ],
+        ramanTests: [
+          { dgRatio: 0.45, testDate: '2024-01-18', testingLab: 'Clariant' }
+        ],
+        semReports: [
+          { filename: 'sem_report_001.pdf', reportDate: '2024-01-20' }
+        ],
+        shipments: [
+          { shipToLocation: 'GEIC', amountShipped: 2.5, shipmentDate: '2024-01-25' }
+        ],
+        objective: 'Test new grinding parameters for improved conductivity',
+        conclusion: 'Milling at 45 minutes showed optimal results'
+      };
+      
+      return createMasterDataCard({
+        preset: preset,
+        data: sampleData,
+        instanceId: `test_${preset}`
+      });
+    },
+    
+    async getCompoundBatchCard() {
+      // Fetch real compound batch data from your system
+      try {
+        // Get all compound batches and look for HG101S1 specifically
+        const compoundBatches = await API.compoundBatch.getAll();
+        if (compoundBatches.length === 0) {
+          return `<div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <p class="text-orange-800">No compound batches found. Please create a compound batch first.</p>
+          </div>`;
+        }
+        
+        // Try to find HG101S1, otherwise use the first available batch
+        const targetBatch = compoundBatches.find(batch => batch.batchNumber === 'HG101S1') || compoundBatches[0];
+        const relatedData = await API.compoundBatch.getRelated(targetBatch.id);
+        
+        // Fetch micronization data for this compound batch
+        const micronizations = await API.micronization.getByCompoundBatch(targetBatch.batchNumber);
+        
+        // Combine all real data
+        const realCompoundBatchData = {
+          ...targetBatch,
+          ...relatedData,
+          micronizations: micronizations || [],
+          isCompoundBatch: true
+        };
+        
+        return createMasterDataCard({
+          preset: 'compoundBatch',
+          data: realCompoundBatchData,
+          instanceId: 'compound_batch_inline'
+        });
+        
+      } catch (error) {
+        console.error('Failed to load compound batch data:', error);
+        return `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p class="text-red-800">Error loading compound batch data: ${error.message}</p>
+          <p class="text-sm text-red-600 mt-1">Make sure the server is running and compound batches exist in the database.</p>
+        </div>`;
+      }
+    },
+    
+    getTestPopupCard() {
+      const sampleData = {
+        experimentNumber: 'MRa355A',
+        experimentDate: '2023-12-10',
+        species: '2',
+        output: 4.78,
+        density: 1.95,
+        maxTemp: 750,
+        time: 45,
+        grindingMethod: 'Mill',
+        appearance: ['Somewhat Shiny', 'Grey'],
+        biocharExperiment: 'MB2995',  // Direct biochar reference
+        // Real biochar source data structure (as returned by API)
+        sourceBiochar: {
+          experimentNumber: 'MB2995',
+          experimentDate: '2023-11-02',
+          rawMaterial: 'Miscanthus',
+          reactor: 'Reactor 2',
+          startingAmount: 485,
+          temperature: 820,
+          time: 2.8,
+          output: 152.3,
+          researchTeam: 'Curia - Germany'
+        },
+        researchTeam: 'Curia - Germany'
+      };
+      
+      return createMasterDataCard({
+        preset: 'detailPopup',
+        data: sampleData,
+        instanceId: 'popup_test',
+        editMode: true
+      });
+    },
+    
+    getCardToggleButton() {
+      return createCardToggleButton();
     },
     
     // Tab component generators

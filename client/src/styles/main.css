@@ -92,6 +92,137 @@
   color: var(--link-dark);
 }
 
+/* Data Card Component Styles */
+.data-card {
+  @apply relative bg-white;
+}
+
+.data-card-popup {
+  @apply transform transition-all duration-300 ease-out;
+}
+
+.data-card-inline {
+  @apply w-full;
+}
+
+/* Card Header Styles */
+.data-card-header {
+  @apply relative;
+}
+
+/* Card Metrics Styles */
+.data-card-metrics {
+  @apply relative;
+}
+
+.data-card-metric-mobile {
+  @apply relative;
+}
+
+.data-card-metric-tablet {
+  @apply relative transition-all duration-150;
+}
+
+.data-card-metric-desktop {
+  @apply relative;
+}
+
+/* Card Section Styles */
+.data-card-section {
+  @apply relative;
+}
+
+.data-card-section-header {
+  @apply cursor-pointer select-none;
+}
+
+.data-card-section-content {
+  @apply relative;
+}
+
+/* Card Field Styles (for editable mode) */
+.data-card-field {
+  @apply relative;
+}
+
+.data-card-field label {
+  @apply block text-xs font-medium text-gray-600 mb-1;
+}
+
+.data-card-field value {
+  @apply block text-sm;
+}
+
+/* Editable mode styles */
+.data-card-editable .data-card-field {
+  @apply cursor-pointer rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors;
+}
+
+.data-card-editable .data-card-field:hover {
+  @apply bg-gray-50;
+}
+
+/* Card Loading State */
+.data-card-loading {
+  @apply absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center;
+}
+
+/* Card Error State */
+.data-card-error {
+  @apply relative;
+}
+
+/* Card Badge Styles */
+.data-card-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* Card Actions (edit mode) */
+.data-card-actions {
+  @apply opacity-0 transition-opacity duration-150;
+}
+
+.data-card:hover .data-card-actions {
+  @apply opacity-100;
+}
+
+/* Mobile-specific card styles */
+@media (max-width: 640px) {
+  .data-card-section-content {
+    @apply max-h-0 overflow-hidden transition-all duration-300;
+  }
+  
+  .data-card-section-expanded .data-card-section-content {
+    @apply max-h-[1000px];
+  }
+  
+  .data-card-metric-mobile {
+    @apply p-3 bg-white rounded-lg border border-gray-100;
+  }
+}
+
+/* Tablet-specific card styles */
+@media (min-width: 640px) and (max-width: 1024px) {
+  .data-card-section {
+    @apply border-t border-gray-100;
+  }
+}
+
+/* Print styles for cards */
+@media print {
+  .data-card {
+    @apply border border-gray-300 break-inside-avoid;
+  }
+  
+  .data-card-section-content {
+    @apply block !important;
+  }
+  
+  .data-card-actions {
+    @apply hidden;
+  }
+}
+
 /* Dashboard-specific styling */
 .dashboard-widget {
   transition: all 0.3s ease;
