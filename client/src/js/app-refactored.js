@@ -26,6 +26,7 @@ import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
 import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 import { getGrapheneTabHtml } from './components/tabs/GrapheneTab.js';
+import { getAnalysisTabHtml } from './components/tabs/AnalysisTab.js';
 import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
 import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
@@ -276,6 +277,15 @@ window.grapheneApp = function() {
       activity: false
     },
     dashboardError: null,
+    
+    // Analysis data
+    analysisData: null,
+    analysisLoading: false,
+    analysisError: null,
+    analysisChartData: null,
+    betChart: null,
+    conductivityChart: null,
+    ramanChart: null,
     
     // Latest production cards data
     latestGrapheneCards: [],
@@ -3531,6 +3541,10 @@ window.grapheneApp = function() {
       return getGrapheneTabHtml();
     },
     
+    getAnalysisTabHtml() {
+      return getAnalysisTabHtml();
+    },
+    
     getBiocharModalHtml() {
       return getBiocharModalHtml();
     },
@@ -3553,11 +3567,348 @@ window.grapheneApp = function() {
       await this.loadDashboardData();
     },
     
-    // Handle tab change to load dashboard if needed
+    // Load analysis data
+    async loadAnalysisData() {
+      this.analysisLoading = true;
+      this.analysisError = null;
+      
+      try {
+        const response = await fetch('/api/analysis/competitive-metrics');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.analysisData = result.data;
+      } catch (error) {
+        console.error('Failed to load analysis data:', error);
+        this.analysisError = 'Failed to load competitive analysis data. Please try again.';
+      } finally {
+        this.analysisLoading = false;
+      }
+    },
+    
+    // Refresh analysis data
+    async refreshAnalysis() {
+      this.analysisError = null;
+      await this.loadAnalysisData();
+    },
+    
+    // Load chart data
+    async loadAnalysisChartData() {
+      try {
+        const response = await fetch('/api/analysis/chart-data');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.analysisChartData = result.data;
+        
+        // Initialize charts after data is loaded
+        await this.$nextTick();
+        this.initializeAnalysisCharts();
+      } catch (error) {
+        console.error('Failed to load chart data:', error);
+      }
+    },
+    
+    // Initialize all analysis charts
+    initializeAnalysisCharts() {
+      if (!this.analysisChartData) return;
+      
+      this.initializeBETChart();
+      this.initializeConductivityChart();
+      this.initializeRAMANChart();
+    },
+    
+    // Initialize BET Surface Area Chart
+    initializeBETChart() {
+      const ctx = document.getElementById('betChart');
+      if (!ctx || !this.analysisChartData?.bet) return;
+      
+      // Destroy existing chart if it exists
+      if (this.betChart) {
+        this.betChart.destroy();
+      }
+      
+      const data = this.analysisChartData.bet;
+      
+      this.betChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            ...data.datasets,
+            // Add benchmark zones as background datasets
+            {
+              label: 'Activated Carbon Range',
+              data: [
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 500},
+                {x: new Date(), y: 500},
+                {x: new Date(), y: 2000},
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 2000}
+              ],
+              backgroundColor: data.benchmarks.activatedCarbon.color,
+              borderColor: 'rgba(59, 130, 246, 0.3)',
+              fill: true,
+              pointRadius: 0,
+              showLine: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'BET Surface Area Over Time vs Industry Benchmarks'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.parsed;
+                  const raw = context.raw;
+                  if (raw.sampleId) {
+                    return `${raw.sampleId} (${raw.sampleType}): ${point.y} m²/g`;
+                  }
+                  return `${point.y} m²/g`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'month'
+              },
+              title: {
+                display: true,
+                text: 'Test Date'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'BET Surface Area (m²/g)'
+              },
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    },
+    
+    // Initialize Conductivity Chart
+    initializeConductivityChart() {
+      const ctx = document.getElementById('conductivityChart');
+      if (!ctx || !this.analysisChartData?.conductivity) return;
+      
+      // Destroy existing chart if it exists
+      if (this.conductivityChart) {
+        this.conductivityChart.destroy();
+      }
+      
+      const data = this.analysisChartData.conductivity;
+      
+      this.conductivityChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            ...data.datasets,
+            // Add benchmark zones as background datasets
+            {
+              label: 'Carbon Black Range',
+              data: [
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 0.1},
+                {x: new Date(), y: 0.1},
+                {x: new Date(), y: 100},
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 100}
+              ],
+              backgroundColor: data.benchmarks.carbonBlack.color,
+              borderColor: 'rgba(147, 51, 234, 0.3)',
+              fill: true,
+              pointRadius: 0,
+              showLine: false
+            },
+            {
+              label: 'Activated Carbon Range',
+              data: [
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 0.1},
+                {x: new Date(), y: 0.1},
+                {x: new Date(), y: 10},
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 10}
+              ],
+              backgroundColor: data.benchmarks.activatedCarbon.color,
+              borderColor: 'rgba(59, 130, 246, 0.3)',
+              fill: true,
+              pointRadius: 0,
+              showLine: false
+            },
+            {
+              label: 'Synthetic Graphite Range',
+              data: [
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 100},
+                {x: new Date(), y: 100},
+                {x: new Date(), y: 1000},
+                {x: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), y: 1000}
+              ],
+              backgroundColor: data.benchmarks.syntheticGraphite.color,
+              borderColor: 'rgba(107, 114, 128, 0.3)',
+              fill: true,
+              pointRadius: 0,
+              showLine: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Electrical Conductivity Over Time (20kN Pressure)'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.parsed;
+                  const raw = context.raw;
+                  if (raw.sampleId) {
+                    const lines = [
+                      `${raw.sampleId} (${raw.sampleType})`,
+                      `20kN: ${raw.conductivity20kN} S/cm`
+                    ];
+                    
+                    // Add other pressure levels if available
+                    if (raw.conductivity12kN) lines.push(`12kN: ${raw.conductivity12kN} S/cm`);
+                    if (raw.conductivity8kN) lines.push(`8kN: ${raw.conductivity8kN} S/cm`);
+                    if (raw.conductivity1kN) lines.push(`1kN: ${raw.conductivity1kN} S/cm`);
+                    
+                    // Add benchmark comparison
+                    const value = raw.conductivity20kN;
+                    if (value >= 100) {
+                      lines.push('⚡ Excellent - Synthetic Graphite range');
+                    } else if (value >= 10) {
+                      lines.push('🟢 Good - Above Activated Carbon');
+                    } else if (value >= 0.1) {
+                      lines.push('🟡 Competitive - Industry range');
+                    } else {
+                      lines.push('🔴 Below industry standards');
+                    }
+                    
+                    return lines;
+                  }
+                  return `${point.y} S/cm`;
+                },
+                title: function(context) {
+                  const raw = context[0].raw;
+                  if (raw.sampleId) {
+                    return `Sample: ${raw.sampleId}`;
+                  }
+                  return 'Conductivity Measurement';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'month'
+              },
+              title: {
+                display: true,
+                text: 'Test Date'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Electrical Conductivity (S/cm)'
+              },
+              beginAtZero: false,
+              min: 0.01,
+              max: 1000,
+              type: 'logarithmic'
+            }
+          }
+        }
+      });
+    },
+    
+    // Initialize RAMAN Chart
+    initializeRAMANChart() {
+      const ctx = document.getElementById('ramanChart');
+      if (!ctx || !this.analysisChartData?.raman) return;
+      
+      // Destroy existing chart if it exists
+      if (this.ramanChart) {
+        this.ramanChart.destroy();
+      }
+      
+      const data = this.analysisChartData.raman;
+      
+      this.ramanChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: data.datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'RAMAN D/G Ratio Over Time (Lower is Better)'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const point = context.parsed;
+                  const raw = context.raw;
+                  if (raw.sampleId) {
+                    return `${raw.sampleId} (${raw.sampleType}): ${point.y.toFixed(3)} D/G`;
+                  }
+                  return `${point.y.toFixed(3)} D/G`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'month'
+              },
+              title: {
+                display: true,
+                text: 'Test Date'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'RAMAN D/G Ratio'
+              },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    },
+    
+    // Handle tab change to load data if needed
     async switchTab(tab) {
       this.activeTab = tab;
       if (tab === 'dashboard' && !this.dashboardData.production) {
         await this.loadDashboardData();
+      } else if (tab === 'analysis') {
+        if (!this.analysisData) {
+          await this.loadAnalysisData();
+        }
+        if (!this.analysisChartData) {
+          await this.loadAnalysisChartData();
+        }
       }
     }
   };

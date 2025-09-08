@@ -10,7 +10,8 @@ A full-stack web application for tracking the complete production journey of mat
 ### Technology Stack
 - **Backend**: Node.js, Express.js, Prisma ORM
 - **Database**: PostgreSQL
-- **Frontend**: Alpine.js, Tailwind CSS
+- **Frontend**: Alpine.js, Tailwind CSS, Chart.js 4.4.0
+- **Charting**: Chart.js with date-fns adapter for time-series visualization
 - **Build Tools**: Vite
 - **Ports**: Frontend 5174, Backend 3000
 
@@ -31,7 +32,8 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   ├── updateReports.js # Update report management + associations
 │   │   ├── semReports.js   # SEM report management + associations
 │   │   ├── shipments.js    # Material shipment tracking + location management + micronization SKU support
-│   │   └── dashboard.js    # Dashboard metrics API endpoints
+│   │   ├── dashboard.js    # Dashboard metrics API endpoints
+│   │   └── analysis.js     # Competitive analysis API + chart data endpoints
 │   └── middleware/
 ├── client/
 │   ├── index.html          # Main UI with Alpine.js templates (3,305 lines after componentization)
@@ -69,7 +71,8 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   │   │   │   ├── TestResultsRAMANTab.js      # RAMAN spectroscopy tab
 │   │   │   │   │   ├── TestResultsTEMTab.js        # TEM analysis tab
 │   │   │   │   │   ├── SEMReportsTab.js            # SEM report management tab
-│   │   │   │   │   └── UpdateReportsTab.js         # Update reports management tab
+│   │   │   │   │   ├── UpdateReportsTab.js         # Update reports management tab
+│   │   │   │   │   └── AnalysisTab.js             # Competitive analysis with interactive charts
 │   │   │   │   ├── dashboard/       # Dashboard widget components
 │   │   │   │   │   └── dashboardWidgets.js    # Modular dashboard widget system
 │   │   │   │   └── tables/          # Table components (reserved for future)
@@ -454,5 +457,61 @@ All components preserve Alpine.js reactivity through dynamic HTML generation and
 - **Lot numbers**: Unique in BiocharLot table
 - **SEM Reports**: PDF only, max 10MB
 - **Scientific Notation**: BET surface area values support format like 1.88e3, displayed as 1.88 × 10³
+
+## Analysis System (September 2025)
+
+### Overview
+Comprehensive competitive analysis dashboard providing real-time benchmarking of graphene material performance against industry standards (activated carbon, carbon black, synthetic graphite). Features interactive charts with time-series data and industry benchmark zones.
+
+### Architecture Components
+
+#### Backend API (`/server/routes/analysis.js`)
+- **Competitive Metrics Endpoint**: `/api/analysis/competitive-metrics`
+  - Aggregates best performance results across all test types
+  - Returns current competitive positioning (leading/competitive/developing)
+  - Provides industry benchmark data for hero cards
+- **Chart Data Endpoint**: `/api/analysis/chart-data`
+  - Queries 12 months of historical test data
+  - Returns formatted Chart.js datasets with benchmark zones
+  - Supports BET, Conductivity, and RAMAN time-series visualization
+
+#### Frontend Components (`/client/src/js/components/tabs/AnalysisTab.js`)
+- **Hero Metric Cards**: Real-time performance indicators with status dots
+  - BET Surface Area with industry benchmark comparison
+  - Electrical Conductivity (20kN pressure) performance
+  - RAMAN D/G Ratio quality metrics (lower is better)
+- **Interactive Charts**: Three Chart.js visualizations with:
+  - Time-series scatter plots showing performance evolution
+  - Industry benchmark zones as background shaded areas
+  - Interactive tooltips with sample details and competitive context
+  - Logarithmic scaling for conductivity (wide industry range)
+
+#### Chart.js Integration
+- **Chart.js 4.4.0**: Modern charting library with responsive design
+- **Date Adapter**: `chartjs-adapter-date-fns` for time-series X-axes
+- **Chart Types**: Scatter plots with benchmark zone overlays
+- **Features**:
+  - Real-time data loading with Alpine.js reactivity
+  - Data point overlap handling (time jitter for same-date measurements)
+  - Enhanced tooltips showing all pressure levels and benchmark comparisons
+  - Professional styling matching laboratory aesthetic
+
+### Key Features
+- **Strategic Insights**: Visual trend analysis showing improvement over time
+- **Competitive Context**: Clear comparison against activated carbon (500-2,000 m²/g), carbon black (50-1,500 m²/g), synthetic graphite (1-20 m²/g)
+- **Interactive Exploration**: Click-to-view sample details and cross-pressure measurements
+- **Executive Ready**: Professional visualizations suitable for stakeholder presentations
+- **Real Data Integration**: Live results from actual BET, Conductivity, and RAMAN tests
+
+### Performance Data
+- **BET Surface Area**: 6 results from 1,240-2,090 m²/g (Nov 2024 - Jan 2025)
+- **Conductivity**: 6 results from 16.9-18.8 S/cm at 20kN (May 2025)  
+- **RAMAN D/G Ratio**: 5 results at 1.0 D/G (Mar-July 2025)
+
+### Technical Implementation
+- **Lazy Loading**: Charts initialize only when Analysis tab is activated
+- **Memory Management**: Existing charts destroyed before re-initialization
+- **Error Handling**: Graceful fallbacks with comprehensive user feedback
+- **Alpine.js Integration**: Reactive data binding with `switchTab()` lifecycle management
 
 > **Process Reference**: For development workflows, troubleshooting, and implementation guides, see [CLAUDE-PROCESS.md](./CLAUDE-PROCESS.md)
