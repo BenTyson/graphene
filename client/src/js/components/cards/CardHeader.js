@@ -16,9 +16,10 @@
 function createCardHeader(config) {
   const { data, editMode, compactMode, instanceId } = config;
   
-  // Determine experiment type and status
+  // Determine experiment type, status, and available tests
   const experimentType = getExperimentType(data);
   const status = getExperimentStatus(data);
+  const availableTests = getAvailableTests(data);
   
   return `
     <div class="data-card-header border-b border-gray-200">
@@ -47,9 +48,10 @@ function createCardHeader(config) {
                 ${data.researchTeam || 'Unknown'}
               </div>
             </div>
-            <div class="flex items-center mt-2 space-x-2">
+            <div class="flex items-center mt-2 space-x-2 flex-wrap gap-1">
               ${createTypeBadge(experimentType, 'mobile')}
-              ${createStatusBadge(status, 'mobile')}
+              ${status === 'shipped' ? createStatusBadge(status, 'mobile') : ''}
+              ${availableTests.map(test => createTestBadge(test, 'mobile')).join('')}
             </div>
           </div>
           
@@ -85,7 +87,8 @@ function createCardHeader(config) {
                 <p class="text-base text-gray-600 font-medium mt-1">${data.batchName}</p>
               ` : ''}
               ${createTypeBadge(experimentType, 'desktop')}
-              ${createStatusBadge(status, 'desktop')}
+              ${status === 'shipped' ? createStatusBadge(status, 'desktop') : ''}
+              ${availableTests.map(test => createTestBadge(test, 'desktop')).join('')}
             </div>
             
             <!-- Subtitle with metadata -->
@@ -126,12 +129,23 @@ function getExperimentType(data) {
 }
 
 /**
+ * Get available tests for badge display
+ */
+function getAvailableTests(data) {
+  const tests = [];
+  if (data.betTests?.length > 0) tests.push('BET');
+  if (data.temTests?.length > 0) tests.push('TEM');
+  if (data.ramanTests?.length > 0) tests.push('RAMAN');
+  if (data.conductivityTests?.length > 0) tests.push('Conductivity');
+  return tests;
+}
+
+/**
  * Determine experiment status
  */
 function getExperimentStatus(data) {
   // Check for various completion indicators
   if (data.shipments?.length > 0) return 'shipped';
-  if (data.betTests?.length > 0 || data.ramanTests?.length > 0) return 'tested';
   if (data.output > 0) return 'complete';
   return 'in-progress';
 }
@@ -150,14 +164,13 @@ function createTypeBadge(type, variant = 'desktop') {
 }
 
 /**
- * Create status badge
+ * Create status badge  
  */
 function createStatusBadge(status, variant = 'desktop') {
   const sizeClass = variant === 'mobile' ? 'text-xs px-2 py-0.5' : 'text-xs px-2 py-1';
   
   const statusConfig = {
     'shipped': { bg: 'bg-link-light', text: 'text-link-dark', label: 'Shipped' },
-    'tested': { bg: 'bg-green-100', text: 'text-green-800', label: 'Tested' },
     'complete': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Complete' },
     'in-progress': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'In Progress' }
   };
@@ -167,6 +180,28 @@ function createStatusBadge(status, variant = 'desktop') {
   return `
     <span class="inline-flex items-center ${sizeClass} ${config.bg} ${config.text} rounded-full font-medium">
       <span class="w-1.5 h-1.5 mr-1 rounded-full ${config.text.replace('text', 'bg')}"></span>
+      ${config.label}
+    </span>
+  `;
+}
+
+/**
+ * Create test badge
+ */
+function createTestBadge(testType, variant = 'desktop') {
+  const sizeClass = variant === 'mobile' ? 'text-xs px-2 py-0.5' : 'text-xs px-2 py-1';
+  
+  const testConfig = {
+    'BET': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'BET' },
+    'TEM': { bg: 'bg-purple-100', text: 'text-purple-800', label: 'TEM' },
+    'RAMAN': { bg: 'bg-green-100', text: 'text-green-800', label: 'RAMAN' },
+    'Conductivity': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Conductivity' }
+  };
+  
+  const config = testConfig[testType] || { bg: 'bg-gray-100', text: 'text-gray-800', label: testType };
+  
+  return `
+    <span class="inline-flex items-center ${sizeClass} ${config.bg} ${config.text} rounded-full font-medium ml-1">
       ${config.label}
     </span>
   `;
@@ -244,4 +279,5 @@ function formatDate(dateString) {
     day: 'numeric' 
   });
 }
+
 

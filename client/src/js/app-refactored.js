@@ -280,6 +280,9 @@ window.grapheneApp = function() {
     // Data Card state
     viewMode: 'card',
     showTestCardPopup: false,
+    inlineCardHtml: '',
+    fullwidthCardHtml: '',
+    compoundBatchCardHtml: '',
     
     // Data storage
     biocharRecords: [],
@@ -3276,98 +3279,55 @@ window.grapheneApp = function() {
     },
     
     // Data Card functions
-    getTestDataCard(preset = 'tableView') {
-      // Sample graphene data for testing
-      const sampleData = {
-        experimentNumber: 'MRa389A',
-        experimentDate: '2024-01-15',
-        species: '1',
-        output: 5.23,
-        density: 1.85,
-        volumeMl: 2.83,
-        homogeneous: true,
-        // Base Treatment
-        baseAmount: 15.0,
-        baseType: 'KOH',
-        baseConcentration: 6.0,
-        base2Amount: 3.0,
-        base2Type: 'NaOH',
-        base2Concentration: 2.0,
-        // Grinding
-        grindingMethod: 'Mill',
-        grindingCount: 3,
-        grindingTime: 5.0,
-        grindingFrequency: 25.0,
-        // Temperature
-        tempRate: '10-15',
-        tempMax: 750,
-        time: 45,
-        gas: 'N2',
-        // Washing
-        washAmount: 500.0,
-        washSolution: 'HCl',
-        washConcentration: 1.0,
-        washWater: 'DI Water',
-        // Drying
-        dryingTemp: 105,
-        dryingAtmosphere: 'Air',
-        dryingPressure: 'atm. Pressure',
-        // Results & Source
-        appearanceTags: ['Shiny', 'Black'],
-        biocharLotNumber: 'LOT-MB3010',  // Real lot reference for MRa389A
-        biocharExperiment: null,  // Using lot reference instead
-        // Real biochar source data structure (as returned by API)
-        // These are the actual biochar experiments that make up this graphene batch
-        lotBiocharExperiments: [
-          {
-            experimentNumber: 'MB3010',
-            experimentDate: '2023-11-15',
-            rawMaterial: 'Miscanthus',
-            reactor: 'Reactor 3',
-            output: 145.2
-          },
-          {
-            experimentNumber: 'MB3008',
-            experimentDate: '2023-11-14',
-            rawMaterial: 'Miscanthus',
-            reactor: 'Reactor 3',
-            output: 142.8
-          }
-        ],
-        researchTeam: 'Curia - Germany',
-        oven: 'Oven 2',
-        quantity: 12.5,
-        titleNote: '(Pilot Plant #1)',
-        betTests: [
-          { multipointBetArea: '1.88e3', testDate: '2024-01-16', testingLab: 'Fraunhofer-Institut' }
-        ],
-        conductivityTests: [
-          { conductivity20kN: 18.4, testDate: '2024-01-17' }
-        ],
-        ramanTests: [
-          { dgRatio: 0.45, testDate: '2024-01-18', testingLab: 'Clariant' }
-        ],
-        semReports: [
-          { filename: 'sem_report_001.pdf', reportDate: '2024-01-20' }
-        ],
-        shipments: [
-          { shipToLocation: 'GEIC', amountShipped: 2.5, shipmentDate: '2024-01-25' }
-        ],
-        objective: 'Test new grinding parameters for improved conductivity',
-        conclusion: 'Milling at 45 minutes showed optimal results'
-      };
-      
-      return createMasterDataCard({
-        preset: preset,
-        data: sampleData,
-        instanceId: `test_${preset}`
-      });
+    async getGrapheneDataCard(experimentNumber = 'MRa389A', preset = 'tableView') {
+      // Fetch real graphene data from the database
+      try {
+        // First get the graphene record with related data
+        const response = await fetch(`/api/graphene/${experimentNumber}/related`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${experimentNumber} data: ${response.status}`);
+        }
+        
+        const relatedData = await response.json();
+        
+        // Now get the main graphene record
+        const grapheneResponse = await fetch(`/api/graphene?search=${experimentNumber}&limit=1`);
+        if (!grapheneResponse.ok) {
+          throw new Error(`Failed to fetch ${experimentNumber} record: ${grapheneResponse.status}`);
+        }
+        
+        const grapheneResult = await grapheneResponse.json();
+        const grapheneRecord = grapheneResult.data && grapheneResult.data.length > 0 ? grapheneResult.data[0] : null;
+        
+        if (!grapheneRecord) {
+          throw new Error(`${experimentNumber} record not found in database`);
+        }
+        
+        // Combine the main record with related data
+        const grapheneData = {
+          ...grapheneRecord,
+          ...relatedData
+        };
+        
+        return createMasterDataCard({
+          preset: preset,
+          data: grapheneData,
+          instanceId: `graphene_${experimentNumber}_${preset}`
+        });
+        
+      } catch (error) {
+        console.error(`Failed to load ${experimentNumber} data:`, error);
+        return `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p class="text-red-800">Error loading ${experimentNumber} data: ${error.message}</p>
+          <p class="text-sm text-red-600 mt-1">Make sure the server is running and ${experimentNumber} exists in the database.</p>
+        </div>`;
+      }
     },
     
-    async getCompoundBatchCard() {
+    async getCompoundBatchCard(batchNumber = null, preset = 'compoundBatch') {
       // Fetch real compound batch data from your system
       try {
-        // Get all compound batches and look for HG101S1 specifically
+        // Get all compound batches
         const compoundBatches = await API.compoundBatch.getAll();
         if (compoundBatches.length === 0) {
           return `<div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -3375,15 +3335,26 @@ window.grapheneApp = function() {
           </div>`;
         }
         
-        // Try to find HG101S1, otherwise use the first available batch
-        const targetBatch = compoundBatches.find(batch => batch.batchNumber === 'HG101S1') || compoundBatches[0];
+        // Find the requested batch or use the first available
+        let targetBatch;
+        if (batchNumber) {
+          targetBatch = compoundBatches.find(batch => batch.batchNumber === batchNumber);
+          if (!targetBatch) {
+            return `<div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p class="text-orange-800">Compound batch ${batchNumber} not found.</p>
+            </div>`;
+          }
+        } else {
+          targetBatch = compoundBatches[0];
+        }
+        
         const relatedData = await API.compoundBatch.getRelated(targetBatch.id);
         
         // Fetch micronization data for this compound batch
         const micronizations = await API.micronization.getByCompoundBatch(targetBatch.batchNumber);
         
         // Combine all real data
-        const realCompoundBatchData = {
+        const compoundBatchData = {
           ...targetBatch,
           ...relatedData,
           micronizations: micronizations || [],
@@ -3391,9 +3362,9 @@ window.grapheneApp = function() {
         };
         
         return createMasterDataCard({
-          preset: 'compoundBatch',
-          data: realCompoundBatchData,
-          instanceId: 'compound_batch_inline'
+          preset: preset,
+          data: compoundBatchData,
+          instanceId: `compound_batch_${targetBatch.batchNumber}_${preset}`
         });
         
       } catch (error) {
@@ -3405,39 +3376,82 @@ window.grapheneApp = function() {
       }
     },
     
-    getTestPopupCard() {
-      const sampleData = {
-        experimentNumber: 'MRa355A',
-        experimentDate: '2023-12-10',
-        species: '2',
-        output: 4.78,
-        density: 1.95,
-        maxTemp: 750,
-        time: 45,
-        grindingMethod: 'Mill',
-        appearance: ['Somewhat Shiny', 'Grey'],
-        biocharExperiment: 'MB2995',  // Direct biochar reference
-        // Real biochar source data structure (as returned by API)
-        sourceBiochar: {
-          experimentNumber: 'MB2995',
-          experimentDate: '2023-11-02',
-          rawMaterial: 'Miscanthus',
-          reactor: 'Reactor 2',
-          startingAmount: 485,
-          temperature: 820,
-          time: 2.8,
-          output: 152.3,
-          researchTeam: 'Curia - Germany'
-        },
-        researchTeam: 'Curia - Germany'
-      };
+    // Loader functions for async card data
+    async loadInlineCard(experimentNumber = 'MRa389A') {
+      if (!this.inlineCardHtml) {
+        this.inlineCardHtml = await this.getGrapheneDataCard(experimentNumber, 'inline');
+      }
+      return this.inlineCardHtml;
+    },
+    
+    async loadFullwidthCard(experimentNumber = 'MRa389A') {
+      if (!this.fullwidthCardHtml) {
+        this.fullwidthCardHtml = await this.getGrapheneDataCard(experimentNumber, 'fullwidth');
+      }
+      return this.fullwidthCardHtml;
+    },
+    
+    async loadCompoundBatchCard(batchNumber = null) {
+      if (!this.compoundBatchCardHtml) {
+        this.compoundBatchCardHtml = await this.getCompoundBatchCard(batchNumber);
+      }
+      return this.compoundBatchCardHtml;
+    },
+    
+    async getPopupCard(experimentNumber) {
+      // Fetch real data for popup display
+      if (!experimentNumber) {
+        return `<div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p class="text-gray-600">No experiment selected for preview.</p>
+        </div>`;
+      }
       
-      return createMasterDataCard({
-        preset: 'detailPopup',
-        data: sampleData,
-        instanceId: 'popup_test',
-        editMode: true
-      });
+      try {
+        // Determine type based on experiment number prefix
+        let data;
+        if (experimentNumber.startsWith('MRa')) {
+          // Graphene experiment
+          const response = await fetch(`/api/graphene/${experimentNumber}/related`);
+          const relatedData = await response.json();
+          const mainResponse = await fetch(`/api/graphene?search=${experimentNumber}&limit=1`);
+          const mainResult = await mainResponse.json();
+          const mainRecord = mainResult.data?.[0];
+          
+          if (!mainRecord) {
+            throw new Error(`Experiment ${experimentNumber} not found`);
+          }
+          
+          data = { ...mainRecord, ...relatedData };
+        } else if (experimentNumber.startsWith('MB') || experimentNumber.startsWith('BC')) {
+          // Biochar experiment
+          const response = await fetch(`/api/biochar/${experimentNumber}/related`);
+          data = await response.json();
+        } else if (experimentNumber.startsWith('CB')) {
+          // Compound batch
+          const batches = await API.compoundBatch.getAll();
+          const batch = batches.find(b => b.batchNumber === experimentNumber);
+          if (!batch) {
+            throw new Error(`Compound batch ${experimentNumber} not found`);
+          }
+          const relatedData = await API.compoundBatch.getRelated(batch.id);
+          data = { ...batch, ...relatedData, isCompoundBatch: true };
+        } else {
+          throw new Error(`Unknown experiment type for ${experimentNumber}`);
+        }
+        
+        return createMasterDataCard({
+          preset: 'detailPopup',
+          data: data,
+          instanceId: `popup_${experimentNumber}`,
+          editMode: false
+        });
+        
+      } catch (error) {
+        console.error(`Failed to load ${experimentNumber} for popup:`, error);
+        return `<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p class="text-red-800">Error loading ${experimentNumber}: ${error.message}</p>
+        </div>`;
+      }
     },
     
     getCardToggleButton() {

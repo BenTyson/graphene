@@ -7,17 +7,17 @@
  * Configuration presets for different contexts
  */
 const presets = {
-  // Full detail popup with all features
-  detailPopup: {
+  // Modal view - full detail popup
+  modal: {
     displayMode: 'popup',
-    editMode: true,
+    editMode: false,
     compactMode: false,
     sections: 'all',
     animations: 'smooth'
   },
   
-  // Table view card (inline, no edit)
-  tableView: {
+  // Table row - inline view for tables
+  tableRow: {
     displayMode: 'inline',
     editMode: false,
     compactMode: 'auto',
@@ -25,8 +25,8 @@ const presets = {
     animations: 'subtle'
   },
   
-  // Dashboard preview card (minimal)
-  dashboardPreview: {
+  // Dashboard widget - compact metrics
+  dashboard: {
     displayMode: 'inline',
     editMode: false,
     compactMode: true,
@@ -34,8 +34,8 @@ const presets = {
     animations: 'subtle'
   },
   
-  // Search result card
-  searchResult: {
+  // Search result - optimized for search
+  search: {
     displayMode: 'inline',
     editMode: false,
     compactMode: 'auto',
@@ -43,43 +43,16 @@ const presets = {
     animations: 'subtle'
   },
   
-  // Print-friendly card
-  printView: {
-    displayMode: 'inline',
-    editMode: false,
-    compactMode: false,
-    sections: 'all',
-    animations: 'none'
-  },
-  
-  // Mobile-optimized card
-  mobileCard: {
-    displayMode: 'popup',
-    editMode: false,
-    compactMode: true,
-    sections: ['metrics', 'tests', 'shipments'],
-    animations: 'smooth'
-  },
-  
-  // Comparison card (side-by-side)
-  comparison: {
+  // Inline view - standard inline display
+  inline: {
     displayMode: 'inline',
     editMode: false,
     compactMode: 'auto',
-    sections: ['metrics', 'tests'],
-    animations: 'none'
+    sections: ['metrics', 'tests', 'source'],
+    animations: 'subtle'
   },
   
-  // Quick view card (hover preview)
-  quickView: {
-    displayMode: 'inline',
-    editMode: false,
-    compactMode: true,
-    sections: ['metrics'],
-    animations: 'fast'
-  },
-  
-  // Full width card (detailed view)
+  // Full width - detailed inline view
   fullwidth: {
     displayMode: 'inline',
     editMode: false,
@@ -88,12 +61,30 @@ const presets = {
     animations: 'subtle'
   },
   
-  // Compound batch card (inline view optimized for batch data)
+  // Compound batch - optimized for batch data
   compoundBatch: {
     displayMode: 'inline',
     editMode: false,
     compactMode: 'auto',
     sections: ['constituents', 'micronization', 'tests', 'shipments'],
+    animations: 'subtle'
+  },
+  
+  // Detail popup - legacy alias for modal
+  detailPopup: {
+    displayMode: 'popup',
+    editMode: false,
+    compactMode: false,
+    sections: 'all',
+    animations: 'smooth'
+  },
+  
+  // Table view - legacy alias for tableRow
+  tableView: {
+    displayMode: 'inline',
+    editMode: false,
+    compactMode: 'auto',
+    sections: ['process', 'source', 'tests', 'shipments'],
     animations: 'subtle'
   }
 };
@@ -233,16 +224,13 @@ function getSectionVisibility(data) {
  */
 function getAvailablePresets() {
   return [
-    { name: 'detailPopup', description: 'Full detail popup with editing' },
-    { name: 'tableView', description: 'Inline card for table views' },
-    { name: 'dashboardPreview', description: 'Minimal dashboard preview' },
-    { name: 'searchResult', description: 'Search result display' },
-    { name: 'printView', description: 'Print-friendly format' },
-    { name: 'mobileCard', description: 'Mobile-optimized popup' },
-    { name: 'comparison', description: 'Side-by-side comparison' },
-    { name: 'quickView', description: 'Hover preview card' },
-    { name: 'fullwidth', description: 'Full width detailed card' },
-    { name: 'compoundBatch', description: 'Compound batch display card' }
+    { name: 'modal', description: 'Full detail modal popup' },
+    { name: 'tableRow', description: 'Inline card for table rows' },
+    { name: 'dashboard', description: 'Dashboard widget display' },
+    { name: 'search', description: 'Search result card' },
+    { name: 'inline', description: 'Standard inline view' },
+    { name: 'fullwidth', description: 'Full width detailed view' },
+    { name: 'compoundBatch', description: 'Compound batch optimized view' }
   ];
 }
 

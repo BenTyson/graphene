@@ -65,16 +65,16 @@ function getDashboardTabHtml() {
             <!-- Two Column Cards -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <!-- Inline Card Preview -->
-              <div x-html="getTestDataCard('inline')"></div>
+              <div x-html="inlineCardHtml || loadInlineCard()"></div>
               
               <!-- Compound Batch Card -->
-              <div x-html="getCompoundBatchCard()"></div>
+              <div x-html="compoundBatchCardHtml || loadCompoundBatchCard()"></div>
             </div>
             
             <!-- Full Width Card Example -->
             <div class="space-y-4">
               <h4 class="text-lg font-semibold text-gray-800">Full Width Example</h4>
-              <div x-html="getTestDataCard('fullwidth')"></div>
+              <div x-html="fullwidthCardHtml || loadFullwidthCard()"></div>
             </div>
           </div>
         </template>

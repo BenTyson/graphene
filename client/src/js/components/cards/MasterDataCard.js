@@ -4,6 +4,23 @@
  * Supports multiple display modes (popup/inline) and configurable features
  */
 
+/**
+ * Format date for display in cards
+ */
+function formatCardDate(dateString) {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
 
 /**
  * Create a master data card with configurable options
@@ -343,7 +360,7 @@ function createConstituentExperimentsSection(config) {
                 <div class="bg-white rounded-lg p-3 border border-blue-100">
                   <div class="flex justify-between items-start mb-2">
                     <div class="font-mono text-sm font-semibold text-blue-700">${exp.graphene?.experimentNumber || exp.experimentNumber}</div>
-                    <div class="text-xs text-gray-500">${exp.graphene?.experimentDate ? new Date(exp.graphene.experimentDate).toLocaleDateString() : 'No date'}</div>
+                    <div class="text-xs text-gray-500">${formatCardDate(exp.graphene?.experimentDate)}</div>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
                     <div>
@@ -398,7 +415,7 @@ function createMicronizationSection(config) {
                     </span>
                     <div class="font-semibold text-green-900">${mic.micronizationNumber}</div>
                   </div>
-                  <div class="text-xs text-green-700">${mic.date ? new Date(mic.date).toLocaleDateString() : 'No date'}</div>
+                  <div class="text-xs text-green-700">${formatCardDate(mic.date)}</div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
@@ -470,7 +487,7 @@ function createSourceSection(config) {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div class="data-card-field">
                 <label class="text-xs text-gray-500">Date</label>
-                <value class="text-gray-800">${new Date(data.sourceBiochar.experimentDate).toLocaleDateString()}</value>
+                <value class="text-gray-800">${formatCardDate(data.sourceBiochar.experimentDate)}</value>
               </div>
               <div class="data-card-field">
                 <label class="text-xs text-gray-500">Raw Material</label>
@@ -506,7 +523,7 @@ function createSourceSection(config) {
                 <div class="bg-white rounded-lg p-3 border border-link-light">
                   <div class="flex justify-between items-start mb-2">
                     <div class="font-medium text-link-dark">${biochar.experimentNumber}</div>
-                    <div class="text-xs text-link-medium">${new Date(biochar.experimentDate).toLocaleDateString()}</div>
+                    <div class="text-xs text-link-medium">${formatCardDate(biochar.experimentDate)}</div>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
                     <div>
@@ -590,7 +607,7 @@ function createTestsSection(config) {
               ${data.betTests.map(test => `
                 <div class="flex justify-between text-sm">
                   <span class="font-mono">${test.multipointBetArea || 'N/A'} m²/g</span>
-                  <span class="text-gray-500">${test.testDate || 'N/A'}</span>
+                  <span class="text-gray-500">${formatCardDate(test.testDate)}</span>
                 </div>
               `).join('')}
             </div>
@@ -607,7 +624,7 @@ function createTestsSection(config) {
               ${data.conductivityTests.map(test => `
                 <div class="flex justify-between text-sm">
                   <span class="font-mono">${test.conductivity20kN || 'N/A'} S/cm @ 20kN</span>
-                  <span class="text-gray-500">${test.testDate || 'N/A'}</span>
+                  <span class="text-gray-500">${formatCardDate(test.testDate)}</span>
                 </div>
               `).join('')}
             </div>
@@ -624,7 +641,7 @@ function createTestsSection(config) {
               ${data.ramanTests.map(test => `
                 <div class="flex justify-between text-sm">
                   <span class="font-mono">D/G Ratio: ${test.integralTypADG2 || 'N/A'}</span>
-                  <span class="text-gray-500">${test.testDate || 'N/A'}</span>
+                  <span class="text-gray-500">${formatCardDate(test.testDate)}</span>
                 </div>
               `).join('')}
             </div>
@@ -641,7 +658,7 @@ function createTestsSection(config) {
               ${data.temTests.map(test => `
                 <div class="flex justify-between text-sm">
                   <span class="font-mono">TEM Analysis</span>
-                  <span class="text-gray-500">${test.testDate || 'N/A'}</span>
+                  <span class="text-gray-500">${formatCardDate(test.testDate)}</span>
                 </div>
               `).join('')}
             </div>
@@ -658,7 +675,7 @@ function createTestsSection(config) {
               ${data.semReports.map(report => `
                 <div class="flex justify-between text-sm">
                   <span class="font-mono">${report.originalName || report.filename}</span>
-                  <span class="text-gray-500">${report.reportDate || 'N/A'}</span>
+                  <span class="text-gray-500">${formatCardDate(report.reportDate)}</span>
                 </div>
               `).join('')}
             </div>
