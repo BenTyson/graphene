@@ -70,6 +70,15 @@ const presets = {
     animations: 'subtle'
   },
   
+  // Shipment - optimized for shipment tracking data
+  shipment: {
+    displayMode: 'inline',
+    editMode: false,
+    compactMode: true,
+    sections: ['metrics', 'source', 'destination'],
+    animations: 'subtle'
+  },
+  
   // Detail popup - legacy alias for modal
   detailPopup: {
     displayMode: 'popup',
@@ -230,7 +239,8 @@ function getAvailablePresets() {
     { name: 'search', description: 'Search result card' },
     { name: 'inline', description: 'Standard inline view' },
     { name: 'fullwidth', description: 'Full width detailed view' },
-    { name: 'compoundBatch', description: 'Compound batch optimized view' }
+    { name: 'compoundBatch', description: 'Compound batch optimized view' },
+    { name: 'shipment', description: 'Shipment tracking card view' }
   ];
 }
 

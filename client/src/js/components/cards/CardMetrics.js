@@ -127,6 +127,49 @@ function getRelevantMetrics(data) {
         icon: 'tag'
       });
     }
+  } else if (data.isShipment) {
+    // Shipment primary metrics - only show essential info not in header or dropdowns
+    if (data.purpose) {
+      primary.push({
+        label: 'Purpose',
+        value: data.purpose,
+        unit: '',
+        icon: 'clipboard'
+      });
+    }
+    
+    if (data.shipmentDate) {
+      primary.push({
+        label: 'Ship Date',
+        value: formatDate(data.shipmentDate),
+        unit: '',
+        icon: 'calendar'
+      });
+    }
+    
+    // Show material type in metrics
+    if (data.grapheneSample) {
+      secondary.push({
+        label: 'Material',
+        value: data.grapheneSample,
+        unit: '',
+        icon: 'beaker'
+      });
+    } else if (data.compoundBatchNumber) {
+      secondary.push({
+        label: 'Material',
+        value: data.compoundBatchNumber,
+        unit: '',
+        icon: 'layers'
+      });
+    } else if (data.micronizationSku) {
+      secondary.push({
+        label: 'Material',
+        value: data.micronizationSku,
+        unit: '',
+        icon: 'sparkles'
+      });
+    }
   } else {
     // Regular experiment primary metrics
     if (data.output !== undefined) {
@@ -304,6 +347,19 @@ function getMetricIcon(type, className = '') {
     eye: `<svg class="${className}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+    </svg>`,
+    
+    truck: `<svg class="${className}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM21 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0M15 17a2 2 0 104 0"></path>
+    </svg>`,
+    
+    map: `<svg class="${className}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+    </svg>`,
+    
+    location: `<svg class="${className}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
     </svg>`
   };
   
@@ -329,5 +385,35 @@ function formatDate(dateString) {
     month: 'short', 
     day: 'numeric' 
   });
+}
+
+/**
+ * Get status icon for shipments
+ * @param {string} status - Shipment status
+ * @returns {string} Icon type
+ */
+function getStatusIcon(status) {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'clock';
+    case 'shipped': return 'truck';
+    case 'in_transit': return 'zap';
+    case 'received': return 'check';
+    default: return 'clock';
+  }
+}
+
+/**
+ * Get status color for shipments
+ * @param {string} status - Shipment status
+ * @returns {string} Color class
+ */
+function getStatusColor(status) {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'text-gray-600';
+    case 'shipped': return 'text-blue-600';
+    case 'in_transit': return 'text-yellow-600';
+    case 'received': return 'text-green-600';
+    default: return 'text-gray-600';
+  }
 }
 

@@ -277,6 +277,11 @@ window.grapheneApp = function() {
     },
     dashboardError: null,
     
+    // Latest production cards data
+    latestGrapheneCards: [],
+    latestCompoundBatches: [],
+    latestShipments: [],
+    
     // Data Card state
     viewMode: 'card',
     showTestCardPopup: false,
@@ -3173,7 +3178,8 @@ window.grapheneApp = function() {
           this.loadProductionMetrics(),
           this.loadInventoryData(), 
           this.loadTestResultsData(),
-          this.loadActivityData()
+          this.loadActivityData(),
+          this.loadLatestProductionCards()
         ]);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -3235,6 +3241,48 @@ window.grapheneApp = function() {
       } finally {
         this.dashboardLoading.activity = false;
       }
+    },
+    
+    async loadLatestProductionCards() {
+      try {
+        // Load all latest production data in parallel
+        const [latestGraphene, latestBatches, latestShipments] = await Promise.all([
+          window.CardService.getLatestGrapheneCards(4),
+          window.CardService.getLatestCompoundBatches(4),
+          window.CardService.getLatestShipments(4)
+        ]);
+        
+        this.latestGrapheneCards = latestGraphene;
+        this.latestCompoundBatches = latestBatches;
+        this.latestShipments = latestShipments;
+      } catch (error) {
+        console.error('Error loading latest production cards:', error);
+        this.latestGrapheneCards = [];
+        this.latestCompoundBatches = [];
+        this.latestShipments = [];
+      }
+    },
+    
+    // Card creation methods for dashboard
+    createGrapheneCard(experiment) {
+      return window.CardFactory.createCard(experiment, {
+        preset: 'tableRow',
+        context: 'dashboard'
+      });
+    },
+    
+    createCompoundBatchCard(batch) {
+      return window.CardFactory.createCard(batch, {
+        preset: 'compoundBatch',
+        context: 'dashboard'
+      });
+    },
+    
+    createShipmentCard(shipment) {
+      return window.CardFactory.createCard(shipment, {
+        preset: 'shipment',
+        context: 'dashboard'
+      });
     },
     
     // Dashboard widget generators

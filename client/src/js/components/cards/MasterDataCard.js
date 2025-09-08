@@ -45,7 +45,12 @@ function createMasterDataCard(options = {}) {
   
   // Determine which sections to show based on data type
   let sections;
-  if (config.data.isCompoundBatch) {
+  if (config.data.isShipment) {
+    // Shipment sections (material flow, locations, status)
+    sections = config.sections === 'all' 
+      ? ['metrics', 'source', 'destination', 'status']
+      : config.sections || ['metrics', 'source', 'destination'];
+  } else if (config.data.isCompoundBatch) {
     // Compound batch sections (no process details since they combine multiple processes)
     sections = config.sections === 'all' 
       ? ['constituents', 'micronization', 'tests', 'reports', 'shipments']
@@ -80,7 +85,9 @@ function createMasterDataCard(options = {}) {
       <!-- Collapsible Sections -->
       <div class="data-card-sections">
         ${sections.includes('process') ? createProcessSection(config) : ''}
-        ${sections.includes('source') ? createSourceSection(config) : ''}
+        ${sections.includes('source') ? (config.data.isShipment ? createShipmentSourceSection(config) : createSourceSection(config)) : ''}
+        ${sections.includes('destination') ? createDestinationSection(config) : ''}
+        ${sections.includes('status') ? createStatusSection(config) : ''}
         ${sections.includes('constituents') ? createConstituentExperimentsSection(config) : ''}
         ${sections.includes('micronization') ? createMicronizationSection(config) : ''}
         ${sections.includes('tests') ? createTestsSection(config) : ''}
@@ -579,6 +586,113 @@ function createSourceSection(config) {
 }
 
 /**
+ * Create shipment source section - shows what material is being shipped
+ */
+function createShipmentSourceSection(config) {
+  const { data } = config;
+  
+  return createCardSection({
+    title: 'Shipped Material',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+    </svg>`,
+    content: `
+      <div class="p-4">
+        ${data.grapheneSample && data.grapheneRef ? `
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="font-semibold text-green-900">${data.grapheneSample}</div>
+              <span class="text-xs px-2 py-1 bg-green-200 text-green-700 rounded">Graphene</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Species</label>
+                <value class="text-gray-800">${data.grapheneRef.species || 'N/A'}</value>
+              </div>
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Output</label>
+                <value class="text-gray-800">${data.grapheneRef.output || 'N/A'} g</value>
+              </div>
+            </div>
+          </div>
+        ` : data.compoundBatchNumber && data.compoundBatchRef ? `
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="font-semibold text-blue-900">${data.compoundBatchNumber}</div>
+              <span class="text-xs px-2 py-1 bg-blue-200 text-blue-700 rounded">Compound Batch</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Batch Name</label>
+                <value class="text-gray-800">${data.compoundBatchRef.batchName || 'N/A'}</value>
+              </div>
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Total Output</label>
+                <value class="text-gray-800">${data.compoundBatchRef.totalOutput || 'N/A'} g</value>
+              </div>
+            </div>
+          </div>
+        ` : data.micronizationSku && data.micronizationRef ? `
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="font-semibold text-purple-900">${data.micronizationSku}</div>
+              <span class="text-xs px-2 py-1 bg-purple-200 text-purple-700 rounded">Micronized</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Micronization #</label>
+                <value class="text-gray-800">${data.micronizationRef.micronizationNumber || 'N/A'}</value>
+              </div>
+              <div class="data-card-field">
+                <label class="text-xs text-gray-500">Recovered Amount</label>
+                <value class="text-gray-800">${data.micronizationRef.recoveredAmount || 'N/A'} g</value>
+              </div>
+            </div>
+          </div>
+        ` : data.grapheneSample ? `
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-semibold text-gray-900">${data.grapheneSample}</div>
+              <span class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">Graphene Reference</span>
+            </div>
+            <div class="text-sm text-gray-600">Graphene sample reference (detailed data not loaded)</div>
+          </div>
+        ` : data.compoundBatchNumber ? `
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-semibold text-gray-900">${data.compoundBatchNumber}</div>
+              <span class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">Batch Reference</span>
+            </div>
+            <div class="text-sm text-gray-600">Compound batch reference (detailed data not loaded)</div>
+          </div>
+        ` : data.micronizationSku ? `
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-semibold text-gray-900">${data.micronizationSku}</div>
+              <span class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">SKU Reference</span>
+            </div>
+            <div class="text-sm text-gray-600">Micronization SKU reference (detailed data not loaded)</div>
+          </div>
+        ` : `
+          <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div class="flex items-center">
+              <svg class="w-4 h-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <div>
+                <div class="font-medium text-orange-800">Unknown Material</div>
+                <div class="text-sm text-orange-600">No material source specified</div>
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+    `,
+    defaultExpanded: false
+  });
+}
+
+/**
  * Create test results section
  */
 function createTestsSection(config) {
@@ -793,5 +907,131 @@ function createObjectivesSection(config) {
     `,
     defaultExpanded: false
   });
+}
+
+/**
+ * Create destination section for shipment cards
+ * @param {Object} config - Card configuration
+ * @returns {string} HTML string for destination section
+ */
+function createDestinationSection(config) {
+  const data = config.data;
+  
+  return createCardSection({
+    id: `destination-${config.instanceId}`,
+    title: 'Destination & Status',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>`,
+    content: `
+      <div class="p-4 space-y-3">
+        <div class="flex items-center space-x-4">
+          <div class="flex-1">
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">From</h5>
+            <p class="text-sm text-gray-900">${data.shipFromLocation || 'N/A'}</p>
+          </div>
+          <div class="text-gray-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">To</h5>
+            <p class="text-sm text-gray-900">${data.shipToLocation || 'N/A'}</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">Amount</h5>
+            <p class="text-sm text-gray-900">${data.amountShipped || 'N/A'}${data.unit ? ` ${data.unit}` : ''}</p>
+          </div>
+          <div>
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">Status</h5>
+            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(data.status)}">
+              ${getStatusLabel(data.status)}
+            </span>
+          </div>
+        </div>
+        ${data.purpose ? `
+          <div>
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">Purpose</h5>
+            <p class="text-sm text-gray-600">${data.purpose}</p>
+          </div>
+        ` : ''}
+      </div>
+    `,
+    defaultExpanded: false
+  });
+}
+
+/**
+ * Create status section for shipment cards
+ * @param {Object} config - Card configuration
+ * @returns {string} HTML string for status section
+ */
+function createStatusSection(config) {
+  const data = config.data;
+  
+  return createCardSection({
+    id: `status-${config.instanceId}`,
+    title: 'Shipment Details',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+    </svg>`,
+    content: `
+      <div class="p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">Ship Date</h5>
+            <p class="text-sm text-gray-900">${data.shipmentDate ? formatCardDate(data.shipmentDate) : 'N/A'}</p>
+          </div>
+          ${data.receivedDate ? `
+            <div>
+              <h5 class="text-xs font-semibold text-gray-700 uppercase">Received Date</h5>
+              <p class="text-sm text-gray-900">${formatCardDate(data.receivedDate)}</p>
+            </div>
+          ` : ''}
+        </div>
+        ${data.comments ? `
+          <div>
+            <h5 class="text-xs font-semibold text-gray-700 uppercase">Comments</h5>
+            <p class="text-sm text-gray-600">${data.comments}</p>
+          </div>
+        ` : ''}
+      </div>
+    `,
+    defaultExpanded: false
+  });
+}
+
+/**
+ * Get status badge CSS classes
+ * @param {string} status - Shipment status
+ * @returns {string} CSS classes for status badge
+ */
+function getStatusBadgeClass(status) {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'bg-gray-100 text-gray-800';
+    case 'shipped': return 'bg-blue-100 text-blue-800';
+    case 'in_transit': return 'bg-yellow-100 text-yellow-800';
+    case 'received': return 'bg-green-100 text-green-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+
+/**
+ * Get status display label
+ * @param {string} status - Shipment status
+ * @returns {string} Display label for status
+ */
+function getStatusLabel(status) {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'Pending';
+    case 'shipped': return 'Shipped';
+    case 'in_transit': return 'In Transit';
+    case 'received': return 'Received';
+    default: return status || 'Unknown';
+  }
 }
 

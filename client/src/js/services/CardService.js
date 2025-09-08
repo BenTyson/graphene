@@ -190,7 +190,7 @@ class CardService {
 
   /**
    * Get card data by type and identifier
-   * @param {string} type - The type of card (graphene, biochar, batch, micronization)
+   * @param {string} type - The type of card (graphene, biochar, batch, micronization, shipment)
    * @param {string} identifier - The experiment/batch number
    * @returns {Promise<Object>} Card data
    */
@@ -205,6 +205,8 @@ class CardService {
         return this.getCompoundBatchCard(identifier);
       case 'micronization':
         return this.getMicronizationCard(identifier);
+      case 'shipment':
+        return this.getShipmentCard(identifier);
       default:
         // Try to auto-detect based on identifier pattern
         return this.getCardByIdentifier(identifier);
@@ -253,6 +255,48 @@ class CardService {
   }
 
   /**
+   * Get shipment card data
+   * @param {string} shipmentNumber - The shipment number
+   * @returns {Promise<Object>} Card data
+   */
+  async getShipmentCard(shipmentNumber) {
+    const cacheKey = `shipment_${shipmentNumber}`;
+    
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data;
+      }
+    }
+
+    try {
+      // Fetch shipment data
+      const response = await fetch(`/api/shipments?search=${shipmentNumber}&limit=1`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch shipment data: ${response.status}`);
+      }
+      const result = await response.json();
+      const data = result.data?.[0];
+
+      if (!data) {
+        throw new Error(`Shipment ${shipmentNumber} not found`);
+      }
+
+      // Add type identifier
+      data.isShipment = true;
+      
+      // Cache the result
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      return data;
+    } catch (error) {
+      console.error(`Failed to fetch shipment card ${shipmentNumber}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get latest experiments for dashboard
    * @param {number} limit - Number of experiments to fetch
    * @returns {Promise<Array>} Array of experiment cards
@@ -267,6 +311,136 @@ class CardService {
       return result.data || [];
     } catch (error) {
       console.error('Failed to fetch latest experiments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get latest graphene cards for dashboard
+   * @param {number} limit - Number of graphene experiments to fetch
+   * @returns {Promise<Array>} Array of graphene experiment data
+   */
+  async getLatestGrapheneCards(limit = 4) {
+    const cacheKey = `latest_graphene_${limit}`;
+    
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/graphene?limit=${limit}&sortBy=createdAt&order=desc`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch latest graphene cards: ${response.status}`);
+      }
+      const result = await response.json();
+      const data = result.data || [];
+      
+      // Cache the result
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch latest graphene cards:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get latest compound batches for dashboard
+   * @param {number} limit - Number of compound batches to fetch
+   * @returns {Promise<Array>} Array of compound batch data
+   */
+  async getLatestCompoundBatches(limit = 4) {
+    const cacheKey = `latest_batches_${limit}`;
+    
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/compound-batches?limit=${limit}&sort=desc`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch latest compound batches: ${response.status}`);
+      }
+      const batches = await response.json();
+      
+      // Enrich each batch with full compound batch data
+      const enrichedData = await Promise.all((batches || []).map(async (batch) => {
+        try {
+          // Fetch related data for each batch
+          const relatedResponse = await fetch(`/api/compound-batches/${batch.id}/related`);
+          const relatedData = relatedResponse.ok ? await relatedResponse.json() : {};
+
+          // Fetch micronization data
+          const micronResponse = await fetch(`/api/micronization?compoundBatchNumber=${batch.batchNumber}`);
+          const micronizations = micronResponse.ok ? await micronResponse.json() : [];
+
+          return {
+            ...batch,
+            ...relatedData,
+            micronizations: micronizations || [],
+            isCompoundBatch: true
+          };
+        } catch (error) {
+          console.error(`Failed to enrich compound batch ${batch.batchNumber}:`, error);
+          // Return basic batch data if enrichment fails
+          return { ...batch, isCompoundBatch: true };
+        }
+      }));
+      
+      // Cache the result
+      this.cache.set(cacheKey, { data: enrichedData, timestamp: Date.now() });
+      
+      return enrichedData;
+    } catch (error) {
+      console.error('Failed to fetch latest compound batches:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get latest shipments for dashboard
+   * @param {number} limit - Number of shipments to fetch
+   * @returns {Promise<Array>} Array of shipment data
+   */
+  async getLatestShipments(limit = 4) {
+    const cacheKey = `latest_shipments_${limit}`;
+    
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/shipments?limit=${limit}&sortBy=createdAt&order=desc`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch latest shipments: ${response.status}`);
+      }
+      const result = await response.json();
+      
+      // Handle different response formats - shipments API returns direct array, others return {data: [...]}
+      const shipments = Array.isArray(result) ? result : (result.data || []);
+      
+      // Add type identifier
+      const data = shipments.map(shipment => ({ ...shipment, isShipment: true }));
+      
+      // Cache the result
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch latest shipments:', error);
       return [];
     }
   }

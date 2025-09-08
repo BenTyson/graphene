@@ -59,7 +59,9 @@ class CardFactory {
    * @returns {string} Card type
    */
   static detectCardType(data) {
-    if (data.isCompoundBatch || data.batchNumber) {
+    if (data.isShipment || data.shipmentNumber) {
+      return 'shipment';
+    } else if (data.isCompoundBatch || data.batchNumber) {
       return 'compoundBatch';
     } else if (data.micronizationNumber) {
       return 'micronization';
@@ -95,6 +97,8 @@ class CardFactory {
     switch (cardType) {
       case 'compoundBatch':
         return 'compoundBatch';
+      case 'shipment':
+        return 'shipment';
       case 'graphene':
       case 'biochar':
       case 'micronization':
@@ -110,10 +114,12 @@ class CardFactory {
    * @returns {string} Instance ID
    */
   static generateInstanceId(data) {
-    const prefix = data.experimentNumber || data.batchNumber || data.micronizationNumber || 'card';
+    const prefix = data.experimentNumber || data.batchNumber || data.micronizationNumber || data.shipmentNumber || 'card';
     const timestamp = Date.now();
     const random = Math.random().toString(36).substr(2, 5);
-    return `${prefix}_${timestamp}_${random}`;
+    // Sanitize the prefix to create valid JavaScript identifiers
+    const sanitizedPrefix = prefix.replace(/[^a-zA-Z0-9_]/g, '_');
+    return `${sanitizedPrefix}_${timestamp}_${random}`;
   }
   
   /**
@@ -232,6 +238,23 @@ class CardFactory {
       preset: 'search',
       context: 'search',
       searchQuery: searchQuery
+    });
+  }
+  
+  /**
+   * Create a shipment card
+   * @param {Object} data - The shipment data
+   * @param {Object} options - Card configuration options
+   * @returns {string} HTML string for shipment card
+   */
+  static createShipmentCard(data, options = {}) {
+    // Ensure data has shipment identifier
+    data.isShipment = true;
+    
+    return this.createCard(data, {
+      preset: 'shipment',
+      context: 'dashboard',
+      ...options
     });
   }
   

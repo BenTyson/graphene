@@ -44,50 +44,63 @@ function getDashboardTabHtml() {
         </div>
       </div>
 
-      <!-- Data Card Test Section -->
-      <div class="mt-12 space-y-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-2xl font-bold text-gray-900">Data Card Preview</h3>
-          <div class="flex space-x-2">
-            <!-- View Mode Toggle -->
-            <div x-html="getCardToggleButton()"></div>
-            <!-- Test Card Popup Button -->
-            <button @click="showTestCardPopup = true"
-                    class="px-4 py-2 text-sm bg-link text-white rounded-lg hover:bg-link-hover transition-colors">
-              Test Popup Card
-            </button>
+      <!-- Latest Production Data -->
+      <div class="mt-12 space-y-8">
+        
+        <!-- Latest Graphene Batches -->
+        <div>
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-900">Latest Graphene Batches</h3>
+            <span class="text-sm text-gray-600">Last 4 experiments</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+            <template x-for="(experiment, index) in latestGrapheneCards.slice(0, 4)" :key="experiment.id">
+              <div x-html="createGrapheneCard(experiment)"></div>
+            </template>
+            <template x-if="!latestGrapheneCards || latestGrapheneCards.length === 0">
+              <div class="col-span-full bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                <p class="text-gray-600">No graphene experiments found</p>
+              </div>
+            </template>
           </div>
         </div>
         
-        <!-- Card Display Area -->
-        <template x-if="typeof viewMode === 'undefined' || viewMode === 'card'">
-          <div>
-            <!-- Two Column Cards -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Inline Card Preview -->
-              <div x-html="inlineCardHtml || loadInlineCard()"></div>
-              
-              <!-- Compound Batch Card -->
-              <div x-html="compoundBatchCardHtml || loadCompoundBatchCard()"></div>
-            </div>
-            
-            <!-- Full Width Card Example -->
-            <div class="space-y-4">
-              <h4 class="text-lg font-semibold text-gray-800">Full Width Example</h4>
-              <div x-html="fullwidthCardHtml || loadFullwidthCard()"></div>
-            </div>
+        <!-- Latest Compound Batches -->
+        <div>
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-900">Latest Compound Batches</h3>
+            <span class="text-sm text-gray-600">Last 4 batches</span>
           </div>
-        </template>
-        
-        <!-- Table View (when toggled) -->
-        <template x-if="viewMode === 'table'">
-          <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <p class="text-gray-600">Table view would be displayed here. Click "Card View" to see the data cards.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+            <template x-for="(batch, index) in latestCompoundBatches.slice(0, 4)" :key="batch.id">
+              <div x-html="createCompoundBatchCard(batch)"></div>
+            </template>
+            <template x-if="!latestCompoundBatches || latestCompoundBatches.length === 0">
+              <div class="col-span-full bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                <p class="text-gray-600">No compound batches found</p>
+              </div>
+            </template>
           </div>
-        </template>
+        </div>
         
-        <!-- Test Popup Card -->
-        <div x-html="getTestPopupCard()"></div>
+        <!-- Latest Shipments -->
+        <div>
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-900">Latest Shipments</h3>
+            <span class="text-sm text-gray-600">Last 2 shipments</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <template x-for="(shipment, index) in latestShipments.slice(0, 2)" :key="shipment.id">
+              <div x-html="createShipmentCard(shipment)"></div>
+            </template>
+            <template x-if="!latestShipments || latestShipments.length === 0">
+              <div class="col-span-full bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                <p class="text-gray-600">No shipments found</p>
+              </div>
+            </template>
+          </div>
+        </div>
+        
       </div>
 
       <!-- Error Display -->

@@ -27,7 +27,17 @@ function generateShipmentNumber() {
 
 router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  const { search = '' } = req.query;
+  const { search = '', limit, sortBy = 'createdAt', order = 'desc' } = req.query;
+  
+  // Build query options
+  const queryOptions = {
+    orderBy: { [sortBy]: order }
+  };
+  
+  // Add limit if specified
+  if (limit) {
+    queryOptions.take = parseInt(limit);
+  }
   
   const shipments = await prisma.materialShipment.findMany({
       where: search ? {
@@ -65,7 +75,7 @@ router.get('/', asyncHandler(async (req, res) => {
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      ...queryOptions
     });
 
     res.json(shipments);

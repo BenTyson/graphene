@@ -28,9 +28,11 @@ function createCardHeader(config) {
         <div class="flex items-start justify-between">
           <div class="flex-1">
             <h2 class="text-xl font-bold text-gray-900 font-mono">
-              ${data.experimentNumber || data.batchNumber || 'Unknown'}
+              ${data.shipmentNumber || data.experimentNumber || data.batchNumber || 'Unknown'}
             </h2>
-            ${data.batchName ? `
+            ${data.isShipment && data.amountShipped && data.shipToLocation ? `
+              <p class="text-sm text-gray-600 font-medium mt-1">${data.amountShipped}${data.unit || 'g'} to ${data.shipToLocation}</p>
+            ` : data.batchName ? `
               <p class="text-sm text-gray-600 font-medium mt-1">${data.batchName}</p>
             ` : ''}
             <!-- Mobile metadata -->
@@ -81,9 +83,11 @@ function createCardHeader(config) {
           <div>
             <div class="flex items-center space-x-3">
               <h2 class="text-2xl font-bold text-gray-900 font-mono">
-                ${data.experimentNumber || data.batchNumber || 'Unknown'}
+                ${data.shipmentNumber || data.experimentNumber || data.batchNumber || 'Unknown'}
               </h2>
-              ${data.batchName ? `
+              ${data.isShipment && data.amountShipped && data.shipToLocation ? `
+                <p class="text-base text-gray-600 font-medium mt-1">${data.amountShipped}${data.unit || 'g'} to ${data.shipToLocation}</p>
+              ` : data.batchName ? `
                 <p class="text-base text-gray-600 font-medium mt-1">${data.batchName}</p>
               ` : ''}
               ${createTypeBadge(experimentType, 'desktop')}
@@ -121,6 +125,7 @@ function createCardHeader(config) {
  * Determine experiment type from data
  */
 function getExperimentType(data) {
+  if (data.isShipment) return 'Shipment';
   if (data.batchNumber) return 'Compound Batch';
   if (data.micronizationNumber) return 'Micronization';
   if (data.experimentNumber?.startsWith('MRa')) return 'Graphene Sample';
