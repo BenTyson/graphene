@@ -18,7 +18,10 @@
     "backup:list": "node scripts/backup-db.js list",
     "backup:cleanup": "node scripts/backup-db.js cleanup",
     "backup:restore": "node scripts/restore-db.js",
-    "backup:auto": "node scripts/backup-db.js create && echo 'Backup completed at $(date)'"
+    "backup:auto": "node scripts/backup-db.js create && echo 'Backup completed at $(date)'",
+    "news:seed": "node graphene-news/config/seed-news-sources.js",
+    "news:fetch": "node graphene-news/test-fetch.js",
+    "news:test": "echo 'Testing news system components...'"
   },
   "keywords": [
     "graphene",
@@ -30,13 +33,18 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.7.0",
+    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-async-handler": "^1.2.0",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "openai": "^5.20.0",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.7",

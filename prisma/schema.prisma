@@ -111,9 +111,9 @@ model Graphene {
   semReports           GrapheneSemReport[]
   updateReports        GrapheneUpdateReport[]
   shipments            MaterialShipment[]
+  micronizations       Micronization[]
   ramanTests           RamanTest[]
   temTests             TEMTest[]
-  micronizations       Micronization[]
 
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
@@ -124,23 +124,23 @@ model Graphene {
 }
 
 model CompoundBatch {
-  id                String                   @id @default(cuid())
-  batchNumber       String                   @unique @map("batch_number")
-  batchName         String?                  @map("batch_name")
+  id                String                      @id @default(cuid())
+  batchNumber       String                      @unique @map("batch_number")
+  batchName         String?                     @map("batch_name")
   description       String?
-  createdDate       DateTime?                @map("created_date")
-  totalOutput       Decimal?                 @map("total_output") @db.Decimal(10, 2)
-  createdAt         DateTime                 @default(now()) @map("created_at")
-  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  createdDate       DateTime?                   @map("created_date")
+  totalOutput       Decimal?                    @map("total_output") @db.Decimal(10, 2)
+  createdAt         DateTime                    @default(now()) @map("created_at")
+  updatedAt         DateTime                    @updatedAt @map("updated_at")
   betTests          BET[]
   semReports        CompoundBatchSemReport[]
+  updateReports     CompoundBatchUpdateReport[]
   conductivityTests ConductivityTest[]
   experiments       GrapheneCompoundBatch[]
   shipments         MaterialShipment[]
+  micronizations    Micronization[]
   ramanTests        RamanTest[]
   temTests          TEMTest[]
-  micronizations    Micronization[]
-  updateReports     CompoundBatchUpdateReport[]
 
   @@index([createdAt])
   @@index([createdDate])
@@ -190,17 +190,17 @@ model ConductivityTest {
   id                     String         @id @default(cuid())
   testDate               DateTime?      @map("test_date")
   grapheneSample         String?        @map("graphene_sample")
-  name                   String?
   description            String?
   conductivity1kN        Decimal?       @map("conductivity_1kn") @db.Decimal(12, 6)
   conductivity8kN        Decimal?       @map("conductivity_8kn") @db.Decimal(12, 6)
   conductivity12kN       Decimal?       @map("conductivity_12kn") @db.Decimal(12, 6)
   conductivity20kN       Decimal?       @map("conductivity_20kn") @db.Decimal(12, 6)
   comments               String?
-  conductivityReportPath String?        @map("conductivity_report_path")
   createdAt              DateTime       @default(now()) @map("created_at")
   updatedAt              DateTime       @updatedAt @map("updated_at")
   compoundBatchNumber    String?        @map("compound_batch_number")
+  conductivityReportPath String?        @map("conductivity_report_path")
+  name                   String?
   compoundBatchRef       CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
   grapheneRef            Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
 
@@ -231,14 +231,6 @@ model RamanTest {
   integralTypADG2        Decimal?       @map("integral_typ_a_dg_2") @db.Decimal(10, 4)
   integralTypAG1         Decimal?       @map("integral_typ_a_g_1") @db.Decimal(10, 3)
   integralTypAG2         Decimal?       @map("integral_typ_a_g_2") @db.Decimal(10, 3)
-  integralTypB2D1        Decimal?       @map("integral_typ_b_2d_1") @db.Decimal(10, 3)
-  integralTypB2D2        Decimal?       @map("integral_typ_b_2d_2") @db.Decimal(10, 3)
-  integralTypBD1         Decimal?       @map("integral_typ_b_d_1") @db.Decimal(10, 3)
-  integralTypBD2         Decimal?       @map("integral_typ_b_d_2") @db.Decimal(10, 3)
-  integralTypBDG1        Decimal?       @map("integral_typ_b_dg_1") @db.Decimal(10, 4)
-  integralTypBDG2        Decimal?       @map("integral_typ_b_dg_2") @db.Decimal(10, 4)
-  integralTypBG1         Decimal?       @map("integral_typ_b_g_1") @db.Decimal(10, 3)
-  integralTypBG2         Decimal?       @map("integral_typ_b_g_2") @db.Decimal(10, 3)
   integrationRange2DHigh Decimal?       @map("integration_range_2d_high") @db.Decimal(10, 2)
   integrationRange2DLow  Decimal?       @map("integration_range_2d_low") @db.Decimal(10, 2)
   integrationRangeDHigh  Decimal?       @map("integration_range_d_high") @db.Decimal(10, 2)
@@ -256,6 +248,14 @@ model RamanTest {
   peakHighTypJG1         Decimal?       @map("peak_high_typ_j_g_1") @db.Decimal(10, 4)
   peakHighTypJG2         Decimal?       @map("peak_high_typ_j_g_2") @db.Decimal(10, 4)
   compoundBatchNumber    String?        @map("compound_batch_number")
+  integralTypB2D1        Decimal?       @map("integral_typ_b_2d_1") @db.Decimal(10, 3)
+  integralTypB2D2        Decimal?       @map("integral_typ_b_2d_2") @db.Decimal(10, 3)
+  integralTypBD1         Decimal?       @map("integral_typ_b_d_1") @db.Decimal(10, 3)
+  integralTypBD2         Decimal?       @map("integral_typ_b_d_2") @db.Decimal(10, 3)
+  integralTypBDG1        Decimal?       @map("integral_typ_b_dg_1") @db.Decimal(10, 4)
+  integralTypBDG2        Decimal?       @map("integral_typ_b_dg_2") @db.Decimal(10, 4)
+  integralTypBG1         Decimal?       @map("integral_typ_b_g_1") @db.Decimal(10, 3)
+  integralTypBG2         Decimal?       @map("integral_typ_b_g_2") @db.Decimal(10, 3)
   compoundBatchRef       CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
   grapheneRef            Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
 
@@ -294,16 +294,16 @@ model TEMTest {
 }
 
 model UpdateReport {
-  id              String                 @id @default(cuid())
-  filename        String                 @map("filename")
-  originalName    String                 @map("original_name")
-  filePath        String                 @map("file_path")
-  description     String?
-  weekOf          DateTime?              @map("week_of")
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
-  grapheneReports GrapheneUpdateReport[]
+  id                   String                      @id @default(cuid())
+  filename             String                      @map("filename")
+  originalName         String                      @map("original_name")
+  filePath             String                      @map("file_path")
+  description          String?
+  weekOf               DateTime?                   @map("week_of")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
   compoundBatchReports CompoundBatchUpdateReport[]
+  grapheneReports      GrapheneUpdateReport[]
 
   @@index([createdAt])
   @@index([weekOf])
@@ -386,12 +386,12 @@ model MaterialShipment {
   purpose             String?
   grapheneSample      String?        @map("graphene_sample")
   compoundBatchNumber String?        @map("compound_batch_number")
-  micronizationSku    String?        @map("micronization_sku")
   comments            String?
   status              String?        @default("shipped")
   receivedDate        DateTime?      @map("received_date")
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
+  micronizationSku    String?        @map("micronization_sku")
   compoundBatchRef    CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
   grapheneRef         Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
   micronizationRef    Micronization? @relation("MicronizationShipments", fields: [micronizationSku], references: [sku])
@@ -410,24 +410,24 @@ model MaterialShipment {
 }
 
 model Micronization {
-  id                     String         @id @default(cuid())
-  micronizationNumber    String         @unique @map("micronization_number")
-  date                   DateTime?      @map("date")
-  sku                    String?        @unique
-  startingMaterialAmount Decimal?       @map("starting_material_amount") @db.Decimal(10, 2)
-  recoveredAmount        Decimal?       @map("recovered_amount") @db.Decimal(10, 2)
-  grindPressure          Int?           @map("grind_pressure")
-  dx50                   String?        @map("dx50")
-  micronizationLocation  String?        @map("micronization_location")
-  micronizationReportPath String?       @map("micronization_report_path")
-  grapheneSample         String?        @map("graphene_sample")
-  compoundBatchNumber    String?        @map("compound_batch_number")
-  createdAt              DateTime       @default(now()) @map("created_at")
-  updatedAt              DateTime       @updatedAt @map("updated_at")
-  compoundBatchRef       CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef            Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
-  shipments              MaterialShipment[] @relation("MicronizationShipments")
-  
+  id                      String             @id @default(cuid())
+  micronizationNumber     String             @unique @map("micronization_number")
+  date                    DateTime?          @map("date")
+  sku                     String?            @unique
+  startingMaterialAmount  Decimal?           @map("starting_material_amount") @db.Decimal(10, 2)
+  recoveredAmount         Decimal?           @map("recovered_amount") @db.Decimal(10, 2)
+  grindPressure           Int?               @map("grind_pressure")
+  micronizationReportPath String?            @map("micronization_report_path")
+  grapheneSample          String?            @map("graphene_sample")
+  compoundBatchNumber     String?            @map("compound_batch_number")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+  dx50                    String?            @map("dx50")
+  micronizationLocation   String?            @map("micronization_location")
+  shipments               MaterialShipment[] @relation("MicronizationShipments")
+  compoundBatchRef        CompoundBatch?     @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef             Graphene?          @relation(fields: [grapheneSample], references: [experimentNumber])
+
   @@index([date])
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
@@ -440,9 +440,148 @@ model Micronization {
   @@map("micronizations")
 }
 
+model NewsSource {
+  id               String                 @id @default(cuid())
+  name             String                 @unique
+  url              String
+  sourceType       SourceType
+  rateLimit        Int?
+  lastFetched      DateTime?              @map("last_fetched")
+  isActive         Boolean                @default(true) @map("is_active")
+  reliabilityScore Decimal?               @map("reliability_score") @db.Decimal(3, 2)
+  termsAccepted    Boolean                @default(false) @map("terms_accepted")
+  robotsTxtChecked DateTime?              @map("robots_txt_checked")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  processingLogs   ContentProcessingLog[]
+  articles         NewsArticle[]
+
+  @@index([isActive, lastFetched])
+  @@index([sourceType, isActive])
+  @@map("news_sources")
+}
+
+model NewsArticle {
+  id               String         @id @default(cuid())
+  title            String
+  summary          String?
+  content          String?
+  url              String         @unique
+  publishDate      DateTime       @map("publish_date")
+  fetchedAt        DateTime       @default(now()) @map("fetched_at")
+  category         NewsCategory
+  relevanceScore   Decimal        @map("relevance_score") @db.Decimal(4, 2)
+  contentHash      String         @unique @map("content_hash")
+  imageUrls        String[]       @map("image_urls")
+  keywordTags      String[]       @map("keyword_tags")
+  author           String?
+  readingTime      Int?           @map("reading_time")
+  sourceId         String         @map("source_id")
+  isBookmarked     Boolean        @default(false) @map("is_bookmarked")
+  viewCount        Int            @default(0) @map("view_count")
+  laymanSummary    String?        @map("layman_summary") @db.Text
+  summaryGenerated Boolean        @default(false) @map("summary_generated")
+  summaryError     String?        @map("summary_error")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  source           NewsSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  bookmarks        UserBookmark[]
+
+  @@index([publishDate, relevanceScore])
+  @@index([category, publishDate])
+  @@index([contentHash])
+  @@index([sourceId, publishDate])
+  @@index([relevanceScore])
+  @@index([summaryGenerated, relevanceScore])
+  @@map("news_articles")
+}
+
+model UserBookmark {
+  id        String      @id @default(cuid())
+  articleId String      @map("article_id")
+  userId    String?     @map("user_id")
+  notes     String?
+  createdAt DateTime    @default(now()) @map("created_at")
+  article   NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@index([userId, createdAt])
+  @@map("user_bookmarks")
+}
+
+model NewsPreference {
+  id                  String          @id @default(cuid())
+  userId              String?         @unique @map("user_id")
+  preferredCategories NewsCategory[]  @map("preferred_categories")
+  excludedSources     String[]        @map("excluded_sources")
+  keywordAlerts       String[]        @map("keyword_alerts")
+  emailDigest         Boolean         @default(false) @map("email_digest")
+  digestFrequency     DigestFrequency @default(WEEKLY) @map("digest_frequency")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  @@map("news_preferences")
+}
+
+model ContentProcessingLog {
+  id             String        @id @default(cuid())
+  articleId      String?       @map("article_id")
+  sourceId       String        @map("source_id")
+  processType    ProcessType   @map("process_type")
+  status         ProcessStatus
+  errorMessage   String?       @map("error_message")
+  processingTime Int?          @map("processing_time")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  source         NewsSource    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId, createdAt])
+  @@index([status, createdAt])
+  @@map("content_processing_logs")
+}
+
 enum GrindingMethod {
   manual
   mill
   ball_mill
   blender
+}
+
+enum SourceType {
+  RSS
+  API
+  WEB_SCRAPING
+  MANUAL
+}
+
+enum NewsCategory {
+  RESEARCH_BREAKTHROUGH
+  INDUSTRY_NEWS
+  MARKET_ANALYSIS
+  APPLICATIONS
+  PRODUCTION_METHODS
+  PATENTS
+  COMPANY_NEWS
+  FUNDING_INVESTMENT
+}
+
+enum DigestFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ProcessType {
+  FETCH
+  PARSE
+  CATEGORIZE
+  RELEVANCE_SCORE
+  IMAGE_EXTRACT
+  DUPLICATE_CHECK
+}
+
+enum ProcessStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+  SKIPPED
 }

@@ -18,6 +18,7 @@ import shipmentRoutes from './routes/shipments.js';
 import micronizationRoutes from './routes/micronization.js';
 import dashboardRoutes from './routes/dashboard.js';
 import analysisRoutes from './routes/analysis.js';
+import newsRoutes from './routes/news.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -39,6 +40,13 @@ app.locals.prisma = prisma;
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// Serve cached news images with CORS headers
+app.use('/news-images', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+}, express.static(path.join(process.cwd(), 'public', 'news-images')));
+
 // Routes
 app.use('/api/biochar', biocharRoutes);
 app.use('/api/graphene', grapheneRoutes);
@@ -53,6 +61,7 @@ app.use('/api/shipments', shipmentRoutes);
 app.use('/api/micronization', micronizationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/news', newsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

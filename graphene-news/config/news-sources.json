@@ -1,0 +1,188 @@
+{
+  "sources": [
+    {
+      "name": "Nature Materials",
+      "url": "https://www.nature.com/nmat/rss/current",
+      "sourceType": "RSS",
+      "description": "Premier materials science journal with regular graphene research",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.5
+    },
+    {
+      "name": "ACS Nano",
+      "url": "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=ancac3",
+      "sourceType": "RSS", 
+      "description": "Leading nanotechnology journal featuring graphene applications",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.3
+    },
+    {
+      "name": "Science Direct - Graphene",
+      "url": "https://rss.sciencedirect.com/publication/science/carbon",
+      "sourceType": "RSS",
+      "description": "Carbon journal RSS feed covering graphene research", 
+      "rateLimit": 24,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.8
+    },
+    {
+      "name": "Graphene-Info",
+      "url": "https://www.graphene-info.com/rss.xml",
+      "sourceType": "RSS",
+      "description": "Dedicated graphene industry news and market analysis",
+      "rateLimit": 6,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.5
+    },
+    {
+      "name": "2D Materials Journal",
+      "url": "https://iopscience.iop.org/journal/rss/2053-1583",
+      "sourceType": "RSS",
+      "description": "IOP Science 2D Materials journal RSS feed",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.0
+    },
+    {
+      "name": "Advanced Materials",
+      "url": "https://onlinelibrary.wiley.com/action/showFeed?jc=15214095&type=etoc&feed=rss",
+      "sourceType": "RSS",
+      "description": "Wiley Advanced Materials journal covering 2D materials",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.2
+    },
+    {
+      "name": "Physical Review Materials",
+      "url": "https://journals.aps.org/prmaterials/rss",
+      "sourceType": "RSS",
+      "description": "APS Physical Review Materials journal",
+      "rateLimit": 24,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.9
+    },
+    {
+      "name": "ArXiv - Materials Science",
+      "url": "http://export.arxiv.org/rss/cond-mat.mtrl-sci",
+      "sourceType": "RSS",
+      "description": "ArXiv preprints in materials science",
+      "rateLimit": 6,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 7.5
+    },
+    {
+      "name": "Materials Today",
+      "url": "https://www.materialstoday.com/rss/",
+      "sourceType": "RSS",
+      "description": "Materials Today news and research updates",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.3
+    },
+    {
+      "name": "Chemical & Engineering News",
+      "url": "https://cen.acs.org/rss/all.xml",
+      "sourceType": "RSS",
+      "description": "C&EN chemical industry news including nanomaterials",
+      "rateLimit": 24,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.1
+    },
+    {
+      "name": "Nano Letters",
+      "url": "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=nalefd",
+      "sourceType": "RSS",
+      "description": "ACS Nano Letters journal",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.1
+    },
+    {
+      "name": "Small Methods",
+      "url": "https://onlinelibrary.wiley.com/action/showFeed?jc=23669608&type=etoc&feed=rss",
+      "sourceType": "RSS",
+      "description": "Wiley Small Methods journal",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.4
+    }
+  ],
+  "categories": {
+    "RESEARCH_BREAKTHROUGH": {
+      "name": "Research Breakthroughs",
+      "description": "Novel discoveries and breakthrough research in graphene",
+      "color": "blue",
+      "priority": 1
+    },
+    "INDUSTRY_NEWS": {
+      "name": "Industry News", 
+      "description": "General industry developments and company news",
+      "color": "gray",
+      "priority": 2
+    },
+    "MARKET_ANALYSIS": {
+      "name": "Market Analysis",
+      "description": "Market trends, forecasts, and economic analysis",
+      "color": "green",
+      "priority": 3
+    },
+    "APPLICATIONS": {
+      "name": "Applications",
+      "description": "New applications and use cases for graphene",
+      "color": "purple",
+      "priority": 4
+    },
+    "PRODUCTION_METHODS": {
+      "name": "Production Methods",
+      "description": "Manufacturing and production technique advances",
+      "color": "orange",
+      "priority": 5
+    },
+    "PATENTS": {
+      "name": "Patents",
+      "description": "Patent filings and intellectual property news",
+      "color": "red",
+      "priority": 6
+    },
+    "COMPANY_NEWS": {
+      "name": "Company News",
+      "description": "Company-specific announcements and developments",
+      "color": "indigo",
+      "priority": 7
+    },
+    "FUNDING_INVESTMENT": {
+      "name": "Funding & Investment",
+      "description": "Investment rounds, funding announcements, and financial news",
+      "color": "yellow",
+      "priority": 8
+    }
+  },
+  "settings": {
+    "defaultFetchInterval": 2,
+    "maxArticlesPerSource": 50,
+    "minRelevanceScore": 2.0,
+    "articleRetentionDays": 90,
+    "lowRelevanceRetentionDays": 30,
+    "imageDownloadEnabled": true,
+    "maxImageSize": "5MB",
+    "cacheDuration": "24h",
+    "respectRobotsTxt": true,
+    "userAgent": "GrapheneNews/1.0 (Research Bot)",
+    "requestDelay": 1000,
+    "maxConcurrentRequests": 3
+  }
+}
