@@ -299,6 +299,19 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
       createdDate: cb.compoundBatch.createdDate ? cb.compoundBatch.createdDate.toISOString().split('T')[0] : null
     }
   }));
+
+  // Process SEM reports to flatten the nested structure
+  const processedSemReports = graphene.semReports?.map(sr => ({
+    ...sr.semReport,
+    reportDate: sr.semReport.reportDate ? sr.semReport.reportDate.toISOString().split('T')[0] : null
+  })) || [];
+
+  // Process update reports to flatten the nested structure
+  const processedUpdateReports = graphene.updateReports?.map(ur => ({
+    ...ur.updateReport,
+    weekDate: ur.updateReport.weekDate ? ur.updateReport.weekDate.toISOString().split('T')[0] : null,
+    uploadDate: ur.updateReport.createdAt ? ur.updateReport.createdAt.toISOString().split('T')[0] : null
+  })) || [];
   
   res.json({
     sourceBiochar,
@@ -308,6 +321,8 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
     conductivityTests: processedConductivityTests,
     compoundBatches: processedCompoundBatches,
     shipments,
+    semReports: processedSemReports,
+    updateReports: processedUpdateReports,
     lotInfo: graphene.biocharLotRef
   });
 }));

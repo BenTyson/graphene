@@ -36,6 +36,7 @@
         <span class="text-sm font-medium text-gray-700" x-text="
           activeTab === 'dashboard' ? 'Dashboard' :
           activeTab === 'analysis' ? 'Analysis' :
+          activeTab === 'news' ? 'News Feed' :
           activeTab === 'graphene' ? 'Graphene' :
           activeTab === 'compound-batches' ? 'Compound Batches' :
           activeTab === 'micronization' ? 'Micronization' :
@@ -57,6 +58,11 @@
                   :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                   class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
             Analysis
+          </button>
+          <button @click="activeTab = 'news'; mobileMenuOpen = false; initializeNewsTab()"
+                  :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
+            News Feed
           </button>
           <button @click="activeTab = 'graphene'; mobileMenuOpen = false"
                   :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
@@ -107,6 +113,13 @@
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             Analysis
+          </button>
+          <button
+            @click="activeTab = 'news'; initializeNewsTab()"
+            :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            News Feed
           </button>
           <button
             @click="activeTab = 'graphene'"
@@ -221,6 +234,9 @@
 
       <!-- Analysis Tab -->
       <div x-html="getAnalysisTabHtml()"></div>
+
+      <!-- News Tab -->
+      <div x-html="getNewsTabHtml()"></div>
 
       <!-- Biochar Tab -->
       <div x-html="getBiocharTabHtml()"></div>
@@ -870,6 +886,19 @@
     <div x-html="getModalHtml('addDryingAtmosphere')"></div>
     <div x-html="getModalHtml('addDryingPressure')"></div>
     
+  
+    <!-- Card Modal Container - inside the main app for shared state -->
+    <div id="card-modal-container">
+      <template x-if="activeCardModal">
+        <div x-html="getCurrentModalHtml()"></div>
+      </template>
+    </div>
+
+    <!-- PDF Viewer Modal Container - higher z-index for modal stacking -->
+    <div id="pdf-viewer-modal-container">
+      <div x-html="window.ModalPdfViewer ? window.ModalPdfViewer.createViewer() : ''"></div>
+    </div>
+
   </div>
 
   <!-- Component Scripts -->
@@ -879,6 +908,8 @@
   <script src="/src/js/components/tabs/TestResultsTEMTab.js"></script>
   <script src="/src/js/components/tabs/SEMReportsTab.js"></script>
   <script src="/src/js/components/tabs/UpdateReportsTab.js"></script>
+  <script src="/src/js/components/tabs/NewsTab.js"></script>
+  <script src="/src/js/components/tabs/NewsTabFunctions.js"></script>
   <script src="/src/js/components/modals/BETModal.js"></script>
   <script src="/src/js/components/modals/ConductivityModal.js"></script>
   <script src="/src/js/components/modals/TEMModal.js"></script>
@@ -892,6 +923,10 @@
   <script src="/src/js/components/cards/MasterDataCard.js"></script>
   <script src="/src/js/services/CardService.js"></script>
   <script src="/src/js/components/cards/CardFactory.js"></script>
+  <script src="/src/js/components/cards/SimplifiedGrapheneCard.js"></script>
+  <script src="/src/js/components/modals/CardModalSystem.js"></script>
+  <script src="/src/js/components/modals/ModalPdfViewer.js"></script>
+  <script src="/src/js/components/modals/ModalTemplates.js"></script>
   
   <!-- Chart.js for interactive charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>

@@ -58,7 +58,7 @@ function createMasterDataCard(options = {}) {
   } else {
     // Regular experiment sections
     sections = config.sections === 'all' 
-      ? ['process', 'source', 'tests', 'reports', 'shipments', 'objectives']
+      ? ['process', 'source', 'tests', 'reports', 'shipments', 'objectives', 'compoundBatches']
       : config.sections || ['metrics', 'tests'];
   }
   
@@ -94,6 +94,7 @@ function createMasterDataCard(options = {}) {
         ${sections.includes('reports') ? createReportsSection(config) : ''}
         ${sections.includes('shipments') ? createShipmentsSection(config) : ''}
         ${sections.includes('objectives') ? createObjectivesSection(config) : ''}
+        ${sections.includes('compoundBatches') ? createCompoundBatchesSection(config) : ''}
       </div>
       
       <!-- Loading State -->
@@ -787,8 +788,11 @@ function createTestsSection(config) {
           ${data.semReports?.length > 0 ? `
             <div class="space-y-2">
               ${data.semReports.map(report => `
-                <div class="flex justify-between text-sm">
-                  <span class="font-mono">${report.originalName || report.filename}</span>
+                <div class="flex justify-between items-center text-sm">
+                  <button @click="openPdfInModal('/uploads/sem-reports/${report.filename}', 'SEM Report')" 
+                          class="font-mono text-link hover:text-link-hover cursor-pointer text-left">
+                    ${report.originalName || report.filename}
+                  </button>
                   <span class="text-gray-500">${formatCardDate(report.reportDate)}</span>
                 </div>
               `).join('')}
@@ -804,34 +808,35 @@ function createTestsSection(config) {
 }
 
 /**
- * Create reports section
+ * Create reports section - for actual documents like Curia Updates
  */
 function createReportsSection(config) {
   const { data } = config;
   
-  const reportCount = (data.semReports?.length || 0) + (data.updateReports?.length || 0);
+  const documentCount = (data.updateReports?.length || 0);
   
   return createCardSection({
-    title: 'Reports & Documents',
-    badge: reportCount > 0 ? `${reportCount}` : null,
+    title: 'Documents',
+    badge: documentCount > 0 ? `${documentCount}` : null,
     icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
     </svg>`,
     content: `
       <div class="p-4">
-        ${reportCount > 0 ? `
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-            ${data.semReports?.map(report => `
-              <button class="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs text-center transition-colors">
-                <svg class="w-6 h-6 mx-auto mb-1 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                </svg>
-                <div class="truncate">SEM Report</div>
-              </button>
+        ${documentCount > 0 ? `
+          <div class="space-y-2">
+            ${data.updateReports?.map(report => `
+              <div class="flex justify-between items-center text-sm">
+                <button @click="openPdfInModal('/uploads/update-reports/${report.filename}', 'Curia Update Report')" 
+                        class="text-link hover:text-link-hover cursor-pointer">
+                  ${report.originalName || report.filename}
+                </button>
+                <span class="text-gray-500">${formatCardDate(report.uploadDate)}</span>
+              </div>
             `).join('') || ''}
           </div>
         ` : `
-          <div class="text-sm text-gray-500">No reports available</div>
+          <div class="text-sm text-gray-500">No documents available</div>
         `}
       </div>
     `,
@@ -1000,6 +1005,116 @@ function createStatusSection(config) {
           </div>
         ` : ''}
       </div>
+    `,
+    defaultExpanded: false
+  });
+}
+
+/**
+ * Create compound batches section
+ * Shows compound batches that include this experiment
+ * @param {Object} config - Configuration object
+ * @returns {string} HTML string for compound batches section
+ */
+function createCompoundBatchesSection(config) {
+  const { data, instanceId } = config;
+  
+  // Get the current experiment number for highlighting
+  const currentExperimentNumber = data.experimentNumber;
+  
+  return createCardSection({
+    id: `compound-batches-${instanceId}`,
+    title: 'Compound Batches',
+    badge: data.compoundBatches?.length > 0 ? `${data.compoundBatches.length}` : null,
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+    </svg>`,
+    content: data.compoundBatches?.length > 0 ? `
+      <div class="space-y-3">
+        ${data.compoundBatches.map(compoundBatchAssoc => `
+          <div class="bg-link-light border border-link rounded-lg p-3">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h5 class="font-semibold text-sm text-gray-800 flex items-center mb-2">
+                  <span class="font-mono">${compoundBatchAssoc.compoundBatch.batchNumber}</span>
+                  ${compoundBatchAssoc.compoundBatch.batchName ? `
+                    <span class="ml-2 font-normal"> - ${compoundBatchAssoc.compoundBatch.batchName}</span>
+                  ` : ''}
+                </h5>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span class="font-medium text-gray-700">Created:</span>
+                    <span class="text-gray-600">${compoundBatchAssoc.compoundBatch.createdDate || 'Not specified'}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-700">Total Output:</span>
+                    <span class="text-gray-600">${compoundBatchAssoc.compoundBatch.totalOutput ? compoundBatchAssoc.compoundBatch.totalOutput + 'g' : 'Not specified'}</span>
+                  </div>
+                </div>
+                ${compoundBatchAssoc.compoundBatch.description ? `
+                  <div class="mt-2">
+                    <span class="font-medium text-gray-700 text-sm">Description:</span>
+                    <p class="text-sm text-gray-600 mt-1">${compoundBatchAssoc.compoundBatch.description}</p>
+                  </div>
+                ` : ''}
+                
+                <!-- Constituent Experiments -->
+                <div class="mt-3">
+                  <span class="font-medium text-gray-700 text-sm">Constituent Experiments:</span>
+                  <div class="mt-1 flex flex-wrap gap-1">
+                    ${compoundBatchAssoc.compoundBatch.experiments.map(exp => `
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        exp.graphene.experimentNumber === currentExperimentNumber 
+                          ? 'bg-white text-gray-800 ring-2 ring-link border border-link' 
+                          : 'bg-gray-100 text-gray-700'
+                      }">
+                        <span>${exp.graphene.experimentNumber}</span>
+                        ${exp.graphene.output ? `
+                          <span class="text-gray-600"> (${exp.graphene.output}g)</span>
+                        ` : ''}
+                      </span>
+                    `).join('')}
+                  </div>
+                </div>
+                
+                <!-- Associated Tests -->
+                ${(compoundBatchAssoc.compoundBatch.betTests?.length > 0 || 
+                   compoundBatchAssoc.compoundBatch.conductivityTests?.length > 0 || 
+                   compoundBatchAssoc.compoundBatch.ramanTests?.length > 0 ||
+                   compoundBatchAssoc.compoundBatch.temTests?.length > 0) ? `
+                  <div class="mt-3">
+                    <span class="font-medium text-gray-700 text-sm">Associated Tests:</span>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                      ${compoundBatchAssoc.compoundBatch.betTests?.length > 0 ? `
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          BET (${compoundBatchAssoc.compoundBatch.betTests.length})
+                        </span>
+                      ` : ''}
+                      ${compoundBatchAssoc.compoundBatch.conductivityTests?.length > 0 ? `
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          Conductivity (${compoundBatchAssoc.compoundBatch.conductivityTests.length})
+                        </span>
+                      ` : ''}
+                      ${compoundBatchAssoc.compoundBatch.ramanTests?.length > 0 ? `
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          RAMAN (${compoundBatchAssoc.compoundBatch.ramanTests.length})
+                        </span>
+                      ` : ''}
+                      ${compoundBatchAssoc.compoundBatch.temTests?.length > 0 ? `
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          TEM (${compoundBatchAssoc.compoundBatch.temTests.length})
+                        </span>
+                      ` : ''}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    ` : `
+      <div class="text-sm text-gray-500">This experiment is not part of any compound batches</div>
     `,
     defaultExpanded: false
   });

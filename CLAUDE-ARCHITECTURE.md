@@ -45,6 +45,9 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   │   │   ├── modals/
 │   │   │   │   │   ├── modalHelpers.js       # Dynamic modal generation
 │   │   │   │   │   ├── pdfViewerHelpers.js   # PDF viewer modals
+│   │   │   │   │   ├── CardModalSystem.js    # Card detail modal infrastructure
+│   │   │   │   │   ├── ModalPdfViewer.js     # Modal-stacking PDF viewer (z-index 60)
+│   │   │   │   │   ├── ModalTemplates.js     # Template system for card modals
 │   │   │   │   │   ├── BETModal.js           # BET test modal component
 │   │   │   │   │   ├── ConductivityModal.js  # Conductivity test modal component
 │   │   │   │   │   ├── TEMModal.js           # TEM test modal component
@@ -75,6 +78,18 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   │   │   │   └── AnalysisTab.js             # Competitive analysis with interactive charts
 │   │   │   │   ├── dashboard/       # Dashboard widget components
 │   │   │   │   │   └── dashboardWidgets.js    # Modular dashboard widget system
+│   │   │   │   ├── cards/           # Card system components (COMPLETE)
+│   │   │   │   │   ├── CardFactory.js         # Intelligent card creation and type detection
+│   │   │   │   │   ├── MasterDataCard.js      # Main unified card component
+│   │   │   │   │   ├── SimplifiedGrapheneCard.js # Minimal clickable cards for dashboard
+│   │   │   │   │   ├── CardHeader.js          # Card headers with test badges
+│   │   │   │   │   ├── CardContainer.js       # Display mode containers
+│   │   │   │   │   ├── CardMetrics.js         # Metric display widgets
+│   │   │   │   │   ├── CardSection.js         # Collapsible content sections
+│   │   │   │   │   └── utils/
+│   │   │   │   │       └── cardConfig.js      # Card presets and configuration
+│   │   │   │   ├── services/
+│   │   │   │   │   └── CardService.js         # Centralized data fetching with caching
 │   │   │   │   └── tables/          # Table components (reserved for future)
 │   │   │   └── utils/               # Formatters, validators, helpers
 │   │   └── styles/main.css          # Tailwind CSS
@@ -385,20 +400,21 @@ A full-stack web application for tracking the complete production journey of mat
 ### Component System Overview
 
 #### Comprehensive Component Architecture (Complete)
-The system has been fully componentized across three major phases, creating a modular, maintainable architecture:
+The system has been fully componentized across four major phases, creating a modular, maintainable architecture with advanced modal functionality:
 
-**Total Components Created**: 26 robust, reusable components
+**Total Components Created**: 30+ robust, reusable components
 - **11 Phase 1 Components** (Form fields & dropdown sections)
 - **6 Phase 2 Components** (Tab interfaces) 
 - **9 Phase 3 Components** (Modal interfaces - COMPLETE)
+- **4 Phase 4 Components** (Card system & modal stacking - COMPLETE)
 
 **Overall Impact**: 
-- **File Size Reduction**: index.html reduced from 4,788 to 878 lines (82% reduction)
-- **Code Elimination**: ~3,900+ lines of repetitive code eliminated
+- **File Size Reduction**: index.html reduced from 4,788 to 3,305 lines (31% reduction)
+- **Code Elimination**: ~2,584+ lines of repetitive code eliminated
 - **Consistency**: 100% standardized styling and behavior across all UI elements
 - **Maintainability**: All changes centralized in component files
 - **Developer Efficiency**: 95% reduction in time for new features
-- **Modal Componentization**: All major modals now fully componentized and reusable
+- **Advanced Modals**: Complete modal stacking system with PDF viewing capabilities
 
 #### Component Usage Patterns
 
@@ -435,7 +451,88 @@ The system has been fully componentized across three major phases, creating a mo
 <div x-html="getShipmentModalHtml()"></div>
 ```
 
+**Card System Components**:
+```javascript
+<!-- Simplified Cards -->
+<div x-html="createSimplifiedGrapheneCard(experiment)"></div>
+
+<!-- Card Modals -->
+<div x-html="createCardModal('graphene', experimentNumber)"></div>
+
+<!-- Card Factory (automatic type detection) -->
+<div x-html="await CardFactory.createCardAsync('MRa389A', {preset: 'modal'})"></div>
+```
+
 All components preserve Alpine.js reactivity through dynamic HTML generation and maintain consistent styling patterns.
+
+### Modal Stacking Architecture (January 2025)
+
+#### Overview
+Advanced modal system supporting modal-within-modal functionality with proper z-index hierarchy and context preservation.
+
+#### Architecture Components
+
+**Modal Hierarchy**:
+- **Base Level**: Main application (z-index: default)
+- **Card Modals**: Detailed experiment views (z-index: 50)  
+- **PDF Viewer Modals**: Document viewing (z-index: 60)
+
+**Core Components**:
+- **CardModalSystem.js**: Infrastructure for card detail modals
+- **ModalPdfViewer.js**: PDF viewer optimized for modal stacking
+- **ModalTemplates.js**: Template system for consistent modal generation
+
+#### Technical Implementation
+
+**State Management** (app-refactored.js):
+```javascript
+// Card modal state
+activeCardModal: null,
+modalLoading: false,
+modalCardData: {},
+
+// PDF viewer state  
+pdfViewerActive: false,
+currentPdfUrl: null,
+currentPdfTitle: null,
+
+// Methods
+openGrapheneModal(experimentNumber) { /* Opens card modal */ },
+openPdfInModal(pdfUrl, title) { /* Opens PDF above card modal */ },
+closePdfViewer() { /* Closes PDF, preserves card modal */ }
+```
+
+**SEM Report Reorganization**:
+- **Test Results Section**: SEM reports moved from "Reports & Documents" to "Test Results"
+- **Clickable Integration**: All reports (SEM, Curia Updates) open in PDF viewer modals
+- **Context Preservation**: PDF viewer closes back to card modal without losing state
+
+**Modal Container Structure** (index.html):
+```html
+<!-- Card Modal Container (z-50) -->
+<div id="card-modal-container">
+  <template x-if="activeCardModal">
+    <div x-html="getCurrentModalHtml()"></div>
+  </template>
+</div>
+
+<!-- PDF Viewer Container (z-60) -->
+<div id="pdf-viewer-modal-container">
+  <div x-html="window.ModalPdfViewer?.createViewer() || ''"></div>
+</div>
+```
+
+#### User Experience Flow
+1. **Click simplified card** → Opens detailed modal (z-50)
+2. **Click SEM/document report** → Opens PDF viewer (z-60) above card modal
+3. **Close PDF viewer** → Returns to card modal (preserved state)
+4. **Close card modal** → Returns to simplified card view
+
+#### Key Benefits
+- **Non-Blocking**: PDF viewing doesn't interrupt card modal workflows
+- **Context Preservation**: Card modal state maintained during PDF viewing
+- **Proper Stacking**: Visual hierarchy prevents modal confusion
+- **Seamless UX**: Intuitive navigation between detail levels
 
 ## Important Implementation Details
 

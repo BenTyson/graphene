@@ -50,6 +50,15 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
+/* Modal stacking z-index classes */
+.z-50 {
+  z-index: 50;
+}
+
+.z-60 {
+  z-index: 60;
+}
+
 /* Global color variables */
 :root {
   --link-primary: #B87333;
