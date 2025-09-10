@@ -15,9 +15,11 @@ export const SUMMARY_CONFIG = {
   BATCH_SIZE: parseInt(process.env.SUMMARY_BATCH_SIZE || '10'),
   RATE_LIMIT_DELAY: 1000, // ms between API calls
 
-  // Quality controls
-  MIN_RELEVANCE_SCORE: 5.0, // Only summarize high-relevance articles
+  // Quality controls - STRICT GRAPHENE FOCUS
+  MIN_RELEVANCE_SCORE: 4.0, // Raised threshold for graphene relevance
+  GRAPHENE_REQUIRED: true,   // MANDATORY: Articles must contain graphene references
   HIGH_IMPACT_KEYWORDS: [
+    'graphene', 'graphene oxide', 'reduced graphene oxide', 'epitaxial graphene',
     'hemp', 'supercapacitor', 'supercapacitors', 
     'energy storage', 'cathode', 'anode', 'electrode',
     'electrochemical', 'capacitor', 'battery storage'

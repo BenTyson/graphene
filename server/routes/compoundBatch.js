@@ -22,7 +22,7 @@ router.get('/', asyncHandler(async (req, res) => {
   let orderBy;
   if (sortBy === 'chronological') {
     orderBy = [
-      { createdDate: order },
+      { createdDate: { sort: order, nulls: 'last' } },
       { createdAt: order }
     ];
   } else {
@@ -140,6 +140,12 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     conductivity20kN: record.conductivity20kN ? Number(record.conductivity20kN) : null
   }));
   
+  // Process SEM reports for frontend display
+  const processedSemReports = compoundBatch.semReports?.map(sr => ({
+    ...sr.semReport,
+    reportDate: sr.semReport.reportDate ? sr.semReport.reportDate.toISOString().split('T')[0] : null
+  })) || [];
+
   res.json({
     compoundBatch: {
       ...compoundBatch,
@@ -150,7 +156,8 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     ramanTests,
     conductivityTests: processedConductivityTests,
     temTests,
-    shipments
+    shipments,
+    semReports: processedSemReports
   });
 }));
 

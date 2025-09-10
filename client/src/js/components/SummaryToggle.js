@@ -4,9 +4,12 @@
  */
 
 export function getSummaryToggleHtml(article) {
-  // Check if summary exists
-  const hasSummary = article.laymanSummary && article.summaryGenerated;
-  const hasError = article.summaryError && !article.summaryGenerated;
+  // Check summary status using new fields
+  const hasSummary = article.laymanSummary && article.summaryStatus === 'COMPLETED';
+  const isGenerating = article.summaryStatus === 'GENERATING';
+  const isPending = article.summaryStatus === 'PENDING';
+  const hasFailed = article.summaryStatus === 'FAILED';
+  const hasError = article.summaryError && hasFailed;
   
   // Get simplified title here in the function
   const simplifiedTitle = getSimplifiedTitle(article.title);
@@ -30,32 +33,19 @@ export function getSummaryToggleHtml(article) {
             <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
             </svg>
-            <span>Business Summary</span>
-            ${hasSummary ? '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">Ready</span>' : ''}
-            ${hasError ? '<span class="px-2 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">Error</span>' : ''}
-            ${!hasSummary && !hasError ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Generate</span>' : ''}
+            <span>Summary</span>
           </span>
         </button>
         
-        ${!hasSummary && !hasError ? `
+        <!-- Automatic summaries - only show retry option for failed summaries -->
+        ${hasFailed ? `
           <button 
-            @click="generateSummary('${article.id}')"
-            :disabled="summaryLoading['${article.id}']"
-            :class="summaryLoading['${article.id}'] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'"
-            class="inline-flex items-center px-3 py-1.5 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-blue-50 transition-colors">
-            <svg 
-              x-show="!summaryLoading['${article.id}']" 
-              class="w-3 h-3 mr-1" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            @click="retryGenerateSummary('${article.id}')"
+            class="inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors">
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            <div 
-              x-show="summaryLoading['${article.id}']" 
-              x-cloak 
-              class="animate-spin w-3 h-3 mr-1 border border-blue-600 border-t-transparent rounded-full"></div>
-            <span x-text="summaryLoading['${article.id}'] ? 'Generating...' : 'Generate'"></span>
+            <span>Retry</span>
           </button>
         ` : ''}
       </div>
@@ -67,73 +57,52 @@ export function getSummaryToggleHtml(article) {
         class="summary-content bg-gray-50 border border-gray-200 rounded-lg p-4">
         
         ${hasSummary ? `
-          <!-- Existing Summary -->
-          <div class="space-y-3">
-            <div class="mb-4">
-              <h4 class="text-base font-medium text-gray-600 mb-2">What This Article Means:</h4>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">${simplifiedTitle}</h3>
-            </div>
-            <div class="space-y-4">
-              ${formatSummaryWithSections(article.laymanSummary || 'Summary not available')}
-            </div>
-            <div class="flex items-center justify-end pt-3 border-t border-gray-200">
-              <button 
-                @click="regenerateSummary('${article.id}')"
-                class="text-black hover:text-gray-700 text-xs font-medium">
-                Regenerate
-              </button>
+          <!-- Completed Summary -->
+          <div class="space-y-4">
+            ${formatSummaryWithSections(article.laymanSummary || 'Summary not available')}
+          </div>
+        ` : isGenerating ? `
+          <!-- Generating State -->
+          <div class="text-center py-6">
+            <div class="space-y-3">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p class="text-sm text-gray-600 font-medium">Generating summary...</p>
             </div>
           </div>
-        ` : hasError ? `
+        ` : isPending ? `
+          <!-- Pending State -->
+          <div class="text-center py-6">
+            <div class="space-y-3">
+              <svg class="w-12 h-12 mx-auto text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p class="text-sm text-gray-600 font-medium">Summary queued for generation</p>
+            </div>
+          </div>
+        ` : hasFailed ? `
           <!-- Error State -->
           <div class="space-y-3">
             <div class="flex items-center space-x-2 text-sm text-red-700">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
               </svg>
-              <span class="font-semibold">Summary Generation Failed</span>
+              <span class="font-semibold">Summary generation failed</span>
             </div>
-            <div class="text-sm text-red-700 bg-red-100 p-3 rounded">
-              <p class="font-medium">Error:</p>
-              <p>${article.summaryError || 'Unknown error occurred'}</p>
-            </div>
-            <div class="flex items-center justify-between pt-2">
-              <span class="text-xs text-gray-500">This may be due to API limits or content restrictions</span>
+            <div class="text-center pt-2">
               <button 
                 @click="retryGenerateSummary('${article.id}')"
                 class="text-black hover:text-gray-700 text-xs font-medium">
-                Try Again
+                Retry
               </button>
             </div>
           </div>
         ` : `
-          <!-- Loading/Generate State -->
-          <div x-show="!summaryLoading['${article.id}']" class="text-center py-6">
-            <div class="space-y-3">
-              <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-              </svg>
-              <p class="text-sm text-gray-600">Click "Generate" to create a business-friendly summary</p>
-              <p class="text-xs text-gray-500">AI will explain this article in simple business terms</p>
-            </div>
-          </div>
-          
-          <div x-show="summaryLoading['${article.id}']" x-cloak class="text-center py-6">
-            <div class="space-y-3">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
-              <p class="text-sm text-gray-600">Generating business summary...</p>
-              <p class="text-xs text-gray-500">This may take 10-30 seconds</p>
-            </div>
+          <!-- Unknown State (fallback) -->
+          <div class="text-center py-6">
+            <p class="text-sm text-gray-600">Summary will be generated automatically</p>
           </div>
         `}
       </div>
-
-      <!-- Cost Information (for admin/development) -->
-      ${window.location.hostname === 'localhost' ? `
-        <div x-show="showSummary['${article.id}'] && ${hasSummary}" class="mt-2 text-xs text-gray-400">
-          Estimated cost: ~$0.002 • Optimized for business insights
-        </div>
-      ` : ''}
     </div>
   `;
 }
@@ -166,7 +135,7 @@ export function formatSummaryWithSections(summaryText) {
     .trim();
 
   // Try to detect markdown-style headers like **Key Development:**
-  const markdownSections = cleanText.split(/(?=(?:Key Development|Why It Matters|Business Impact|Timeline|Market Opportunity|Strategic Relevance|Opportunities|Risks|Industry Implications|Connection to|What|How|When|Where|Why).*?:)/i);
+  const markdownSections = cleanText.split(/(?=(?:Key Development|Why It Matters|Business Impact|Timeline|Market Opportunity|Strategic Relevance|Opportunities|Industry Implications|Connection to|What|How|When|Where|Why).*?:)/i);
   
   if (markdownSections.length > 1) {
     let formattedHtml = '';
@@ -179,14 +148,12 @@ export function formatSummaryWithSections(summaryText) {
       if (headerMatch) {
         const [, rawHeader, content] = headerMatch;
         
-        // Clean and map headers to our standard ones
+        // Clean and map headers to our standard ones (excluding risks)
         const headerMappings = {
           'key development': 'Key Development',
           'why it matters': 'Business Impact',
           'business impact': 'Business Impact',
           'opportunities': 'Market Opportunity',
-          'risks': 'Risks & Considerations',
-          'opportunities/risks': 'Opportunities & Risks',
           'industry implications': 'Strategic Relevance',
           'connection to': 'Strategic Relevance',
           'timeline': 'Timeline & Implementation',
@@ -194,6 +161,12 @@ export function formatSummaryWithSections(summaryText) {
         };
         
         const cleanHeader = rawHeader.toLowerCase().trim();
+        
+        // Skip any sections related to risks
+        if (cleanHeader.includes('risk')) {
+          return;
+        }
+        
         const displayHeader = headerMappings[cleanHeader] || 
                             rawHeader.replace(/[^\w\s]/g, '').trim();
         

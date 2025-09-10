@@ -233,25 +233,157 @@ Write in a professional but accessible tone. Avoid jargon. Focus on "what this m
   }
 
   /**
+   * Process all pending summary generations for existing articles
+   */
+  async processPendingSummaries() {
+    console.log('🔄 Processing pending summary generations...');
+    
+    try {
+      // Find articles that need summaries
+      const pendingArticles = await this.prisma.newsArticle.findMany({
+        where: {
+          OR: [
+            { summaryStatus: 'PENDING' },
+            { 
+              AND: [
+                { summaryStatus: 'FAILED' },
+                { summaryAttempts: { lt: 3 } }
+              ]
+            }
+          ]
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20 // Process in batches to avoid overwhelming the API
+      });
+
+      console.log(`Found ${pendingArticles.length} articles needing summaries`);
+
+      if (pendingArticles.length === 0) {
+        console.log('✅ No pending summaries to process');
+        return { processed: 0, successful: 0, failed: 0 };
+      }
+
+      // Process summaries with ContentAcquisitionService pattern
+      let successful = 0;
+      let failed = 0;
+
+      for (const article of pendingArticles) {
+        try {
+          console.log(`🤖 Generating summary for: ${article.title.substring(0, 60)}...`);
+          
+          // Mark as generating
+          await this.updateSummaryStatus(article.id, 'GENERATING');
+          
+          const result = await this.generateSummary(article);
+          
+          // Update with summary
+          await this.updateArticleWithSummary(article.id, result.summary);
+          
+          successful++;
+          console.log(`✅ Summary generated for article ${article.id}`);
+          
+          // Add delay to respect rate limits
+          await this.delay(1000);
+          
+        } catch (error) {
+          console.error(`❌ Failed to generate summary for article ${article.id}:`, error);
+          await this.updateArticleWithSummaryError(article.id, error.message);
+          failed++;
+        }
+      }
+
+      const results = {
+        processed: pendingArticles.length,
+        successful,
+        failed
+      };
+
+      console.log(`📊 Summary processing complete:`, results);
+      return results;
+
+    } catch (error) {
+      console.error('❌ Error processing pending summaries:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update summary status
+   */
+  async updateSummaryStatus(articleId, status) {
+    try {
+      await this.prisma.newsArticle.update({
+        where: { id: articleId },
+        data: {
+          summaryStatus: status,
+          summaryAttempts: status === 'GENERATING' ? { increment: 1 } : undefined
+        }
+      });
+    } catch (error) {
+      console.error(`Error updating summary status for article ${articleId}:`, error);
+    }
+  }
+
+  /**
+   * Update article with generated summary
+   */
+  async updateArticleWithSummary(articleId, summary) {
+    try {
+      await this.prisma.newsArticle.update({
+        where: { id: articleId },
+        data: {
+          laymanSummary: summary,
+          summaryGenerated: true,
+          summaryGeneratedAt: new Date(),
+          summaryStatus: 'COMPLETED',
+          summaryError: null
+        }
+      });
+    } catch (error) {
+      console.error(`Error updating article ${articleId} with summary:`, error);
+    }
+  }
+
+  /**
+   * Update article with summary error
+   */
+  async updateArticleWithSummaryError(articleId, errorMessage) {
+    try {
+      await this.prisma.newsArticle.update({
+        where: { id: articleId },
+        data: {
+          summaryGenerated: false,
+          summaryStatus: 'FAILED',
+          summaryError: errorMessage
+        }
+      });
+    } catch (error) {
+      console.error(`Error updating article ${articleId} with summary error:`, error);
+    }
+  }
+
+  /**
    * Check if summary generation should proceed based on article criteria
+   * Since we now use mandatory graphene filtering, all articles are worthy of summaries
    */
   shouldGenerateSummary(article) {
-    // Only generate for high-relevance articles
-    if (parseFloat(article.relevanceScore) < 5.0) {
+    // Only if not already generated or failed
+    if (article.summaryGenerated || article.summaryStatus === 'COMPLETED') {
       return false;
     }
 
-    // Only if not already generated
-    if (article.summaryGenerated) {
+    // Don't retry if already failed too many times
+    if (article.summaryStatus === 'FAILED' && article.summaryAttempts >= 3) {
       return false;
     }
 
-    // Check for high-impact keywords
-    const highImpactKeywords = ['hemp', 'supercapacitor', 'energy storage', 'cathode', 'anode', 'electrode'];
-    const hasHighImpactKeyword = article.keywordTags?.some(tag => 
-      highImpactKeywords.some(keyword => tag.toLowerCase().includes(keyword))
-    );
+    // Skip if currently generating
+    if (article.summaryStatus === 'GENERATING') {
+      return false;
+    }
 
-    return hasHighImpactKeyword || parseFloat(article.relevanceScore) >= 7.0;
+    // All graphene articles that pass GrapheneFilter are worthy of summaries
+    // since they've already been vetted for relevance
+    return true;
   }
 }

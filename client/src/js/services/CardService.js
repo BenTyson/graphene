@@ -332,7 +332,7 @@ class CardService {
     }
 
     try {
-      const response = await fetch(`/api/graphene?limit=${limit}&sortBy=createdAt&order=desc`);
+      const response = await fetch(`/api/graphene?limit=${limit}&sortBy=chronological&order=desc`);
       if (!response.ok) {
         throw new Error(`Failed to fetch latest graphene cards: ${response.status}`);
       }
@@ -366,7 +366,7 @@ class CardService {
     }
 
     try {
-      const response = await fetch(`/api/compound-batches?limit=${limit}&sort=desc`);
+      const response = await fetch(`/api/compound-batches?limit=${limit}&sortBy=chronological&order=desc`);
       if (!response.ok) {
         throw new Error(`Failed to fetch latest compound batches: ${response.status}`);
       }
@@ -423,7 +423,7 @@ class CardService {
     }
 
     try {
-      const response = await fetch(`/api/shipments?limit=${limit}&sortBy=createdAt&order=desc`);
+      const response = await fetch(`/api/shipments?limit=${limit}&sortBy=chronological&order=desc`);
       if (!response.ok) {
         throw new Error(`Failed to fetch latest shipments: ${response.status}`);
       }

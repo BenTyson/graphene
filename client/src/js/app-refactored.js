@@ -34,6 +34,8 @@ import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
 
 // Import new components for simplified cards and modals
 import './components/cards/SimplifiedGrapheneCard.js';
+import './components/cards/SimplifiedCompoundBatchCard.js';
+import './components/cards/SimplifiedShipmentCard.js';
 import './components/modals/CardModalSystem.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
 
@@ -3334,15 +3336,13 @@ window.grapheneApp = function() {
     },
     
     createCompoundBatchCard(batch) {
-      return window.CardFactory.createCard(batch, {
-        preset: 'compoundBatch',
+      return createSimplifiedCompoundBatchCard(batch, {
         context: 'dashboard'
       });
     },
     
     createShipmentCard(shipment) {
-      return window.CardFactory.createCard(shipment, {
-        preset: 'shipment',
+      return createSimplifiedShipmentCard(shipment, {
         context: 'dashboard'
       });
     },
@@ -3420,16 +3420,11 @@ window.grapheneApp = function() {
       
       try {
         if (!this.modalCardData[shipmentNumber]) {
-          // For now, use existing shipment data
-          const shipmentData = this.shipments.find(s => s.shipmentNumber === shipmentNumber);
-          if (shipmentData) {
-            this.modalCardData = {
-              ...this.modalCardData,
-              [shipmentNumber]: shipmentData
-            };
-          } else {
-            throw new Error('Shipment not found');
-          }
+          const detailedData = await window.CardService.getShipmentCard(shipmentNumber);
+          this.modalCardData = {
+            ...this.modalCardData,
+            [shipmentNumber]: detailedData
+          };
         }
       } catch (error) {
         console.error('Failed to load detailed shipment data:', error);

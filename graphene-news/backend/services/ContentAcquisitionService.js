@@ -4,12 +4,14 @@ import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import { ImageCacheService } from './ImageCacheService.js';
 import { SummaryService } from './SummaryService.js';
+import { GrapheneFilter } from './GrapheneFilter.js';
 
 export class ContentAcquisitionService {
   constructor(prisma) {
     this.prisma = prisma;
     this.imageCache = new ImageCacheService();
     this.summaryService = new SummaryService(prisma);
+    this.grapheneFilter = new GrapheneFilter();
     this.rssParser = new Parser({
       customFields: {
         feed: ['image'],
@@ -302,6 +304,26 @@ export class ContentAcquisitionService {
       // Calculate relevance score (will be enhanced with AI processing)
       const relevanceScore = await this.calculateBasicRelevanceScore(articleData);
       
+      // MANDATORY GRAPHENE FILTERING - Reject non-graphene articles
+      console.log(`Validating graphene relevance for: ${articleData.title.substring(0, 80)}...`);
+      const grapheneValidation = await this.grapheneFilter.validateGrapheneRelevance(articleData);
+      
+      if (!grapheneValidation.isValid) {
+        console.log(`❌ Article rejected - ${grapheneValidation.reason}:`, articleData.title);
+        console.log(`   Graphene score: ${grapheneValidation.score.toFixed(2)}`);
+        if (grapheneValidation.details.recommendations) {
+          console.log(`   Recommendations:`, grapheneValidation.details.recommendations);
+        }
+        await this.logProcessingError(source.id, 'GRAPHENE_FILTER', 
+          `Rejected: ${grapheneValidation.reason} (score: ${grapheneValidation.score.toFixed(2)})`);
+        return false; // Reject article - not graphene relevant
+      }
+      
+      console.log(`✅ Article passes graphene validation (score: ${grapheneValidation.score.toFixed(2)}):`, articleData.title);
+      
+      // Use enhanced graphene score as relevance score
+      const finalRelevanceScore = Math.max(relevanceScore, grapheneValidation.score);
+      
       // Categorize content (basic implementation)
       const category = await this.categorizeContent(articleData);
 
@@ -319,7 +341,7 @@ export class ContentAcquisitionService {
         }
       }
 
-      // Create new article first
+      // Create new article first - all graphene articles get automatic summaries
       const newArticle = await this.prisma.newsArticle.create({
         data: {
           title: articleData.title.substring(0, 500), // Limit title length
@@ -328,13 +350,14 @@ export class ContentAcquisitionService {
           url: articleData.url,
           publishDate: articleData.publishDate,
           category,
-          relevanceScore,
+          relevanceScore: finalRelevanceScore,
           contentHash,
           imageUrls: allImageUrls,
           keywordTags: await this.extractKeywords(articleData),
           author: articleData.author?.substring(0, 200) || null,
           readingTime: this.calculateReadingTime(articleData.content || articleData.summary || ''),
-          sourceId: source.id
+          sourceId: source.id,
+          summaryStatus: 'PENDING' // All graphene articles will get summaries
         }
       });
 
@@ -343,10 +366,9 @@ export class ContentAcquisitionService {
         this.cacheArticleImagesAsync(newArticle.id, allImageUrls);
       }
 
-      // Generate summary for high-impact articles (async, non-blocking)
-      if (this.summaryService.shouldGenerateSummary(newArticle)) {
-        this.generateSummaryAsync(newArticle.id, newArticle);
-      }
+      // Generate summary for ALL graphene articles (they've already passed filtering)
+      console.log(`🤖 Triggering automatic summary generation for: ${newArticle.title.substring(0, 60)}...`);
+      this.generateSummaryAsync(newArticle.id, newArticle);
 
       console.log(`Created new article: ${newArticle.title}`);
       return true;
@@ -619,22 +641,45 @@ export class ContentAcquisitionService {
   }
 
   // Async summary generation (non-blocking)
-  generateSummaryAsync(articleId, articleData) {
-    // Run in background without awaiting
-    this.summaryService.generateSummary(articleData)
-      .then(async (result) => {
-        console.log(`Generated summary for article ${articleId}`);
-        console.log(`Cost: $${result.cost.toFixed(4)}, Tokens: ${result.tokens.total}`);
-        
-        // Update article with generated summary
-        await this.updateArticleWithSummary(articleId, result.summary);
-      })
-      .catch(async (error) => {
-        console.error(`Error generating summary for article ${articleId}:`, error);
-        
-        // Update article with error status
-        await this.updateArticleWithSummaryError(articleId, error.message);
+  async generateSummaryAsync(articleId, articleData) {
+    try {
+      // Mark as generating
+      await this.updateSummaryStatus(articleId, 'GENERATING');
+      
+      // Run in background without awaiting
+      this.summaryService.generateSummary(articleData)
+        .then(async (result) => {
+          console.log(`✅ Generated summary for article ${articleId}`);
+          console.log(`💰 Cost: $${result.cost.toFixed(4)}, 🔢 Tokens: ${result.tokens.total}`);
+          
+          // Update article with generated summary
+          await this.updateArticleWithSummary(articleId, result.summary);
+        })
+        .catch(async (error) => {
+          console.error(`❌ Error generating summary for article ${articleId}:`, error);
+          
+          // Update article with error status
+          await this.updateArticleWithSummaryError(articleId, error.message);
+        });
+    } catch (error) {
+      console.error(`❌ Error setting summary status for article ${articleId}:`, error);
+      await this.updateSummaryStatus(articleId, 'FAILED');
+    }
+  }
+
+  // Update summary status
+  async updateSummaryStatus(articleId, status) {
+    try {
+      await this.prisma.newsArticle.update({
+        where: { id: articleId },
+        data: {
+          summaryStatus: status,
+          summaryAttempts: status === 'GENERATING' ? { increment: 1 } : undefined
+        }
       });
+    } catch (error) {
+      console.error(`Error updating summary status for article ${articleId}:`, error);
+    }
   }
 
   // Update article with generated summary
@@ -645,6 +690,8 @@ export class ContentAcquisitionService {
         data: {
           laymanSummary: summary,
           summaryGenerated: true,
+          summaryGeneratedAt: new Date(),
+          summaryStatus: 'COMPLETED',
           summaryError: null // Clear any previous errors
         }
       });
@@ -660,6 +707,7 @@ export class ContentAcquisitionService {
         where: { id: articleId },
         data: {
           summaryGenerated: false,
+          summaryStatus: 'FAILED',
           summaryError: errorMessage
         }
       });

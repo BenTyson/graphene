@@ -86,7 +86,14 @@ router.get('/articles', asyncHandler(async (req, res) => {
       readingTime: article.readingTime,
       isBookmarked: article.isBookmarked,
       viewCount: article.viewCount,
-      source: article.source
+      source: article.source,
+      // Add automatic summary fields
+      laymanSummary: article.laymanSummary,
+      summaryGenerated: article.summaryGenerated,
+      summaryError: article.summaryError,
+      summaryStatus: article.summaryStatus,
+      summaryGeneratedAt: article.summaryGeneratedAt,
+      summaryAttempts: article.summaryAttempts
     }));
 
     const totalPages = Math.ceil(totalCount / take);

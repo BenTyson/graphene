@@ -333,7 +333,7 @@ export function buildFilterAwareOrderBy(sortBy = 'createdAt', order = 'desc', so
   // Handle special chronological sorting
   if (sortBy === 'chronological') {
     return [
-      { experimentDate: order },
+      { experimentDate: { sort: order, nulls: 'last' } },
       { createdAt: order }
     ];
   }

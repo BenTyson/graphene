@@ -29,9 +29,19 @@ router.get('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { search = '', limit, sortBy = 'createdAt', order = 'desc' } = req.query;
   
-  // Build query options
+  // Build query options with enhanced sorting
+  let orderBy;
+  if (sortBy === 'chronological') {
+    orderBy = [
+      { shipmentDate: { sort: order, nulls: 'last' } },
+      { createdAt: order }
+    ];
+  } else {
+    orderBy = { [sortBy]: order };
+  }
+  
   const queryOptions = {
-    orderBy: { [sortBy]: order }
+    orderBy
   };
   
   // Add limit if specified

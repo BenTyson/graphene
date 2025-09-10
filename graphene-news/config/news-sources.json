@@ -71,33 +71,33 @@
       "reliabilityScore": 8.9
     },
     {
-      "name": "ArXiv - Materials Science",
+      "name": "ArXiv - Materials Science", 
       "url": "http://export.arxiv.org/rss/cond-mat.mtrl-sci",
       "sourceType": "RSS",
-      "description": "ArXiv preprints in materials science",
+      "description": "ArXiv preprints in materials science - DISABLED: Too broad, low graphene hit rate",
       "rateLimit": 6,
       "termsAccepted": true,
-      "isActive": true,
+      "isActive": false,
       "reliabilityScore": 7.5
     },
     {
       "name": "Materials Today",
       "url": "https://www.materialstoday.com/rss/",
-      "sourceType": "RSS",
-      "description": "Materials Today news and research updates",
+      "sourceType": "RSS", 
+      "description": "Materials Today news and research updates - DISABLED: Too broad, low graphene hit rate",
       "rateLimit": 12,
       "termsAccepted": true,
-      "isActive": true,
+      "isActive": false,
       "reliabilityScore": 8.3
     },
     {
       "name": "Chemical & Engineering News",
       "url": "https://cen.acs.org/rss/all.xml",
       "sourceType": "RSS",
-      "description": "C&EN chemical industry news including nanomaterials",
+      "description": "C&EN chemical industry news - DISABLED: Too broad, very low graphene hit rate",
       "rateLimit": 24,
       "termsAccepted": true,
-      "isActive": true,
+      "isActive": false,
       "reliabilityScore": 8.1
     },
     {
@@ -119,6 +119,36 @@
       "termsAccepted": true,
       "isActive": true,
       "reliabilityScore": 8.4
+    },
+    {
+      "name": "Graphene Council",
+      "url": "https://www.graphenecouncil.org/feed/",
+      "sourceType": "RSS",
+      "description": "Dedicated graphene industry news and developments from Graphene Council",
+      "rateLimit": 6,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 9.0
+    },
+    {
+      "name": "Graphene Week",
+      "url": "https://www.grapheneweek.com/feed/",
+      "sourceType": "RSS",
+      "description": "Graphene industry events, research, and market news",
+      "rateLimit": 6,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.5
+    },
+    {
+      "name": "ArXiv - Graphene Specific Search",
+      "url": "http://export.arxiv.org/rss/cond-mat.mes-hall",
+      "sourceType": "RSS",
+      "description": "ArXiv mesoscale and nanoscale physics (higher graphene content)",
+      "rateLimit": 12,
+      "termsAccepted": true,
+      "isActive": true,
+      "reliabilityScore": 8.0
     }
   ],
   "categories": {
@@ -174,7 +204,7 @@
   "settings": {
     "defaultFetchInterval": 2,
     "maxArticlesPerSource": 50,
-    "minRelevanceScore": 2.0,
+    "minRelevanceScore": 4.0,
     "articleRetentionDays": 90,
     "lowRelevanceRetentionDays": 30,
     "imageDownloadEnabled": true,

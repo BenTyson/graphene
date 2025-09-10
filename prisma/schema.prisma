@@ -479,11 +479,14 @@ model NewsArticle {
   sourceId         String         @map("source_id")
   isBookmarked     Boolean        @default(false) @map("is_bookmarked")
   viewCount        Int            @default(0) @map("view_count")
-  laymanSummary    String?        @map("layman_summary") @db.Text
-  summaryGenerated Boolean        @default(false) @map("summary_generated")
-  summaryError     String?        @map("summary_error")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  laymanSummary      String?        @map("layman_summary") @db.Text
+  summaryGenerated   Boolean        @default(false) @map("summary_generated")
+  summaryError       String?        @map("summary_error")
+  summaryStatus      SummaryStatus  @default(PENDING) @map("summary_status")
+  summaryGeneratedAt DateTime?      @map("summary_generated_at")
+  summaryAttempts    Int            @default(0) @map("summary_attempts")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
   source           NewsSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   bookmarks        UserBookmark[]
 
@@ -493,6 +496,7 @@ model NewsArticle {
   @@index([sourceId, publishDate])
   @@index([relevanceScore])
   @@index([summaryGenerated, relevanceScore])
+  @@index([summaryStatus, createdAt])
   @@map("news_articles")
 }
 
@@ -583,5 +587,13 @@ enum ProcessStatus {
   SUCCESS
   FAILED
   PARTIAL
+  SKIPPED
+}
+
+enum SummaryStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
   SKIPPED
 }

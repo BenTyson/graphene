@@ -4,12 +4,12 @@ export class AIProcessingService {
   constructor(prisma) {
     this.prisma = prisma;
     
-    // Relevance scoring weights for graphene content
+    // Relevance scoring weights for graphene content - HEAVILY favor graphene
     this.relevanceFactors = {
-      grapheneKeywords: 0.4,      // direct graphene mentions
-      materialScience: 0.3,       // related materials
-      industryContext: 0.2,       // applications/market
-      sourceReliability: 0.1      // source credibility
+      grapheneKeywords: 0.7,      // MASSIVE weight for direct graphene mentions
+      materialScience: 0.1,       // Much lower weight for related materials
+      industryContext: 0.15,      // Moderate weight for applications/market
+      sourceReliability: 0.05     // Minimal weight for source credibility
     };
 
     // Comprehensive keyword dictionaries
@@ -262,21 +262,36 @@ export class AIProcessingService {
 
   calculateGrapheneKeywordScore(text) {
     let score = 0;
-    const grapheneTerms = [
-      ...this.keywordDictionaries.graphene,
-      ...this.keywordDictionaries.relatedMaterials
-    ];
-
-    for (const term of grapheneTerms) {
+    
+    // Strict graphene-only focus - heavily weight direct graphene mentions
+    const coreGrapheneTerms = this.keywordDictionaries.graphene;
+    const relatedMaterialTerms = this.keywordDictionaries.relatedMaterials;
+    
+    // Core graphene terms get massive weight boost
+    for (const term of coreGrapheneTerms) {
       const count = (text.match(new RegExp(term.toLowerCase(), 'g')) || []).length;
-      if (this.keywordDictionaries.graphene.includes(term)) {
-        score += count * 2; // Higher weight for direct graphene terms
-      } else {
-        score += count * 1;
+      score += count * 5; // 5x multiplier for direct graphene terms
+    }
+    
+    // Related materials only count if graphene is present
+    const hasGraphene = coreGrapheneTerms.some(term => 
+      text.includes(term.toLowerCase())
+    );
+    
+    if (hasGraphene) {
+      for (const term of relatedMaterialTerms) {
+        const count = (text.match(new RegExp(term.toLowerCase(), 'g')) || []).length;
+        score += count * 1; // Normal weight for related terms
       }
     }
-
-    return Math.min(score / 5, 10); // Normalize to 0-10
+    
+    // Penalty if no direct graphene mentions (critical requirement)
+    if (!hasGraphene) {
+      return 0; // Zero score if no graphene mentions
+    }
+    
+    // Enhanced normalization with higher ceiling for graphene-rich content
+    return Math.min(score / 3, 10); // Easier to reach high scores with graphene focus
   }
 
   calculateMaterialScienceScore(text) {

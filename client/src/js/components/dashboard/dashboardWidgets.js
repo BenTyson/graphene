@@ -76,9 +76,9 @@ export function createProductionWidget(data) {
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
         <!-- Total Production -->
         <div class="text-center bg-gray-50 rounded-lg p-6 border border-gray-100">
-          <div class="text-5xl dashboard-metric-value text-gray-900 mb-2">
+          <div class="text-4xl dashboard-metric-value text-gray-900 mb-2">
             ${formatMetricValue(totalProduction)}
-            <span class="text-3xl text-gray-600">g</span>
+            <span class="text-2xl text-gray-600">g</span>
           </div>
           <div class="text-lg dashboard-metric-label text-gray-800 font-semibold">Total Produced</div>
           <div class="text-sm text-gray-600 mt-1 dashboard-metric-label">${totalExperiments} experiments</div>
@@ -86,9 +86,9 @@ export function createProductionWidget(data) {
         
         <!-- Average Output -->
         <div class="text-center bg-gray-50 rounded-lg p-6 border border-gray-100">
-          <div class="text-5xl dashboard-metric-value text-gray-900 mb-2">
+          <div class="text-4xl dashboard-metric-value text-gray-900 mb-2">
             ${formatMetricValue(averageOutput)}
-            <span class="text-3xl text-gray-600">g</span>
+            <span class="text-2xl text-gray-600">g</span>
           </div>
           <div class="text-lg dashboard-metric-label text-gray-800 font-semibold">Average Output</div>
           <div class="text-sm text-gray-600 mt-1 dashboard-metric-label">per experiment</div>
@@ -96,9 +96,9 @@ export function createProductionWidget(data) {
         
         <!-- Current Month -->
         <div class="text-center bg-gray-50 rounded-lg p-6 border border-gray-100">
-          <div class="text-5xl dashboard-metric-value text-gray-900 mb-2">
+          <div class="text-4xl dashboard-metric-value text-gray-900 mb-2">
             ${formatMetricValue(currentMonth.production || 0)}
-            <span class="text-3xl text-gray-600">g</span>
+            <span class="text-2xl text-gray-600">g</span>
           </div>
           <div class="text-lg dashboard-metric-label text-gray-800 font-semibold">This Month</div>
           <div class="text-sm text-gray-600 mt-1 dashboard-metric-label">${currentMonth.experiments || 0} experiments</div>
@@ -106,9 +106,9 @@ export function createProductionWidget(data) {
         
         <!-- Month Change -->
         <div class="text-center rounded-lg p-6 border ${monthChange >= 0 ? 'bg-link-light border-link text-link-dark' : 'bg-gray-100 border-gray-300 text-gray-700'}">
-          <div class="text-5xl dashboard-metric-value mb-2 ${monthChange >= 0 ? 'text-link' : 'text-gray-700'}">
+          <div class="text-4xl dashboard-metric-value mb-2 ${monthChange >= 0 ? 'text-link' : 'text-gray-700'}">
             ${Math.abs(monthChange)}
-            <span class="text-3xl">%</span>
+            <span class="text-2xl">%</span>
           </div>
           <div class="text-lg dashboard-metric-label font-semibold ${monthChange >= 0 ? 'text-link-dark' : 'text-gray-800'}">
             ${monthChange >= 0 ? 'Increase' : 'Decrease'}
@@ -206,10 +206,10 @@ export function createInventoryWidget(data) {
                 <div class="text-gray-700 font-medium mb-1 dashboard-metric-label">Raw</div>
                 <div class="dashboard-metric-value text-gray-900">${formatMetricValue(loc.rawGraphene?.current || 0)}<span class="text-xs text-gray-500 ml-1">g</span></div>
               </div>
-              <div class="text-center bg-link-light border border-link rounded-lg p-3">
-                <div class="text-link-dark font-medium mb-1 dashboard-metric-label">Compound</div>
-                <div class="dashboard-metric-value text-link">${formatMetricValue(loc.compoundBatch?.current || 0)}<span class="text-xs text-gray-500 ml-1">g</span></div>
-                ${loc.compoundBatch?.processed > 0 ? `<div class="text-xs text-link-medium mt-1 dashboard-metric-label">${formatMetricValue(loc.compoundBatch.processed)}g processed</div>` : ''}
+              <div class="text-center bg-white border border-gray-200 rounded-lg p-3">
+                <div class="text-gray-700 font-medium mb-1 dashboard-metric-label">Compound</div>
+                <div class="dashboard-metric-value text-gray-900">${formatMetricValue(loc.compoundBatch?.current || 0)}<span class="text-xs text-gray-500 ml-1">g</span></div>
+                ${loc.compoundBatch?.processed > 0 ? `<div class="text-xs text-gray-600 mt-1 dashboard-metric-label">${formatMetricValue(loc.compoundBatch.processed)}g processed</div>` : ''}
               </div>
               <div class="text-center bg-white border border-gray-200 rounded-lg p-3">
                 <div class="text-gray-700 font-medium mb-1 dashboard-metric-label">Micronized</div>
