@@ -5,6 +5,14 @@ The Graphene News System is a comprehensive news aggregation and AI-powered summ
 
 ## Architecture
 
+### Integration with Main Application
+The news system is fully integrated into the Alpine.js application context:
+- **Module Import**: NewsTab.js is imported as an ES6 module in app-refactored.js
+- **Alpine Context**: All news methods and properties are part of the main Alpine app
+- **State Management**: News state (articles, filters, pagination) managed in app-refactored.js
+- **Badge System**: Numerical badges show live counts using Alpine.js reactive data
+- **Bookmark System**: Loading states tracked via `bookmarkLoading[articleId]` object
+
 ### Backend Structure
 ```
 /graphene-news/
@@ -20,10 +28,14 @@ The Graphene News System is a comprehensive news aggregation and AI-powered summ
 
 ### Frontend Structure
 ```
-/client/src/js/components/
-├── tabs/NewsTab.js                   # Main news feed UI
-├── SummaryToggle.js                  # Summary display component
-└── services/api.js                   # API communication
+/client/src/js/
+├── components/
+│   ├── tabs/NewsTab.js               # Main news feed UI (ES6 module)
+│   └── SummaryToggle.js              # Summary display component
+├── services/
+│   ├── NewsService.js                # News-specific service logic
+│   └── api.js                        # API communication
+└── app-refactored.js                 # Main Alpine.js app with integrated news functions
 ```
 
 ## Database Schema
@@ -135,6 +147,16 @@ PRODUCTION_METHODS -> "Manufacturing improvements? Cost benefits?"
 
 ## Frontend Components
 
+### NewsTab Component
+**File**: `/client/src/js/components/tabs/NewsTab.js`
+
+**Key Features**:
+- ES6 module with export: `export { getNewsTabHtml }`
+- Two-column layout with sidebar filters
+- Categories with numerical badges showing article counts
+- Bookmark functionality with loading states
+- Pagination and infinite scroll support
+
 ### SummaryToggle Component
 **File**: `/client/src/js/components/SummaryToggle.js`
 
@@ -206,7 +228,9 @@ DATABASE_URL="postgresql://..."
 ### Critical Files for Future Development:
 - **Main News API**: `/server/routes/news.js`
 - **Summary Service**: `/graphene-news/backend/services/SummaryService.js`
-- **Frontend Component**: `/client/src/js/components/SummaryToggle.js`
+- **News Tab Component**: `/client/src/js/components/tabs/NewsTab.js` (ES6 module)
+- **Main App Integration**: `/client/src/js/app-refactored.js` (Alpine.js context)
+- **News Service**: `/client/src/js/services/NewsService.js` (Business logic)
 - **Configuration**: `/graphene-news/config/summary-config.js`
 - **Database Schema**: `/prisma/schema.prisma` (NewsArticle, NewsSource models)
 
@@ -217,10 +241,20 @@ SummaryService.generateSummary(articleId)
 ContentAcquisitionService.fetchArticlesFromRSS()
 PromptTemplates.getOptimalPrompt(article)
 
-// Frontend  
+// Frontend (Alpine.js app context)
+getCategoryCount(category)      // Badge counts
+getTagCount(tag)                // Tag counts  
+getDateRangeCount(dateRange)    // Date range counts
+toggleBookmark(articleId)       // Bookmark with loading states
+formatDate(dateString)          // Relative date formatting
+refreshNewsFeed()               // Refresh articles
+nextNewsPage(), previousNewsPage(), goToNewsPage(page) // Pagination
+
+// Components
 getSummaryToggleHtml(article)
 formatSummaryWithSections(summaryText)
 getSimplifiedTitle(originalTitle)
+getNewsTabHtml()                // Returns news tab HTML template
 ```
 
 ## Testing & Debugging
@@ -289,6 +323,15 @@ Timeline & Implementation
 ### Title Not Simplifying
 - **Issue**: Function called client-side in template
 - **Fix**: Call `getSimplifiedTitle()` server-side in component function
+
+### News Tab Not Working After Refactoring
+- **Problem**: `bookmarkLoading is not defined`, count functions not accessible
+- **Solution**: All news functions integrated into Alpine.js app context in `app-refactored.js`
+- **Key Changes**:
+  - NewsTab.js is now an ES6 module imported by app-refactored.js
+  - NewsTabFunctions.js removed (functionality integrated into main app)
+  - All methods (toggleBookmark, getCategoryCount, etc.) added to Alpine context
+  - Properties like `bookmarkLoading: {}` added to app state
 
 ## Future Enhancement Areas
 

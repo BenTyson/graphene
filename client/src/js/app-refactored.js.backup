@@ -38,6 +38,9 @@ import './components/cards/SimplifiedCompoundBatchCard.js';
 import './components/cards/SimplifiedShipmentCard.js';
 import './components/modals/CardModalSystem.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
+import FilterService from './services/FilterService.js';
+import NewsService from './services/NewsService.js';
+import CRUDService from './services/CRUDService.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -1260,59 +1263,25 @@ window.grapheneApp = function() {
       this.toggleExpanded('micronization', id);
     },
     
-    // Biochar CRUD operations
+    // Biochar CRUD operations - Delegated to CRUDService
     editBiochar(record) {
-      this.editingBiochar = record;
-      const editableFields = dataHelpers.extractEditableFields(record, ['grapheneProductions', 'lot', 'lotNumber']);
-      this.biocharForm = { ...editableFields };
-      this.showAddBiochar = true;
+      CRUDService.editBiochar(record, this);
     },
     
     copyBiochar(record) {
-      this.editingBiochar = null;
-      const editableFields = dataHelpers.extractEditableFields(record, ['grapheneProductions', 'lot', 'lotNumber', 'experimentNumber']);
-      this.biocharForm = { 
-        ...editableFields,
-        experimentNumber: '',
-        testOrder: record.testOrder ? record.testOrder + 1 : null
-      };
-      this.showAddBiochar = true;
+      CRUDService.copyBiochar(record, this);
     },
     
     async saveBiochar() {
-      try {
-        const data = validators.processBiocharForm(this.biocharForm);
-        
-        if (this.editingBiochar) {
-          await API.biochar.update(this.editingBiochar.id, data);
-        } else {
-          await API.biochar.create(data);
-        }
-        
-        await this.loadBiocharRecords();
-        this.closeBiocharForm();
-      } catch (error) {
-        console.error('Failed to save biochar record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
+      await CRUDService.saveBiochar(this);
     },
     
     async deleteBiochar(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.biochar.delete(id);
-        await this.loadBiocharRecords();
-      } catch (error) {
-        console.error('Failed to delete biochar record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
+      await CRUDService.deleteBiochar(id, this);
     },
     
     closeBiocharForm() {
-      this.showAddBiochar = false;
-      this.editingBiochar = null;
-      this.biocharForm = { ...DEFAULT_FORMS.biochar };
+      CRUDService.closeBiocharForm(this);
     },
     
     // Graphene CRUD operations
@@ -2953,286 +2922,37 @@ window.grapheneApp = function() {
       return pdfViewerHelpers.createPdfViewerModal(config);
     },
     
-    // Filter system methods
+    // Filter system methods - delegated to FilterService
     async initFilters(tableName) {
-      this.filterLoading = true;
-      this.filterError = null;
-      
-      try {
-        // Load filter configuration
-        const configResponse = await fetch(`/api/${tableName}/filters/config`);
-        if (!configResponse.ok) {
-          throw new Error(`Failed to load filter configuration: ${configResponse.statusText}`);
-        }
-        
-        const config = await configResponse.json();
-        this.filterConfigs[tableName] = config;
-        
-        // Initialize filter options object
-        this.filterOptions[tableName] = {};
-        
-        // Load dynamic filter options
-        await this.loadFilterOptions(tableName);
-        
-        // Initialize active filters state
-        this.initializeFilterValues(tableName);
-        
-      } catch (error) {
-        console.error('Error initializing filters:', error);
-        this.filterError = error.message;
-      } finally {
-        this.filterLoading = false;
-      }
+      await FilterService.initFilters(tableName, this);
+      // Expose filter data to app context for template access
+      this.filterConfigs = FilterService.getFilterConfigs();
+      this.filterOptions = FilterService.getFilterOptions();
+      this.activeFilters = FilterService.getActiveFilters();
     },
-    
-    async loadFilterOptions(tableName) {
-      const config = this.filterConfigs[tableName];
-      if (!config || !config.filters) return;
-      
-      const optionPromises = config.filters
-        .filter(filter => filter.optionsQuery || (filter.type === 'select' && !filter.options))
-        .map(async (filter) => {
-          try {
-            const response = await fetch(`/api/${tableName}/filters/${filter.field}/options`);
-            if (response.ok) {
-              const options = await response.json();
-              this.filterOptions[tableName][filter.field] = options;
-            }
-          } catch (error) {
-            console.warn(`Failed to load options for ${filter.field}:`, error);
-            this.filterOptions[tableName][filter.field] = [];
-          }
-        });
-      
-      await Promise.all(optionPromises);
-    },
-    
-    initializeFilterValues(tableName) {
-      const config = this.filterConfigs[tableName];
-      if (!config || !config.filters) return;
-      
-      this.activeFilters[tableName] = {};
-      this.grapheneFilterState.filters = {};
-      
-      config.filters.forEach(filter => {
-        let defaultValue;
-        switch (filter.type) {
-          case 'text':
-          case 'select':
-            defaultValue = filter.multiple ? [] : '';
-            break;
-          case 'multiSelect':
-            defaultValue = [];
-            break;
-          case 'dateRange':
-            defaultValue = { from: '', to: '' };
-            break;
-          case 'numericRange':
-            defaultValue = { min: null, max: null };
-            break;
-          case 'boolean':
-            defaultValue = '';
-            break;
-          default:
-            defaultValue = '';
-        }
-        this.activeFilters[tableName][filter.field] = defaultValue;
-        this.grapheneFilterState.filters[filter.field] = defaultValue;
-      });
-    },
-    
+
     generateFilterFields(tableName, filterStateVariable, onFilterChange) {
-      const config = this.filterConfigs[tableName];
-      if (!config || !config.filters) {
-        return '<div class="text-xs text-gray-500">No filters available</div>';
-      }
-      
-      return config.filters
-        .map(filterConfig => {
-          const { field, type, label, multiple, options, min, max, step } = filterConfig;
-          
-          switch (type) {
-            case 'text':
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <input type="text"
-                         x-model="${filterStateVariable}.filters.${field}"
-                         @input.debounce.300ms="${onFilterChange}"
-                         placeholder="Search ${label.toLowerCase()}..."
-                         class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-              `;
-            
-            case 'select':
-              const modelAttribute = `x-model="${filterStateVariable}.filters.${field}"`;
-              const multipleAttribute = multiple ? 'multiple' : '';
-              const sizeAttribute = multiple ? 'size="4"' : '';
-              
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <select ${modelAttribute}
-                          @change="${onFilterChange}"
-                          ${multipleAttribute}
-                          ${sizeAttribute}
-                          class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${multiple ? 'h-20' : ''}">
-                    <option value="">All ${label}</option>
-                    <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </div>
-              `;
-            
-            case 'dateRange':
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <div class="grid grid-cols-2 gap-2">
-                    <input type="date"
-                           x-model="${filterStateVariable}.filters.${field}.from"
-                           @change="${onFilterChange}"
-                           placeholder="From"
-                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <input type="date"
-                           x-model="${filterStateVariable}.filters.${field}.to"
-                           @change="${onFilterChange}"
-                           placeholder="To"
-                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  </div>
-                </div>
-              `;
-            
-            case 'numericRange':
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <div class="grid grid-cols-2 gap-2">
-                    <input type="number"
-                           x-model.number="${filterStateVariable}.filters.${field}.min"
-                           @input.debounce.300ms="${onFilterChange}"
-                           placeholder="Min"
-                           min="${min || ''}"
-                           max="${max || ''}"
-                           step="${step || 'any'}"
-                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <input type="number"
-                           x-model.number="${filterStateVariable}.filters.${field}.max"
-                           @input.debounce.300ms="${onFilterChange}"
-                           placeholder="Max"
-                           min="${min || ''}"
-                           max="${max || ''}"
-                           step="${step || 'any'}"
-                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  </div>
-                </div>
-              `;
-            
-            case 'multiSelect':
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <div class="space-y-1 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-                    ${options.map(option => `
-                      <label class="flex items-center space-x-2 text-xs">
-                        <input type="checkbox"
-                               :checked="(${filterStateVariable}.filters.${field} || []).includes('${option}')"
-                               @change="toggleMultiSelectOption('${field}', '${option}', $event.target.checked, '${filterStateVariable}'); ${onFilterChange}"
-                               class="rounded text-blue-600">
-                        <span>${option}</span>
-                      </label>
-                    `).join('')}
-                  </div>
-                </div>
-              `;
-            
-            case 'boolean':
-              return `
-                <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
-                  <select x-model="${filterStateVariable}.filters.${field}"
-                          @change="${onFilterChange}"
-                          class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">All</option>
-                    ${options.map(option => `
-                      <option value="${option.value}">${option.label}</option>
-                    `).join('')}
-                  </select>
-                </div>
-              `;
-            
-            default:
-              return '';
-          }
-        })
-        .join('');
+      return FilterService.generateFilterFields(tableName, filterStateVariable, onFilterChange);
     },
-    
+
     getActiveFilterCount(filterState) {
-      if (!filterState || !filterState.filters) return 0;
-      
-      return Object.values(filterState.filters).filter(value => {
-        if (Array.isArray(value)) {
-          return value.length > 0;
-        }
-        if (typeof value === 'object' && value !== null) {
-          return Object.values(value).some(v => v !== null && v !== '');
-        }
-        return value !== null && value !== '';
-      }).length;
+      return FilterService.getActiveFilterCount(filterState);
     },
-    
+
     clearAllFilters(tableName) {
-      this.initializeFilterValues(tableName);
-      this.loadGrapheneRecords();
+      FilterService.clearAllFilters(tableName, this);
     },
-    
+
     toggleMultiSelectOption(field, option, checked, stateVariable) {
-      const filterState = this[stateVariable];
-      if (!filterState.filters[field]) {
-        filterState.filters[field] = [];
-      }
-      
-      if (checked) {
-        if (!filterState.filters[field].includes(option)) {
-          filterState.filters[field].push(option);
-        }
-      } else {
-        filterState.filters[field] = filterState.filters[field].filter(item => item !== option);
-      }
+      FilterService.toggleMultiSelectOption(field, option, checked, stateVariable, this);
     },
-    
+
     buildFilterQueryParams(tableName, additionalParams = {}) {
-      const filters = this.grapheneFilterState.filters;
-      if (!filters) return additionalParams;
-      
-      const params = { ...additionalParams };
-      
-      // Add filters as JSON string
-      const activeFilters = {};
-      Object.entries(filters).forEach(([key, value]) => {
-        if (Array.isArray(value) && value.length > 0) {
-          activeFilters[key] = value;
-        } else if (typeof value === 'object' && value !== null) {
-          const hasValues = Object.values(value).some(v => v !== null && v !== '');
-          if (hasValues) {
-            activeFilters[key] = value;
-          }
-        } else if (value !== null && value !== '') {
-          activeFilters[key] = value;
-        }
-      });
-      
-      if (Object.keys(activeFilters).length > 0) {
-        params.filters = JSON.stringify(activeFilters);
-      }
-      
-      return params;
+      return FilterService.buildFilterQueryParams(tableName, additionalParams, this);
     },
-    
+
     applyFilters() {
-      this.loadGrapheneRecords();
+      FilterService.applyFilters(this);
     },
     
     // Dashboard methods
@@ -4121,390 +3841,130 @@ window.grapheneApp = function() {
       }
     },
 
-    // News system methods
+    // News system methods - delegated to NewsService
     async fetchNewsArticles() {
-      this.newsLoading = true;
-      this.newsError = null;
-
-      try {
-        const queryParams = new URLSearchParams();
-        
-        if (this.newsFilters.search) queryParams.append('search', this.newsFilters.search);
-        if (this.newsFilters.category) queryParams.append('category', this.newsFilters.category);
-        if (this.newsFilters.source) queryParams.append('source', this.newsFilters.source);
-        if (this.newsFilters.sortBy) queryParams.append('sortBy', this.newsFilters.sortBy);
-        if (this.newsFilters.sortOrder) queryParams.append('sortOrder', this.newsFilters.sortOrder);
-        
-        const dateRange = this.getDateRange();
-        if (dateRange.startDate) queryParams.append('startDate', dateRange.startDate);
-        if (dateRange.endDate) queryParams.append('endDate', dateRange.endDate);
-
-        queryParams.append('page', '1');
-        queryParams.append('limit', '50');
-
-        const response = await fetch(`/api/news/articles?${queryParams.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch news articles');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          this.newsArticles = data.data.articles;
-          this.filteredNewsArticles = [...this.newsArticles];
-          this.applyClientSideFilters();
-          this.updatePagination();
-        } else {
-          throw new Error(data.error || 'Failed to fetch news articles');
-        }
-
-      } catch (error) {
-        console.error('Error fetching news articles:', error);
-        this.newsError = error.message;
-        this.showNotification('Error loading news articles: ' + error.message, 'error');
-      } finally {
-        this.newsLoading = false;
-      }
+      await NewsService.fetchNewsArticles(this);
+      // Sync state from service
+      const state = NewsService.getNewsState();
+      Object.assign(this, state);
     },
 
     async refreshNewsFeed() {
-      await this.fetchNewsArticles();
-      this.showNotification('News feed refreshed successfully', 'success');
+      await NewsService.refreshNewsFeed(this);
     },
 
     filterNews() {
-      this.applyClientSideFilters();
-      this.newsCurrentPage = 1;
-      this.updatePagination();
+      NewsService.filterNews(this);
+      const state = NewsService.getNewsState();
+      Object.assign(this, state);
     },
 
     applyClientSideFilters() {
-      let filtered = [...this.newsArticles];
-
-      // Filter by high-impact keywords first
-      if (this.highImpactKeywords.length > 0) {
-        filtered = filtered.filter(article => {
-          const articleText = (
-            article.title + ' ' + 
-            (article.summary || '') + ' ' + 
-            (article.keywordTags ? article.keywordTags.join(' ') : '')
-          ).toLowerCase();
-          
-          return this.highImpactKeywords.some(keyword => 
-            articleText.includes(keyword.toLowerCase())
-          );
-        });
-      }
-
-      if (this.newsFilters.search) {
-        const searchTerm = this.newsFilters.search.toLowerCase();
-        filtered = filtered.filter(article => 
-          article.title.toLowerCase().includes(searchTerm) ||
-          (article.summary && article.summary.toLowerCase().includes(searchTerm)) ||
-          (article.keywordTags && article.keywordTags.some(tag => 
-            tag.toLowerCase().includes(searchTerm)
-          ))
-        );
-      }
-
-      if (this.newsFilters.category) {
-        filtered = filtered.filter(article => article.category === this.newsFilters.category);
-      }
-
-      filtered.sort((a, b) => {
-        const field = this.newsFilters.sortBy;
-        const order = this.newsFilters.sortOrder;
-        
-        let aValue = a[field];
-        let bValue = b[field];
-
-        if (field === 'publishDate') {
-          aValue = new Date(aValue);
-          bValue = new Date(bValue);
-        }
-
-        if (order === 'desc') {
-          return bValue > aValue ? 1 : -1;
-        } else {
-          return aValue > bValue ? 1 : -1;
-        }
-      });
-
-      this.filteredNewsArticles = filtered;
+      NewsService.applyClientSideFilters();
+      const state = NewsService.getNewsState();
+      this.filteredNewsArticles = state.filteredNewsArticles;
+      this.paginatedNewsArticles = state.paginatedNewsArticles;
     },
 
     updatePagination() {
-      this.newsTotalPages = Math.ceil(this.filteredNewsArticles.length / this.newsPageSize);
-      this.newsHasMorePages = this.newsCurrentPage < this.newsTotalPages;
-      
-      const start = (this.newsCurrentPage - 1) * this.newsPageSize;
-      const end = start + this.newsPageSize;
-      this.paginatedNewsArticles = this.filteredNewsArticles.slice(start, end);
+      NewsService.updatePagination();
+      const state = NewsService.getNewsState();
+      this.paginatedNewsArticles = state.paginatedNewsArticles;
+      this.newsTotalPages = state.newsTotalPages;
+      this.newsHasMorePages = state.newsHasMorePages;
     },
 
     nextNewsPage() {
-      if (this.newsCurrentPage < this.newsTotalPages) {
-        this.newsCurrentPage++;
-        this.updatePagination();
-      }
+      NewsService.nextNewsPage();
+      this.updatePagination();
     },
 
     previousNewsPage() {
-      if (this.newsCurrentPage > 1) {
-        this.newsCurrentPage--;
-        this.updatePagination();
-      }
+      NewsService.previousNewsPage();
+      this.updatePagination();
     },
 
     goToNewsPage(page) {
-      if (page >= 1 && page <= this.newsTotalPages) {
-        this.newsCurrentPage = page;
-        this.updatePagination();
-      }
+      NewsService.goToNewsPage(page);
+      this.updatePagination();
     },
 
     loadMoreNews() {
-      if (this.newsHasMorePages && !this.newsLoading) {
-        this.nextNewsPage();
-      }
+      NewsService.loadMoreNews();
+      this.updatePagination();
     },
 
     getNewsPageNumbers() {
-      const pages = [];
-      const total = this.newsTotalPages;
-      const current = this.newsCurrentPage;
-      
-      if (total <= 7) {
-        for (let i = 1; i <= total; i++) {
-          pages.push(i);
-        }
-      } else {
-        if (current <= 4) {
-          for (let i = 1; i <= 5; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        } else if (current >= total - 3) {
-          pages.push(1);
-          pages.push('...');
-          for (let i = total - 4; i <= total; i++) pages.push(i);
-        } else {
-          pages.push(1);
-          pages.push('...');
-          for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        }
-      }
-      
-      return pages.filter(p => p !== '...' || pages.indexOf(p) === pages.lastIndexOf(p));
+      return NewsService.getNewsPageNumbers();
     },
 
     getDateRange() {
-      const now = new Date();
-      const range = { startDate: null, endDate: null };
-
-      switch (this.newsFilters.dateRange) {
-        case 'today':
-          range.startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-          break;
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          range.startDate = weekAgo.toISOString();
-          break;
-        case 'month':
-          const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          range.startDate = monthAgo.toISOString();
-          break;
-        case 'quarter':
-          const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-          range.startDate = quarterAgo.toISOString();
-          break;
-      }
-
-      return range;
+      return NewsService.getDateRange();
     },
 
     updateDateFilters() {
-      // Called when date range filter changes
+      // Called when date range filter changes - handled by filterNews
+      this.filterNews();
     },
 
     formatCategory(category) {
-      const categoryMap = {
-        'RESEARCH_BREAKTHROUGH': 'Research',
-        'INDUSTRY_NEWS': 'Industry',
-        'MARKET_ANALYSIS': 'Market',
-        'APPLICATIONS': 'Applications',
-        'PRODUCTION_METHODS': 'Production',
-        'PATENTS': 'Patents',
-        'COMPANY_NEWS': 'Company',
-        'FUNDING_INVESTMENT': 'Funding'
-      };
-      return categoryMap[category] || category;
+      return NewsService.formatCategory(category);
     },
 
     getCategoryColor(category) {
-      const colorMap = {
-        'RESEARCH_BREAKTHROUGH': 'bg-blue-100 text-blue-800',
-        'INDUSTRY_NEWS': 'bg-gray-100 text-gray-800',
-        'MARKET_ANALYSIS': 'bg-green-100 text-green-800',
-        'APPLICATIONS': 'bg-purple-100 text-purple-800',
-        'PRODUCTION_METHODS': 'bg-orange-100 text-orange-800',
-        'PATENTS': 'bg-red-100 text-red-800',
-        'COMPANY_NEWS': 'bg-indigo-100 text-indigo-800',
-        'FUNDING_INVESTMENT': 'bg-yellow-100 text-yellow-800'
-      };
-      return colorMap[category] || 'bg-gray-100 text-gray-800';
+      return NewsService.getCategoryColor(category);
     },
 
     hasActiveFilters() {
-      return !!(this.newsFilters.search || 
-                this.newsFilters.category || 
-                this.newsFilters.dateRange ||
-                this.newsFilters.source);
+      return NewsService.hasActiveFilters();
     },
 
     getActiveFilters() {
-      const filters = [];
-      
-      if (this.newsFilters.search) {
-        filters.push({ key: 'search', label: `Search: "${this.newsFilters.search}"` });
-      }
-      if (this.newsFilters.category) {
-        filters.push({ key: 'category', label: `Category: ${this.formatCategory(this.newsFilters.category)}` });
-      }
-      if (this.newsFilters.dateRange) {
-        filters.push({ key: 'dateRange', label: `Date: ${this.newsFilters.dateRange}` });
-      }
-      if (this.newsFilters.source) {
-        filters.push({ key: 'source', label: `Source: ${this.newsFilters.source}` });
-      }
-      
-      return filters;
+      return NewsService.getActiveFilters();
     },
 
     removeFilter(filterKey) {
-      this.newsFilters[filterKey] = '';
+      NewsService.removeFilter(filterKey);
       this.filterNews();
     },
 
     clearAllFilters() {
-      this.newsFilters = {
-        search: '',
-        category: '',
-        source: '',
-        dateRange: '',
-        sortBy: 'publishDate',
-        sortOrder: 'desc'
-      };
+      NewsService.clearAllFilters();
       this.filterNews();
     },
 
     async toggleBookmark(articleId) {
-      try {
-        const response = await fetch(`/api/news/articles/${articleId}/bookmark`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to toggle bookmark');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          const article = this.newsArticles.find(a => a.id === articleId);
-          if (article) {
-            article.isBookmarked = data.isBookmarked;
-          }
-          
-          const filteredArticle = this.filteredNewsArticles.find(a => a.id === articleId);
-          if (filteredArticle) {
-            filteredArticle.isBookmarked = data.isBookmarked;
-          }
-          
-          const paginatedArticle = this.paginatedNewsArticles.find(a => a.id === articleId);
-          if (paginatedArticle) {
-            paginatedArticle.isBookmarked = data.isBookmarked;
-          }
-
-          this.showNotification(
-            data.isBookmarked ? 'Article bookmarked' : 'Bookmark removed',
-            'success'
-          );
-        }
-
-      } catch (error) {
-        console.error('Error toggling bookmark:', error);
-        this.showNotification('Error updating bookmark', 'error');
-      }
+      await NewsService.toggleBookmark(articleId, this);
     },
 
     async trackArticleView(articleId) {
-      try {
-        await fetch(`/api/news/articles/${articleId}`, {
-          method: 'GET'
-        });
-      } catch (error) {
-        console.error('Error tracking article view:', error);
-      }
+      await NewsService.trackArticleView(articleId);
     },
 
     shareArticle(article) {
-      if (navigator.share) {
-        navigator.share({
-          title: article.title,
-          text: article.summary,
-          url: article.url
-        });
-      } else {
-        navigator.clipboard.writeText(article.url).then(() => {
-          this.showNotification('Article URL copied to clipboard', 'success');
-        }).catch(err => {
-          console.error('Error copying to clipboard:', err);
-          this.showNotification('Could not copy URL', 'error');
-        });
-      }
+      NewsService.shareArticle(article, this);
     },
 
     // High-impact keyword methods
     toggleHighImpactKeyword(keyword) {
-      const index = this.highImpactKeywords.indexOf(keyword);
-      if (index > -1) {
-        this.highImpactKeywords.splice(index, 1);
-      } else {
-        this.highImpactKeywords.push(keyword);
-      }
+      NewsService.toggleHighImpactKeyword(keyword);
       this.filterNews();
     },
 
     clearHighImpactKeywords() {
-      this.highImpactKeywords = [];
+      NewsService.clearHighImpactKeywords();
       this.filterNews();
     },
 
     hasHighImpactKeyword(article) {
-      if (!article.keywordTags || article.keywordTags.length === 0) return false;
-      
-      const articleKeywords = article.keywordTags.map(tag => tag.toLowerCase());
-      return this.allHighImpactKeywords.some(keyword => 
-        articleKeywords.includes(keyword.toLowerCase()) ||
-        articleKeywords.some(tag => tag.includes(keyword.toLowerCase()))
-      );
+      return NewsService.hasHighImpactKeyword(article);
     },
 
     isHighImpactKeyword(tag) {
-      const tagLower = tag.toLowerCase();
-      return this.allHighImpactKeywords.some(keyword => 
-        tagLower === keyword.toLowerCase() || 
-        tagLower.includes(keyword.toLowerCase())
-      );
+      return NewsService.isHighImpactKeyword(tag);
     },
 
-    // Summary system methods
+    // Summary system methods - these remain here as they use imported helpers
     toggleSummaryDisplay(articleId) {
       this.showSummary[articleId] = !this.showSummary[articleId];
     },
@@ -4526,72 +3986,31 @@ window.grapheneApp = function() {
     },
 
     async generateSummary(articleId) {
-      this.summaryLoading[articleId] = true;
-      this.summaryError[articleId] = null;
-
-      try {
-        const response = await fetch(`/api/news/articles/${articleId}/generate-summary`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          // Update the article in our local state
-          const article = this.newsArticles.find(a => a.id === articleId);
-          if (article) {
-            article.laymanSummary = result.data.summary;
-            article.summaryGenerated = true;
-            article.summaryError = null;
-          }
-
-          // Show the summary
-          this.showSummary[articleId] = true;
-          
-          // Show success notification
-          this.showNotification(
-            `Summary generated! ${result.data.cached ? '(Cached)' : `Cost: $${result.data.cost?.toFixed(4) || '0.001'}`}`,
-            'success'
-          );
-
-          // Re-filter to update display
-          this.applyClientSideFilters();
-        } else {
-          throw new Error(result.error || 'Failed to generate summary');
-        }
-
-      } catch (error) {
-        console.error('Error generating summary:', error);
-        this.summaryError[articleId] = error.message;
-        this.showNotification('Failed to generate summary: ' + error.message, 'error');
-      } finally {
-        this.summaryLoading[articleId] = false;
-      }
+      await NewsService.generateSummary(articleId, this);
     },
 
     async regenerateSummary(articleId) {
-      // Find and update the article to force regeneration
-      const article = this.newsArticles.find(a => a.id === articleId);
-      if (article) {
-        article.summaryGenerated = false;
-        article.laymanSummary = null;
-        article.summaryError = null;
-      }
-      
-      await this.generateSummary(articleId);
+      await NewsService.regenerateSummary(articleId, this);
     },
 
     async retryGenerateSummary(articleId) {
-      // Clear error and retry
-      this.summaryError[articleId] = null;
-      await this.generateSummary(articleId);
+      await NewsService.retryGenerateSummary(articleId, this);
+    },
+
+    async initializeNewsTab() {
+      await NewsService.initializeNewsTab(this);
+    },
+
+    async fetchHeadlines() {
+      await NewsService.fetchHeadlines(this);
+    },
+
+    async refreshHeadlines() {
+      await NewsService.refreshHeadlines(this);
+    },
+
+    openNewsArticle(article) {
+      NewsService.openNewsArticle(article);
     },
 
     debounce(func, wait) {
@@ -4604,49 +4023,6 @@ window.grapheneApp = function() {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
       };
-    },
-
-    async initializeNewsTab() {
-      if (this.newsArticles.length === 0) {
-        await this.fetchNewsArticles();
-      }
-    },
-
-    async fetchHeadlines() {
-      this.headlinesLoading = true;
-      this.headlinesError = null;
-
-      try {
-        const response = await fetch('/api/news/headlines?limit=5');
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch headlines');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          this.headlines = data.data;
-        } else {
-          throw new Error(data.error || 'Failed to fetch headlines');
-        }
-
-      } catch (error) {
-        console.error('Error fetching headlines:', error);
-        this.headlinesError = error.message;
-        this.headlines = [];
-      } finally {
-        this.headlinesLoading = false;
-      }
-    },
-
-    async refreshHeadlines() {
-      await this.fetchHeadlines();
-    },
-
-    openNewsArticle(article) {
-      this.trackArticleView(article.id);
-      window.open(article.url, '_blank', 'noopener,noreferrer');
     }
   };
 };

@@ -542,3 +542,6 @@ function getNewsTabHtml() {
     </div>
   `;
 }
+
+// Export for use in app-refactored.js
+export { getNewsTabHtml };

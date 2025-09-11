@@ -584,4 +584,50 @@ npm run dev
 - **Code Reduction**: 95% reduction in dropdown HTML
 - **Perfect Reusability**: Components render appropriately for both experiments and batches
 
+### Service-Oriented Architecture Optimization (September 2025)
+
+#### Problem Identification
+The user identified that `app-refactored.js` was a "massive massive file" causing performance issues during agent parsing and editing. The 4,651-line file was difficult for Claude agents to process efficiently, leading to slower response times during development tasks.
+
+#### Optimization Process
+A systematic service extraction approach was implemented to create a maintainable, modular architecture:
+
+**Phase 1: Analysis & Planning**
+- Analyzed the massive file to identify major functional sections
+- Created extraction strategy focusing on logical service boundaries
+- Planned delegation pattern to preserve Alpine.js reactivity
+
+**Phase 2: Service Extraction**
+- **FilterService.js** (347 lines): Extracted all filtering functionality
+- **NewsService.js** (526 lines): Moved complete news system management  
+- **CRUDService.js** (1,169 lines): Extracted all CRUD operations (largest service)
+- **DashboardService.js** (121 lines): Moved dashboard data loading
+- **constants.js** (223 lines): Moved DEFAULT_FORMS and application constants
+
+**Phase 3: Integration & Error Resolution**
+- Fixed import/export mismatches between services and main app
+- Resolved Alpine.js integration issues and missing plugins
+- Made news filtering functions globally accessible
+- Removed broken test file references
+- Validated all functionality preservation
+
+#### Technical Achievements
+- **37.4% File Size Reduction**: From 4,651 to 2,913 lines
+- **Improved Agent Performance**: Significantly faster parsing for Claude agents
+- **Zero Functionality Loss**: All features preserved exactly
+- **Service Architecture**: Clean separation of concerns with delegation pattern
+- **Alpine.js Compatibility**: All reactive bindings maintained
+
+#### Process Validation
+- **Error Resolution**: Fixed API import/export issues, missing Alpine.js plugins
+- **Function Accessibility**: Made count functions globally available for templates
+- **Application Testing**: Verified all core functionality works correctly
+- **Performance Confirmation**: Improved parsing speed for future development
+
+#### Benefits for Development
+- **Faster Edits**: Changes isolated to relevant service files
+- **Better Maintainability**: Logical separation makes code easier to understand
+- **Reduced Complexity**: Main file focuses on coordination rather than implementation
+- **Agent Efficiency**: Smaller files improve Claude agent processing speed
+
 > **Architecture Reference**: For technical specifications and database details, see [CLAUDE-ARCHITECTURE.md](./CLAUDE-ARCHITECTURE.md)

@@ -27,6 +27,7 @@ import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.
 import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 import { getGrapheneTabHtml } from './components/tabs/GrapheneTab.js';
 import { getAnalysisTabHtml } from './components/tabs/AnalysisTab.js';
+import { getNewsTabHtml } from './components/tabs/NewsTab.js';
 import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
 import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
@@ -40,231 +41,21 @@ import './components/modals/CardModalSystem.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
 import FilterService from './services/FilterService.js';
 import NewsService from './services/NewsService.js';
+import CRUDService from './services/CRUDService.js';
+import DashboardService from './services/DashboardService.js';
+import { DEFAULT_FORMS } from './utils/constants.js';
 
-// Default form values
-const DEFAULT_FORMS = {
-  biochar: {
-    experimentNumber: '',
-    testOrder: '',
-    experimentDate: '',
-    dateUnknown: false,
-    researchTeam: 'Curia - Germany',
-    reactor: '',
-    rawMaterial: '',
-    startingAmount: '',
-    acidAmount: '',
-    acidConcentration: '',
-    acidMolarity: '',
-    acidType: '',
-    temperature: '',
-    time: '',
-    pressureInitial: '',
-    pressureFinal: '',
-    washAmount: '',
-    washMedium: '',
-    output: '',
-    dryingTemp: '',
-    kftPercentage: '',
-    comments: ''
-  },
-  graphene: {
-    experimentNumber: '',
-    titleNote: '',
-    testOrder: '',
-    experimentDate: '',
-    dateUnknown: false,
-    researchTeam: 'Curia - Germany',
-    oven: '',
-    quantity: '',
-    biocharExperiment: '',
-    biocharLotNumber: '',
-    biocharSource: '',
-    baseAmount: '',
-    baseType: '',
-    baseConcentration: '',
-    base2Amount: '',
-    base2Type: '',
-    base2Concentration: '',
-    grindingMethod: '',
-    grindingCount: '',
-    grindingTime: '',
-    grindingFrequency: '',
-    homogeneous: '',
-    gas: '',
-    tempRate: '',
-    tempMax: '',
-    time: '',
-    washAmount: '',
-    washSolution: '',
-    washConcentration: '',
-    washWater: '',
-    dryingTemp: '',
-    dryingAtmosphere: '',
-    dryingPressure: 'atm. Pressure',
-    volumeMl: '',
-    species: '',
-    appearanceTags: [],
-    semReportFile: null,
-    removeSemReport: false,
-    replaceSemReport: false,
-    objective: '',
-    experimentDetails: '',
-    result: '',
-    conclusion: '',
-    recommendedAction: '',
-    objectivePaste: '', // For the paste textarea
-    updateReportIds: [],
-    output: '',
-    comments: ''
-  },
-  bet: {
-    testDate: '',
-    dateUnknown: false,
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    mass: '',
-    researchTeam: 'Curia - Germany',
-    testingLab: 'Fraunhofer-Institut',
-    multipointBetArea: '',
-    langmuirSurfaceArea: '',
-    betReportFile: null,
-    removeBetReport: false,
-    replaceBetReport: false,
-    comments: ''
-  },
-  conductivity: {
-    testDate: '',
-    dateUnknown: false,
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    name: '',
-    description: '',
-    conductivity1kN: '',
-    conductivity8kN: '',
-    conductivity12kN: '',
-    conductivity20kN: '',
-    comments: '',
-    conductivityReportPath: '',
-    conductivityReportFile: null,
-    removeConductivityReport: false
-  },
-  raman: {
-    testDate: '',
-    dateUnknown: false,
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    researchTeam: 'Curia - Germany',
-    testingLab: '',
-    // Integration range row (low and high for each)
-    integrationRange2DLow: '',
-    integrationRange2DHigh: '',
-    integrationRangeGLow: '',
-    integrationRangeGHigh: '',
-    integrationRangeDLow: '',
-    integrationRangeDHigh: '',
-    integrationRangeDGLow: '',
-    integrationRangeDGHigh: '',
-    // Integral Typ A row (two values for each)
-    integralTypA2D1: '',
-    integralTypA2D2: '',
-    integralTypAG1: '',
-    integralTypAG2: '',
-    integralTypAD1: '',
-    integralTypAD2: '',
-    integralTypADG1: '',
-    integralTypADG2: '',
-    // Peak high Typ J row (two values for each)
-    peakHighTypJ2D1: '',
-    peakHighTypJ2D2: '',
-    peakHighTypJG1: '',
-    peakHighTypJG2: '',
-    peakHighTypJD1: '',
-    peakHighTypJD2: '',
-    peakHighTypJDG1: '',
-    peakHighTypJDG2: '',
-    ramanReportFile: null,
-    removeRamanReport: false,
-    replaceRamanReport: false,
-    comments: ''
-  },
-  tem: {
-    testDate: '',
-    dateUnknown: false,
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    researchTeam: 'Curia - Germany',
-    testingLab: '',
-    temReportFile: null,
-    removeTEMReport: false,
-    replaceTEMReport: false,
-    comments: ''
-  },
-  combine: {
-    lotNumber: '',
-    lotName: '',
-    description: ''
-  },
-  updateReport: {
-    description: '',
-    weekOf: '',
-    grapheneIds: [],
-    compoundBatchIds: [],
-    updateFile: null
-  },
-  semReport: {
-    reportDate: '',
-    grapheneIds: [],
-    compoundBatchIds: [],
-    semFiles: null
-  },
-  compoundBatch: {
-    batchNumber: '',
-    batchName: '',
-    createdDate: '',
-    dateUnknown: false,
-    totalOutput: '',
-    description: '',
-    experimentIds: []
-  },
-  shipment: {
-    shipmentNumber: '',
-    shipFromLocation: 'Curia Frankfurt',
-    shipToLocation: '',
-    shipmentDate: '',
-    dateUnknown: false,
-    receivedDate: '',
-    receivedDateUnknown: false,
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    micronizationSku: '',
-    amountShipped: '',
-    unit: 'g',
-    purpose: '',
-    status: 'shipped',
-    comments: ''
-  },
-  micronization: {
-    micronizationNumber: '',
-    date: '',
-    dateUnknown: false,
-    skuSuffix: '',  // Changed from sku to skuSuffix
-    materialType: 'graphene',
-    grapheneSample: '',
-    compoundBatchNumber: '',
-    startingMaterialAmount: '',
-    recoveredAmount: '',
-    grindPressure: '',
-    dx50: '',
-    micronizationReportFile: null,
-    removeMicronizationReport: false,
-    replaceMicronizationReport: false
-  }
-};
+console.log('Loading app-refactored.js...');
+
+// Make tab functions globally available for Alpine.js templates
+window.getDashboardTabHtml = getDashboardTabHtml;
+window.getShipmentsTabHtml = getShipmentsTabHtml;
+window.getMicronizationTabHtml = getMicronizationTabHtml;
+window.getCompoundBatchesTabHtml = getCompoundBatchesTabHtml;
+window.getBiocharTabHtml = getBiocharTabHtml;
+window.getGrapheneTabHtml = getGrapheneTabHtml;
+window.getAnalysisTabHtml = getAnalysisTabHtml;
+window.getNewsTabHtml = getNewsTabHtml;
 
 // Main Alpine.js application
 window.grapheneApp = function() {
@@ -303,6 +94,7 @@ window.grapheneApp = function() {
     newsLoading: false,
     newsError: null,
     showNewsFilters: false,
+    bookmarkLoading: {},
     headlines: [],
     headlinesLoading: false,
     headlinesError: null,
@@ -1262,1165 +1054,300 @@ window.grapheneApp = function() {
       this.toggleExpanded('micronization', id);
     },
     
-    // Biochar CRUD operations
+    // Biochar CRUD operations - Delegated to CRUDService
     editBiochar(record) {
-      this.editingBiochar = record;
-      const editableFields = dataHelpers.extractEditableFields(record, ['grapheneProductions', 'lot', 'lotNumber']);
-      this.biocharForm = { ...editableFields };
-      this.showAddBiochar = true;
+      CRUDService.editBiochar(record, this);
     },
     
     copyBiochar(record) {
-      this.editingBiochar = null;
-      const editableFields = dataHelpers.extractEditableFields(record, ['grapheneProductions', 'lot', 'lotNumber', 'experimentNumber']);
-      this.biocharForm = { 
-        ...editableFields,
-        experimentNumber: '',
-        testOrder: record.testOrder ? record.testOrder + 1 : null
-      };
-      this.showAddBiochar = true;
+      CRUDService.copyBiochar(record, this);
     },
     
     async saveBiochar() {
-      try {
-        const data = validators.processBiocharForm(this.biocharForm);
-        
-        if (this.editingBiochar) {
-          await API.biochar.update(this.editingBiochar.id, data);
-        } else {
-          await API.biochar.create(data);
-        }
-        
-        await this.loadBiocharRecords();
-        this.closeBiocharForm();
-      } catch (error) {
-        console.error('Failed to save biochar record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
+      await CRUDService.saveBiochar(this);
     },
     
     async deleteBiochar(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.biochar.delete(id);
-        await this.loadBiocharRecords();
-      } catch (error) {
-        console.error('Failed to delete biochar record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
+      await CRUDService.deleteBiochar(id, this);
     },
     
     closeBiocharForm() {
-      this.showAddBiochar = false;
-      this.editingBiochar = null;
-      this.biocharForm = { ...DEFAULT_FORMS.biochar };
+      CRUDService.closeBiocharForm(this);
     },
     
-    // Graphene CRUD operations
+    // Graphene CRUD operations - Delegated to CRUDService
     editGraphene(record) {
-      this.editingGraphene = record;
-      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'updateReports']);
-      this.grapheneForm = { ...editableFields };
-      
-      // Ensure appearanceTags is always an array
-      if (!this.grapheneForm.appearanceTags || !Array.isArray(this.grapheneForm.appearanceTags)) {
-        this.grapheneForm.appearanceTags = [];
-      }
-      
-      // Set biocharSource based on what's populated
-      if (record.biocharExperiment) {
-        this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
-      } else if (record.biocharLotNumber) {
-        this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
-      } else {
-        this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
-      }
-      
-      // Initialize SEM-related flags
-      this.grapheneForm.removeSemReport = false;
-      this.grapheneForm.replaceSemReport = false;
-      
-      // Initialize update report IDs from existing associations
-      this.grapheneForm.updateReportIds = record.updateReports?.map(ur => ur.updateReportId) || [];
-      
-      this.showAddGraphene = true;
+      CRUDService.editGraphene(record, this);
     },
-    
+
     copyGraphene(record) {
-      this.editingGraphene = null;
-      const editableFields = dataHelpers.extractEditableFields(record, ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betTests', 'updateReports', 'experimentNumber', 'semReportPath']);
-      this.grapheneForm = { 
-        ...editableFields,
-        experimentNumber: '',
-        testOrder: record.testOrder ? record.testOrder + 1 : null
-      };
-      
-      // Ensure appearanceTags is always an array
-      if (!this.grapheneForm.appearanceTags || !Array.isArray(this.grapheneForm.appearanceTags)) {
-        this.grapheneForm.appearanceTags = [];
-      }
-      
-      // Set biocharSource based on what's populated
-      if (record.biocharExperiment) {
-        this.grapheneForm.biocharSource = 'exp:' + record.biocharExperiment;
-      } else if (record.biocharLotNumber) {
-        this.grapheneForm.biocharSource = 'lot:' + record.biocharLotNumber;
-      } else {
-        this.grapheneForm.biocharSource = '';  // Could be 'various' or empty
-      }
-      
-      // Initialize SEM-related flags
-      this.grapheneForm.removeSemReport = false;
-      this.grapheneForm.replaceSemReport = false;
-      
-      // Copy update report associations from original record
-      this.grapheneForm.updateReportIds = record.updateReports?.map(ur => ur.updateReportId) || [];
-      
-      this.showAddGraphene = true;
+      CRUDService.copyGraphene(record, this);
     },
-    
+
     async saveGraphene() {
-      try {
-        const data = validators.processGrapheneForm(this.grapheneForm);
-        const file = this.grapheneForm.semReportFile;
-        
-        // Add removal flag if user wants to remove SEM report
-        if (this.grapheneForm.removeSemReport) {
-          data.removeSemReport = true;
-        }
-        
-        if (this.editingGraphene) {
-          await API.graphene.update(this.editingGraphene.id, data, file);
-        } else {
-          await API.graphene.create(data, file);
-        }
-        
-        await this.loadGrapheneRecords();
-        await this.loadSemReports(); // Refresh SEM reports if one was uploaded
-        this.closeGrapheneForm();
-      } catch (error) {
-        console.error('Failed to save graphene record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
+      await CRUDService.saveGraphene(this);
     },
-    
+
     async deleteGraphene(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.graphene.delete(id);
-        await this.loadGrapheneRecords();
-      } catch (error) {
-        console.error('Failed to delete graphene record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
+      await CRUDService.deleteGraphene(id, this);
     },
 
     async removeSemReportAssociation(semReportId) {
-      if (!confirm('Remove the association between this SEM report and the graphene experiment?')) return;
-      
-      try {
-        await API.semReport.removeGrapheneAssociation(semReportId, this.editingGraphene.id);
-        
-        // Update the editingGraphene record to reflect the change
-        this.editingGraphene.semReports = this.editingGraphene.semReports.filter(
-          sr => sr.semReport.id !== semReportId
-        );
-        
-        // Also refresh the main graphene list
-        await this.loadGrapheneRecords();
-        
-        alert('SEM report association removed successfully');
-      } catch (error) {
-        console.error('Failed to remove SEM report association:', error);
-        alert(`Failed to remove association: ${error.message}`);
-      }
-    },
-    
-    closeGrapheneForm() {
-      this.showAddGraphene = false;
-      this.editingGraphene = null;
-      this.grapheneForm = { ...DEFAULT_FORMS.graphene };
-      // Ensure appearanceTags is always an array
-      this.grapheneForm.appearanceTags = [];
-      // Reset SEM-related flags
-      this.grapheneForm.removeSemReport = false;
-      this.grapheneForm.replaceSemReport = false;
-      // Reset update report IDs
-      this.grapheneForm.updateReportIds = [];
-    },
-    
-    // BET CRUD operations
-    editBet(record) {
-      this.editingBet = record;
-      this.betForm = {
-        testDate: record.testDate ? record.testDate.split('T')[0] : '',
-        dateUnknown: !record.testDate,
-        grapheneSample: record.grapheneSample || '',
-        mass: record.mass || '',
-        researchTeam: record.researchTeam || 'Curia - Germany',
-        testingLab: record.testingLab || 'Fraunhofer-Institut',
-        multipointBetArea: record.multipointBetArea || '',
-        langmuirSurfaceArea: record.langmuirSurfaceArea || '',
-        betReportFile: null,
-        removeBetReport: false,
-        replaceBetReport: false,
-        comments: record.comments || ''
-      };
-      this.showAddBet = true;
-    },
-    
-    async saveBet() {
-      try {
-        // Extract file before processing
-        const file = this.betForm.betReportFile;
-        
-        // Process form data through validator
-        const data = validators.processBetForm(this.betForm);
-        
-        if (this.editingBet) {
-          await API.bet.update(this.editingBet.id, data, file);
-        } else {
-          await API.bet.create(data, file);
-        }
-        
-        await this.loadBetRecords();
-        this.closeBetForm();
-      } catch (error) {
-        console.error('Failed to save BET record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
-    },
-    
-    async deleteBet(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.bet.delete(id);
-        await this.loadBetRecords();
-      } catch (error) {
-        console.error('Failed to delete BET record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
-    },
-    
-    closeBetForm() {
-      this.showAddBet = false;
-      this.editingBet = null;
-      this.betForm = { ...DEFAULT_FORMS.bet };
-    },
-    
-    // Conductivity CRUD operations
-    editConductivity(record) {
-      this.editingConductivity = record;
-      this.conductivityForm = {
-        testDate: record.testDate ? record.testDate.split('T')[0] : '',
-        dateUnknown: !record.testDate,
-        materialType: record.compoundBatchNumber ? 'compound' : 'graphene',
-        grapheneSample: record.grapheneSample || '',
-        compoundBatchNumber: record.compoundBatchNumber || '',
-        name: record.name || '',
-        description: record.description || '',
-        conductivity1kN: record.conductivity1kN || '',
-        conductivity8kN: record.conductivity8kN || '',
-        conductivity12kN: record.conductivity12kN || '',
-        conductivity20kN: record.conductivity20kN || '',
-        comments: record.comments || '',
-        conductivityReportPath: record.conductivityReportPath || '',
-        conductivityReportFile: null,
-        removeConductivityReport: false
-      };
-      this.showAddConductivity = true;
-    },
-    
-    async saveConductivity() {
-      try {
-        // Extract file before processing
-        const file = this.conductivityForm.conductivityReportFile;
-        
-        const data = { ...this.conductivityForm };
-        
-        if (data.dateUnknown) {
-          data.testDate = null;
-        }
-        delete data.dateUnknown;
-        delete data.conductivityReportFile; // Remove file from data object
-        delete data.conductivityReportPath; // Don't send the path from frontend
-        delete data.replaceConductivityReport; // Remove UI-only field
-        
-        if (this.editingConductivity) {
-          await API.conductivity.update(this.editingConductivity.id, data, file);
-        } else {
-          await API.conductivity.create(data, file);
-        }
-        
-        await this.loadConductivityRecords();
-        this.closeConductivityForm();
-      } catch (error) {
-        console.error('Failed to save conductivity record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
-    },
-    
-    async deleteConductivity(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.conductivity.delete(id);
-        await this.loadConductivityRecords();
-      } catch (error) {
-        console.error('Failed to delete conductivity record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
-    },
-    
-    closeConductivityForm() {
-      this.showAddConductivity = false;
-      this.editingConductivity = null;
-      this.conductivityForm = { ...DEFAULT_FORMS.conductivity };
+      await CRUDService.removeSemReportAssociation(semReportId, this);
     },
 
-    // RAMAN Test management
+    closeGrapheneForm() {
+      CRUDService.closeGrapheneForm(this);
+    },
+
+    // BET CRUD operations - Delegated to CRUDService
+    editBet(record) {
+      CRUDService.editBet(record, this);
+    },
+
+    async saveBet() {
+      await CRUDService.saveBet(this);
+    },
+
+    async deleteBet(id) {
+      await CRUDService.deleteBet(id, this);
+    },
+
+    closeBetForm() {
+      CRUDService.closeBetForm(this);
+    },
+
+    // Conductivity CRUD operations - Delegated to CRUDService
+    editConductivity(record) {
+      CRUDService.editConductivity(record, this);
+    },
+
+    async saveConductivity() {
+      await CRUDService.saveConductivity(this);
+    },
+
+    async deleteConductivity(id) {
+      await CRUDService.deleteConductivity(id, this);
+    },
+
+    closeConductivityForm() {
+      CRUDService.closeConductivityForm(this);
+    },
+
+    // RAMAN Test management - Delegated to CRUDService
     editRaman(record) {
-      this.editingRaman = record;
-      this.ramanForm = {
-        testDate: record.testDate ? new Date(record.testDate).toISOString().split('T')[0] : '',
-        dateUnknown: !record.testDate,
-        grapheneSample: record.grapheneSample || '',
-        researchTeam: record.researchTeam || 'Curia - Germany',
-        testingLab: record.testingLab || '',
-        // Integration range row (low and high for each)
-        integrationRange2DLow: record.integrationRange2DLow || '',
-        integrationRange2DHigh: record.integrationRange2DHigh || '',
-        integrationRangeGLow: record.integrationRangeGLow || '',
-        integrationRangeGHigh: record.integrationRangeGHigh || '',
-        integrationRangeDLow: record.integrationRangeDLow || '',
-        integrationRangeDHigh: record.integrationRangeDHigh || '',
-        integrationRangeDGLow: record.integrationRangeDGLow || '',
-        integrationRangeDGHigh: record.integrationRangeDGHigh || '',
-        // Integral Typ A row (two values for each)
-        integralTypA2D1: record.integralTypA2D1 || '',
-        integralTypA2D2: record.integralTypA2D2 || '',
-        integralTypAG1: record.integralTypAG1 || '',
-        integralTypAG2: record.integralTypAG2 || '',
-        integralTypAD1: record.integralTypAD1 || '',
-        integralTypAD2: record.integralTypAD2 || '',
-        integralTypADG1: record.integralTypADG1 || '',
-        integralTypADG2: record.integralTypADG2 || '',
-        // Peak high Typ J row (two values for each)
-        peakHighTypJ2D1: record.peakHighTypJ2D1 || '',
-        peakHighTypJ2D2: record.peakHighTypJ2D2 || '',
-        peakHighTypJG1: record.peakHighTypJG1 || '',
-        peakHighTypJG2: record.peakHighTypJG2 || '',
-        peakHighTypJD1: record.peakHighTypJD1 || '',
-        peakHighTypJD2: record.peakHighTypJD2 || '',
-        peakHighTypJDG1: record.peakHighTypJDG1 || '',
-        peakHighTypJDG2: record.peakHighTypJDG2 || '',
-        ramanReportFile: null,
-        removeRamanReport: false,
-        replaceRamanReport: false,
-        comments: record.comments || ''
-      };
-      this.showAddRaman = true;
+      CRUDService.editRaman(record, this);
     },
 
     async saveRaman() {
-      try {
-        const data = { ...this.ramanForm };
-        
-        if (data.dateUnknown) {
-          data.testDate = null;
-        }
-        delete data.dateUnknown;
-        
-        // Handle file removal
-        if (data.removeRamanReport) {
-          data.removeRamanReport = 'true';
-        }
-        
-        let result;
-        if (this.editingRaman) {
-          result = await API.raman.update(this.editingRaman.id, data, data.ramanReportFile);
-        } else {
-          result = await API.raman.create(data, data.ramanReportFile);
-        }
-        
-        await this.loadRamanRecords();
-        this.closeRamanForm();
-      } catch (error) {
-        console.error('Failed to save RAMAN record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
+      await CRUDService.saveRaman(this);
     },
 
     async deleteRaman(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.raman.delete(id);
-        await this.loadRamanRecords();
-      } catch (error) {
-        console.error('Failed to delete RAMAN record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
+      await CRUDService.deleteRaman(id, this);
     },
 
     closeRamanForm() {
-      this.showAddRaman = false;
-      this.editingRaman = null;
-      this.ramanForm = { ...DEFAULT_FORMS.raman };
+      CRUDService.closeRamanForm(this);
     },
 
-    // TEM CRUD operations
+    // TEM CRUD operations - Delegated to CRUDService
     editTem(record) {
-      this.editingTem = record;
-      this.temForm = {
-        testDate: record.testDate ? record.testDate.split('T')[0] : '',
-        dateUnknown: !record.testDate,
-        grapheneSample: record.grapheneSample || '',
-        researchTeam: record.researchTeam || 'Curia - Germany',
-        testingLab: record.testingLab || '',
-        temReportFile: null,
-        removeTEMReport: false,
-        replaceTEMReport: false,
-        comments: record.comments || ''
-      };
-      this.showAddTem = true;
+      CRUDService.editTem(record, this);
     },
 
     async saveTem() {
-      try {
-        // Extract file before processing
-        const file = this.temForm.temReportFile;
-        
-        // Create clean data object
-        const data = { ...this.temForm };
-        
-        // Remove file and UI fields
-        delete data.temReportFile;
-        
-        // Handle report removal
-        if (data.removeTEMReport) {
-          data.removeTEMReport = 'true';
-        }
-        
-        let result;
-        if (this.editingTem) {
-          result = await API.tem.update(this.editingTem.id, data, file);
-        } else {
-          result = await API.tem.create(data, file);
-        }
-        
-        await this.loadTemRecords();
-        this.closeTemForm();
-      } catch (error) {
-        console.error('Failed to save TEM record:', error);
-        alert(`Failed to save record: ${error.message}`);
-      }
+      await CRUDService.saveTem(this);
     },
 
     async deleteTem(id) {
-      if (!confirm('Are you sure you want to delete this record?')) return;
-      
-      try {
-        await API.tem.delete(id);
-        await this.loadTemRecords();
-      } catch (error) {
-        console.error('Failed to delete TEM record:', error);
-        alert(`Failed to delete record: ${error.message}`);
-      }
+      await CRUDService.deleteTem(id, this);
     },
 
     closeTemForm() {
-      this.showAddTem = false;
-      this.editingTem = null;
-      this.temForm = { ...DEFAULT_FORMS.tem };
+      CRUDService.closeTemForm(this);
     },
-    
-    // Update Report CRUD operations
+
+    // Update Report CRUD operations - Delegated to CRUDService
     editUpdateReport(record) {
-      this.editingUpdateReport = record;
-      this.updateReportForm = {
-        description: record.description || '',
-        weekOf: record.weekOf ? record.weekOf.split('T')[0] : '',
-        grapheneIds: record.grapheneReports?.map(gr => gr.grapheneId) || [],
-        updateFile: null
-      };
-      this.showAddUpdateReport = true;
+      CRUDService.editUpdateReport(record, this);
     },
-    
+
     async saveUpdateReport() {
-      try {
-        const data = { ...this.updateReportForm };
-        const file = this.updateReportForm.updateFile;
-        
-        // Remove the file object from data since it's handled separately
-        delete data.updateFile;
-        
-        if (this.editingUpdateReport) {
-          // For edit, file is optional
-          await API.updateReport.update(this.editingUpdateReport.id, data, file);
-        } else {
-          if (!file) {
-            alert('Please select an update report file');
-            return;
-          }
-          await API.updateReport.create(data, file);
-        }
-        
-        await this.loadUpdateReports();
-        await this.loadGrapheneRecords(); // Refresh graphene records to show new associations
-        this.closeUpdateReportForm();
-      } catch (error) {
-        console.error('Failed to save update report:', error);
-        alert(`Failed to save update report: ${error.message}`);
-      }
+      await CRUDService.saveUpdateReport(this);
     },
-    
+
     async deleteUpdateReport(id) {
-      if (!confirm('Are you sure you want to delete this update report?')) return;
-      
-      try {
-        await API.updateReport.delete(id);
-        await this.loadUpdateReports();
-        await this.loadGrapheneRecords(); // Refresh graphene records to update associations
-      } catch (error) {
-        console.error('Failed to delete update report:', error);
-        alert(`Failed to delete update report: ${error.message}`);
-      }
+      await CRUDService.deleteUpdateReport(id, this);
     },
-    
+
     closeUpdateReportForm() {
-      this.showAddUpdateReport = false;
-      this.editingUpdateReport = null;
-      this.updateReportForm = { ...DEFAULT_FORMS.updateReport };
+      CRUDService.closeUpdateReportForm(this);
     },
-    
+
     viewUpdateReport(filePath) {
-      if (filePath) {
-        this.currentUpdateReport = filePath + '#navpanes=0&toolbar=0';
-        this.showUpdateReportModal = true;
-      }
+      CRUDService.viewUpdateReport(filePath, this);
     },
-    
+
     closeUpdateReportModal() {
-      this.showUpdateReportModal = false;
-      this.currentUpdateReport = null;
+      CRUDService.closeUpdateReportModal(this);
     },
-    
+
     handleUpdateFileChange(event) {
-      const file = event.target.files[0];
-      const validation = validators.validatePDFFile(file);
-      
-      if (validation.isValid) {
-        this.updateReportForm.updateFile = file;
-      } else {
-        alert(validation.message);
-        event.target.value = '';
-        this.updateReportForm.updateFile = null;
-      }
+      CRUDService.handleUpdateFileChange(event, this);
     },
-    
+
     toggleGrapheneSelection(grapheneId) {
-      const index = this.updateReportForm.grapheneIds.indexOf(grapheneId);
-      if (index > -1) {
-        this.updateReportForm.grapheneIds.splice(index, 1);
-      } else {
-        this.updateReportForm.grapheneIds.push(grapheneId);
-      }
+      CRUDService.toggleGrapheneSelection(grapheneId, this);
     },
-    
-    // New Update Report functions for compound batch support
+
+    // New Update Report functions for compound batch support - Delegated to CRUDService
     toggleUpdateReportGraphene(grapheneId) {
-      const index = this.updateReportForm.grapheneIds.indexOf(grapheneId);
-      if (index > -1) {
-        this.updateReportForm.grapheneIds.splice(index, 1);
-      } else {
-        this.updateReportForm.grapheneIds.push(grapheneId);
-      }
+      CRUDService.toggleUpdateReportGraphene(grapheneId, this);
     },
-    
+
     toggleUpdateReportCompoundBatch(batchId) {
-      const index = this.updateReportForm.compoundBatchIds.indexOf(batchId);
-      if (index > -1) {
-        this.updateReportForm.compoundBatchIds.splice(index, 1);
-      } else {
-        this.updateReportForm.compoundBatchIds.push(batchId);
-      }
+      CRUDService.toggleUpdateReportCompoundBatch(batchId, this);
     },
-    
+
     filterUpdateReportMaterials() {
-      const searchTerm = this.updateReportSearchTerm.toLowerCase();
-      
-      // Filter graphene experiments
-      if (!searchTerm) {
-        this.filteredGrapheneForUpdate = this.grapheneRecords;
-      } else {
-        this.filteredGrapheneForUpdate = this.grapheneRecords.filter(g => 
-          g.experimentNumber?.toLowerCase().includes(searchTerm) ||
-          g.species?.toLowerCase().includes(searchTerm) ||
-          (g.experimentDate && formatters.formatDate(g.experimentDate).toLowerCase().includes(searchTerm))
-        );
-      }
-      
-      // Filter compound batches
-      if (!searchTerm) {
-        this.filteredCompoundBatchesForUpdate = this.compoundBatchRecords;
-      } else {
-        this.filteredCompoundBatchesForUpdate = this.compoundBatchRecords.filter(b => 
-          b.batchNumber?.toLowerCase().includes(searchTerm) ||
-          b.batchName?.toLowerCase().includes(searchTerm) ||
-          b.description?.toLowerCase().includes(searchTerm)
-        );
-      }
+      CRUDService.filterUpdateReportMaterials(this);
     },
-    
-    // SEM Report methods
+
+    // SEM Report methods - Delegated to CRUDService
     async saveSemReport() {
-      try {
-        const files = this.semReportForm.semFiles;
-        
-        console.log('Saving SEM report, files:', files);
-        console.log('Is editing:', this.editingSemReport);
-        console.log('Files length:', files ? files.length : 0);
-        
-        // Only require files for new uploads, not edits
-        if (!this.editingSemReport && (!files || files.length === 0)) {
-          alert('Please select at least one PDF file to upload');
-          return;
-        }
-        
-        const data = {
-          reportDate: this.semReportForm.reportDate,
-          grapheneIds: this.semReportForm.grapheneIds,
-          compoundBatchIds: this.semReportForm.compoundBatchIds
-        };
-        
-        if (this.editingSemReport) {
-          await API.semReport.update(this.editingSemReport.id, data);
-        } else {
-          await API.semReport.create(data, files);
-        }
-        
-        await this.loadSemReports();
-        this.closeSemReportForm();
-      } catch (error) {
-        console.error('Failed to save SEM report:', error);
-        alert(`Failed to save SEM report: ${error.message}`);
-      }
+      await CRUDService.saveSemReport(this);
     },
-    
+
     editSemReport(record) {
-      this.editingSemReport = record;
-      this.semReportForm = {
-        reportDate: record.reportDate ? new Date(record.reportDate).toISOString().split('T')[0] : '',
-        grapheneIds: record.grapheneReports ? record.grapheneReports.map(gr => gr.graphene.id) : [],
-        compoundBatchIds: record.compoundBatchReports ? record.compoundBatchReports.map(cbr => cbr.compoundBatch.id) : [],
-        semFiles: null
-      };
-      this.showAddSemReport = true;
+      CRUDService.editSemReport(record, this);
     },
-    
+
     async deleteSemReport(id) {
-      if (confirm('Are you sure you want to delete this SEM report?')) {
-        try {
-          await API.semReport.delete(id);
-          await this.loadSemReports();
-        } catch (error) {
-          console.error('Failed to delete SEM report:', error);
-          alert(`Failed to delete SEM report: ${error.message}`);
-        }
-      }
+      await CRUDService.deleteSemReport(id, this);
     },
-    
+
     closeSemReportForm() {
-      this.showAddSemReport = false;
-      this.editingSemReport = null;
-      this.semReportForm = { ...DEFAULT_FORMS.semReport };
+      CRUDService.closeSemReportForm(this);
     },
-    
+
     viewSemPdf(filePath) {
-      if (filePath) {
-        this.currentSemPdf = filePath + '#navpanes=0&toolbar=0';
-        this.showSemModal = true;
-      }
+      CRUDService.viewSemPdf(filePath, this);
     },
-    
+
     closeSemModal() {
-      this.showSemModal = false;
-      this.currentSemPdf = null;
+      CRUDService.closeSemModal(this);
     },
-    
+
     handleSemFileChange(event) {
-      console.log('handleSemFileChange called, event:', event);
-      
-      if (!event || !event.target || !event.target.files) {
-        console.error('Invalid event object:', event);
-        return;
-      }
-      
-      const files = event.target.files;
-      const filesArray = Array.from(files);
-      
-      console.log('Files selected:', filesArray.length, 'files');
-      console.log('File details:', filesArray.map(f => ({ name: f.name, size: f.size, type: f.type })));
-      
-      // Validate all files are PDFs
-      const allValid = filesArray.every(file => {
-        const validation = validators.validatePDFFile(file);
-        if (!validation.isValid) {
-          alert(`${file.name}: ${validation.message}`);
-          return false;
-        }
-        return true;
-      });
-      
-      if (allValid && filesArray.length > 0) {
-        this.semReportForm.semFiles = filesArray;
-        console.log('Files stored in form:', this.semReportForm.semFiles);
-        console.log('Form state after file selection:', this.semReportForm);
-      } else {
-        event.target.value = null;
-        this.semReportForm.semFiles = null;
-      }
+      CRUDService.handleSemFileChange(event, this);
     },
-    
+
     toggleSemGrapheneSelection(grapheneId) {
-      const index = this.semReportForm.grapheneIds.indexOf(grapheneId);
-      if (index > -1) {
-        this.semReportForm.grapheneIds.splice(index, 1);
-      } else {
-        this.semReportForm.grapheneIds.push(grapheneId);
-      }
+      CRUDService.toggleSemGrapheneSelection(grapheneId, this);
     },
 
     toggleSemCompoundBatchSelection(compoundBatchId) {
-      const index = this.semReportForm.compoundBatchIds.indexOf(compoundBatchId);
-      if (index > -1) {
-        this.semReportForm.compoundBatchIds.splice(index, 1);
-      } else {
-        this.semReportForm.compoundBatchIds.push(compoundBatchId);
-      }
-    },
-    
-    // Compound Batch CRUD operations
-    async saveCompoundBatch() {
-      try {
-        const data = { ...this.compoundBatchForm };
-        delete data.experimentIds;
-        delete data.dateUnknown;
-        
-        // Handle date field
-        if (data.createdDate === '' || this.compoundBatchForm.dateUnknown) {
-          data.createdDate = null;
-        }
-        
-        let result;
-        if (this.editingCompoundBatch) {
-          result = await API.compoundBatch.update(this.editingCompoundBatch.id, {
-            ...data,
-            experimentIds: this.compoundBatchForm.experimentIds
-          });
-        } else {
-          result = await API.compoundBatch.create({
-            ...data,
-            experimentIds: this.compoundBatchForm.experimentIds
-          });
-        }
-        
-        await this.loadCompoundBatches();
-        this.closeCompoundBatchForm();
-      } catch (error) {
-        console.error('Failed to save compound batch:', error);
-        alert(`Failed to save compound batch: ${error.message}`);
-      }
-    },
-    
-    editCompoundBatch(batch) {
-      this.editingCompoundBatch = batch;
-      this.compoundBatchForm = {
-        batchNumber: batch.batchNumber || '',
-        batchName: batch.batchName || '',
-        createdDate: batch.createdDate ? new Date(batch.createdDate).toISOString().split('T')[0] : '',
-        dateUnknown: !batch.createdDate,
-        totalOutput: batch.totalOutput || '',
-        description: batch.description || '',
-        experimentIds: batch.experiments ? batch.experiments.map(exp => exp.grapheneId) : []
-      };
-      this.showCompoundBatchModal = true;
-    },
-    
-    async deleteCompoundBatch(id) {
-      if (confirm('Are you sure you want to delete this compound batch? This will not delete the individual graphene experiments.')) {
-        try {
-          await API.compoundBatch.delete(id);
-          await this.loadCompoundBatches();
-        } catch (error) {
-          console.error('Failed to delete compound batch:', error);
-          alert(`Failed to delete compound batch: ${error.message}`);
-        }
-      }
-    },
-    
-    closeCompoundBatchForm() {
-      this.showCompoundBatchModal = false;
-      this.editingCompoundBatch = null;
-      this.compoundBatchForm = { ...DEFAULT_FORMS.compoundBatch };
-      this.selectedGrapheneIds = [];
-      this.experimentSearchTerm = '';
-    },
-    
-    toggleGrapheneSelection(grapheneId) {
-      const index = this.selectedGrapheneIds.indexOf(grapheneId);
-      if (index > -1) {
-        this.selectedGrapheneIds.splice(index, 1);
-      } else {
-        this.selectedGrapheneIds.push(grapheneId);
-      }
-      
-      // Update form
-      this.compoundBatchForm.experimentIds = [...this.selectedGrapheneIds];
-    },
-    
-    // Compound Batch Management Tab Functions
-    openCompoundBatchForm() {
-      this.compoundBatchForm = { ...DEFAULT_FORMS.compoundBatch };
-      this.editingCompoundBatch = null;
-      this.experimentSearchTerm = '';
-      this.showCompoundBatchModal = true;
-    },
-    
-    
-    async searchCompoundBatches() {
-      try {
-        this.compoundBatchRecords = await API.compoundBatch.getAll(this.compoundBatchSearch);
-      } catch (error) {
-        console.error('Failed to search compound batches:', error);
-      }
-    },
-    
-    sortCompoundBatches(column) {
-      if (this.compoundBatchSortColumn === column) {
-        this.compoundBatchSortOrder = this.compoundBatchSortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        this.compoundBatchSortColumn = column;
-        this.compoundBatchSortOrder = 'asc';
-      }
-      
-      this.compoundBatchRecords.sort((a, b) => {
-        let aVal = a[column] || '';
-        let bVal = b[column] || '';
-        
-        // Handle dates
-        if (column === 'createdDate') {
-          aVal = new Date(aVal || '1900-01-01');
-          bVal = new Date(bVal || '1900-01-01');
-        }
-        
-        // Handle numbers
-        if (column === 'totalOutput') {
-          aVal = parseFloat(aVal) || 0;
-          bVal = parseFloat(bVal) || 0;
-        }
-        
-        if (aVal < bVal) return this.compoundBatchSortOrder === 'asc' ? -1 : 1;
-        if (aVal > bVal) return this.compoundBatchSortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-    },
-    
-    getCompoundBatchSortIcon(column) {
-      if (this.compoundBatchSortColumn !== column) return '';
-      return this.compoundBatchSortOrder === 'asc' 
-        ? '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>'
-        : '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>';
-    },
-    
-    // Modal experiment selection functions
-    getFilteredExperiments() {
-      if (!this.grapheneRecords || this.grapheneRecords.length === 0) {
-        return [];
-      }
-      
-      if (!this.experimentSearchTerm) {
-        return this.grapheneRecords;
-      }
-      
-      const searchTerm = this.experimentSearchTerm.toLowerCase();
-      return this.grapheneRecords.filter(record => {
-        return (
-          (record.experimentNumber && record.experimentNumber.toLowerCase().includes(searchTerm)) ||
-          (record.species && record.species.toLowerCase().includes(searchTerm)) ||
-          (record.biocharExperiment && record.biocharExperiment.toLowerCase().includes(searchTerm)) ||
-          (record.biocharLotNumber && record.biocharLotNumber.toLowerCase().includes(searchTerm)) ||
-          (record.experimentDate && record.experimentDate.includes(searchTerm))
-        );
-      });
-    },
-    
-    toggleExperimentSelection(experimentId) {
-      const index = this.compoundBatchForm.experimentIds.indexOf(experimentId);
-      if (index > -1) {
-        this.compoundBatchForm.experimentIds.splice(index, 1);
-      } else {
-        this.compoundBatchForm.experimentIds.push(experimentId);
-      }
-      
-      // Recalculate total output
-      this.updateCompoundBatchTotalOutput();
-    },
-    
-    updateCompoundBatchTotalOutput() {
-      const totalOutput = this.compoundBatchForm.experimentIds.reduce((sum, experimentId) => {
-        const experiment = this.grapheneRecords.find(record => record.id === experimentId);
-        return sum + (experiment && experiment.output ? Number(experiment.output) : 0);
-      }, 0);
-      
-      this.compoundBatchForm.totalOutput = totalOutput.toFixed(2);
-    },
-    
-    createCompoundBatchFromSelected() {
-      if (this.selectedGrapheneIds.length === 0) {
-        alert('Please select at least one graphene experiment to create a compound batch.');
-        return;
-      }
-      
-      // Calculate total output from selected experiments
-      const totalOutput = this.selectedGrapheneIds.reduce((sum, grapheneId) => {
-        const experiment = this.grapheneRecords.find(record => record.id === grapheneId);
-        return sum + (experiment && experiment.output ? Number(experiment.output) : 0);
-      }, 0);
-      
-      this.compoundBatchForm = {
-        ...DEFAULT_FORMS.compoundBatch,
-        experimentIds: [...this.selectedGrapheneIds],
-        totalOutput: totalOutput.toFixed(2)
-      };
-      
-      this.showCompoundBatchModal = true;
+      CRUDService.toggleSemCompoundBatchSelection(compoundBatchId, this);
     },
 
-    // Shipment CRUD operations
+    // Compound Batch CRUD operations - Delegated to CRUDService
+    async saveCompoundBatch() {
+      await CRUDService.saveCompoundBatch(this);
+    },
+
+    editCompoundBatch(batch) {
+      CRUDService.editCompoundBatch(batch, this);
+    },
+
+    async deleteCompoundBatch(id) {
+      await CRUDService.deleteCompoundBatch(id, this);
+    },
+
+    closeCompoundBatchForm() {
+      CRUDService.closeCompoundBatchForm(this);
+    },
+
+    // Compound Batch Management Tab Functions - Delegated to CRUDService
+    openCompoundBatchForm() {
+      CRUDService.openCompoundBatchForm(this);
+    },
+
+    async searchCompoundBatches() {
+      await CRUDService.searchCompoundBatches(this);
+    },
+
+    sortCompoundBatches(column) {
+      CRUDService.sortCompoundBatches(column, this);
+    },
+
+    getCompoundBatchSortIcon(column) {
+      return CRUDService.getCompoundBatchSortIcon(column, this);
+    },
+
+    // Modal experiment selection functions - Delegated to CRUDService
+    getFilteredExperiments() {
+      return CRUDService.getFilteredExperiments(this);
+    },
+
+    toggleExperimentSelection(experimentId) {
+      CRUDService.toggleExperimentSelection(experimentId, this);
+    },
+
+    updateCompoundBatchTotalOutput() {
+      CRUDService.updateCompoundBatchTotalOutput(this);
+    },
+
+    createCompoundBatchFromSelected() {
+      CRUDService.createCompoundBatchFromSelected(this);
+    },
+
+    // Shipment CRUD operations - Delegated to CRUDService
     openShipmentForm(shipment = null) {
-      if (shipment) {
-        this.editingShipment = shipment;
-        this.shipmentForm = {
-          shipmentNumber: shipment.shipmentNumber || '',
-          shipFromLocation: shipment.shipFromLocation || 'Curia Frankfurt',
-          shipToLocation: shipment.shipToLocation || '',
-          shipmentDate: shipment.shipmentDate ? new Date(shipment.shipmentDate).toISOString().split('T')[0] : '',
-          dateUnknown: !shipment.shipmentDate,
-          receivedDate: shipment.receivedDate ? new Date(shipment.receivedDate).toISOString().split('T')[0] : '',
-          receivedDateUnknown: !shipment.receivedDate,
-          materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
-          grapheneSample: shipment.grapheneSample || '',
-          compoundBatchNumber: shipment.compoundBatchNumber || '',
-          micronizationSku: shipment.micronizationSku || '',
-          amountShipped: shipment.amountShipped || '',
-          unit: shipment.unit || 'g',
-          purpose: shipment.purpose || '',
-          status: shipment.status || 'shipped',
-          comments: shipment.comments || ''
-        };
-      } else {
-        this.editingShipment = null;
-        this.shipmentForm = { ...DEFAULT_FORMS.shipment };
-      }
-      this.showAddShipment = true;
+      CRUDService.openShipmentForm(shipment, this);
     },
 
     async saveShipment() {
-      try {
-        const data = { ...this.shipmentForm };
-        
-        // Remove UI-only fields
-        delete data.materialType;
-        delete data.dateUnknown;
-        delete data.receivedDateUnknown;
-        
-        // Handle date fields
-        if (data.shipmentDate === '' || this.shipmentForm.dateUnknown) {
-          data.shipmentDate = null;
-        }
-        if (data.receivedDate === '' || this.shipmentForm.receivedDateUnknown) {
-          data.receivedDate = null;
-        }
-
-        // Clear the non-selected material reference
-        if (this.shipmentForm.materialType === 'graphene') {
-          data.compoundBatchNumber = null;
-        } else {
-          data.grapheneSample = null;
-        }
-
-        if (this.editingShipment) {
-          await API.shipment.update(this.editingShipment.id, data);
-        } else {
-          await API.shipment.create(data);
-        }
-
-        await this.loadShipments();
-        this.closeShipmentForm();
-      } catch (error) {
-        console.error('Failed to save shipment:', error);
-        alert(`Failed to save shipment: ${error.message}`);
-      }
+      await CRUDService.saveShipment(this);
     },
 
     async deleteShipment(id) {
-      if (confirm('Are you sure you want to delete this shipment record?')) {
-        try {
-          await API.shipment.delete(id);
-          await this.loadShipments();
-        } catch (error) {
-          console.error('Failed to delete shipment:', error);
-          alert(`Failed to delete shipment: ${error.message}`);
-        }
-      }
+      await CRUDService.deleteShipment(id, this);
     },
 
     duplicateShipment(shipment) {
-      this.editingShipment = null;
-      this.shipmentForm = {
-        shipmentNumber: '', // Clear shipment number for new shipment
-        shipFromLocation: shipment.shipFromLocation || 'Curia Frankfurt',
-        shipToLocation: shipment.shipToLocation || '',
-        shipmentDate: new Date().toISOString().split('T')[0], // Today's date
-        dateUnknown: false,
-        receivedDate: '',
-        receivedDateUnknown: true,
-        materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
-        grapheneSample: shipment.grapheneSample || '',
-        compoundBatchNumber: shipment.compoundBatchNumber || '',
-        micronizationSku: shipment.micronizationSku || '',
-        amountShipped: shipment.amountShipped || '',
-        unit: shipment.unit || 'g',
-        purpose: shipment.purpose || '',
-        status: 'pending', // Default to pending for new shipment
-        comments: shipment.comments || ''
-      };
-      this.showAddShipment = true;
+      CRUDService.duplicateShipment(shipment, this);
     },
 
     closeShipmentForm() {
-      this.showAddShipment = false;
-      this.editingShipment = null;
-      this.shipmentForm = { ...DEFAULT_FORMS.shipment };
+      CRUDService.closeShipmentForm(this);
     },
 
     addShipmentLocation() {
-      if (this.newShipmentLocation.trim()) {
-        this.shipmentLocations.push(this.newShipmentLocation.trim());
-        this.shipmentLocations.sort();
-        this.newShipmentLocation = '';
-        this.showAddShipmentLocation = false;
-      }
+      CRUDService.addShipmentLocation(this);
     },
-    
-    // Micronization CRUD operations
+
+    // Micronization CRUD operations - Delegated to CRUDService
     openMicronizationForm(micronization = null) {
-      if (micronization) {
-        this.editingMicronization = micronization;
-        this.micronizationForm = {
-          micronizationNumber: micronization.micronizationNumber || '',
-          date: micronization.date ? new Date(micronization.date).toISOString().split('T')[0] : '',
-          dateUnknown: !micronization.date,
-          sku: micronization.sku || '',
-          materialType: micronization.grapheneSample ? 'graphene' : 'compound',
-          grapheneSample: micronization.grapheneSample || '',
-          compoundBatchNumber: micronization.compoundBatchNumber || '',
-          startingMaterialAmount: micronization.startingMaterialAmount || '',
-          recoveredAmount: micronization.recoveredAmount || '',
-          grindPressure: micronization.grindPressure || '',
-          micronizationReportFile: null,
-          removeMicronizationReport: false,
-          replaceMicronizationReport: false
-        };
-      } else {
-        this.editingMicronization = null;
-        this.micronizationForm = { ...DEFAULT_FORMS.micronization };
-      }
-      this.showMicronizationModal = true;
+      CRUDService.openMicronizationForm(micronization, this);
     },
 
     async saveMicronization() {
-      try {
-        const data = { ...this.micronizationForm };
-        
-        // Remove UI-only fields
-        delete data.materialType;
-        delete data.dateUnknown;
-        delete data.micronizationReportFile;
-        delete data.removeMicronizationReport;
-        delete data.replaceMicronizationReport;
-        
-        // Handle date field
-        if (data.date === '' || this.micronizationForm.dateUnknown) {
-          data.date = null;
-        }
-
-        // Clear the non-selected material reference
-        if (this.micronizationForm.materialType === 'graphene') {
-          data.compoundBatchNumber = null;
-        } else {
-          data.grapheneSample = null;
-        }
-
-        const file = this.micronizationForm.micronizationReportFile;
-
-        if (this.editingMicronization) {
-          await API.micronization.update(this.editingMicronization.id, data, file);
-        } else {
-          await API.micronization.create(data, file);
-        }
-
-        await this.loadMicronizations();
-        this.closeMicronizationForm();
-      } catch (error) {
-        console.error('Failed to save micronization:', error);
-        alert(`Failed to save micronization: ${error.message}`);
-      }
+      await CRUDService.saveMicronization(this);
     },
 
     async deleteMicronization(id) {
-      if (confirm('Are you sure you want to delete this micronization record?')) {
-        try {
-          await API.micronization.delete(id);
-          await this.loadMicronizations();
-        } catch (error) {
-          console.error('Failed to delete micronization:', error);
-          alert(`Failed to delete micronization: ${error.message}`);
-        }
-      }
+      await CRUDService.deleteMicronization(id, this);
     },
 
     duplicateMicronization(micronization) {
-      this.editingMicronization = null;
-      this.micronizationForm = {
-        micronizationNumber: '', // Clear number for new record
-        date: new Date().toISOString().split('T')[0], // Today's date
-        dateUnknown: false,
-        sku: '', // Clear SKU for new record
-        materialType: micronization.grapheneSample ? 'graphene' : 'compound',
-        grapheneSample: micronization.grapheneSample || '',
-        compoundBatchNumber: micronization.compoundBatchNumber || '',
-        startingMaterialAmount: micronization.startingMaterialAmount || '',
-        recoveredAmount: '', // Clear recovered amount
-        grindPressure: micronization.grindPressure || '',
-        micronizationReportFile: null,
-        removeMicronizationReport: false,
-        replaceMicronizationReport: false
-      };
-      this.showMicronizationModal = true;
+      CRUDService.duplicateMicronization(micronization, this);
     },
 
     closeMicronizationForm() {
-      this.showMicronizationModal = false;
-      this.editingMicronization = null;
-      this.micronizationForm = { ...DEFAULT_FORMS.micronization };
+      CRUDService.closeMicronizationForm(this);
     },
-    
+
     // Export methods
     exportData(type) {
       if (type === 'biochar') {
@@ -2988,116 +1915,42 @@ window.grapheneApp = function() {
       FilterService.applyFilters(this);
     },
     
-    // Dashboard methods
+    // Dashboard methods - Delegated to DashboardService
     async loadDashboardData() {
-      try {
-        // Load all dashboard data in parallel
-        await Promise.all([
-          this.loadProductionMetrics(),
-          this.loadInventoryData(), 
-          this.loadTestResultsData(),
-          this.loadActivityData(),
-          this.loadLatestProductionCards()
-        ]);
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        this.dashboardError = 'Failed to load dashboard data';
-      }
+      await DashboardService.loadDashboardData(this);
     },
     
     async loadProductionMetrics() {
-      this.dashboardLoading.production = true;
-      try {
-        const response = await fetch('/api/dashboard/production-metrics');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        this.dashboardData.production = await response.json();
-      } catch (error) {
-        console.error('Error loading production metrics:', error);
-        this.dashboardData.production = null;
-      } finally {
-        this.dashboardLoading.production = false;
-      }
+      await DashboardService.loadProductionMetrics(this);
     },
     
     async loadInventoryData() {
-      this.dashboardLoading.inventory = true;
-      try {
-        const response = await fetch('/api/dashboard/inventory-by-location');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        this.dashboardData.inventory = await response.json();
-      } catch (error) {
-        console.error('Error loading inventory data:', error);
-        this.dashboardData.inventory = null;
-      } finally {
-        this.dashboardLoading.inventory = false;
-      }
+      await DashboardService.loadInventoryData(this);
     },
     
     async loadTestResultsData() {
-      this.dashboardLoading.testResults = true;
-      try {
-        const response = await fetch('/api/dashboard/best-test-results');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        this.dashboardData.testResults = await response.json();
-      } catch (error) {
-        console.error('Error loading test results data:', error);
-        this.dashboardData.testResults = null;
-      } finally {
-        this.dashboardLoading.testResults = false;
-      }
+      await DashboardService.loadTestResultsData(this);
     },
     
     async loadActivityData() {
-      this.dashboardLoading.activity = true;
-      try {
-        const response = await fetch('/api/dashboard/recent-activity');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        this.dashboardData.activity = await response.json();
-      } catch (error) {
-        console.error('Error loading activity data:', error);
-        this.dashboardData.activity = null;
-      } finally {
-        this.dashboardLoading.activity = false;
-      }
+      await DashboardService.loadActivityData(this);
     },
     
     async loadLatestProductionCards() {
-      try {
-        // Load all latest production data in parallel
-        const [latestGraphene, latestBatches, latestShipments] = await Promise.all([
-          window.CardService.getLatestGrapheneCards(4),
-          window.CardService.getLatestCompoundBatches(4),
-          window.CardService.getLatestShipments(4)
-        ]);
-        
-        this.latestGrapheneCards = latestGraphene;
-        this.latestCompoundBatches = latestBatches;
-        this.latestShipments = latestShipments;
-      } catch (error) {
-        console.error('Error loading latest production cards:', error);
-        this.latestGrapheneCards = [];
-        this.latestCompoundBatches = [];
-        this.latestShipments = [];
-      }
+      await DashboardService.loadLatestProductionCards(this);
     },
     
-    // Card creation methods for dashboard
+    // Card creation methods for dashboard - Delegated to DashboardService
     createGrapheneCard(experiment) {
-      return createSimplifiedGrapheneCard(experiment, {
-        context: 'dashboard'
-      });
+      return DashboardService.createGrapheneCard(experiment, createSimplifiedGrapheneCard);
     },
     
     createCompoundBatchCard(batch) {
-      return createSimplifiedCompoundBatchCard(batch, {
-        context: 'dashboard'
-      });
+      return DashboardService.createCompoundBatchCard(batch, createSimplifiedCompoundBatchCard);
     },
     
     createShipmentCard(shipment) {
-      return createSimplifiedShipmentCard(shipment, {
-        context: 'dashboard'
-      });
+      return DashboardService.createShipmentCard(shipment, createSimplifiedShipmentCard);
     },
     
     // Modal system methods
@@ -3931,6 +2784,38 @@ window.grapheneApp = function() {
       return NewsService.getNewsPageNumbers();
     },
 
+    nextNewsPage() {
+      if (this.newsCurrentPage < this.newsTotalPages) {
+        this.newsCurrentPage++;
+        this.updatePagination();
+      }
+    },
+
+    previousNewsPage() {
+      if (this.newsCurrentPage > 1) {
+        this.newsCurrentPage--;
+        this.updatePagination();
+      }
+    },
+
+    goToNewsPage(page) {
+      if (page >= 1 && page <= this.newsTotalPages) {
+        this.newsCurrentPage = page;
+        this.updatePagination();
+      }
+    },
+
+    loadMoreNews() {
+      if (this.newsHasMorePages && !this.newsLoading) {
+        this.nextNewsPage();
+      }
+    },
+
+    async refreshNewsFeed() {
+      await this.fetchNewsArticles();
+      this.showNotification('News feed refreshed successfully', 'success');
+    },
+
     getDateRange() {
       return NewsService.getDateRange();
     },
@@ -3946,6 +2831,23 @@ window.grapheneApp = function() {
 
     getCategoryColor(category) {
       return NewsService.getCategoryColor(category);
+    },
+
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     },
 
     hasActiveFilters() {
@@ -3964,10 +2866,6 @@ window.grapheneApp = function() {
     clearAllFilters() {
       NewsService.clearAllFilters();
       this.filterNews();
-    },
-
-    async toggleBookmark(articleId) {
-      await NewsService.toggleBookmark(articleId, this);
     },
 
     async trackArticleView(articleId) {
@@ -3995,6 +2893,127 @@ window.grapheneApp = function() {
 
     isHighImpactKeyword(tag) {
       return NewsService.isHighImpactKeyword(tag);
+    },
+
+    // Count functions for badges
+    getCategoryCount(category) {
+      if (!this.newsArticles) return 0;
+      if (!category) {
+        return this.newsArticles.length;
+      }
+      return this.newsArticles.filter(article => article.category === category).length;
+    },
+
+    getTagCount(tag) {
+      if (!this.newsArticles) return 0;
+      return this.newsArticles.filter(article => 
+        article.keywordTags?.some(articleTag => 
+          articleTag.toLowerCase().includes(tag.toLowerCase())
+        )
+      ).length;
+    },
+
+    getDateRangeCount(dateRange) {
+      if (!this.newsArticles) return 0;
+      if (!dateRange) {
+        return this.newsArticles.length;
+      }
+
+      const now = new Date();
+      let startDate;
+
+      switch (dateRange) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'quarter':
+          const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+          startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+          break;
+        default:
+          return this.newsArticles.length;
+      }
+
+      return this.newsArticles.filter(article => {
+        const publishDate = new Date(article.publishDate);
+        return publishDate >= startDate;
+      }).length;
+    },
+
+    // Bookmark functionality
+    async toggleBookmark(articleId) {
+      // Set loading state
+      this.bookmarkLoading[articleId] = true;
+      
+      try {
+        const response = await fetch(`/api/news/articles/${articleId}/bookmark`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to toggle bookmark');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update the article in our local state
+          const article = this.newsArticles.find(a => a.id === articleId);
+          if (article) {
+            article.isBookmarked = data.isBookmarked;
+          }
+          
+          // Update filtered and paginated arrays
+          const filteredArticle = this.filteredNewsArticles.find(a => a.id === articleId);
+          if (filteredArticle) {
+            filteredArticle.isBookmarked = data.isBookmarked;
+          }
+          
+          const paginatedArticle = this.paginatedNewsArticles.find(a => a.id === articleId);
+          if (paginatedArticle) {
+            paginatedArticle.isBookmarked = data.isBookmarked;
+          }
+
+          this.showNotification(
+            data.isBookmarked ? 'Article bookmarked' : 'Bookmark removed',
+            'success'
+          );
+        }
+
+      } catch (error) {
+        console.error('Error toggling bookmark:', error);
+        this.showNotification('Error updating bookmark', 'error');
+      } finally {
+        // Clear loading state
+        this.bookmarkLoading[articleId] = false;
+      }
+    },
+
+    shareArticle(article) {
+      if (navigator.share) {
+        navigator.share({
+          title: article.title,
+          text: article.summary,
+          url: article.url
+        });
+      } else {
+        // Fallback to copying URL to clipboard
+        navigator.clipboard.writeText(article.url).then(() => {
+          this.showNotification('Article URL copied to clipboard', 'success');
+        }).catch(err => {
+          console.error('Error copying to clipboard:', err);
+          this.showNotification('Could not copy URL', 'error');
+        });
+      }
     },
 
     // Summary system methods - these remain here as they use imported helpers
@@ -4059,3 +3078,5 @@ window.grapheneApp = function() {
     }
   };
 };
+
+console.log('grapheneApp defined on window:', typeof window.grapheneApp);

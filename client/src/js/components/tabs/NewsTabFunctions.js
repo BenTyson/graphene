@@ -477,3 +477,54 @@ function initializeNewsFunctionality() {
 
 // Add to global app functions
 window.newsTabFunctions = initializeNewsFunctionality();
+
+// Make count functions globally available for Alpine.js templates
+window.getCategoryCount = function(category) {
+  if (!window.newsTabFunctions.newsArticles) return 0;
+  if (!category) {
+    return window.newsTabFunctions.newsArticles.length;
+  }
+  return window.newsTabFunctions.newsArticles.filter(article => article.category === category).length;
+};
+
+window.getTagCount = function(tag) {
+  if (!window.newsTabFunctions.newsArticles) return 0;
+  return window.newsTabFunctions.newsArticles.filter(article => 
+    article.keywordTags?.some(articleTag => 
+      articleTag.toLowerCase().includes(tag.toLowerCase())
+    )
+  ).length;
+};
+
+window.getDateRangeCount = function(dateRange) {
+  if (!window.newsTabFunctions.newsArticles) return 0;
+  if (!dateRange) {
+    return window.newsTabFunctions.newsArticles.length;
+  }
+
+  const now = new Date();
+  let startDate;
+
+  switch (dateRange) {
+    case 'today':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      break;
+    case 'week':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case 'month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'quarter':
+      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+      startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+      break;
+    default:
+      return window.newsTabFunctions.newsArticles.length;
+  }
+
+  return window.newsTabFunctions.newsArticles.filter(article => {
+    const publishDate = new Date(article.publishDate);
+    return publishDate >= startDate;
+  }).length;
+};
