@@ -38,7 +38,6 @@ import './components/cards/SimplifiedCompoundBatchCard.js';
 import './components/cards/SimplifiedShipmentCard.js';
 import './components/modals/CardModalSystem.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
-import FilterService from './services/FilterService.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -2954,37 +2953,286 @@ window.grapheneApp = function() {
       return pdfViewerHelpers.createPdfViewerModal(config);
     },
     
-    // Filter system methods - delegated to FilterService
+    // Filter system methods
     async initFilters(tableName) {
-      await FilterService.initFilters(tableName, this);
-      // Expose filter data to app context for template access
-      this.filterConfigs = FilterService.getFilterConfigs();
-      this.filterOptions = FilterService.getFilterOptions();
-      this.activeFilters = FilterService.getActiveFilters();
+      this.filterLoading = true;
+      this.filterError = null;
+      
+      try {
+        // Load filter configuration
+        const configResponse = await fetch(`/api/${tableName}/filters/config`);
+        if (!configResponse.ok) {
+          throw new Error(`Failed to load filter configuration: ${configResponse.statusText}`);
+        }
+        
+        const config = await configResponse.json();
+        this.filterConfigs[tableName] = config;
+        
+        // Initialize filter options object
+        this.filterOptions[tableName] = {};
+        
+        // Load dynamic filter options
+        await this.loadFilterOptions(tableName);
+        
+        // Initialize active filters state
+        this.initializeFilterValues(tableName);
+        
+      } catch (error) {
+        console.error('Error initializing filters:', error);
+        this.filterError = error.message;
+      } finally {
+        this.filterLoading = false;
+      }
     },
-
+    
+    async loadFilterOptions(tableName) {
+      const config = this.filterConfigs[tableName];
+      if (!config || !config.filters) return;
+      
+      const optionPromises = config.filters
+        .filter(filter => filter.optionsQuery || (filter.type === 'select' && !filter.options))
+        .map(async (filter) => {
+          try {
+            const response = await fetch(`/api/${tableName}/filters/${filter.field}/options`);
+            if (response.ok) {
+              const options = await response.json();
+              this.filterOptions[tableName][filter.field] = options;
+            }
+          } catch (error) {
+            console.warn(`Failed to load options for ${filter.field}:`, error);
+            this.filterOptions[tableName][filter.field] = [];
+          }
+        });
+      
+      await Promise.all(optionPromises);
+    },
+    
+    initializeFilterValues(tableName) {
+      const config = this.filterConfigs[tableName];
+      if (!config || !config.filters) return;
+      
+      this.activeFilters[tableName] = {};
+      this.grapheneFilterState.filters = {};
+      
+      config.filters.forEach(filter => {
+        let defaultValue;
+        switch (filter.type) {
+          case 'text':
+          case 'select':
+            defaultValue = filter.multiple ? [] : '';
+            break;
+          case 'multiSelect':
+            defaultValue = [];
+            break;
+          case 'dateRange':
+            defaultValue = { from: '', to: '' };
+            break;
+          case 'numericRange':
+            defaultValue = { min: null, max: null };
+            break;
+          case 'boolean':
+            defaultValue = '';
+            break;
+          default:
+            defaultValue = '';
+        }
+        this.activeFilters[tableName][filter.field] = defaultValue;
+        this.grapheneFilterState.filters[filter.field] = defaultValue;
+      });
+    },
+    
     generateFilterFields(tableName, filterStateVariable, onFilterChange) {
-      return FilterService.generateFilterFields(tableName, filterStateVariable, onFilterChange);
+      const config = this.filterConfigs[tableName];
+      if (!config || !config.filters) {
+        return '<div class="text-xs text-gray-500">No filters available</div>';
+      }
+      
+      return config.filters
+        .map(filterConfig => {
+          const { field, type, label, multiple, options, min, max, step } = filterConfig;
+          
+          switch (type) {
+            case 'text':
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <input type="text"
+                         x-model="${filterStateVariable}.filters.${field}"
+                         @input.debounce.300ms="${onFilterChange}"
+                         placeholder="Search ${label.toLowerCase()}..."
+                         class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+              `;
+            
+            case 'select':
+              const modelAttribute = `x-model="${filterStateVariable}.filters.${field}"`;
+              const multipleAttribute = multiple ? 'multiple' : '';
+              const sizeAttribute = multiple ? 'size="4"' : '';
+              
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <select ${modelAttribute}
+                          @change="${onFilterChange}"
+                          ${multipleAttribute}
+                          ${sizeAttribute}
+                          class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${multiple ? 'h-20' : ''}">
+                    <option value="">All ${label}</option>
+                    <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </div>
+              `;
+            
+            case 'dateRange':
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="date"
+                           x-model="${filterStateVariable}.filters.${field}.from"
+                           @change="${onFilterChange}"
+                           placeholder="From"
+                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="date"
+                           x-model="${filterStateVariable}.filters.${field}.to"
+                           @change="${onFilterChange}"
+                           placeholder="To"
+                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  </div>
+                </div>
+              `;
+            
+            case 'numericRange':
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="number"
+                           x-model.number="${filterStateVariable}.filters.${field}.min"
+                           @input.debounce.300ms="${onFilterChange}"
+                           placeholder="Min"
+                           min="${min || ''}"
+                           max="${max || ''}"
+                           step="${step || 'any'}"
+                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="number"
+                           x-model.number="${filterStateVariable}.filters.${field}.max"
+                           @input.debounce.300ms="${onFilterChange}"
+                           placeholder="Max"
+                           min="${min || ''}"
+                           max="${max || ''}"
+                           step="${step || 'any'}"
+                           class="px-2 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  </div>
+                </div>
+              `;
+            
+            case 'multiSelect':
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <div class="space-y-1 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
+                    ${options.map(option => `
+                      <label class="flex items-center space-x-2 text-xs">
+                        <input type="checkbox"
+                               :checked="(${filterStateVariable}.filters.${field} || []).includes('${option}')"
+                               @change="toggleMultiSelectOption('${field}', '${option}', $event.target.checked, '${filterStateVariable}'); ${onFilterChange}"
+                               class="rounded text-blue-600">
+                        <span>${option}</span>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            
+            case 'boolean':
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <select x-model="${filterStateVariable}.filters.${field}"
+                          @change="${onFilterChange}"
+                          class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    ${options.map(option => `
+                      <option value="${option.value}">${option.label}</option>
+                    `).join('')}
+                  </select>
+                </div>
+              `;
+            
+            default:
+              return '';
+          }
+        })
+        .join('');
     },
-
+    
     getActiveFilterCount(filterState) {
-      return FilterService.getActiveFilterCount(filterState);
+      if (!filterState || !filterState.filters) return 0;
+      
+      return Object.values(filterState.filters).filter(value => {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        if (typeof value === 'object' && value !== null) {
+          return Object.values(value).some(v => v !== null && v !== '');
+        }
+        return value !== null && value !== '';
+      }).length;
     },
-
+    
     clearAllFilters(tableName) {
-      FilterService.clearAllFilters(tableName, this);
+      this.initializeFilterValues(tableName);
+      this.loadGrapheneRecords();
     },
-
+    
     toggleMultiSelectOption(field, option, checked, stateVariable) {
-      FilterService.toggleMultiSelectOption(field, option, checked, stateVariable, this);
+      const filterState = this[stateVariable];
+      if (!filterState.filters[field]) {
+        filterState.filters[field] = [];
+      }
+      
+      if (checked) {
+        if (!filterState.filters[field].includes(option)) {
+          filterState.filters[field].push(option);
+        }
+      } else {
+        filterState.filters[field] = filterState.filters[field].filter(item => item !== option);
+      }
     },
-
+    
     buildFilterQueryParams(tableName, additionalParams = {}) {
-      return FilterService.buildFilterQueryParams(tableName, additionalParams, this);
+      const filters = this.grapheneFilterState.filters;
+      if (!filters) return additionalParams;
+      
+      const params = { ...additionalParams };
+      
+      // Add filters as JSON string
+      const activeFilters = {};
+      Object.entries(filters).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          activeFilters[key] = value;
+        } else if (typeof value === 'object' && value !== null) {
+          const hasValues = Object.values(value).some(v => v !== null && v !== '');
+          if (hasValues) {
+            activeFilters[key] = value;
+          }
+        } else if (value !== null && value !== '') {
+          activeFilters[key] = value;
+        }
+      });
+      
+      if (Object.keys(activeFilters).length > 0) {
+        params.filters = JSON.stringify(activeFilters);
+      }
+      
+      return params;
     },
-
+    
     applyFilters() {
-      FilterService.applyFilters(this);
+      this.loadGrapheneRecords();
     },
     
     // Dashboard methods

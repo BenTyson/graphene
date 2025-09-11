@@ -8,6 +8,7 @@ function initializeNewsFunctionality() {
     newsLoading: false,
     newsError: null,
     showNewsFilters: false,
+    bookmarkLoading: {},
     
     // Pagination
     newsCurrentPage: 1,
@@ -323,6 +324,9 @@ function initializeNewsFunctionality() {
 
     // Article interactions
     async toggleBookmark(articleId) {
+      // Set loading state
+      this.bookmarkLoading[articleId] = true;
+      
       try {
         const response = await fetch(`/api/news/articles/${articleId}/bookmark`, {
           method: 'POST',
@@ -364,6 +368,9 @@ function initializeNewsFunctionality() {
       } catch (error) {
         console.error('Error toggling bookmark:', error);
         this.showNotification('Error updating bookmark', 'error');
+      } finally {
+        // Clear loading state
+        this.bookmarkLoading[articleId] = false;
       }
     },
 
@@ -394,6 +401,56 @@ function initializeNewsFunctionality() {
           this.showNotification('Could not copy URL', 'error');
         });
       }
+    },
+
+    // Badge count calculation functions
+    getCategoryCount(category) {
+      if (!category) {
+        // "All Categories" - return total count
+        return this.newsArticles.length;
+      }
+      return this.newsArticles.filter(article => article.category === category).length;
+    },
+
+    getTagCount(tag) {
+      return this.newsArticles.filter(article => 
+        article.keywordTags?.some(articleTag => 
+          articleTag.toLowerCase().includes(tag.toLowerCase())
+        )
+      ).length;
+    },
+
+    getDateRangeCount(dateRange) {
+      if (!dateRange) {
+        // "All Time" - return total count
+        return this.newsArticles.length;
+      }
+
+      const now = new Date();
+      let startDate;
+
+      switch (dateRange) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'quarter':
+          const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+          startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+          break;
+        default:
+          return this.newsArticles.length;
+      }
+
+      return this.newsArticles.filter(article => {
+        const articleDate = new Date(article.publishDate);
+        return articleDate >= startDate && articleDate <= now;
+      }).length;
     },
 
     // Debounce utility

@@ -34,33 +34,54 @@ function getNewsTabHtml() {
                 CATEGORIES
               </h3>
               <div class="space-y-2">
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">All Categories</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">All Categories</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="RESEARCH_BREAKTHROUGH" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Research</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="RESEARCH_BREAKTHROUGH" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Research</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('RESEARCH_BREAKTHROUGH')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="INDUSTRY_NEWS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Industry News</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="INDUSTRY_NEWS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Industry News</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('INDUSTRY_NEWS')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="MARKET_ANALYSIS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Market Analysis</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="MARKET_ANALYSIS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Market Analysis</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('MARKET_ANALYSIS')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="APPLICATIONS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Applications</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="APPLICATIONS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Applications</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('APPLICATIONS')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="COMPANY_NEWS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Company News</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="COMPANY_NEWS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Company News</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('COMPANY_NEWS')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.category" value="PATENTS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Patents</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.category" value="PATENTS" @change="filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Patents</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getCategoryCount('PATENTS')"></span>
                 </label>
               </div>
             </div>
@@ -77,38 +98,44 @@ function getNewsTabHtml() {
                 <button 
                   @click="toggleHighImpactKeyword('hemp')"
                   :class="highImpactKeywords.includes('hemp') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Hemp
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Hemp</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('hemp')"></span>
                 </button>
                 <button 
                   @click="toggleHighImpactKeyword('supercapacitor')"
                   :class="highImpactKeywords.includes('supercapacitor') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Supercapacitors
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Supercapacitors</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('supercapacitor')"></span>
                 </button>
                 <button 
                   @click="toggleHighImpactKeyword('energy storage')"
                   :class="highImpactKeywords.includes('energy storage') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Energy Storage
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Energy Storage</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('energy storage')"></span>
                 </button>
                 <button 
                   @click="toggleHighImpactKeyword('cathode')"
                   :class="highImpactKeywords.includes('cathode') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Cathode
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Cathode</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('cathode')"></span>
                 </button>
                 <button 
                   @click="toggleHighImpactKeyword('anode')"
                   :class="highImpactKeywords.includes('anode') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Anode
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Anode</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('anode')"></span>
                 </button>
                 <button 
                   @click="toggleHighImpactKeyword('electrode')"
                   :class="highImpactKeywords.includes('electrode') ? 'bg-yellow-500 text-white border-yellow-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
-                  class="w-full text-left px-3 py-2 border rounded-md text-sm font-medium transition-colors">
-                  Electrode
+                  class="w-full flex items-center justify-between px-3 py-2 border rounded-md text-sm font-medium transition-colors">
+                  <span>Electrode</span>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getTagCount('electrode')"></span>
                 </button>
                 <template x-if="highImpactKeywords.length > 0">
                   <button 
@@ -132,25 +159,40 @@ function getNewsTabHtml() {
                 DATE RANGE
               </h3>
               <div class="space-y-2">
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.dateRange" value="" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">All Time</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.dateRange" value="" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">All Time</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getDateRangeCount('')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.dateRange" value="today" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">Today</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.dateRange" value="today" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">Today</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getDateRangeCount('today')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.dateRange" value="week" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">This Week</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.dateRange" value="week" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">This Week</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getDateRangeCount('week')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.dateRange" value="month" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">This Month</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.dateRange" value="month" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">This Month</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getDateRangeCount('month')"></span>
                 </label>
-                <label class="flex items-center cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
-                  <input type="radio" x-model="newsFilters.dateRange" value="quarter" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
-                  <span class="text-sm text-gray-700">This Quarter</span>
+                <label class="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1.5 rounded transition-colors">
+                  <div class="flex items-center">
+                    <input type="radio" x-model="newsFilters.dateRange" value="quarter" @change="updateDateFilters(); filterNews()" class="mr-2 text-black focus:ring-black">
+                    <span class="text-sm text-gray-700">This Quarter</span>
+                  </div>
+                  <span class="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full" x-text="getDateRangeCount('quarter')"></span>
                 </label>
               </div>
             </div>
@@ -296,9 +338,16 @@ function getNewsTabHtml() {
                       <!-- Bookmark Button -->
                       <button 
                         @click="toggleBookmark(article.id)"
+                        :disabled="bookmarkLoading[article.id]"
                         :class="article.isBookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'"
-                        class="transition-colors">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        class="transition-colors relative">
+                        <!-- Loading spinner -->
+                        <svg x-show="bookmarkLoading[article.id]" x-cloak class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <!-- Regular bookmark icon -->
+                        <svg x-show="!bookmarkLoading[article.id]" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
                         </svg>
                       </button>
