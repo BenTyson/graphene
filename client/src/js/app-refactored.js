@@ -39,6 +39,7 @@ import './components/cards/SimplifiedShipmentCard.js';
 import './components/modals/CardModalSystem.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
 import FilterService from './services/FilterService.js';
+import NewsService from './services/NewsService.js';
 
 // Default form values
 const DEFAULT_FORMS = {
@@ -3873,390 +3874,130 @@ window.grapheneApp = function() {
       }
     },
 
-    // News system methods
+    // News system methods - delegated to NewsService
     async fetchNewsArticles() {
-      this.newsLoading = true;
-      this.newsError = null;
-
-      try {
-        const queryParams = new URLSearchParams();
-        
-        if (this.newsFilters.search) queryParams.append('search', this.newsFilters.search);
-        if (this.newsFilters.category) queryParams.append('category', this.newsFilters.category);
-        if (this.newsFilters.source) queryParams.append('source', this.newsFilters.source);
-        if (this.newsFilters.sortBy) queryParams.append('sortBy', this.newsFilters.sortBy);
-        if (this.newsFilters.sortOrder) queryParams.append('sortOrder', this.newsFilters.sortOrder);
-        
-        const dateRange = this.getDateRange();
-        if (dateRange.startDate) queryParams.append('startDate', dateRange.startDate);
-        if (dateRange.endDate) queryParams.append('endDate', dateRange.endDate);
-
-        queryParams.append('page', '1');
-        queryParams.append('limit', '50');
-
-        const response = await fetch(`/api/news/articles?${queryParams.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch news articles');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          this.newsArticles = data.data.articles;
-          this.filteredNewsArticles = [...this.newsArticles];
-          this.applyClientSideFilters();
-          this.updatePagination();
-        } else {
-          throw new Error(data.error || 'Failed to fetch news articles');
-        }
-
-      } catch (error) {
-        console.error('Error fetching news articles:', error);
-        this.newsError = error.message;
-        this.showNotification('Error loading news articles: ' + error.message, 'error');
-      } finally {
-        this.newsLoading = false;
-      }
+      await NewsService.fetchNewsArticles(this);
+      // Sync state from service
+      const state = NewsService.getNewsState();
+      Object.assign(this, state);
     },
 
     async refreshNewsFeed() {
-      await this.fetchNewsArticles();
-      this.showNotification('News feed refreshed successfully', 'success');
+      await NewsService.refreshNewsFeed(this);
     },
 
     filterNews() {
-      this.applyClientSideFilters();
-      this.newsCurrentPage = 1;
-      this.updatePagination();
+      NewsService.filterNews(this);
+      const state = NewsService.getNewsState();
+      Object.assign(this, state);
     },
 
     applyClientSideFilters() {
-      let filtered = [...this.newsArticles];
-
-      // Filter by high-impact keywords first
-      if (this.highImpactKeywords.length > 0) {
-        filtered = filtered.filter(article => {
-          const articleText = (
-            article.title + ' ' + 
-            (article.summary || '') + ' ' + 
-            (article.keywordTags ? article.keywordTags.join(' ') : '')
-          ).toLowerCase();
-          
-          return this.highImpactKeywords.some(keyword => 
-            articleText.includes(keyword.toLowerCase())
-          );
-        });
-      }
-
-      if (this.newsFilters.search) {
-        const searchTerm = this.newsFilters.search.toLowerCase();
-        filtered = filtered.filter(article => 
-          article.title.toLowerCase().includes(searchTerm) ||
-          (article.summary && article.summary.toLowerCase().includes(searchTerm)) ||
-          (article.keywordTags && article.keywordTags.some(tag => 
-            tag.toLowerCase().includes(searchTerm)
-          ))
-        );
-      }
-
-      if (this.newsFilters.category) {
-        filtered = filtered.filter(article => article.category === this.newsFilters.category);
-      }
-
-      filtered.sort((a, b) => {
-        const field = this.newsFilters.sortBy;
-        const order = this.newsFilters.sortOrder;
-        
-        let aValue = a[field];
-        let bValue = b[field];
-
-        if (field === 'publishDate') {
-          aValue = new Date(aValue);
-          bValue = new Date(bValue);
-        }
-
-        if (order === 'desc') {
-          return bValue > aValue ? 1 : -1;
-        } else {
-          return aValue > bValue ? 1 : -1;
-        }
-      });
-
-      this.filteredNewsArticles = filtered;
+      NewsService.applyClientSideFilters();
+      const state = NewsService.getNewsState();
+      this.filteredNewsArticles = state.filteredNewsArticles;
+      this.paginatedNewsArticles = state.paginatedNewsArticles;
     },
 
     updatePagination() {
-      this.newsTotalPages = Math.ceil(this.filteredNewsArticles.length / this.newsPageSize);
-      this.newsHasMorePages = this.newsCurrentPage < this.newsTotalPages;
-      
-      const start = (this.newsCurrentPage - 1) * this.newsPageSize;
-      const end = start + this.newsPageSize;
-      this.paginatedNewsArticles = this.filteredNewsArticles.slice(start, end);
+      NewsService.updatePagination();
+      const state = NewsService.getNewsState();
+      this.paginatedNewsArticles = state.paginatedNewsArticles;
+      this.newsTotalPages = state.newsTotalPages;
+      this.newsHasMorePages = state.newsHasMorePages;
     },
 
     nextNewsPage() {
-      if (this.newsCurrentPage < this.newsTotalPages) {
-        this.newsCurrentPage++;
-        this.updatePagination();
-      }
+      NewsService.nextNewsPage();
+      this.updatePagination();
     },
 
     previousNewsPage() {
-      if (this.newsCurrentPage > 1) {
-        this.newsCurrentPage--;
-        this.updatePagination();
-      }
+      NewsService.previousNewsPage();
+      this.updatePagination();
     },
 
     goToNewsPage(page) {
-      if (page >= 1 && page <= this.newsTotalPages) {
-        this.newsCurrentPage = page;
-        this.updatePagination();
-      }
+      NewsService.goToNewsPage(page);
+      this.updatePagination();
     },
 
     loadMoreNews() {
-      if (this.newsHasMorePages && !this.newsLoading) {
-        this.nextNewsPage();
-      }
+      NewsService.loadMoreNews();
+      this.updatePagination();
     },
 
     getNewsPageNumbers() {
-      const pages = [];
-      const total = this.newsTotalPages;
-      const current = this.newsCurrentPage;
-      
-      if (total <= 7) {
-        for (let i = 1; i <= total; i++) {
-          pages.push(i);
-        }
-      } else {
-        if (current <= 4) {
-          for (let i = 1; i <= 5; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        } else if (current >= total - 3) {
-          pages.push(1);
-          pages.push('...');
-          for (let i = total - 4; i <= total; i++) pages.push(i);
-        } else {
-          pages.push(1);
-          pages.push('...');
-          for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-          pages.push('...');
-          pages.push(total);
-        }
-      }
-      
-      return pages.filter(p => p !== '...' || pages.indexOf(p) === pages.lastIndexOf(p));
+      return NewsService.getNewsPageNumbers();
     },
 
     getDateRange() {
-      const now = new Date();
-      const range = { startDate: null, endDate: null };
-
-      switch (this.newsFilters.dateRange) {
-        case 'today':
-          range.startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-          break;
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          range.startDate = weekAgo.toISOString();
-          break;
-        case 'month':
-          const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          range.startDate = monthAgo.toISOString();
-          break;
-        case 'quarter':
-          const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-          range.startDate = quarterAgo.toISOString();
-          break;
-      }
-
-      return range;
+      return NewsService.getDateRange();
     },
 
     updateDateFilters() {
-      // Called when date range filter changes
+      // Called when date range filter changes - handled by filterNews
+      this.filterNews();
     },
 
     formatCategory(category) {
-      const categoryMap = {
-        'RESEARCH_BREAKTHROUGH': 'Research',
-        'INDUSTRY_NEWS': 'Industry',
-        'MARKET_ANALYSIS': 'Market',
-        'APPLICATIONS': 'Applications',
-        'PRODUCTION_METHODS': 'Production',
-        'PATENTS': 'Patents',
-        'COMPANY_NEWS': 'Company',
-        'FUNDING_INVESTMENT': 'Funding'
-      };
-      return categoryMap[category] || category;
+      return NewsService.formatCategory(category);
     },
 
     getCategoryColor(category) {
-      const colorMap = {
-        'RESEARCH_BREAKTHROUGH': 'bg-blue-100 text-blue-800',
-        'INDUSTRY_NEWS': 'bg-gray-100 text-gray-800',
-        'MARKET_ANALYSIS': 'bg-green-100 text-green-800',
-        'APPLICATIONS': 'bg-purple-100 text-purple-800',
-        'PRODUCTION_METHODS': 'bg-orange-100 text-orange-800',
-        'PATENTS': 'bg-red-100 text-red-800',
-        'COMPANY_NEWS': 'bg-indigo-100 text-indigo-800',
-        'FUNDING_INVESTMENT': 'bg-yellow-100 text-yellow-800'
-      };
-      return colorMap[category] || 'bg-gray-100 text-gray-800';
+      return NewsService.getCategoryColor(category);
     },
 
     hasActiveFilters() {
-      return !!(this.newsFilters.search || 
-                this.newsFilters.category || 
-                this.newsFilters.dateRange ||
-                this.newsFilters.source);
+      return NewsService.hasActiveFilters();
     },
 
     getActiveFilters() {
-      const filters = [];
-      
-      if (this.newsFilters.search) {
-        filters.push({ key: 'search', label: `Search: "${this.newsFilters.search}"` });
-      }
-      if (this.newsFilters.category) {
-        filters.push({ key: 'category', label: `Category: ${this.formatCategory(this.newsFilters.category)}` });
-      }
-      if (this.newsFilters.dateRange) {
-        filters.push({ key: 'dateRange', label: `Date: ${this.newsFilters.dateRange}` });
-      }
-      if (this.newsFilters.source) {
-        filters.push({ key: 'source', label: `Source: ${this.newsFilters.source}` });
-      }
-      
-      return filters;
+      return NewsService.getActiveFilters();
     },
 
     removeFilter(filterKey) {
-      this.newsFilters[filterKey] = '';
+      NewsService.removeFilter(filterKey);
       this.filterNews();
     },
 
     clearAllFilters() {
-      this.newsFilters = {
-        search: '',
-        category: '',
-        source: '',
-        dateRange: '',
-        sortBy: 'publishDate',
-        sortOrder: 'desc'
-      };
+      NewsService.clearAllFilters();
       this.filterNews();
     },
 
     async toggleBookmark(articleId) {
-      try {
-        const response = await fetch(`/api/news/articles/${articleId}/bookmark`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to toggle bookmark');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          const article = this.newsArticles.find(a => a.id === articleId);
-          if (article) {
-            article.isBookmarked = data.isBookmarked;
-          }
-          
-          const filteredArticle = this.filteredNewsArticles.find(a => a.id === articleId);
-          if (filteredArticle) {
-            filteredArticle.isBookmarked = data.isBookmarked;
-          }
-          
-          const paginatedArticle = this.paginatedNewsArticles.find(a => a.id === articleId);
-          if (paginatedArticle) {
-            paginatedArticle.isBookmarked = data.isBookmarked;
-          }
-
-          this.showNotification(
-            data.isBookmarked ? 'Article bookmarked' : 'Bookmark removed',
-            'success'
-          );
-        }
-
-      } catch (error) {
-        console.error('Error toggling bookmark:', error);
-        this.showNotification('Error updating bookmark', 'error');
-      }
+      await NewsService.toggleBookmark(articleId, this);
     },
 
     async trackArticleView(articleId) {
-      try {
-        await fetch(`/api/news/articles/${articleId}`, {
-          method: 'GET'
-        });
-      } catch (error) {
-        console.error('Error tracking article view:', error);
-      }
+      await NewsService.trackArticleView(articleId);
     },
 
     shareArticle(article) {
-      if (navigator.share) {
-        navigator.share({
-          title: article.title,
-          text: article.summary,
-          url: article.url
-        });
-      } else {
-        navigator.clipboard.writeText(article.url).then(() => {
-          this.showNotification('Article URL copied to clipboard', 'success');
-        }).catch(err => {
-          console.error('Error copying to clipboard:', err);
-          this.showNotification('Could not copy URL', 'error');
-        });
-      }
+      NewsService.shareArticle(article, this);
     },
 
     // High-impact keyword methods
     toggleHighImpactKeyword(keyword) {
-      const index = this.highImpactKeywords.indexOf(keyword);
-      if (index > -1) {
-        this.highImpactKeywords.splice(index, 1);
-      } else {
-        this.highImpactKeywords.push(keyword);
-      }
+      NewsService.toggleHighImpactKeyword(keyword);
       this.filterNews();
     },
 
     clearHighImpactKeywords() {
-      this.highImpactKeywords = [];
+      NewsService.clearHighImpactKeywords();
       this.filterNews();
     },
 
     hasHighImpactKeyword(article) {
-      if (!article.keywordTags || article.keywordTags.length === 0) return false;
-      
-      const articleKeywords = article.keywordTags.map(tag => tag.toLowerCase());
-      return this.allHighImpactKeywords.some(keyword => 
-        articleKeywords.includes(keyword.toLowerCase()) ||
-        articleKeywords.some(tag => tag.includes(keyword.toLowerCase()))
-      );
+      return NewsService.hasHighImpactKeyword(article);
     },
 
     isHighImpactKeyword(tag) {
-      const tagLower = tag.toLowerCase();
-      return this.allHighImpactKeywords.some(keyword => 
-        tagLower === keyword.toLowerCase() || 
-        tagLower.includes(keyword.toLowerCase())
-      );
+      return NewsService.isHighImpactKeyword(tag);
     },
 
-    // Summary system methods
+    // Summary system methods - these remain here as they use imported helpers
     toggleSummaryDisplay(articleId) {
       this.showSummary[articleId] = !this.showSummary[articleId];
     },
@@ -4278,72 +4019,31 @@ window.grapheneApp = function() {
     },
 
     async generateSummary(articleId) {
-      this.summaryLoading[articleId] = true;
-      this.summaryError[articleId] = null;
-
-      try {
-        const response = await fetch(`/api/news/articles/${articleId}/generate-summary`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          // Update the article in our local state
-          const article = this.newsArticles.find(a => a.id === articleId);
-          if (article) {
-            article.laymanSummary = result.data.summary;
-            article.summaryGenerated = true;
-            article.summaryError = null;
-          }
-
-          // Show the summary
-          this.showSummary[articleId] = true;
-          
-          // Show success notification
-          this.showNotification(
-            `Summary generated! ${result.data.cached ? '(Cached)' : `Cost: $${result.data.cost?.toFixed(4) || '0.001'}`}`,
-            'success'
-          );
-
-          // Re-filter to update display
-          this.applyClientSideFilters();
-        } else {
-          throw new Error(result.error || 'Failed to generate summary');
-        }
-
-      } catch (error) {
-        console.error('Error generating summary:', error);
-        this.summaryError[articleId] = error.message;
-        this.showNotification('Failed to generate summary: ' + error.message, 'error');
-      } finally {
-        this.summaryLoading[articleId] = false;
-      }
+      await NewsService.generateSummary(articleId, this);
     },
 
     async regenerateSummary(articleId) {
-      // Find and update the article to force regeneration
-      const article = this.newsArticles.find(a => a.id === articleId);
-      if (article) {
-        article.summaryGenerated = false;
-        article.laymanSummary = null;
-        article.summaryError = null;
-      }
-      
-      await this.generateSummary(articleId);
+      await NewsService.regenerateSummary(articleId, this);
     },
 
     async retryGenerateSummary(articleId) {
-      // Clear error and retry
-      this.summaryError[articleId] = null;
-      await this.generateSummary(articleId);
+      await NewsService.retryGenerateSummary(articleId, this);
+    },
+
+    async initializeNewsTab() {
+      await NewsService.initializeNewsTab(this);
+    },
+
+    async fetchHeadlines() {
+      await NewsService.fetchHeadlines(this);
+    },
+
+    async refreshHeadlines() {
+      await NewsService.refreshHeadlines(this);
+    },
+
+    openNewsArticle(article) {
+      NewsService.openNewsArticle(article);
     },
 
     debounce(func, wait) {
@@ -4356,49 +4056,6 @@ window.grapheneApp = function() {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
       };
-    },
-
-    async initializeNewsTab() {
-      if (this.newsArticles.length === 0) {
-        await this.fetchNewsArticles();
-      }
-    },
-
-    async fetchHeadlines() {
-      this.headlinesLoading = true;
-      this.headlinesError = null;
-
-      try {
-        const response = await fetch('/api/news/headlines?limit=5');
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch headlines');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          this.headlines = data.data;
-        } else {
-          throw new Error(data.error || 'Failed to fetch headlines');
-        }
-
-      } catch (error) {
-        console.error('Error fetching headlines:', error);
-        this.headlinesError = error.message;
-        this.headlines = [];
-      } finally {
-        this.headlinesLoading = false;
-      }
-    },
-
-    async refreshHeadlines() {
-      await this.fetchHeadlines();
-    },
-
-    openNewsArticle(article) {
-      this.trackArticleView(article.id);
-      window.open(article.url, '_blank', 'noopener,noreferrer');
     }
   };
 };
