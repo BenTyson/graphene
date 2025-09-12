@@ -253,5 +253,7 @@ function getAnalysisTabHtml() {
   `;
 }
 
-// Export for use in the main application
-export { getAnalysisTabHtml };
+// Make function globally available for Alpine.js templates
+if (typeof window !== 'undefined') {
+  window.getAnalysisTabHtml = getAnalysisTabHtml;
+}

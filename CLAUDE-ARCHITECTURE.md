@@ -33,8 +33,10 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   ├── semReports.js   # SEM report management + associations
 │   │   ├── shipments.js    # Material shipment tracking + location management + micronization SKU support
 │   │   ├── dashboard.js    # Dashboard metrics API endpoints
-│   │   └── analysis.js     # Competitive analysis API + chart data endpoints
+│   │   ├── analysis.js     # Competitive analysis API + chart data endpoints
+│   │   └── auth.js         # Authentication routes (login, logout, user management)
 │   └── middleware/
+│   │   └── errorHandler.js # Global error handling middleware
 ├── client/
 │   ├── index.html          # Main UI with Alpine.js templates (3,305 lines after componentization)
 │   ├── src/
@@ -42,6 +44,7 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   │   ├── app-refactored.js    # Main Alpine.js application (2,913 lines - optimized Sept 2025)
 │   │   │   ├── services/            # Service-oriented architecture modules
 │   │   │   │   ├── api.js           # API client (default export)
+│   │   │   │   ├── AuthService.js   # Authentication service (192 lines)
 │   │   │   │   ├── FilterService.js # Filtering functionality (347 lines)
 │   │   │   │   ├── NewsService.js   # News system management (526 lines)
 │   │   │   │   ├── CRUDService.js   # All CRUD operations (1,169 lines)
@@ -54,6 +57,9 @@ A full-stack web application for tracking the complete production journey of mat
 │   │   │   │   ├── dataHelpers.js   # Data manipulation helpers
 │   │   │   │   └── objectiveParser.js # Experiment objective parsing
 │   │   │   ├── components/          # Reusable UI components (COMPLETE)
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── LoginPage.js          # Clean login page component
+│   │   │   │   │   └── AuthWrapper.js        # Authentication wrapper (deprecated)
 │   │   │   │   ├── modals/
 │   │   │   │   │   ├── modalHelpers.js       # Dynamic modal generation
 │   │   │   │   │   ├── pdfViewerHelpers.js   # PDF viewer modals
@@ -108,6 +114,7 @@ A full-stack web application for tracking the complete production journey of mat
 ├── scripts/
 │   ├── backup-db.js        # Database backup utility
 │   ├── restore-db.js       # Database restore utility
+│   ├── seed-users.js       # User seeding script for authentication
 │   └── setup-auto-backup.sh # Automated backup setup
 ├── prisma/
 │   └── schema.prisma       # Database schema
@@ -228,7 +235,111 @@ async createRecord(data, appContext) {
 - ✅ **Testing Validated**: Application loads and functions correctly
 - ✅ **Performance Verified**: Improved parsing speed confirmed
 
+## Authentication System (September 2025)
+
+### Overview
+Comprehensive JWT-based authentication system providing secure user management and session control for the Graphene Production Control System.
+
+### Architecture Components
+
+#### Backend Authentication (`/server/routes/auth.js`)
+- **Login Endpoint**: `POST /api/auth/login` - User authentication with JWT token generation
+- **Logout Endpoint**: `POST /api/auth/logout` - Session termination and token invalidation
+- **User Info Endpoint**: `GET /api/auth/me` - Current user profile with role information
+- **Features**:
+  - **Rate Limiting**: 5 login attempts per 15 minutes per IP address
+  - **Password Security**: bcrypt hashing with 12 salt rounds
+  - **JWT Tokens**: Configurable expiration (7d default, 30d with "Remember Me")
+  - **Role-Based Access**: TEAM_MEMBER and SUPER_ADMIN roles
+  - **Session Management**: Token validation and user context preservation
+
+#### Frontend Authentication Service (`/client/src/js/services/AuthService.js`)
+- **Token Management**: localStorage (Remember Me) and sessionStorage support
+- **API Integration**: Automatic token headers for authenticated requests
+- **Session Validation**: Token validation on app initialization
+- **Auto-Logout**: Handles expired sessions with graceful redirects
+- **User Context**: Role-based permissions and user profile access
+- **Features**:
+  - **Singleton Pattern**: Global `window.authService` access
+  - **State Synchronization**: Real-time authentication state management
+  - **Error Handling**: Comprehensive error catching and user feedback
+  - **Network Resilience**: Handles offline/online transitions
+
+#### User Interface Components
+- **Login Page** (`/client/src/js/components/auth/LoginPage.js`):
+  - **Clean Design**: Minimal interface with company branding (HGraphene logo)
+  - **Form Features**: Password visibility toggle, "Remember Me" option, loading states
+  - **Error Handling**: Inline error messages with user-friendly feedback
+  - **Mobile Responsive**: Optimized for all device sizes
+- **Authentication Wrapper**: Integrated into main application with loading screens
+- **Header Integration**: User profile display with initials avatar and dropdown menu
+
+#### Database Schema
+```sql
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(TEAM_MEMBER)
+  firstName    String?   @map("first_name")
+  lastName     String?   @map("last_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  @@map("users")
+}
+
+enum UserRole {
+  TEAM_MEMBER
+  SUPER_ADMIN
+}
+```
+
+#### User Management
+- **Seeding System**: `scripts/seed-users.js` for preloading team credentials
+- **Default Admin**: Benjamin Tyson (Super Admin) with configurable credentials
+- **Team Expansion**: Template structure for adding team member accounts
+- **Role Hierarchy**: Super Admin access for system administration, Team Member for daily operations
+
+### Security Features
+- **Password Protection**: Industry-standard bcrypt hashing
+- **Session Security**: JWT tokens with configurable expiration
+- **Rate Limiting**: Brute force attack prevention
+- **HTTPS Ready**: Secure token transmission
+- **Input Validation**: Server-side validation for all authentication endpoints
+- **Role Enforcement**: Permission-based access control foundation
+
+### User Experience
+- **Seamless Integration**: Authentication wrapper preserves application state
+- **Mobile Optimized**: Touch-friendly interface with responsive design
+- **Professional Branding**: Clean corporate identity throughout login flow
+- **Loading States**: Visual feedback during authentication processes
+- **Error Recovery**: Clear error messages with actionable guidance
+
+### Development Features
+- **Environment Flexibility**: Automatic API URL detection for development/production
+- **Debug Support**: Comprehensive console logging for troubleshooting
+- **State Inspection**: Global access to authentication state for debugging
+- **Hot Reloading**: Development server integration without session loss
+
+### Migration Impact
+- **Zero Downtime**: Authentication system added without disrupting existing functionality
+- **Backward Compatible**: All existing features preserved and protected
+- **Database Expansion**: Clean schema addition without affecting existing tables
+- **Performance Optimized**: Minimal overhead on application startup and operation
+
 ## Database Schema
+
+### Authentication Models
+
+#### User Model
+- **Purpose**: User accounts with role-based access control
+- **Key Fields**: username, email, passwordHash, firstName, lastName, role, isActive
+- **Security**: bcrypt password hashing, JWT token-based sessions
+- **Roles**: TEAM_MEMBER (default), SUPER_ADMIN
+- **Features**: Login tracking, account activation/deactivation, profile management
 
 ### Core Models
 
@@ -368,6 +479,21 @@ async createRecord(data, appContext) {
 - **Full Traceability**: Complete audit trail from raw materials to final testing
 
 ## API Reference
+
+### Authentication APIs
+
+#### User Authentication
+- `POST /api/auth/login` - User login with JWT token generation
+  - **Body**: `{ username, password, rememberMe }`
+  - **Response**: `{ success: true, data: { token, user: { id, username, email, firstName, lastName, role } } }`
+  - **Features**: Rate limiting (5 attempts/15min), bcrypt password verification, configurable token expiration
+- `POST /api/auth/logout` - Session termination and token invalidation
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Response**: `{ success: true, message: "Logged out successfully" }`
+- `GET /api/auth/me` - Current user profile and role information
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Response**: `{ success: true, data: { user: { id, username, email, firstName, lastName, role, lastLogin, createdAt } } }`
+  - **Features**: Token validation, user context retrieval, role verification
 
 ### Core Entity APIs
 

@@ -6,6 +6,7 @@ import fs from 'fs';
 import { buildQueryOptions, buildResponseMeta, formatResponse } from '../utils/queryHelpers.js';
 import { buildFilterWhere, buildFilterAwareOrderBy, getFilterOptions } from '../utils/filterQueryBuilder.js';
 import { getFilterConfig } from '../utils/filterConfig.js';
+import AIInsightsService from '../services/AIInsightsService.js';
 
 const router = express.Router();
 
@@ -448,6 +449,9 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
     });
   }
   
+  // Trigger AI insights cache invalidation for new graphene data
+  AIInsightsService.onNewData('graphene');
+  
   res.status(201).json(graphene);
 }));
 
@@ -615,6 +619,9 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
       });
     }
   }
+  
+  // Trigger AI insights cache invalidation for updated graphene data
+  AIInsightsService.onNewData('graphene');
   
   res.json(graphene);
 }));

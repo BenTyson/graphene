@@ -4,6 +4,7 @@ import path from 'path';
 import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
 import { prepareDataForDB } from '../utils/dataConversion.js';
+import AIInsightsService from '../services/AIInsightsService.js';
 
 const router = express.Router();
 
@@ -103,6 +104,9 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
     data
   });
   
+  // Trigger AI insights cache invalidation for new BET data
+  AIInsightsService.onNewData('bet');
+  
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
     ...betRecord,
@@ -157,6 +161,9 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
     where: { id },
     data
   });
+  
+  // Trigger AI insights cache invalidation for updated BET data
+  AIInsightsService.onNewData('bet');
   
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {

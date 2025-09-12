@@ -18,7 +18,10 @@ import shipmentRoutes from './routes/shipments.js';
 import micronizationRoutes from './routes/micronization.js';
 import dashboardRoutes from './routes/dashboard.js';
 import analysisRoutes from './routes/analysis.js';
+import aiInsightsRoutes from './routes/ai-insights.js';
 import newsRoutes from './routes/news.js';
+import knowledgeBaseRoutes from './routes/knowledge-base.js';
+import authRoutes from './routes/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -61,7 +64,10 @@ app.use('/api/shipments', shipmentRoutes);
 app.use('/api/micronization', micronizationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/ai-insights', aiInsightsRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/knowledge-base', knowledgeBaseRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

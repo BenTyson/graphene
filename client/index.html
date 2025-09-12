@@ -7,19 +7,101 @@
   <link rel="stylesheet" href="/src/styles/main.css">
 </head>
 <body class="bg-white text-gray-900 font-sans">
-  <div id="app" x-data="grapheneApp()">
-    
-    <!-- Header -->
-    <header class="border-b border-gray-200 bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <h1 class="text-2xl font-bold tracking-tight">HGRAPHENE</h1>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
+  <div id="app" x-data="authWrapper()" x-init="init()">
+    <!-- Login Screen -->
+    <div x-show="!isAuthenticated && !isLoading" x-cloak>
+      <div x-html="getLoginPageHtml()"></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div x-show="isLoading" x-cloak class="min-h-screen flex items-center justify-center bg-gray-50">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+        <p class="text-gray-600">Initializing application...</p>
+      </div>
+    </div>
+
+    <!-- Main Application -->
+    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()">
+      <!-- Header with logout -->
+      <header class="border-b border-gray-200 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <!-- Desktop Header -->
+          <div class="hidden md:flex justify-between items-center h-16">
+            <div class="flex items-center">
+              <img class="h-8 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
+            </div>
+            <div class="flex items-center space-x-4">
+              <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
+              <div class="flex items-center space-x-2 text-sm text-gray-600" x-data="{ user: window.authService?.getCurrentUser() }" x-init="user = window.authService?.getCurrentUser()">
+                <span x-text="user?.firstName + ' ' + user?.lastName"></span>
+                <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
+                <button @click="window.authService?.logout().then(() => location.reload())" 
+                        class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded hover:bg-gray-100 transition-colors">
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Header -->
+          <div class="md:hidden" x-data="{ showUserMenu: false, user: window.authService?.getCurrentUser() }" x-init="user = window.authService?.getCurrentUser()">
+            <div class="flex justify-between items-center h-16">
+              <!-- Logo -->
+              <div class="flex items-center">
+                <img class="h-7 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
+              </div>
+              
+              <!-- User Menu Button -->
+              <button @click="showUserMenu = !showUserMenu" 
+                      class="flex items-center space-x-2 p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
+                <div class="flex items-center space-x-2">
+                  <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-medium text-gray-600" x-text="user?.firstName?.charAt(0) + user?.lastName?.charAt(0)"></span>
+                  </div>
+                  <svg class="w-4 h-4 transition-transform" :class="showUserMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </button>
+            </div>
+
+            <!-- Mobile User Dropdown -->
+            <div x-show="showUserMenu" x-cloak 
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="transform opacity-100 scale-100"
+                 x-transition:leave-end="transform opacity-0 scale-95"
+                 @click.away="showUserMenu = false"
+                 class="absolute right-4 top-16 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              
+              <!-- User Info -->
+              <div class="px-4 py-3 border-b border-gray-100">
+                <div class="text-sm font-medium text-gray-900" x-text="user?.firstName + ' ' + user?.lastName"></div>
+                <div class="text-xs text-gray-500" x-text="user?.email"></div>
+                <div class="mt-1">
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600" 
+                        x-text="user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
+                </div>
+              </div>
+
+              <!-- Date -->
+              <div class="px-4 py-2 text-xs text-gray-500 border-b border-gray-100" x-text="new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })"></div>
+
+              <!-- Logout -->
+              <button @click="window.authService?.logout().then(() => location.reload())" 
+                      class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
     <!-- Navigation Tabs -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6" x-data="{ mobileMenuOpen: false }">
@@ -35,71 +117,129 @@
         </button>
         <span class="text-sm font-medium text-gray-700" x-text="
           activeTab === 'dashboard' ? 'Dashboard' :
-          activeTab === 'analysis' ? 'Analysis' :
           activeTab === 'news' ? 'News Feed' :
-          activeTab === 'graphene' ? 'Graphene' :
-          activeTab === 'compound-batches' ? 'Compound Batches' :
-          activeTab === 'micronization' ? 'Micronization' :
-          activeTab === 'shipments' ? 'Shipments' :
-          activeTab === 'biochar' ? 'Biochar' :
-          activeTab.startsWith('test-') ? 'Test Results' : ''
+          activeTab === 'analysis' ? 'Analysis' :
+          activeTab === 'ai-insights' ? 'Insights' :
+          activeTab.startsWith('test-') ? 'Test Results' :
+          activeTab === 'graphene' ? 'Production → Graphene' :
+          activeTab === 'biochar' ? 'Production → Biochar' :
+          activeTab === 'compound-batches' ? 'Production → Compound Batches' :
+          activeTab === 'micronization' ? 'Production → Micronization' :
+          activeTab === 'shipments' ? 'Production → Shipments' : ''
         "></span>
       </div>
       
       <!-- Mobile dropdown menu -->
-      <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg">
+      <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg" x-data="{ mobileProductionOpen: false, mobileAnalyticsOpen: false }">
         <div class="py-2">
+          <!-- Dashboard -->
           <button @click="switchTab('dashboard'); mobileMenuOpen = false"
                   :class="activeTab === 'dashboard' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                   class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
             Dashboard
           </button>
-          <button @click="switchTab('analysis'); mobileMenuOpen = false"
-                  :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Analysis
-          </button>
-          <button @click="activeTab = 'news'; mobileMenuOpen = false; initializeNewsTab()"
-                  :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            News Feed
-          </button>
-          <button @click="activeTab = 'graphene'; mobileMenuOpen = false"
-                  :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Graphene
-          </button>
-          <button @click="activeTab = 'compound-batches'; mobileMenuOpen = false"
-                  :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Compound Batches
-          </button>
-          <button @click="activeTab = 'micronization'; mobileMenuOpen = false"
-                  :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Micronization
-          </button>
-          <button @click="activeTab = 'shipments'; mobileMenuOpen = false"
-                  :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Shipments
-          </button>
-          <button @click="activeTab = 'biochar'; mobileMenuOpen = false"
-                  :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Biochar
-          </button>
-          <button @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'; mobileMenuOpen = false"
-                  :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Test Results
-          </button>
+
+          <!-- Production Category -->
+          <div class="border-t border-gray-100">
+            <button @click="mobileProductionOpen = !mobileProductionOpen"
+                    :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target flex items-center justify-between">
+              <span>Production</span>
+              <svg class="w-5 h-5 transition-transform" :class="mobileProductionOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div x-show="mobileProductionOpen" x-cloak 
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 max-h-0"
+                 x-transition:enter-end="opacity-100 max-h-96"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 max-h-96"
+                 x-transition:leave-end="opacity-0 max-h-0"
+                 class="overflow-hidden">
+              <div class="bg-gray-50">
+                <button @click="activeTab = 'graphene'; mobileMenuOpen = false"
+                        :class="activeTab === 'graphene' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Graphene
+                </button>
+                <button @click="activeTab = 'biochar'; mobileMenuOpen = false"
+                        :class="activeTab === 'biochar' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Biochar
+                </button>
+                <button @click="activeTab = 'compound-batches'; mobileMenuOpen = false"
+                        :class="activeTab === 'compound-batches' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Compound Batches
+                </button>
+                <button @click="activeTab = 'micronization'; mobileMenuOpen = false"
+                        :class="activeTab === 'micronization' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Micronization
+                </button>
+                <button @click="activeTab = 'shipments'; mobileMenuOpen = false"
+                        :class="activeTab === 'shipments' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Shipments
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics Category -->
+          <div class="border-t border-gray-100">
+            <button @click="mobileAnalyticsOpen = !mobileAnalyticsOpen"
+                    :class="['analysis', 'ai-insights'].includes(activeTab) || activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target flex items-center justify-between">
+              <span>Analytics</span>
+              <svg class="w-5 h-5 transition-transform" :class="mobileAnalyticsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div x-show="mobileAnalyticsOpen" x-cloak 
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 max-h-0"
+                 x-transition:enter-end="opacity-100 max-h-96"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 max-h-96"
+                 x-transition:leave-end="opacity-0 max-h-0"
+                 class="overflow-hidden">
+              <div class="bg-gray-50">
+                <button @click="switchTab('analysis'); mobileMenuOpen = false"
+                        :class="activeTab === 'analysis' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Analysis
+                </button>
+                <button @click="switchTab('ai-insights'); mobileMenuOpen = false"
+                        :class="activeTab === 'ai-insights' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Insights
+                </button>
+                <button @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'; mobileMenuOpen = false"
+                        :class="activeTab.startsWith('test-') ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
+                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
+                  Test Results
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- News Feed -->
+          <div class="border-t border-gray-100">
+            <button @click="activeTab = 'news'; mobileMenuOpen = false; initializeNewsTab()"
+                    :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
+              News Feed
+            </button>
+          </div>
         </div>
       </div>
       
       <!-- Desktop navigation -->
-      <div class="border-b border-gray-200 hidden md:block">
+      <div class="border-b border-gray-200 hidden md:block" x-data="{ productionOpen: false, analyticsOpen: false }">
         <nav class="-mb-px flex space-x-8">
+          <!-- Dashboard -->
           <button
             @click="switchTab('dashboard')"
             :class="activeTab === 'dashboard' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -107,61 +247,78 @@
           >
             Dashboard
           </button>
-          <button
-            @click="switchTab('analysis')"
-            :class="activeTab === 'analysis' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Analysis
-          </button>
+
+          <!-- Production Dropdown -->
+          <div class="relative" @click.away="productionOpen = false">
+            <button
+              @click="productionOpen = !productionOpen"
+              :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+              class="py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-1"
+            >
+              <span>Production</span>
+              <svg class="w-4 h-4 transition-transform" :class="productionOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div
+              x-show="productionOpen"
+              x-cloak
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 translate-y-1"
+              class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+            >
+              <div class="py-1">
+                <button @click="activeTab = 'graphene'; productionOpen = false" :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Graphene</button>
+                <button @click="activeTab = 'biochar'; productionOpen = false" :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Biochar</button>
+                <button @click="activeTab = 'compound-batches'; productionOpen = false" :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Compound Batches</button>
+                <button @click="activeTab = 'micronization'; productionOpen = false" :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Micronization</button>
+                <button @click="activeTab = 'shipments'; productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics Dropdown -->
+          <div class="relative" @click.away="analyticsOpen = false">
+            <button
+              @click="analyticsOpen = !analyticsOpen"
+              :class="['analysis', 'ai-insights'].includes(activeTab) || activeTab.startsWith('test-') ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+              class="py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-1"
+            >
+              <span>Analytics</span>
+              <svg class="w-4 h-4 transition-transform" :class="analyticsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div
+              x-show="analyticsOpen"
+              x-cloak
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 translate-y-1"
+              class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+            >
+              <div class="py-1">
+                <button @click="switchTab('analysis'); analyticsOpen = false" :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Analysis</button>
+                <button @click="switchTab('ai-insights'); analyticsOpen = false" :class="activeTab === 'ai-insights' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Insights</button>
+                <button @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'; analyticsOpen = false" :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Test Results</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- News Feed -->
           <button
             @click="activeTab = 'news'; initializeNewsTab()"
             :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             News Feed
-          </button>
-          <button
-            @click="activeTab = 'graphene'"
-            :class="activeTab === 'graphene' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Graphene
-          </button>
-          <button
-            @click="activeTab = 'compound-batches'"
-            :class="activeTab === 'compound-batches' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Compound Batches
-          </button>
-          <button
-            @click="activeTab = 'micronization'"
-            :class="activeTab === 'micronization' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Micronization
-          </button>
-          <button
-            @click="activeTab = 'shipments'"
-            :class="activeTab === 'shipments' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Shipments
-          </button>
-          <button
-            @click="activeTab = 'biochar'"
-            :class="activeTab === 'biochar' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Biochar
-          </button>
-          <button
-            @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'"
-            :class="activeTab.startsWith('test-') ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Test Results
           </button>
         </nav>
       </div>
@@ -170,7 +327,8 @@
     <!-- Sub-navigation for Tests -->
     <div x-show="activeTab.startsWith('test-')" x-cloak class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="border-b border-gray-100 bg-gray-50">
-        <nav class="flex space-x-6 px-2 py-3">
+        <!-- Desktop: Horizontal Layout -->
+        <nav class="hidden md:flex space-x-6 px-2 py-3">
           <button
             @click="activeTab = 'test-bet'"
             :class="activeTab === 'test-bet' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
@@ -214,6 +372,52 @@
             Curia Updates
           </button>
         </nav>
+
+        <!-- Mobile: Grid Layout -->
+        <nav class="md:hidden grid grid-cols-2 gap-2 p-3">
+          <button
+            @click="activeTab = 'test-bet'"
+            :class="activeTab === 'test-bet' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            BET
+          </button>
+          <button
+            @click="activeTab = 'test-conductivity'"
+            :class="activeTab === 'test-conductivity' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            Conductivity
+          </button>
+          <button
+            @click="activeTab = 'test-raman'"
+            :class="activeTab === 'test-raman' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            RAMAN
+          </button>
+          <button
+            @click="activeTab = 'test-tem'"
+            :class="activeTab === 'test-tem' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            TEM
+          </button>
+          <button
+            @click="activeTab = 'test-sem'"
+            :class="activeTab === 'test-sem' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            SEM Reports
+          </button>
+          <button
+            @click="activeTab = 'test-updates'"
+            :class="activeTab === 'test-updates' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            Curia Updates
+          </button>
+        </nav>
       </div>
     </div>
 
@@ -234,6 +438,9 @@
 
       <!-- Analysis Tab -->
       <div x-html="getAnalysisTabHtml()"></div>
+
+      <!-- AI Insights Tab -->
+      <div x-html="getAIInsightsTabHtml()"></div>
 
       <!-- News Tab -->
       <div x-html="getNewsTabHtml()"></div>
@@ -901,25 +1108,25 @@
 
   </div>
 
-  <!-- Component Scripts -->
-  <script src="/src/js/components/tabs/TestResultsBETTab.js"></script>
-  <script src="/src/js/components/tabs/TestResultsConductivityTab.js"></script>
-  <script src="/src/js/components/tabs/TestResultsRAMANTab.js"></script>
-  <script src="/src/js/components/tabs/TestResultsTEMTab.js"></script>
-  <script src="/src/js/components/tabs/SEMReportsTab.js"></script>
-  <script src="/src/js/components/tabs/UpdateReportsTab.js"></script>
-  <script src="/src/js/components/modals/BETModal.js"></script>
-  <script src="/src/js/components/modals/ConductivityModal.js"></script>
-  <script src="/src/js/components/modals/TEMModal.js"></script>
-  <script src="/src/js/components/modals/ShipmentModal.js"></script>
-  <script src="/src/js/components/modals/GrapheneModal.js"></script>
+  <!-- Chart.js for interactive charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <!-- Chart.js date adapter for time scales -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  
+  <!-- Alpine.js Intersect plugin -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Component Scripts - loaded before main app for dependencies -->
+  <script src="/src/js/services/CardService.js"></script>
   <script src="/src/js/components/cards/CardSection.js"></script>
   <script src="/src/js/components/cards/CardMetrics.js"></script>
   <script src="/src/js/components/cards/CardHeader.js"></script>
   <script src="/src/js/components/cards/CardContainer.js"></script>
   <script src="/src/js/components/cards/utils/cardConfig.js"></script>
   <script src="/src/js/components/cards/MasterDataCard.js"></script>
-  <script src="/src/js/services/CardService.js"></script>
   <script src="/src/js/components/cards/CardFactory.js"></script>
   <script src="/src/js/components/cards/SimplifiedGrapheneCard.js"></script>
   <script src="/src/js/components/cards/SimplifiedCompoundBatchCard.js"></script>
@@ -928,17 +1135,59 @@
   <script src="/src/js/components/modals/ModalPdfViewer.js"></script>
   <script src="/src/js/components/modals/ModalTemplates.js"></script>
   
-  <!-- Chart.js for interactive charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-  <!-- Chart.js date adapter for time scales -->
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  
-  <!-- Alpine.js Intersect plugin -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
-  
   <!-- Use modules for better code organization -->
   <script type="module" src="/src/js/app-refactored.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Ensure Alpine.js waits for main app to load -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Wait a short moment to ensure modules have loaded
+      setTimeout(function() {
+        if (typeof window.grapheneApp === 'function') {
+          // Main app is loaded, Alpine can proceed
+          console.log('Main app loaded, Alpine.js can initialize');
+        } else {
+          console.error('Main app not loaded! Check app-refactored.js');
+        }
+      }, 100);
+    });
+  </script>
+  
+  <!-- Authentication Components - loaded before main app -->
+  <script src="/src/js/services/AuthService.js"></script>
+  <script src="/src/js/components/auth/LoginPage.js"></script>
+  <script src="/src/js/components/auth/AuthWrapper.js"></script>
+  
+  <!-- Tab and Modal Component Scripts - loaded after main app -->
+  <script src="/src/js/components/tabs/TestResultsBETTab.js"></script>
+  <script src="/src/js/components/tabs/TestResultsConductivityTab.js"></script>
+  <script src="/src/js/components/tabs/TestResultsRAMANTab.js"></script>
+  <script src="/src/js/components/tabs/TestResultsTEMTab.js"></script>
+  <script src="/src/js/components/tabs/SEMReportsTab.js"></script>
+  <script src="/src/js/components/tabs/UpdateReportsTab.js"></script>
+  <script src="/src/js/components/tabs/AnalysisTab.js"></script>
+  <!-- AIInsightsTab is now loaded as ES6 module in app-refactored.js -->
+  <script src="/src/js/components/modals/BETModal.js"></script>
+  <script src="/src/js/components/modals/ConductivityModal.js"></script>
+  <script src="/src/js/components/modals/TEMModal.js"></script>
+  <script src="/src/js/components/modals/ShipmentModal.js"></script>
+  <script src="/src/js/components/modals/GrapheneModal.js"></script>
+  
+  <script>
+    // Delay Alpine.js initialization until components are loaded
+    window.addEventListener('DOMContentLoaded', function() {
+      // Load Alpine.js after a short delay to ensure all modules are loaded
+      setTimeout(function() {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js';
+        script.defer = true;
+        document.head.appendChild(script);
+      }, 200);
+    });
+  </script>
+  
+    </div> <!-- End Main Application -->
+  </div> <!-- End Auth Wrapper -->
   
   <!-- Optimization Testing Scripts removed to prevent 404 errors -->
 </body>

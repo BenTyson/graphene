@@ -597,3 +597,103 @@ enum SummaryStatus {
   FAILED
   SKIPPED
 }
+
+model KnowledgeDocument {
+  id                    String            @id @default(cuid())
+  title                 String
+  description           String?
+  filename              String            @map("filename")
+  originalName          String            @map("original_name")
+  filePath              String            @map("file_path")
+  fileSize              Int?              @map("file_size")
+  mimeType              String?           @map("mime_type")
+  documentType          DocumentType      @map("document_type")
+  documentCategory      DocumentCategory? @map("document_category")
+  researchAreas         String[]          @map("research_areas")
+  keywords              String[]
+  authors               String[]
+  publicationDate       DateTime?         @map("publication_date")
+  uploadedAt            DateTime          @default(now()) @map("uploaded_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  processingStatus      ProcessingStatus  @default(PENDING) @map("processing_status")
+  extractedText         String?           @map("extracted_text") @db.Text
+  summary               String?           @map("summary") @db.Text
+  laymanSummary         String?           @map("layman_summary") @db.Text
+  keyFindings           String[]          @map("key_findings")
+  relevanceScore        Decimal?          @map("relevance_score") @db.Decimal(4, 2)
+  contentHash           String?           @unique @map("content_hash")
+  processingError       String?           @map("processing_error")
+  processingAttempts    Int               @default(0) @map("processing_attempts")
+  lastProcessedAt       DateTime?         @map("last_processed_at")
+  isActive              Boolean           @default(true) @map("is_active")
+  tags                  String[]
+  metadata              Json?             // Additional flexible metadata
+
+  @@index([documentType, processingStatus])
+  @@index([documentCategory, uploadedAt])
+  @@index([processingStatus, processingAttempts])
+  @@index([relevanceScore, documentType])
+  @@index([contentHash])
+  @@index([isActive, uploadedAt])
+  @@map("knowledge_documents")
+}
+
+enum DocumentType {
+  RESEARCH_PAPER
+  PATENT
+  TECHNICAL_REPORT
+  WHITEPAPER
+  THESIS
+  CONFERENCE_PAPER
+  BOOK_CHAPTER
+  MANUAL
+  SPECIFICATION
+  OTHER
+}
+
+enum DocumentCategory {
+  GRAPHENE_PRODUCTION
+  BIOCHAR_PROCESSING
+  MATERIAL_CHARACTERIZATION
+  CONDUCTIVITY_TESTING
+  SURFACE_ANALYSIS
+  SCALING_METHODS
+  QUALITY_CONTROL
+  EQUIPMENT_OPERATION
+  SAFETY_PROCEDURES
+  MARKET_ANALYSIS
+  APPLICATIONS
+  GENERAL
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum UserRole {
+  TEAM_MEMBER
+  SUPER_ADMIN
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(TEAM_MEMBER)
+  firstName    String?   @map("first_name")
+  lastName     String?   @map("last_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([username])
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}

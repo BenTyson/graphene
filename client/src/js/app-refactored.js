@@ -26,7 +26,9 @@ import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
 import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 import { getGrapheneTabHtml } from './components/tabs/GrapheneTab.js';
-import { getAnalysisTabHtml } from './components/tabs/AnalysisTab.js';
+// Tab components are loaded as separate scripts and made available globally
+// import { getAnalysisTabHtml } from './components/tabs/AnalysisTab.js';
+import { getAIInsightsTabHtml } from './components/tabs/AIInsightsTab.js';
 import { getNewsTabHtml } from './components/tabs/NewsTab.js';
 import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
 import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
@@ -54,7 +56,12 @@ window.getMicronizationTabHtml = getMicronizationTabHtml;
 window.getCompoundBatchesTabHtml = getCompoundBatchesTabHtml;
 window.getBiocharTabHtml = getBiocharTabHtml;
 window.getGrapheneTabHtml = getGrapheneTabHtml;
-window.getAnalysisTabHtml = getAnalysisTabHtml;
+// Tab functions are made globally available in their component files  
+// window.getAnalysisTabHtml = getAnalysisTabHtml;
+
+// AI Insights tab is now loaded from the actual component
+window.getAIInsightsTabHtml = getAIInsightsTabHtml;
+
 window.getNewsTabHtml = getNewsTabHtml;
 
 // Main Alpine.js application
@@ -86,6 +93,33 @@ window.grapheneApp = function() {
     betChart: null,
     conductivityChart: null,
     ramanChart: null,
+    
+    // AI Insights data
+    aiInsightsData: null,
+    aiInsightsLoading: false,
+    aiInsightsError: null,
+    correlationData: null,
+    correlationLoading: false,
+    optimizationData: null,
+    optimizationLoading: false,
+    scalingData: null,
+    scalingLoading: false,
+    suggestionsData: null,
+    suggestionsLoading: false,
+    customQuery: '',
+    customAnalysisContext: 'general',
+    customAnalysisResult: null,
+    customAnalysisLoading: false,
+    
+    // AI Analysis Filters
+    analysisFilters: {
+      oven: '',
+      species: '',
+      timeRange: '',
+      includeCompoundBatches: true,
+      includeMicronization: true
+    },
+    filtersLoading: false,
     
     // News system state
     newsArticles: [],
@@ -2710,6 +2744,210 @@ window.grapheneApp = function() {
       });
     },
     
+    // AI Insights Methods
+    
+    // Load AI insights dashboard data
+    async loadAIInsightsDashboard() {
+      this.aiInsightsLoading = true;
+      this.aiInsightsError = null;
+      
+      try {
+        const response = await fetch('/api/ai-insights/dashboard');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.aiInsightsData = result;
+      } catch (error) {
+        console.error('Failed to load AI insights dashboard:', error);
+        this.aiInsightsError = error.message;
+      } finally {
+        this.aiInsightsLoading = false;
+      }
+    },
+    
+    // Refresh all AI insights
+    async refreshAIInsights() {
+      this.aiInsightsError = null;
+      await this.loadAIInsightsDashboard();
+    },
+    
+    // Load correlation analysis
+    async loadCorrelationAnalysis() {
+      this.correlationLoading = true;
+      
+      try {
+        const response = await fetch('/api/ai-insights/correlations');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.correlationData = result;
+      } catch (error) {
+        console.error('Failed to load correlation analysis:', error);
+        this.aiInsightsError = error.message;
+      } finally {
+        this.correlationLoading = false;
+      }
+    },
+    
+    // Load optimization analysis
+    async loadOptimizationAnalysis() {
+      this.optimizationLoading = true;
+      
+      try {
+        const response = await fetch('/api/ai-insights/optimization');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.optimizationData = result;
+      } catch (error) {
+        console.error('Failed to load optimization analysis:', error);
+        this.aiInsightsError = error.message;
+      } finally {
+        this.optimizationLoading = false;
+      }
+    },
+    
+    // Load scaling analysis  
+    async loadScalingAnalysis() {
+      this.scalingLoading = true;
+      
+      try {
+        const response = await fetch('/api/ai-insights/scaling?targetOvenSize=50L&targetProductionRate=10');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.scalingData = result;
+      } catch (error) {
+        console.error('Failed to load scaling analysis:', error);
+        this.aiInsightsError = error.message;
+      } finally {
+        this.scalingLoading = false;
+      }
+    },
+    
+    // Load experiment suggestions
+    async loadExperimentSuggestions() {
+      this.suggestionsLoading = true;
+      
+      try {
+        const response = await fetch('/api/ai-insights/experiments?priorities=yield,quality,scaling');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.suggestionsData = result;
+      } catch (error) {
+        console.error('Failed to load experiment suggestions:', error);
+        this.aiInsightsError = error.message;
+      } finally {
+        this.suggestionsLoading = false;
+      }
+    },
+    
+    // Perform custom analysis
+    async performCustomAnalysis() {
+      if (!this.customQuery.trim()) return;
+      
+      this.customAnalysisLoading = true;
+      this.customAnalysisResult = null;
+      
+      try {
+        const response = await fetch('/api/ai-insights/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            question: this.customQuery,
+            context: this.customAnalysisContext
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        this.customAnalysisResult = result.analysis;
+      } catch (error) {
+        console.error('Failed to perform custom analysis:', error);
+        this.customAnalysisResult = 'Error: ' + error.message;
+      } finally {
+        this.customAnalysisLoading = false;
+      }
+    },
+    
+    // Markdown Utility Function
+    
+    // Safely render markdown to HTML
+    renderMarkdown(text) {
+      if (!text || typeof text !== 'string') return '';
+      
+      try {
+        // Configure marked for safe rendering
+        const html = marked.parse(text, {
+          breaks: true,
+          gfm: true,
+          sanitize: false // We control the input source (our AI responses)
+        });
+        return html;
+      } catch (error) {
+        console.error('Markdown rendering error:', error);
+        return text; // Fallback to plain text
+      }
+    },
+    
+    // AI Analysis Filter Methods
+    
+    // Check if any filters are active
+    hasActiveFilters() {
+      return this.analysisFilters.oven || 
+             this.analysisFilters.species || 
+             this.analysisFilters.timeRange ||
+             this.analysisFilters.includeCompoundBatches ||
+             this.analysisFilters.includeMicronization;
+    },
+    
+    // Apply analysis filters and refresh data
+    async applyFilters() {
+      this.filtersLoading = true;
+      
+      try {
+        // Clear existing analysis data to force refresh with filters
+        this.correlationData = null;
+        this.optimizationData = null;
+        this.scalingData = null;
+        this.suggestionsData = null;
+        
+        // Reload AI insights with filters
+        await this.loadAIInsightsDashboard();
+        
+      } catch (error) {
+        console.error('Failed to apply filters:', error);
+        this.aiInsightsError = 'Failed to apply filters: ' + error.message;
+      } finally {
+        this.filtersLoading = false;
+      }
+    },
+    
+    // Reset all filters to default values
+    resetFilters() {
+      this.analysisFilters = {
+        oven: '',
+        species: '',
+        timeRange: '',
+        includeCompoundBatches: true,
+        includeMicronization: true
+      };
+      
+      // Auto-apply reset filters
+      this.applyFilters();
+    },
+    
     // Handle tab change to load data if needed
     async switchTab(tab) {
       this.activeTab = tab;
@@ -2721,6 +2959,10 @@ window.grapheneApp = function() {
         }
         if (!this.analysisChartData) {
           await this.loadAnalysisChartData();
+        }
+      } else if (tab === 'ai-insights') {
+        if (!this.aiInsightsData) {
+          await this.loadAIInsightsDashboard();
         }
       } else if (tab === 'news') {
         await this.initializeNewsTab();

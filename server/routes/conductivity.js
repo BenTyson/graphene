@@ -2,6 +2,7 @@ import express from 'express';
 import asyncHandler from 'express-async-handler';
 import path from 'path';
 import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
+import AIInsightsService from '../services/AIInsightsService.js';
 
 const router = express.Router();
 
@@ -154,6 +155,9 @@ router.post('/', upload.single('conductivityReport'), asyncHandler(async (req, r
     data
   });
   
+  // Trigger AI insights cache invalidation for new conductivity data
+  AIInsightsService.onNewData('conductivity');
+  
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
     ...conductivityRecord,
@@ -236,6 +240,9 @@ router.put('/:id', upload.single('conductivityReport'), asyncHandler(async (req,
     where: { id },
     data
   });
+  
+  // Trigger AI insights cache invalidation for updated conductivity data
+  AIInsightsService.onNewData('conductivity');
   
   // Convert Decimal fields to numbers for frontend
   const processedRecord = {
