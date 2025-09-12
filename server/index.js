@@ -40,6 +40,9 @@ app.use(express.urlencoded({ extended: true }));
 // Make prisma available in routes
 app.locals.prisma = prisma;
 
+// Serve static files
+app.use(express.static(path.join(process.cwd(), 'client')));
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -78,8 +81,8 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Graceful shutdown
