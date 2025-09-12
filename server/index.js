@@ -77,6 +77,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Catch-all route - serve index.html for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'client', 'index.html'));
+});
+
 // Error handling
 app.use(errorHandler);
 
