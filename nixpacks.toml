@@ -1,9 +1,10 @@
-[variables]
-    NODE_VERSION = "20"
+[phases.setup]
+    nixPkgs = ["nodejs_20"]
 
 [phases.build]
     cmds = [
-        "npm ci",
+        "rm -rf node_modules/.cache",
+        "npm install",
         "npx prisma generate",
         "npx prisma db push"
     ]

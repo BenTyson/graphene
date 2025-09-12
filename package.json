@@ -4,6 +4,9 @@
   "description": "Admin control panel for Graphene SEM test results analysis",
   "main": "server/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
