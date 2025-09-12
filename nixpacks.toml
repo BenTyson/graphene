@@ -1,0 +1,15 @@
+[variables]
+    NODE_VERSION = "18"
+
+[phases.build]
+    cmds = [
+        "npm ci",
+        "npx prisma generate",
+        "npx prisma db push"
+    ]
+
+[phases.start]
+    cmd = "npm start"
+
+[staticAssets]
+    "/client" = "./client"

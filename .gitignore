@@ -14,6 +14,16 @@ build/
 .env.test.local
 .env.production.local
 
+# Railway specific
+railway.json
+.railway/
+
+# Uploads and user data (don't commit user files)
+uploads/
+public/news-images/
+!uploads/.gitkeep
+!public/news-images/.gitkeep
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
