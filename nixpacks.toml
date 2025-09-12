@@ -9,6 +9,3 @@
 
 [phases.start]
     cmd = "npx prisma db push && npm start"
-
-[staticAssets]
-    "/client" = "./client"
