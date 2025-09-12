@@ -42,6 +42,17 @@ app.use(express.urlencoded({ extended: true }));
 // Make prisma available in routes
 app.locals.prisma = prisma;
 
+// Health check - placed early for Railway compatibility
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    nodeEnv: process.env.NODE_ENV,
+    version: '1.0.0'
+  });
+});
+
 // Serve static files
 app.use(express.static(path.join(process.cwd(), 'client')));
 
@@ -74,10 +85,6 @@ app.use('/api/news', newsRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
 app.use('/api/auth', authRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Catch-all route - serve index.html for client-side routing
 app.get('*', (req, res) => {
@@ -87,9 +94,10 @@ app.get('*', (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Start server  
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+// Start server - Railway works best with 0.0.0.0 or no explicit host
+const HOST = '0.0.0.0';  // IPv4 all interfaces (Railway compatible)
+const server = app.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT} in ${process.env.NODE_ENV} mode`);
 });
 
 // Graceful shutdown
