@@ -4,12 +4,11 @@
 [phases.build]
     cmds = [
         "npm install",
-        "npx prisma generate",
-        "npx prisma db push"
+        "npx prisma generate"
     ]
 
 [phases.start]
-    cmd = "npm start"
+    cmd = "npx prisma db push && npm start"
 
 [staticAssets]
     "/client" = "./client"
