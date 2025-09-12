@@ -3,7 +3,6 @@
 
 [phases.build]
     cmds = [
-        "rm -rf node_modules/.cache",
         "npm install",
         "npx prisma generate",
         "npx prisma db push"
