@@ -43,8 +43,36 @@ console.log('PWD:', process.env.PWD);
 console.log('Process arguments:', process.argv);
 console.log('========================');
 
-// Middleware
-app.use(helmet());
+// Middleware - Configure Helmet CSP for CDN resources
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net",
+        "https://unpkg.com"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net",
+        "https://unpkg.com"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https:",
+        "http:"
+      ],
+      connectSrc: [
+        "'self'",
+        "https:"
+      ]
+    }
+  }
+}));
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
