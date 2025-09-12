@@ -29,9 +29,19 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
-console.log('All environment variables:', JSON.stringify(process.env, null, 2));
-console.log('PORT environment variable:', process.env.PORT);
+
+// Comprehensive Railway debugging
+console.log('=== RAILWAY DEBUG INFO ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT from env:', process.env.PORT);
+console.log('PORT type:', typeof process.env.PORT);
 console.log('Using PORT:', PORT);
+console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
+console.log('RAILWAY_SERVICE_NAME:', process.env.RAILWAY_SERVICE_NAME);
+console.log('RAILWAY_PROJECT_NAME:', process.env.RAILWAY_PROJECT_NAME);
+console.log('PWD:', process.env.PWD);
+console.log('Process arguments:', process.argv);
+console.log('========================');
 
 // Middleware
 app.use(helmet());
@@ -98,7 +108,29 @@ app.use(errorHandler);
 // Start server - Railway works best with 0.0.0.0 or no explicit host
 const HOST = '0.0.0.0';  // IPv4 all interfaces (Railway compatible)
 const server = app.listen(PORT, HOST, () => {
-  console.log(`Server running on ${HOST}:${PORT} in ${process.env.NODE_ENV} mode`);
+  console.log('=== SERVER STARTED ===');
+  console.log(`Host: ${HOST}`);
+  console.log(`Port: ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`Server URL: http://${HOST}:${PORT}`);
+  console.log(`Process PID: ${process.pid}`);
+  console.log('======================');
+});
+
+// Additional server event logging
+server.on('error', (err) => {
+  console.error('=== SERVER ERROR ===');
+  console.error('Error:', err);
+  console.error('Port:', PORT);
+  console.error('Host:', HOST);
+  console.error('===================');
+});
+
+server.on('listening', () => {
+  const address = server.address();
+  console.log('=== SERVER LISTENING ===');
+  console.log('Address info:', address);
+  console.log('========================');
 });
 
 // Graceful shutdown
