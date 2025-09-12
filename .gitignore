@@ -15,7 +15,6 @@ build/
 .env.production.local
 
 # Railway specific
-railway.json
 .railway/
 
 # Uploads and user data (don't commit user files)
