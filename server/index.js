@@ -29,6 +29,8 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
+console.log('PORT environment variable:', process.env.PORT);
+console.log('Using PORT:', PORT);
 
 // Middleware
 app.use(helmet());
