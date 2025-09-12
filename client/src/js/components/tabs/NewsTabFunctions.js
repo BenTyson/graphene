@@ -69,7 +69,6 @@ function initializeNewsFunctionality() {
       } catch (error) {
         console.error('Error fetching news articles:', error);
         this.newsError = error.message;
-        this.showNotification('Error loading news articles: ' + error.message, 'error');
       } finally {
         this.newsLoading = false;
       }
@@ -359,15 +358,11 @@ function initializeNewsFunctionality() {
             paginatedArticle.isBookmarked = data.isBookmarked;
           }
 
-          this.showNotification(
-            data.isBookmarked ? 'Article bookmarked' : 'Bookmark removed',
-            'success'
-          );
+          console.log(data.isBookmarked ? 'Article bookmarked' : 'Bookmark removed');
         }
 
       } catch (error) {
         console.error('Error toggling bookmark:', error);
-        this.showNotification('Error updating bookmark', 'error');
       } finally {
         // Clear loading state
         this.bookmarkLoading[articleId] = false;
@@ -395,10 +390,9 @@ function initializeNewsFunctionality() {
       } else {
         // Fallback to copying URL to clipboard
         navigator.clipboard.writeText(article.url).then(() => {
-          this.showNotification('Article URL copied to clipboard', 'success');
+          console.log('Article URL copied to clipboard');
         }).catch(err => {
           console.error('Error copying to clipboard:', err);
-          this.showNotification('Could not copy URL', 'error');
         });
       }
     },
@@ -478,6 +472,31 @@ function initializeNewsFunctionality() {
 // Add to global app functions
 window.newsTabFunctions = initializeNewsFunctionality();
 
+// High-impact keywords definition (excluding "graphene" since every article should have it)
+window.allHighImpactKeywords = [
+  'battery', 'energy storage', 'conductivity', 'supercapacitor',
+  'breakthrough', 'commercial', 'production', 'scalable', 'patent'
+];
+
+// Make high impact functions globally available for Alpine.js templates
+window.hasHighImpactKeyword = function(article) {
+  if (!article.keywordTags || article.keywordTags.length === 0) return false;
+  
+  const articleKeywords = article.keywordTags.map(tag => tag.toLowerCase());
+  return window.allHighImpactKeywords.some(keyword => 
+    articleKeywords.includes(keyword.toLowerCase()) ||
+    articleKeywords.some(tag => tag.includes(keyword.toLowerCase()))
+  );
+};
+
+window.isHighImpactKeyword = function(tag) {
+  const tagLower = tag.toLowerCase();
+  return window.allHighImpactKeywords.some(keyword => 
+    tagLower === keyword.toLowerCase() || 
+    tagLower.includes(keyword.toLowerCase())
+  );
+};
+
 // Make count functions globally available for Alpine.js templates
 window.getCategoryCount = function(category) {
   if (!window.newsTabFunctions.newsArticles) return 0;
@@ -487,8 +506,40 @@ window.getCategoryCount = function(category) {
   return window.newsTabFunctions.newsArticles.filter(article => article.category === category).length;
 };
 
+// Category color function - returns grayscale colors to match site aesthetic
+window.getCategoryColor = function(category) {
+  if (!category) return 'bg-gray-200 text-gray-800';
+  
+  const categoryColors = {
+    'general': 'bg-gray-100 text-gray-700',
+    'research': 'bg-gray-200 text-gray-800',
+    'technology': 'bg-gray-300 text-gray-900',
+    'industry': 'bg-gray-400 text-white',
+    'market': 'bg-gray-500 text-white',
+    'sustainability': 'bg-gray-600 text-white',
+    'energy': 'bg-gray-700 text-white',
+    'materials': 'bg-gray-800 text-white',
+    'manufacturing': 'bg-gray-900 text-white'
+  };
+  
+  return categoryColors[category.toLowerCase()] || 'bg-gray-200 text-gray-800';
+};
+
+// High impact tag counting function - counts articles that contain high impact keywords
 window.getTagCount = function(tag) {
   if (!window.newsTabFunctions.newsArticles) return 0;
+  
+  // For high impact tags, count articles that actually have high impact keywords
+  if (window.isHighImpactKeyword && window.isHighImpactKeyword(tag)) {
+    return window.newsTabFunctions.newsArticles.filter(article => 
+      window.hasHighImpactKeyword && window.hasHighImpactKeyword(article) &&
+      article.keywordTags?.some(articleTag => 
+        articleTag.toLowerCase().includes(tag.toLowerCase())
+      )
+    ).length;
+  }
+  
+  // For regular tags, use normal counting
   return window.newsTabFunctions.newsArticles.filter(article => 
     article.keywordTags?.some(articleTag => 
       articleTag.toLowerCase().includes(tag.toLowerCase())

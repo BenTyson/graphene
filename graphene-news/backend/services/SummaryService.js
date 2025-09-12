@@ -151,11 +151,47 @@ export class SummaryService {
     // Focus on first part of article (most important info usually at beginning)
     const maxLength = this.config.maxInputTokens * 3; // Rough char estimate
     if (text.length > maxLength) {
-      text = text.substring(0, maxLength);
-      // Find last complete sentence
-      const lastPeriod = text.lastIndexOf('.');
-      if (lastPeriod > maxLength * 0.8) {
-        text = text.substring(0, lastPeriod + 1);
+      // Create a range for acceptable truncation (80%-120% of target length)
+      const minAcceptableLength = Math.floor(maxLength * 0.8);
+      const maxAcceptableLength = Math.floor(maxLength * 1.2);
+      
+      // First try to find a sentence ending within the acceptable range
+      const searchText = text.substring(0, maxAcceptableLength);
+      const sentenceEndings = ['. ', '! ', '? ']; // Include space to avoid abbreviations
+      
+      let bestCutoff = -1;
+      let bestDistance = Infinity;
+      
+      for (const ending of sentenceEndings) {
+        let lastIndex = searchText.lastIndexOf(ending);
+        while (lastIndex > 0) {
+          const cutoffPoint = lastIndex + ending.length - 1; // Position after the punctuation
+          
+          // Check if this cutoff is within our acceptable range
+          if (cutoffPoint >= minAcceptableLength) {
+            const distance = Math.abs(cutoffPoint - maxLength);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestCutoff = cutoffPoint;
+            }
+            break; // Found a good one in this search
+          }
+          
+          // Look for earlier sentence endings if this one is too long
+          const earlierSearch = searchText.substring(0, lastIndex);
+          lastIndex = earlierSearch.lastIndexOf(ending);
+        }
+      }
+      
+      if (bestCutoff > 0) {
+        text = text.substring(0, bestCutoff);
+      } else {
+        // Fallback: truncate at max length and try to find any sentence ending
+        text = text.substring(0, maxLength);
+        const fallbackCutoff = text.lastIndexOf('. ');
+        if (fallbackCutoff > minAcceptableLength) {
+          text = text.substring(0, fallbackCutoff + 1);
+        }
       }
     }
 

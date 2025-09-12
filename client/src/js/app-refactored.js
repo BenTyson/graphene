@@ -3054,8 +3054,41 @@ window.grapheneApp = function() {
     },
 
     async refreshNewsFeed() {
-      await this.fetchNewsArticles();
-      this.showNotification('News feed refreshed successfully', 'success');
+      console.log('🔄 Refreshing news feed...');
+      this.newsLoading = true;
+      
+      try {
+        // First, trigger content acquisition from external sources
+        console.log('📡 Fetching new articles from external sources...');
+        const refreshResponse = await fetch('/api/news/refresh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const refreshData = await refreshResponse.json();
+        
+        if (refreshData.success) {
+          console.log(`✅ Content refresh completed: ${refreshData.data.newArticles} new articles found`);
+          
+          // Then fetch the updated articles from database
+          await this.fetchNewsArticles();
+          
+          console.log(`📄 News feed updated successfully`);
+        } else {
+          console.error('❌ Content refresh failed:', refreshData.error);
+          // Still try to refresh from database in case of external source errors
+          await this.fetchNewsArticles();
+        }
+        
+      } catch (error) {
+        console.error('❌ Error during news refresh:', error);
+        // Fallback to just refreshing from database
+        await this.fetchNewsArticles();
+      } finally {
+        this.newsLoading = false;
+      }
     },
 
     getDateRange() {

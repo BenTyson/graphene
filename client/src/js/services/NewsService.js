@@ -29,10 +29,10 @@ class NewsService {
     this.summaryLoading = {};
     this.summaryError = {};
     
-    // High-impact keywords
+    // High-impact keywords (excluding "graphene" since every article should have it)
     this.highImpactKeywords = [];
     this.allHighImpactKeywords = [
-      'graphene', 'battery', 'energy storage', 'conductivity', 'supercapacitor',
+      'battery', 'energy storage', 'conductivity', 'supercapacitor',
       'breakthrough', 'commercial', 'production', 'scalable', 'patent'
     ];
     

@@ -55,9 +55,9 @@ export class GrapheneFilter {
     // Minimum requirements for graphene relevance
     this.requirements = {
       minGrapheneMentions: 1,        // Must mention graphene at least once
-      minRelevanceScore: 4.0,        // Higher threshold than before
-      minGrapheneContextScore: 2.0,  // Graphene must be contextually relevant
-      maxNonGrapheneRatio: 0.7       // Max 70% of content can be non-graphene related
+      minRelevanceScore: 8.0,        // VERY STRICT - only clearly graphene-focused articles
+      minGrapheneContextScore: 3.0,  // Graphene must be highly contextually relevant
+      maxNonGrapheneRatio: 0.5       // Max 50% of content can be non-graphene related
     };
 
     // Weight multipliers for different term categories

@@ -370,18 +370,32 @@ router.get('/stats/categories', asyncHandler(async (req, res) => {
 // Refresh news from all active sources
 router.post('/refresh', asyncHandler(async (req, res) => {
   try {
-    // This will trigger the content acquisition service
-    // For now, return success - will be implemented with scheduled jobs
+    console.log('🔄 Manual news refresh initiated');
+    
+    // Import and initialize the content acquisition service
+    const { ContentAcquisitionService } = await import('../../graphene-news/backend/services/ContentAcquisitionService.js');
+    const contentService = new ContentAcquisitionService(req.app.locals.prisma);
+    
+    // Fetch new content from all active sources
+    const results = await contentService.fetchAllContent();
+    
+    console.log(`✅ News refresh completed: ${results.newArticles} new articles, ${results.processed} sources processed, ${results.errors} errors`);
+    
     res.json({
       success: true,
-      message: 'News refresh initiated'
+      message: `News refresh completed successfully`,
+      data: {
+        newArticles: results.newArticles,
+        sourcesProcessed: results.processed,
+        errors: results.errors
+      }
     });
 
   } catch (error) {
-    console.error('Error initiating news refresh:', error);
+    console.error('❌ Error during news refresh:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to initiate news refresh',
+      error: 'Failed to refresh news content',
       message: error.message
     });
   }
