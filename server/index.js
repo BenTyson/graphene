@@ -93,8 +93,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve static files
-app.use(express.static(path.join(process.cwd(), 'client')));
+// Serve static files - use dist for production build, client for development
+const staticPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'dist')
+  : path.join(process.cwd(), 'client');
+console.log('Serving static files from:', staticPath);
+app.use(express.static(staticPath));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -128,7 +132,10 @@ app.use('/api/auth', authRoutes);
 
 // Catch-all route - serve index.html for client-side routing
 app.get('*', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'client', 'index.html'));
+  const indexPath = process.env.NODE_ENV === 'production'
+    ? path.join(process.cwd(), 'dist', 'index.html')
+    : path.join(process.cwd(), 'client', 'index.html');
+  res.sendFile(indexPath);
 });
 
 // Error handling
