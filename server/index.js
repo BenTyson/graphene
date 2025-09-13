@@ -30,12 +30,16 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
+// Configure Express for Railway proxy
+app.set('trust proxy', true);
+
 // Comprehensive Railway debugging
 console.log('=== RAILWAY DEBUG INFO ===');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT from env:', process.env.PORT);
 console.log('PORT type:', typeof process.env.PORT);
 console.log('Using PORT:', PORT);
+console.log('Trust proxy set:', app.get('trust proxy'));
 console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
 console.log('RAILWAY_SERVICE_NAME:', process.env.RAILWAY_SERVICE_NAME);
 console.log('RAILWAY_PROJECT_NAME:', process.env.RAILWAY_PROJECT_NAME);
