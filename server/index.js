@@ -135,6 +135,10 @@ app.use('/api/news', newsRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
 app.use('/api/auth', authRoutes);
 
+// Handle /src/* requests in production (these don't exist, should 404)
+app.get('/src/*', (req, res) => {
+  res.status(404).end();
+});
 
 // Catch-all route - serve index.html for client-side routing
 // This MUST come after all other routes and static file serving
