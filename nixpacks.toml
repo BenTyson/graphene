@@ -9,4 +9,4 @@
     ]
 
 [phases.start]
-    cmd = "npx prisma db push && node scripts/run-migration.js && npm start"
+    cmd = "npx prisma db push && node scripts/run-migration.js && node scripts/seed-users.js && npm start"
