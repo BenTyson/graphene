@@ -100,6 +100,12 @@ const staticPath = process.env.NODE_ENV === 'production'
 console.log('Serving static files from:', staticPath);
 app.use(express.static(staticPath));
 
+// In production, also explicitly serve assets directory
+if (process.env.NODE_ENV === 'production') {
+  app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'assets')));
+  console.log('Serving production assets from:', path.join(process.cwd(), 'dist', 'assets'));
+}
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -131,6 +137,7 @@ app.use('/api/auth', authRoutes);
 
 
 // Catch-all route - serve index.html for client-side routing
+// This MUST come after all other routes and static file serving
 app.get('*', (req, res) => {
   const indexPath = process.env.NODE_ENV === 'production'
     ? path.join(process.cwd(), 'dist', 'index.html')
