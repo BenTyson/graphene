@@ -31,7 +31,7 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 // Configure Express for Railway proxy
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // Comprehensive Railway debugging
 console.log('=== RAILWAY DEBUG INFO ===');

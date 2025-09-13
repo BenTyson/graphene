@@ -25,16 +25,32 @@ const TEAM_CREDENTIALS = [
 ];
 
 async function seedUsers() {
-  console.log('🌱 Seeding users...');
+  console.log(`🌱 [${new Date().toISOString()}] SEEDING SCRIPT STARTING`);
+  console.log('📍 Current working directory:', process.cwd());
+  console.log('📍 Script path:', import.meta.url);
+  console.log('📍 Node version:', process.version);
+  console.log(`📊 [${new Date().toISOString()}] Team credentials to process: ${TEAM_CREDENTIALS.length}`);
 
   try {
-    for (const userData of TEAM_CREDENTIALS) {
-      console.log(`Creating user: ${userData.username}`);
+    console.log(`🔗 [${new Date().toISOString()}] Initializing Prisma client...`);
+    console.log('✅ Prisma client initialized successfully');
 
-      // Hash the password
+    console.log(`🔗 [${new Date().toISOString()}] Testing database connection...`);
+    await prisma.$queryRaw`SELECT 1 as test`;
+    console.log('✅ Database connection successful');
+
+    console.log(`👥 [${new Date().toISOString()}] Starting user creation process...`);
+    
+    for (let i = 0; i < TEAM_CREDENTIALS.length; i++) {
+      const userData = TEAM_CREDENTIALS[i];
+      console.log(`👤 [${new Date().toISOString()}] Processing user ${i + 1}/${TEAM_CREDENTIALS.length}: ${userData.username}`);
+      console.log(`📧 Email: ${userData.email}, Role: ${userData.role}`);
+
+      console.log(`🔐 [${new Date().toISOString()}] Hashing password for ${userData.username}...`);
       const passwordHash = await bcrypt.hash(userData.password, 12);
+      console.log(`✅ Password hashed successfully for ${userData.username}`);
 
-      // Check if user already exists
+      console.log(`🔍 [${new Date().toISOString()}] Checking if user ${userData.username} already exists...`);
       const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
@@ -45,12 +61,13 @@ async function seedUsers() {
       });
 
       if (existingUser) {
-        console.log(`⚠️  User ${userData.username} already exists, skipping...`);
+        console.log(`⚠️ [${new Date().toISOString()}] User ${userData.username} already exists (ID: ${existingUser.id}), skipping...`);
         continue;
       }
+      console.log(`✅ User ${userData.username} does not exist, proceeding with creation`);
 
-      // Create the user
-      await prisma.user.create({
+      console.log(`➕ [${new Date().toISOString()}] Creating user ${userData.username} in database...`);
+      const newUser = await prisma.user.create({
         data: {
           username: userData.username.toLowerCase(),
           email: userData.email.toLowerCase(),
@@ -62,16 +79,26 @@ async function seedUsers() {
         }
       });
 
-      console.log(`✅ Created user: ${userData.username} (${userData.role})`);
+      console.log(`✅ [${new Date().toISOString()}] Successfully created user: ${userData.username} (ID: ${newUser.id}, Role: ${userData.role})`);
     }
 
-    console.log('🎉 User seeding completed successfully!');
+    console.log(`🎉 [${new Date().toISOString()}] USER SEEDING COMPLETED SUCCESSFULLY!`);
+    console.log(`📊 Final user count check...`);
+    const totalUsers = await prisma.user.count();
+    console.log(`📊 Total users in database: ${totalUsers}`);
 
   } catch (error) {
-    console.error('❌ Error seeding users:', error);
-    process.exit(1);
+    console.error(`❌ [${new Date().toISOString()}] USER SEEDING FAILED!`);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Full error object:', JSON.stringify(error, null, 2));
+    console.error('Stack trace:', error.stack);
+    throw error;
   } finally {
+    console.log(`🔌 [${new Date().toISOString()}] Disconnecting from database...`);
     await prisma.$disconnect();
+    console.log('✅ Database disconnected');
   }
 }
 

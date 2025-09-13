@@ -9,4 +9,4 @@
     ]
 
 [phases.start]
-    cmd = "npx prisma db push && node scripts/run-migration.js && node scripts/seed-users.js && npm start"
+    cmd = "echo '🚀 STARTING RAILWAY DEPLOYMENT SETUP' && echo '📅 Timestamp:' $(date) && echo '1️⃣ STARTING: prisma db push' && npx prisma db push && echo '✅ SUCCESS: prisma db push completed' && echo '2️⃣ STARTING: Database migration script' && node scripts/run-migration.js && echo '✅ SUCCESS: Migration script completed' && echo '3️⃣ STARTING: User seeding script' && node scripts/seed-users.js && echo '✅ SUCCESS: User seeding completed' && echo '4️⃣ STARTING: Server startup' && npm start"
