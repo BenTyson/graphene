@@ -41,14 +41,14 @@ export const filterConfigs = {
         type: 'select',
         label: 'Base Type',
         multiple: true,
-        optionsQuery: 'SELECT DISTINCT "baseType" FROM graphene WHERE "baseType" IS NOT NULL ORDER BY "baseType"'
+        optionsQuery: 'SELECT DISTINCT base_type FROM graphene WHERE base_type IS NOT NULL ORDER BY base_type'
       },
       {
         field: 'grindingMethod',
         type: 'select',
         label: 'Grinding Method',
         multiple: true,
-        optionsQuery: 'SELECT DISTINCT "grindingMethod" FROM graphene WHERE "grindingMethod" IS NOT NULL ORDER BY "grindingMethod"'
+        optionsQuery: 'SELECT DISTINCT grinding_method FROM graphene WHERE grinding_method IS NOT NULL ORDER BY grinding_method'
       },
       {
         field: 'oven',
@@ -62,7 +62,7 @@ export const filterConfigs = {
         type: 'select',
         label: 'Research Team',
         multiple: true,
-        optionsQuery: 'SELECT DISTINCT "researchTeam" FROM graphene WHERE "researchTeam" IS NOT NULL ORDER BY "researchTeam"'
+        optionsQuery: 'SELECT DISTINCT research_team FROM graphene WHERE research_team IS NOT NULL ORDER BY research_team'
       },
       {
         field: 'output',
@@ -212,7 +212,7 @@ export const filterConfigs = {
         type: 'select',
         label: 'Research Team',
         multiple: true,
-        optionsQuery: 'SELECT DISTINCT "researchTeam" FROM biochar WHERE "researchTeam" IS NOT NULL ORDER BY "researchTeam"'
+        optionsQuery: 'SELECT DISTINCT research_team FROM biochar WHERE research_team IS NOT NULL ORDER BY research_team'
       },
       {
         field: 'isInLot',
