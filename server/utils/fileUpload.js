@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { shouldUseCloudinary, uploadToCloudinary, deleteFromCloudinary } from './cloudinaryConfig.js';
 
 /**
  * Enhanced file type detection by reading file magic bytes
@@ -215,4 +216,102 @@ export function replaceFile(oldPath, file) {
   
   // Return new file path relative to uploads directory
   return file ? path.relative(path.join(process.cwd(), 'uploads'), file.path) : null;
+}
+
+/**
+ * Upload file to appropriate storage (local or Cloudinary)
+ * @param {object} file - Multer file object
+ * @param {string} destination - Destination folder (e.g., 'sem-reports')
+ * @returns {Promise<object>} Upload result with path/url
+ */
+export async function uploadFile(file, destination) {
+  if (!file) {
+    return { success: false, error: 'No file provided' };
+  }
+
+  if (shouldUseCloudinary()) {
+    // Upload to Cloudinary
+    const relativePath = path.join(destination, path.basename(file.filename || file.originalname));
+    const result = await uploadToCloudinary(file.path, relativePath);
+    
+    // Clean up temporary file
+    deleteFile(file.path);
+    
+    return {
+      success: result.success,
+      path: result.success ? result.url : null,
+      error: result.error,
+      isCloudinary: true
+    };
+  } else {
+    // Use local storage
+    const relativePath = path.relative(path.join(process.cwd(), 'uploads'), file.path);
+    return {
+      success: true,
+      path: relativePath,
+      isCloudinary: false
+    };
+  }
+}
+
+/**
+ * Delete file from appropriate storage (local or Cloudinary)
+ * @param {string} filePath - File path/URL to delete
+ * @returns {Promise<object>} Deletion result
+ */
+export async function deleteFileFromStorage(filePath) {
+  if (!filePath) {
+    return { success: true }; // Nothing to delete
+  }
+
+  if (filePath.startsWith('https://res.cloudinary.com/')) {
+    // Delete from Cloudinary
+    try {
+      // Extract public_id from URL
+      const urlParts = filePath.split('/');
+      const uploadIndex = urlParts.findIndex(part => part === 'upload');
+      if (uploadIndex === -1) {
+        throw new Error('Invalid Cloudinary URL format');
+      }
+      
+      // Get everything after version (v123456789/)
+      const pathAfterVersion = urlParts.slice(uploadIndex + 2).join('/');
+      const publicId = pathAfterVersion.replace(/\.(pdf|xlsx?|xlsm|docx)(\.(pdf))?$/, '');
+      
+      // Determine resource type
+      const isRaw = /\.(xlsx?|xlsm|docx)$/.test(filePath);
+      const resourceType = isRaw ? 'raw' : 'image';
+      
+      return await deleteFromCloudinary(publicId, resourceType);
+    } catch (error) {
+      console.error('Error deleting from Cloudinary:', error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    // Delete local file
+    const fullPath = path.join(process.cwd(), 'uploads', filePath);
+    deleteFile(fullPath);
+    return { success: true };
+  }
+}
+
+/**
+ * Handle file replacement with appropriate storage
+ * @param {string} oldPath - Old file path/URL to delete
+ * @param {object} file - New file object from multer
+ * @param {string} destination - Destination folder
+ * @returns {Promise<object>} Upload result
+ */
+export async function replaceFileInStorage(oldPath, file, destination) {
+  // Delete old file if it exists
+  if (oldPath) {
+    await deleteFileFromStorage(oldPath);
+  }
+  
+  // Upload new file
+  if (file) {
+    return await uploadFile(file, destination);
+  }
+  
+  return { success: true, path: null };
 }

@@ -42,7 +42,7 @@ export function createFileUploadField(config) {
           <div class="flex items-center justify-between bg-link-light p-2 rounded">
             <span class="text-sm text-link-dark">Current ${label.toLowerCase()} attached</span>
             <div class="flex space-x-2">
-              <button type="button" @click="window.open('/uploads/' + ${editingVariable}.${currentFilePathField}, '_blank')" 
+              <button type="button" @click="window.open(${editingVariable}.${currentFilePathField}.startsWith('https://') ? ${editingVariable}.${currentFilePathField} : '/uploads/' + ${editingVariable}.${currentFilePathField}, '_blank')" 
                       class="text-link text-link-hover text-sm">View</button>
               <button type="button" @click="${removeFileVariable} = true" 
                       class="text-red-600 hover:text-red-800 text-sm">Remove</button>

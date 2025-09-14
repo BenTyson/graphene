@@ -98,7 +98,7 @@ function createSemReportsSection(dataPath, record = 'record') {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between items-center">
                   <div>
-                    <button @click="viewSemPdf('/uploads/' + semReport.semReport.filePath)" 
+                    <button @click="viewSemPdf(semReport.semReport.filePath)" 
                             class="font-medium text-link text-link-hover text-left">
                       <span x-text="semReport.semReport.originalName"></span>
                     </button>

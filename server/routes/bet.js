@@ -1,7 +1,7 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
 import path from 'path';
-import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
+import { createFileUploadMiddleware, uploadFile, replaceFileInStorage, deleteFileFromStorage } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
 import { prepareDataForDB } from '../utils/dataConversion.js';
 import AIInsightsService from '../services/AIInsightsService.js';
@@ -92,7 +92,12 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   
   // Handle file upload
   if (req.file) {
-    data.betReportPath = path.join('bet-reports', req.file.filename);
+    const uploadResult = await uploadFile(req.file, 'bet-reports');
+    if (uploadResult.success) {
+      data.betReportPath = uploadResult.path;
+    } else {
+      console.error('Failed to upload BET report:', uploadResult.error);
+    }
   }
   
   // Remove system fields
@@ -142,14 +147,19 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   
   // Handle file operations
   if (req.body.removeBetReport === 'true') {
-    // Remove existing file
-    if (existingRecord.betReportPath) {
-      deleteFile(path.join(process.cwd(), 'uploads', existingRecord.betReportPath));
-    }
     data.betReportPath = null;
+    // Delete existing file
+    if (existingRecord.betReportPath) {
+      await deleteFileFromStorage(existingRecord.betReportPath);
+    }
   } else if (req.file) {
     // Replace existing file
-    data.betReportPath = replaceFile(existingRecord.betReportPath, req.file);
+    const replaceResult = await replaceFileInStorage(existingRecord.betReportPath, req.file, 'bet-reports');
+    if (replaceResult.success) {
+      data.betReportPath = replaceResult.path;
+    } else {
+      console.error('Failed to replace BET report:', replaceResult.error);
+    }
   }
   
   // Remove system fields

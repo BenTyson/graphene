@@ -119,16 +119,135 @@ A full-stack web application for tracking the complete production journey of mat
 ├── prisma/
 │   └── schema.prisma       # Database schema
 ├── uploads/
-│   ├── sem-reports/        # SEM PDF storage
-│   ├── bet-reports/        # BET test PDF storage
-│   ├── raman-reports/      # RAMAN test PDF storage
-│   ├── tem-reports/        # TEM test PDF storage
-│   ├── conductivity-reports/ # Conductivity test PDF storage
-│   ├── micronization-reports/ # Micronization PDF storage
-│   └── update-reports/     # Weekly update report PDFs
+│   └── .gitkeep           # Preserved structure for local dev
 ├── backups/                # Database backups (gitignored)
-└── vite.config.js          # Vite dev server with proxy for /api and /uploads
+├── scripts/                # Deployment and migration scripts
+│   ├── railway-startup.sh  # Production startup script
+│   ├── run-migration.js    # Database schema migration
+│   ├── migrate-files-cloudinary.js # File upload to Cloudinary
+│   └── update-db-paths.js  # Database path updates to CDN URLs
+├── server/
+│   └── utils/
+│       ├── cloudinaryConfig.js # Cloudinary configuration and upload helpers
+│       └── fileUpload.js       # Multer configuration with Cloudinary integration
+├── railway.json            # Railway deployment configuration
+├── nixpacks.toml           # Build configuration for Railway
+├── .env.cloudinary         # Cloudinary API credentials
+└── vite.config.js          # Vite dev server with proxy for /api
 ```
+
+## Deployment Architecture
+
+### Railway Production Environment
+
+#### Infrastructure
+- **Platform**: Railway.app cloud platform
+- **Domain**: admin.hgraphene.com with automatic HTTPS
+- **Database**: Railway PostgreSQL with connection pooling
+- **Build System**: Nixpacks with Node.js 20 runtime
+- **Process Management**: Automatic process restart and monitoring
+- **Environment Variables**: Secure credential management
+
+#### File Storage Strategy
+- **Cloudinary CDN**: Used for both development and production environments
+  - **Base URL**: `https://res.cloudinary.com/dlbztbaaa`
+  - **Development Folder**: `graphene-uploads-dev` (environment-specific)
+  - **Production Folder**: `graphene-uploads` (main production folder)
+  - **File Types**: PDF reports, Excel files, images
+  - **Upload Limits**: 10MB per file, batch uploads supported
+  - **Path Structure**: `/image/upload/v[timestamp]/[folder]/[file-path]`
+- **Local Development Fallback**: `/uploads/` directories for legacy support
+- **Migration**: 296 files (872MB) successfully migrated to Cloudinary
+- **Security**: PDF delivery must be enabled in Cloudinary account settings
+
+#### Database Migration
+- **Source**: Local PostgreSQL development database
+- **Target**: Railway PostgreSQL production database
+- **Migration Tool**: pg_dump and pg_restore with data validation
+- **Results**: 
+  - 241 graphene experiments migrated
+  - 77 biochar records migrated
+  - 198 SEM reports path updated
+  - 55 update reports path updated
+  - All test results and associations preserved
+
+#### Deployment Process
+1. **Code Deployment**: Git push to main branch triggers Railway deployment
+2. **Build Process**: Nixpacks installs dependencies and runs Vite build
+3. **Database Setup**: Prisma schema push and migration scripts
+4. **User Seeding**: Automatic admin user creation with secure defaults
+5. **Health Checks**: Railway monitors application health and restarts if needed
+
+#### Configuration Files
+- **`railway.json`**: Deployment configuration with startup script delegation
+- **`nixpacks.toml`**: Build configuration specifying Node.js 20 and build commands
+- **`scripts/railway-startup.sh`**: Production startup script with comprehensive logging
+- **`.env.cloudinary`**: Cloudinary API credentials for file operations
+
+#### Environment Management
+- **Development**: Local environment with database and file storage
+- **Production**: Railway environment with PostgreSQL and Cloudinary integration
+- **Configuration**: Environment-specific database URLs and API credentials
+- **Security**: JWT tokens, bcrypt password hashing, secure API key management
+
+### Cloudinary Integration Details
+
+#### Technical Implementation
+- **SDK**: `cloudinary` npm package (v2) for Node.js backend integration
+- **Configuration**: Environment variables in `.env.cloudinary`
+  - `CLOUDINARY_CLOUD_NAME`: [your-cloud-name]
+  - `CLOUDINARY_API_KEY`: [your-api-key]
+  - `CLOUDINARY_API_SECRET`: [your-api-secret]
+  - `USE_CLOUDINARY`: true (enables Cloudinary in development)
+- **Upload Strategy**: 
+  - `resource_type: 'auto'` for automatic file type detection
+  - Environment-specific folders:
+    - Development: `folder: 'graphene-uploads-dev'`
+    - Production: `folder: 'graphene-uploads'`
+  - Public ID based on original file path structure
+  - Public delivery (no signed URLs required)
+
+#### File Path Conversion
+- **Local Format**: `sem-reports/MRa123_SEM.pdf`
+- **Cloudinary Format**: 
+  - **Images/PDFs**: `/image/upload/v1757814746/graphene-uploads/sem-reports/MRa123_SEM.pdf`
+  - **Raw Files**: `/raw/upload/v1757814746/graphene-uploads/micronization-reports/report.xlsx`
+- **Conversion Logic**: 
+  - Remove file extension from public_id
+  - Encode spaces (%20) and special characters (%26)
+  - Determine resource type: 'raw' for .xlsm/.xlsx/.docx, 'image' for others
+  - Append '.pdf' for non-raw files in final URL
+
+#### Database Integration
+- **Path Storage**: Database stores full Cloudinary URLs, not local paths
+- **Migration Results**: 
+  - 198 SEM reports updated
+  - 55 update reports updated
+  - 296 total files (872MB) migrated successfully
+- **File Upload Process**: 
+  1. Client uploads file via form
+  2. Multer processes upload temporarily
+  3. Backend uploads to Cloudinary
+  4. Cloudinary URL stored in database
+  5. Temporary file cleaned up
+
+#### Development vs Production File Handling
+- **Both Environments**: Primary storage on Cloudinary CDN
+  - Development uses `graphene-uploads-dev` folder
+  - Production uses `graphene-uploads` folder
+- **URL Detection**: Application automatically detects URL format
+  - Cloudinary URLs: `https://res.cloudinary.com/...` (no modifications)
+  - Local paths: `/uploads/...` (adds prefix and viewer parameters)
+- **Frontend Integration**:
+  - `viewSemPdf()`: Detects Cloudinary URLs and handles appropriately
+  - `CRUDService.viewSemPdf()`: Smart URL detection without viewer params for CDN
+  - PDF viewer modals: Iframe with proper CSP configuration
+  - Authentication service: Skips initialization in iframe contexts
+
+#### Cloudinary Account Requirements
+- **PDF Delivery**: Must be enabled in Security settings (Settings → Security → "Allow delivery of PDF and ZIP files")
+- **Free Plan Limitation**: PDF delivery restricted by default, requires manual enablement
+- **Error Handling**: 401 errors indicate PDF delivery needs to be enabled
 
 ## Service-Oriented Architecture (September 2025 Optimization)
 
@@ -432,8 +551,9 @@ enum UserRole {
 - **Purpose**: Stores weekly PDF reports with metadata
 - **Key Fields**: filename, description, weekDate, filePath
 - **Features**:
-  - **File Storage**: PDFs in `/uploads/update-reports/` with unique timestamped names
+  - **File Storage**: PDFs on Cloudinary CDN with unique timestamped names
   - **Multi-Experiment Associations**: Single report can reference multiple experiments
+  - **URL Format**: Cloudinary URLs for production, local paths for development
 - **Relationships**: Many-to-many with Graphene experiments
 
 #### SemReport Model
@@ -441,8 +561,9 @@ enum UserRole {
 - **Key Fields**: filename, originalName, filePath, reportDate
 - **Features**:
   - **Bulk Upload**: Up to 10 PDF files simultaneously (10MB each max)
-  - **Full Circle Integration**: Direct uploads and centralized management
+  - **Full Circle Integration**: Direct uploads to Cloudinary CDN and centralized management
   - **Association Management**: Add/remove experiment associations post-upload
+  - **URL Format**: Cloudinary URLs for production, local paths for development
 - **Relationships**: Many-to-many with Graphene experiments
 
 ### Shipment Models

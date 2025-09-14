@@ -525,7 +525,7 @@ function getGrapheneModalHtml() {
                             <div x-show="semReport.semReport.description" class="text-xs text-gray-500 mt-1" x-text="semReport.semReport.description"></div>
                           </div>
                           <div class="flex space-x-2">
-                            <button type="button" @click="viewSemPdf('/uploads/' + semReport.semReport.filePath)" 
+                            <button type="button" @click="viewSemPdf(semReport.semReport.filePath)" 
                                     class="text-link text-link-hover text-sm">
                               View
                             </button>

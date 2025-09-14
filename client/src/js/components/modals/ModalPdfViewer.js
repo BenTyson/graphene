@@ -100,7 +100,9 @@ function createModalPdfViewer(options = {}) {
                 <iframe :src="currentPdfUrl" 
                         class="w-full h-full border-0 rounded"
                         :title="currentPdfTitle"
-                        frameborder="0">
+                        frameborder="0"
+                        sandbox="allow-same-origin"
+                        loading="lazy">
                   <div class="flex items-center justify-center h-full">
                     <div class="text-center p-8">
                       <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

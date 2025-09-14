@@ -1,46 +1,19 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { buildQueryOptions, buildResponseMeta, formatResponse } from '../utils/queryHelpers.js';
 import { buildFilterWhere, buildFilterAwareOrderBy, getFilterOptions } from '../utils/filterQueryBuilder.js';
 import { getFilterConfig } from '../utils/filterConfig.js';
+import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
 import AIInsightsService from '../services/AIInsightsService.js';
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'sem-reports');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Create unique filename with timestamp
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, `${name}_${timestamp}${ext}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    // Only allow PDF files
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'), false);
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+// Configure file upload middleware for SEM reports
+const upload = createFileUploadMiddleware('sem-reports', {
+  allowedTypes: ['application/pdf'],
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedExtensions: ['.pdf'],
+  validateContent: true
 });
 
 // Get all graphene records with advanced filtering
@@ -416,24 +389,37 @@ router.post('/', upload.single('semReport'), asyncHandler(async (req, res) => {
   
   // Create SEM report entry if file was uploaded directly
   if (req.file) {
-    const semReportData = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      filePath: `sem-reports/${req.file.filename}`,
-      reportDate: data.experimentDate || new Date()
-    };
+    const uploadResult = await uploadFile(req.file, 'sem-reports');
     
-    const semReport = await prisma.semReport.create({
-      data: semReportData
-    });
-    
-    // Create association between graphene and SEM report
-    await prisma.grapheneSemReport.create({
-      data: {
-        grapheneId: graphene.id,
-        semReportId: semReport.id
-      }
-    });
+    if (uploadResult.success) {
+      const semReportData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        filePath: uploadResult.path, // Will be Cloudinary URL or local path
+        reportDate: data.experimentDate || new Date()
+      };
+      
+      console.log('📁 SEM Report Upload Success:', {
+        filename: semReportData.filename,
+        originalName: semReportData.originalName,
+        filePath: semReportData.filePath,
+        isCloudinary: uploadResult.isCloudinary
+      });
+      
+      const semReport = await prisma.semReport.create({
+        data: semReportData
+      });
+      
+      // Create association between graphene and SEM report
+      await prisma.grapheneSemReport.create({
+        data: {
+          grapheneId: graphene.id,
+          semReportId: semReport.id
+        }
+      });
+    } else {
+      console.error('Failed to upload SEM report:', uploadResult.error);
+    }
   }
   
   // Create update report associations if provided
@@ -473,27 +459,8 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   // If new file was uploaded, add the path to the data and delete old file
   const data = { ...req.body };
   
-  // Handle SEM report removal
-  if (data.removeSemReport === 'true' || data.removeSemReport === true) {
-    data.semReportPath = null;
-    
-    // Delete the file if it exists
-    if (existingRecord.semReportPath) {
-      const oldFilePath = path.join(process.cwd(), existingRecord.semReportPath);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
-    }
-  } else if (req.file) {
-    // New file uploaded - clear old semReportPath and delete old file
-    data.semReportPath = null;
-    if (existingRecord.semReportPath) {
-      const oldFilePath = path.join(process.cwd(), existingRecord.semReportPath);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
-    }
-  }
+  // Note: SEM report removal is now handled through the SEM Reports system
+  // The removeSemReport flag is processed but no file operations needed here
   
   // Remove UI-only fields that don't exist in database schema
   delete data.biocharSource;
@@ -579,24 +546,30 @@ router.put('/:id', upload.single('semReport'), asyncHandler(async (req, res) => 
   
   // Handle SEM report creation for direct uploads
   if (req.file && !data.removeSemReport) {
-    const semReportData = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      filePath: `sem-reports/${req.file.filename}`,
-      reportDate: data.experimentDate || new Date()
-    };
+    const uploadResult = await uploadFile(req.file, 'sem-reports');
     
-    const semReport = await prisma.semReport.create({
-      data: semReportData
-    });
-    
-    // Create association between graphene and SEM report
-    await prisma.grapheneSemReport.create({
-      data: {
-        grapheneId: id,
-        semReportId: semReport.id
-      }
-    });
+    if (uploadResult.success) {
+      const semReportData = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        filePath: uploadResult.path, // Will be Cloudinary URL or local path
+        reportDate: data.experimentDate || new Date()
+      };
+      
+      const semReport = await prisma.semReport.create({
+        data: semReportData
+      });
+      
+      // Create association between graphene and SEM report
+      await prisma.grapheneSemReport.create({
+        data: {
+          grapheneId: id,
+          semReportId: semReport.id
+        }
+      });
+    } else {
+      console.error('Failed to upload SEM report:', uploadResult.error);
+    }
   }
   
   // Update report associations if provided
@@ -636,12 +609,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     where: { id }
   });
   
-  if (existingRecord && existingRecord.semReportPath) {
-    const filePath = path.join(process.cwd(), existingRecord.semReportPath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  }
+  // Note: File deletion is now handled through SEM Reports system
+  // Associated files are cleaned up through the semReports associations
   
   await prisma.graphene.delete({
     where: { id }

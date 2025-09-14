@@ -1,6 +1,12 @@
 // Authentication Service - Handles token storage, API calls, and auth state
 class AuthService {
   constructor() {
+    // Don't initialize auth service in iframe context (like PDF viewers)
+    if (window.self !== window.top) {
+      console.log('AuthService: Skipping initialization in iframe context');
+      return;
+    }
+    
     this.baseURL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
     this.token = this.getStoredToken();
     this.user = null;

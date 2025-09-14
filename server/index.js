@@ -73,7 +73,16 @@ app.use(helmet({
       ],
       connectSrc: [
         "'self'",
-        "https:"
+        "https:",
+        // Allow localhost HTTP connections in development
+        ...(process.env.NODE_ENV !== 'production' ? ["http://localhost:3000", "http://127.0.0.1:3000"] : [])
+      ],
+      frameSrc: [
+        "'self'",
+        "https:",
+        // Allow PDF iframes from Cloudinary and local development
+        "https://res.cloudinary.com",
+        ...(process.env.NODE_ENV !== 'production' ? ["http://localhost:3000", "http://127.0.0.1:3000"] : [])
       ]
     }
   }
@@ -110,8 +119,12 @@ if (process.env.NODE_ENV === 'production') {
   console.log('Serving production assets from:', path.join(process.cwd(), 'dist', 'assets'));
 }
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve uploaded files with 404 fallback (prevent HTML serving for missing files)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')), (req, res) => {
+  // If file not found, return 404 instead of falling through to catch-all HTML route
+  console.log('📁 File not found in uploads:', req.originalUrl);
+  res.status(404).send('File not found');
+});
 
 // Serve cached news images with CORS headers
 app.use('/news-images', (req, res, next) => {

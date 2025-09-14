@@ -1456,9 +1456,19 @@ window.grapheneApp = function() {
     
     viewSemReport(semReportPath) {
       if (semReportPath) {
-        // Path will be proxied through Vite to backend
-        // Add PDF viewer parameters to hide navigation pane and toolbar elements
-        this.currentSemPdf = semReportPath + '#navpanes=0&toolbar=0';
+        console.log('📋 SEM Report - Processing path [v2]:', semReportPath);
+        
+        // Handle both Cloudinary URLs and local paths
+        if (semReportPath.startsWith('https://') || semReportPath.startsWith('http://')) {
+          // Cloudinary URL - use as-is without viewer parameters
+          this.currentSemPdf = semReportPath;
+          console.log('✅ SEM Report - Using Cloudinary URL as-is:', this.currentSemPdf);
+        } else {
+          // Local path - add /uploads prefix and viewer parameters
+          this.currentSemPdf = '/uploads/' + semReportPath + '#navpanes=0&toolbar=0';
+          console.log('📁 SEM Report - Using local path:', this.currentSemPdf);
+        }
+        
         this.showSemModal = true;
       }
     },
@@ -1470,7 +1480,12 @@ window.grapheneApp = function() {
 
     viewRamanPdf(ramanReportPath) {
       if (ramanReportPath) {
-        this.currentRamanPdf = '/uploads/' + ramanReportPath + '#navpanes=0&toolbar=0';
+        // Handle both Cloudinary URLs and local paths
+        if (ramanReportPath.startsWith('https://')) {
+          this.currentRamanPdf = ramanReportPath; // Cloudinary URL - use as is
+        } else {
+          this.currentRamanPdf = '/uploads/' + ramanReportPath + '#navpanes=0&toolbar=0'; // Local path
+        }
         this.showRamanModal = true;
       }
     },
@@ -1482,7 +1497,12 @@ window.grapheneApp = function() {
 
     viewTemPdf(temReportPath) {
       if (temReportPath) {
-        this.currentTemPdf = '/uploads/' + temReportPath + '#navpanes=0&toolbar=0';
+        // Handle both Cloudinary URLs and local paths
+        if (temReportPath.startsWith('https://')) {
+          this.currentTemPdf = temReportPath; // Cloudinary URL - use as is
+        } else {
+          this.currentTemPdf = '/uploads/' + temReportPath + '#navpanes=0&toolbar=0'; // Local path
+        }
         this.showTemModal = true;
       }
     },
@@ -1494,7 +1514,12 @@ window.grapheneApp = function() {
 
     viewBetPdf(betReportPath) {
       if (betReportPath) {
-        this.currentBetPdf = '/uploads/' + betReportPath + '#navpanes=0&toolbar=0';
+        // Handle both Cloudinary URLs and local paths
+        if (betReportPath.startsWith('https://')) {
+          this.currentBetPdf = betReportPath; // Cloudinary URL - use as is
+        } else {
+          this.currentBetPdf = '/uploads/' + betReportPath + '#navpanes=0&toolbar=0'; // Local path
+        }
         this.showBetModal = true;
       }
     },
@@ -2084,6 +2109,7 @@ window.grapheneApp = function() {
     
     // PDF viewer methods for modal-within-modal functionality
     openPdfInModal(pdfUrl, pdfTitle) {
+      console.log('Opening PDF Modal - URL:', pdfUrl, 'Title:', pdfTitle);
       this.currentPdfUrl = pdfUrl;
       this.currentPdfTitle = pdfTitle || 'PDF Document';
       this.pdfViewerActive = true;
@@ -3355,3 +3381,43 @@ window.grapheneApp = function() {
 };
 
 console.log('grapheneApp defined on window:', typeof window.grapheneApp);
+
+// Expose PDF modal functions globally for card modal system
+window.addEventListener('alpine:init', () => {
+  // Wait for Alpine to initialize the app, then expose PDF functions
+  setTimeout(() => {
+    const appElement = document.querySelector('[x-data*="grapheneApp"]');
+    if (appElement && appElement._x_dataStack && appElement._x_dataStack[0]) {
+      const appData = appElement._x_dataStack[0];
+      window.openPdfInModal = function(url, title) {
+        console.log('🔗 PDF Modal - Processing URL:', url);
+        
+        // Handle both Cloudinary URLs and local paths  
+        let finalUrl = url;
+        
+        // If it's already a full URL (Cloudinary or other CDN), use as-is
+        if (url.startsWith('https://') || url.startsWith('http://')) {
+          finalUrl = url;
+          console.log('✅ Using full URL as-is:', finalUrl);
+        } 
+        // If it's a relative path, make it local uploads path
+        else {
+          // Clean up the path and make it absolute for local development
+          const cleanPath = url.replace(/^\/+/, ''); // Remove leading slashes
+          finalUrl = '/uploads/' + cleanPath;
+          
+          // Add viewer params only for local PDFs
+          if (!finalUrl.includes('#')) {
+            finalUrl += '#navpanes=0&toolbar=0';
+          }
+          console.log('📁 Using local uploads path:', finalUrl);
+        }
+        
+        console.log('🎯 Final PDF URL:', finalUrl);
+        appData.openPdfInModal(finalUrl, title);
+      };
+      window.closePdfViewer = appData.closePdfViewer.bind(appData);
+      console.log('PDF modal functions exposed globally');
+    }
+  }, 100);
+});

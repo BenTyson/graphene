@@ -695,7 +695,19 @@ class CRUDService {
 
   viewSemPdf(filePath, appContext) {
     if (filePath) {
-      appContext.currentSemPdf = filePath + '#navpanes=0&toolbar=0';
+      console.log('📋 viewSemPdf - Processing path:', filePath);
+      
+      // Check if it's a Cloudinary URL or other external URL
+      if (filePath.startsWith('https://') || filePath.startsWith('http://')) {
+        // Cloudinary/external URL - use as-is without viewer parameters
+        appContext.currentSemPdf = filePath;
+        console.log('✅ Using Cloudinary/external URL as-is:', appContext.currentSemPdf);
+      } else {
+        // Local path - add /uploads prefix and viewer parameters
+        appContext.currentSemPdf = '/uploads/' + filePath + '#navpanes=0&toolbar=0';
+        console.log('📁 Using local path with viewer params:', appContext.currentSemPdf);
+      }
+      
       appContext.showSemModal = true;
     }
   }

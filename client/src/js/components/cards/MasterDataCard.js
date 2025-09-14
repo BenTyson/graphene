@@ -789,7 +789,7 @@ function createTestsSection(config) {
             <div class="space-y-2">
               ${data.semReports.map(report => `
                 <div class="flex justify-between items-center text-sm">
-                  <button @click="openPdfInModal('/uploads/sem-reports/${report.filename}', 'SEM Report')" 
+                  <button @click="console.log('SEM Report Click - Full Report Data:', ${JSON.stringify(report).replace(/'/g, "\\'")}); window.openPdfInModal('${report.filePath}', 'SEM Report')" 
                           class="font-mono text-link hover:text-link-hover cursor-pointer text-left">
                     ${report.originalName || report.filename}
                   </button>
@@ -827,7 +827,7 @@ function createReportsSection(config) {
           <div class="space-y-2">
             ${data.updateReports?.map(report => `
               <div class="flex justify-between items-center text-sm">
-                <button @click="openPdfInModal('/uploads/update-reports/${report.filename}', 'Curia Update Report')" 
+                <button @click="window.openPdfInModal('${report.filePath}', 'Curia Update Report')" 
                         class="text-link hover:text-link-hover cursor-pointer">
                   ${report.originalName || report.filename}
                 </button>

@@ -1,9 +1,24 @@
 # Graphene Production Control System - Process Guide
 
+## Environment Overview
+
+### Production Environment (Railway)
+- **URL**: https://admin.hgraphene.com
+- **Database**: Railway PostgreSQL (241 migrated experiments)
+- **File Storage**: Cloudinary CDN (872MB migrated)
+- **Deployment**: Automatic via Git push to main branch
+- **Runtime**: Node.js 20 on Railway platform
+
+### Development Environment
+- **URL**: http://localhost:5174
+- **Database**: Local PostgreSQL
+- **File Storage**: Local `/uploads/` directories
+- **Runtime**: Local Node.js with Vite dev server
+
 ## Development Workflow
 
-### Critical Commands
-Always run these commands after making code changes:
+### Development Commands
+Local development commands:
 ```bash
 # Development server
 npm run dev
@@ -11,7 +26,23 @@ npm run dev
 # Database backup (HIGHLY RECOMMENDED before schema changes)
 npm run backup:create
 
+# Prisma commands for schema changes
+npx prisma generate  # After schema changes
+npx prisma db push   # Apply schema changes
+npx prisma studio    # Database GUI
+
 # Note: lint and typecheck commands not configured in this project
+```
+
+### Production Deployment
+Production deployment is automatic via Railway:
+```bash
+# Deploy to production
+git push origin main  # Triggers Railway deployment
+
+# Monitor deployment
+# Check Railway dashboard or application logs
+# Production URL: https://admin.hgraphene.com
 ```
 
 ### Claude Code Slash Commands
@@ -68,9 +99,17 @@ npm run backup:cleanup
 ### Development Setup
 1. **Start dev server**: `npm run dev`
 2. **Access application**: http://localhost:5174
-3. **Database migrations**: `npx prisma migrate dev` after schema changes
+3. **Database migrations**: `npx prisma db push` (preferred) or `npx prisma migrate dev`
 4. **Generate Prisma client**: `npx prisma generate` after schema changes
 5. **View database**: `npx prisma studio` for GUI database viewer
+
+### Production Environment Setup
+**Railway handles production setup automatically:**
+1. **Code push**: Git push to main triggers deployment
+2. **Build process**: Nixpacks builds with Node.js 20
+3. **Database setup**: Automatic schema push via `scripts/railway-startup.sh`
+4. **User seeding**: Admin user created automatically
+5. **Health monitoring**: Railway monitors and restarts if needed
 
 ## System Features & User Workflows
 
@@ -84,6 +123,22 @@ npm run backup:cleanup
 - All PDF reports open in modal viewers with navigation controls
 
 ### File Management
+
+#### Production (Cloudinary CDN)
+- **Storage**: All files stored on Cloudinary CDN
+- **URL Format**: `https://res.cloudinary.com/dlbztbaaa/[resource-type]/upload/v1757814746/graphene-uploads/[file-path]`
+- **File Types**: PDF reports, Excel files (.xlsx, .xls, .xlsm)
+- **Upload Limits**: 10MB per file, batch uploads supported
+- **Migration**: 296 files (872MB) successfully migrated from local storage
+- **Automatic cleanup**: Files managed via Cloudinary API
+
+#### Development (Local Storage)
+- **Storage**: Local `/uploads/` directories
+- **Vite Proxy**: `/uploads` proxied to backend for PDF serving
+- **File Types**: Same as production but stored locally
+- **Migration Tool**: `scripts/migrate-files-cloudinary.js` for moving to production
+
+#### File Operations (Both Environments)
 - **SEM PDFs**: Upload, view, replace, or remove PDF reports for graphene records
 - **BET Reports**: Upload, view, replace, or remove PDF reports for BET test records
 - **RAMAN Reports**: Upload, view, replace, or remove PDF reports for RAMAN test records
@@ -92,8 +147,46 @@ npm run backup:cleanup
 - **Update Reports**: Weekly PDF reports with multi-experiment associations
 - **Micronization Reports**: PDF reports with 10MB file size limits
 - **Modal Viewers**: All PDFs open in fullscreen modals with iframe display
-- **Vite Proxy**: `/uploads` proxied to backend for PDF serving
-- **Automatic cleanup**: Files deleted when records removed
+
+#### Cloudinary Integration Process
+
+##### File Upload Flow (Production)
+1. **Client Upload**: User selects file via form input
+2. **Multer Processing**: Backend receives file via multer middleware
+3. **Cloudinary Upload**: File uploaded to Cloudinary with proper configuration:
+   ```javascript
+   cloudinary.uploader.upload(file.path, {
+     public_id: originalPath.replace(/\.[^.]+$/, ''), // Remove extension
+     resource_type: 'auto',                          // Auto-detect type
+     folder: 'graphene-uploads'                      // Organization
+   })
+   ```
+4. **Database Update**: Cloudinary URL stored in database field
+5. **Cleanup**: Temporary local file removed
+
+##### File Migration Commands
+```bash
+# Migrate all local files to Cloudinary (one-time process)
+node scripts/migrate-files-cloudinary.js
+
+# Update database paths from local to Cloudinary URLs
+node scripts/update-db-paths.js
+```
+
+##### Cloudinary Configuration
+- **Environment File**: `.env.cloudinary` with API credentials
+- **Cloud Name**: dlbztbaaa
+- **Upload Folder**: graphene-uploads (for organization)
+- **Resource Types**: 
+  - 'image' for PDFs (default Cloudinary PDF handling)
+  - 'raw' for Excel files (.xlsx, .xls, .xlsm)
+- **URL Structure**: `https://res.cloudinary.com/dlbztbaaa/[type]/upload/v[version]/graphene-uploads/[path]`
+
+##### File Path Handling
+- **Local Development**: `/uploads/sem-reports/file.pdf`
+- **Production CDN**: `https://res.cloudinary.com/dlbztbaaa/image/upload/v1757814746/graphene-uploads/sem-reports/file.pdf`
+- **Automatic Detection**: Application detects URL format and handles appropriately
+- **Modal Integration**: PDF viewer works with both local and CDN URLs
 
 ### Weekly Update Reports
 - **Upload Once, Associate Many**: Single PDF can reference multiple experiments
@@ -295,6 +388,27 @@ The codebase achieved complete componentization across three major phases, elimi
   - **Frankfurt**: 135.17g (1,178.37g produced - 1,043.2g shipped)
   - **GEIC**: 17.15g (1.2g compound + 15.95g micronized received)
 
+## Database Management
+
+### Production Database (Railway PostgreSQL)
+- **Connection**: Managed via Railway environment variables
+- **Migration**: 241 graphene experiments and 77 biochar records migrated
+- **Schema Management**: Automatic via `scripts/railway-startup.sh`
+- **Backup**: Railway provides automated backups
+- **Access**: Via Railway dashboard or Prisma Studio with production connection
+
+### Development Database (Local PostgreSQL)
+- **Connection**: Local PostgreSQL instance
+- **Schema Management**: `npx prisma db push` for development
+- **Backup System**: Local backup scripts (see Database Backup & Recovery section)
+- **Migration Tools**: `scripts/run-migration.js` for production schema updates
+
+### Database Path Updates
+After Cloudinary migration, database file paths were updated:
+- **Update Tool**: `scripts/update-db-paths.js`
+- **Results**: 198 SEM reports + 55 update reports updated
+- **Format**: Local paths → Cloudinary URLs
+
 ## Development Reference
 
 ### Common Issues & Solutions
@@ -381,12 +495,64 @@ const exclusions = ['biocharLot', 'biocharExperimentRef', 'biocharLotRef', 'betT
 **Problem**: After schema changes, getting "Unknown argument" errors even though field exists in schema
 **Solution**: Regenerate Prisma client and restart server
 ```bash
-# After any schema change:
+# Development:
 npx prisma generate  # Regenerate Prisma client
-# Then restart the dev server to pick up the new client
-npm run dev
+npm run dev         # Restart dev server
+
+# Production:
+# Schema changes deploy automatically via railway.json startup script
+# Railway restarts the application automatically after deployment
 ```
 **Note**: The running server process caches the old Prisma client, so restart is required
+
+#### Production Deployment Issues
+**Problem**: Railway deployment fails or application doesn't start
+**Solution**: Check Railway logs and startup script
+```bash
+# Check Railway deployment logs via dashboard
+# Common issues:
+# - Node.js version mismatch (use nixpacks.toml)
+# - Database connection issues (check environment variables)
+# - File upload issues (check Cloudinary configuration)
+# - Build failures (check package.json scripts)
+```
+
+#### File Upload Issues in Production
+**Problem**: File uploads fail or don't appear
+**Solution**: Verify Cloudinary configuration
+```bash
+# Check .env.cloudinary file has correct credentials
+# Verify Cloudinary account limits and permissions
+# Check file size limits (10MB max per file)
+# Monitor Cloudinary dashboard for upload success/failure
+```
+
+#### Cloudinary Migration Issues
+**Problem**: Files not migrating correctly or database paths not updating
+**Solution**: Run migration scripts with proper error handling
+```bash
+# Full migration process:
+1. node scripts/migrate-files-cloudinary.js  # Upload files
+2. node scripts/update-db-paths.js           # Update database
+
+# Check migration results:
+# - 296 files should be uploaded to Cloudinary
+# - 198 SEM reports + 55 update reports paths updated
+# - All local files preserved for rollback if needed
+```
+
+#### File Access Issues
+**Problem**: PDFs not loading in modals or download links broken
+**Solution**: Check URL format and environment detection
+```bash
+# Verify database contains correct URLs:
+# ✅ Correct: https://res.cloudinary.com/dlbztbaaa/image/upload/...
+# ❌ Incorrect: /uploads/... (local path in production)
+
+# Check file exists on Cloudinary:
+# Visit Cloudinary dashboard > Media Library
+# Search for files in 'graphene-uploads' folder
+```
 
 ### Code Style Guidelines
 
@@ -421,6 +587,199 @@ npm run dev
 - Memory leaks → Always destroy existing chart instances before creating new ones
 - Time scale issues → Use proper Date objects and set appropriate min/max bounds
 - Logarithmic scale conflicts → Remove `beginAtZero: true` when using logarithmic Y-axis
+
+## Deployment Architecture Details
+
+### Railway Production Configuration
+
+#### Build Configuration Files
+- **`railway.json`**: Deployment configuration with startup script delegation
+  - `startCommand`: `bash scripts/railway-startup.sh`
+  - Delegates complex startup logic to dedicated script
+- **`nixpacks.toml`**: Build system configuration
+  - Node.js 20 runtime specification
+  - Build commands: npm install, vite build, prisma generate
+- **`scripts/railway-startup.sh`**: Production startup script
+  - Database schema push
+  - Run migration scripts
+  - Seed admin users
+  - Start Express server
+
+#### File Migration Process
+- **Migration Script**: `scripts/migrate-files-cloudinary.js`
+  - Uploads all local files to Cloudinary CDN
+  - Updates database paths from local to CDN URLs
+  - Handles different file types (PDFs, Excel files)
+- **Path Update Script**: `scripts/update-db-paths.js`
+  - Manual database path conversion tool
+  - Converts local paths to Cloudinary URLs
+  - Results: 198 SEM + 55 update reports updated
+
+#### Environment Variable Management
+- **Development**: `.env` file with local database credentials
+- **Production**: Railway environment variables
+  - Database connection managed automatically
+  - Cloudinary credentials in `.env.cloudinary`
+  - JWT secrets and API keys securely managed
+
+### Development vs Production Workflows
+
+#### Local Development Workflow
+1. **Code Changes**: Edit files locally
+2. **Testing**: `npm run dev` for local testing
+3. **Database Changes**: `npx prisma db push` for schema updates
+4. **File Uploads**: Files stored in local `/uploads/` directories
+5. **Commit**: Git commit changes when ready
+
+#### Production Deployment Workflow
+1. **Deploy**: `git push origin main`
+2. **Build**: Railway runs Nixpacks build process
+3. **Database**: Automatic schema push and migrations
+4. **Files**: Cloudinary CDN handles all file operations
+5. **Health Check**: Railway monitors application health
+
+#### Key Differences
+- **File Storage**: Local files vs Cloudinary CDN
+- **Database**: Local PostgreSQL vs Railway PostgreSQL
+- **Build Process**: Vite dev server vs Nixpacks production build
+- **Environment Variables**: `.env` files vs Railway dashboard
+- **Monitoring**: Local console vs Railway dashboard logs
+
+### Environment Management Best Practices
+
+#### Development Environment Setup
+1. **Prerequisites**:
+   - Node.js 20.x installed locally
+   - PostgreSQL running locally
+   - Git repository cloned
+
+2. **Initial Setup**:
+   ```bash
+   npm install                    # Install dependencies
+   npx prisma generate           # Generate Prisma client
+   npx prisma db push            # Apply schema to local DB
+   node scripts/seed-users.js    # Create admin user
+   npm run dev                   # Start development server
+   ```
+
+3. **Environment Files**:
+   - `.env`: Local database connection and development settings
+   - `.env.cloudinary`: Cloudinary credentials (for file migration testing)
+
+#### Production Deployment Management
+
+##### Railway Deployment Process
+1. **Automatic Deployment**:
+   ```bash
+   git add .
+   git commit -m "feature: description"
+   git push origin main  # Triggers Railway deployment
+   ```
+
+2. **Build Process** (Railway automatically executes):
+   - **Build System**: Nixpacks with Node.js 20
+   - **Dependencies**: `npm install`
+   - **Client Build**: `vite build`
+   - **Prisma Setup**: `npx prisma generate`
+   - **Startup**: `bash scripts/railway-startup.sh`
+
+3. **Startup Script Execution** (`railway-startup.sh`):
+   ```bash
+   # Schema and migration management
+   npx prisma db push
+   node scripts/run-migration.js
+   
+   # User management
+   node scripts/seed-users.js
+   
+   # Start application
+   npm start
+   ```
+
+##### Deployment Monitoring
+- **Railway Dashboard**: Monitor deployment status and logs
+- **Application Health**: Automatic health checks and restarts
+- **Database Status**: Monitor connection and query performance
+- **File Operations**: Monitor Cloudinary usage and limits
+
+#### Environment Variable Management
+
+##### Development Variables (`.env`)
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/graphene"
+JWT_SECRET="development-secret"
+PORT=3000
+```
+
+##### Production Variables (Railway Dashboard)
+- `DATABASE_URL`: Managed automatically by Railway PostgreSQL
+- `JWT_SECRET`: Secure random string for production
+- `PORT`: Managed automatically by Railway
+- `CLOUDINARY_*`: Loaded from `.env.cloudinary` file
+
+##### Cloudinary Variables (`.env.cloudinary`)
+```bash
+CLOUDINARY_CLOUD_NAME=dlbztbaaa
+CLOUDINARY_API_KEY=835639479697844
+CLOUDINARY_API_SECRET=G0lWCegtQaT91e1HHaFp-tqHXOY
+```
+
+#### Database Schema Management
+
+##### Development Schema Changes
+1. **Modify Schema**: Edit `prisma/schema.prisma`
+2. **Generate Client**: `npx prisma generate`
+3. **Apply Changes**: `npx prisma db push`
+4. **Test Locally**: Verify functionality works
+
+##### Production Schema Deployment
+1. **Automatic Application**: Schema changes deploy via startup script
+2. **Migration Scripts**: Custom migrations in `scripts/run-migration.js`
+3. **Data Preservation**: Migrations preserve existing data
+4. **Rollback Strategy**: Railway provides automatic database backups
+
+#### Troubleshooting Deployment Issues
+
+##### Common Deployment Failures
+1. **Build Failures**:
+   - Check `nixpacks.toml` configuration
+   - Verify `package.json` scripts
+   - Monitor Railway build logs
+
+2. **Database Connection Issues**:
+   - Verify Railway PostgreSQL service is running
+   - Check database URL format in logs
+   - Confirm schema migrations completed
+
+3. **File Upload Issues**:
+   - Verify Cloudinary credentials in `.env.cloudinary`
+   - Check Cloudinary account quotas and limits
+   - Monitor file upload success in application logs
+
+4. **Application Startup Issues**:
+   - Check `scripts/railway-startup.sh` execution logs
+   - Verify user seeding completed successfully
+   - Monitor Express server startup logs
+
+##### Debugging Tools
+- **Railway Logs**: Real-time application and build logs
+- **Database Logs**: Query performance and connection issues
+- **Cloudinary Dashboard**: File upload success/failure monitoring
+- **Application Health**: Railway provides uptime and performance metrics
+
+#### Security and Maintenance
+
+##### Security Practices
+- **Environment Variables**: All secrets managed via Railway dashboard
+- **Database Access**: Secured connection strings with Railway PostgreSQL
+- **File Storage**: Cloudinary provides secure CDN access
+- **Authentication**: JWT tokens with bcrypt password hashing
+
+##### Maintenance Procedures
+- **Regular Monitoring**: Check Railway dashboard for performance metrics
+- **Database Backups**: Railway provides automatic backup management
+- **Cloudinary Monitoring**: Monitor file storage usage and bandwidth
+- **Security Updates**: Keep dependencies updated via Dependabot
 
 ## Change History
 
