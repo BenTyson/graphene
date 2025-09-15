@@ -45,31 +45,39 @@ router.post('/import-sql', upload.single('sqlFile'), async (req, res) => {
     
     console.log(`📋 Processing ${statements.length} SQL statements...`);
     
-    // Execute SQL statements in transaction
-    await prisma.$transaction(async (tx) => {
-      let executed = 0;
-      for (const statement of statements) {
-        try {
-          // Skip certain statements that might cause issues
-          if (statement.includes('pg_catalog.set_config') || 
-              statement.includes('SET ') || 
-              statement.includes('SELECT pg_catalog.set_config')) {
-            continue;
-          }
-          
-          await tx.$executeRawUnsafe(statement);
-          executed++;
-          
-          if (executed % 50 === 0) {
-            console.log(`✅ Executed ${executed}/${statements.length} statements`);
-          }
-        } catch (error) {
-          console.warn(`⚠️ Skipping statement (likely harmless): ${error.message.slice(0, 100)}...`);
-          // Continue with other statements - some might fail due to constraints/duplicates
+    // Execute SQL statements without transaction first (due to complex dependencies)
+    let executed = 0;
+    let insertCount = 0;
+    
+    for (const statement of statements) {
+      try {
+        // Skip certain statements that might cause issues
+        if (statement.includes('pg_catalog.set_config') || 
+            statement.includes('SET ') || 
+            statement.includes('SELECT pg_catalog.set_config') ||
+            statement.trim() === '' ||
+            statement.startsWith('--')) {
+          continue;
         }
+        
+        await prisma.$executeRawUnsafe(statement);
+        executed++;
+        
+        if (statement.trim().startsWith('INSERT')) {
+          insertCount++;
+        }
+        
+        if (executed % 100 === 0) {
+          console.log(`✅ Executed ${executed}/${statements.length} statements (${insertCount} inserts)`);
+        }
+      } catch (error) {
+        // Log the actual error for debugging
+        console.warn(`⚠️ Failed statement: ${statement.slice(0, 200)}...`);
+        console.warn(`⚠️ Error: ${error.message}`);
+        // Continue with other statements - some might fail due to constraints/duplicates
       }
-      console.log(`✅ Successfully executed ${executed} statements`);
-    });
+    }
+    console.log(`✅ Import completed: ${executed} statements executed, ${insertCount} INSERT statements`);
     
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
