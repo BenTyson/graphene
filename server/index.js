@@ -22,6 +22,7 @@ import aiInsightsRoutes from './routes/ai-insights.js';
 import newsRoutes from './routes/news.js';
 import knowledgeBaseRoutes from './routes/knowledge-base.js';
 import authRoutes from './routes/auth.js';
+import dataImportRoutes from './routes/data-import.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -152,6 +153,7 @@ app.use('/api/ai-insights', aiInsightsRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/data-import', dataImportRoutes);
 
 // Catch-all route - serve index.html for client-side routing
 // This MUST come after all other routes and static file serving
