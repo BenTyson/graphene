@@ -103,13 +103,25 @@ router.post('/import-sql', upload.single('sqlFile'), async (req, res) => {
  */
 router.get('/status', async (req, res) => {
   try {
-    // Test database connectivity with simple count
-    const grapheneCount = await prisma.graphene.count();
+    // Test database connectivity and count all key tables
+    const [grapheneCount, biocharCount, userCount, compoundBatchCount, betCount] = await Promise.all([
+      prisma.graphene.count(),
+      prisma.biochar.count(), 
+      prisma.user.count(),
+      prisma.compoundBatch.count(),
+      prisma.bET.count()
+    ]);
     
     res.json({
       environment: process.env.NODE_ENV,
       databaseConnected: true,
-      sampleCount: grapheneCount,
+      databaseCounts: {
+        graphene: grapheneCount,
+        biochar: biocharCount,
+        users: userCount,
+        compoundBatches: compoundBatchCount,
+        bet: betCount
+      },
       importEndpointAvailable: process.env.NODE_ENV !== 'production'
     });
   } catch (error) {
