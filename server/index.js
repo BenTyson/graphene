@@ -106,17 +106,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve static files - use dist for production build, client for development
-const staticPath = process.env.NODE_ENV === 'production' 
+// Serve static files - use dist for production/staging build, client for development
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+const staticPath = isProduction
   ? path.join(process.cwd(), 'dist')
   : path.join(process.cwd(), 'client');
 console.log('Serving static files from:', staticPath);
 app.use(express.static(staticPath));
 
-// In production, also explicitly serve assets directory
-if (process.env.NODE_ENV === 'production') {
+// In production/staging, also explicitly serve assets directory
+if (isProduction) {
   app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'assets')));
-  console.log('Serving production assets from:', path.join(process.cwd(), 'dist', 'assets'));
+  console.log('Serving assets from:', path.join(process.cwd(), 'dist', 'assets'));
 }
 
 // Serve uploaded files with 404 fallback (prevent HTML serving for missing files)
@@ -155,7 +156,8 @@ app.use('/api/auth', authRoutes);
 // Catch-all route - serve index.html for client-side routing
 // This MUST come after all other routes and static file serving
 app.get('*', (req, res) => {
-  const indexPath = process.env.NODE_ENV === 'production'
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+  const indexPath = isProduction
     ? path.join(process.cwd(), 'dist', 'index.html')
     : path.join(process.cwd(), 'client', 'index.html');
   res.sendFile(indexPath);
