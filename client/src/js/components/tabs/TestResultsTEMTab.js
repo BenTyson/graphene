@@ -69,7 +69,7 @@ function getTEMTabHtml() {
             </template>
             <template x-for="record in temRecords" :key="record.id">
               <tr class="hover:bg-gray-50">
-                <td class="table-cell-compact" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
+                <td class="table-cell-compact" x-text="record.testDate ? window.formatDateSafe(record.testDate) : ''"></td>
                 <td class="table-cell-compact">
                   <div class="flex items-center space-x-2">
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"

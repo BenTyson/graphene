@@ -1003,12 +1003,19 @@ class CRUDService {
       delete data.dateUnknown;
       delete data.receivedDateUnknown;
       
-      // Handle date fields
+      // Handle date fields - convert date strings to DateTime format
       if (data.shipmentDate === '' || appContext.shipmentForm.dateUnknown) {
         data.shipmentDate = null;
+      } else if (data.shipmentDate) {
+        // Convert date string (YYYY-MM-DD) to DateTime (YYYY-MM-DDTHH:MM:SS.SSSZ)
+        data.shipmentDate = new Date(data.shipmentDate + 'T00:00:00.000Z').toISOString();
       }
+      
       if (data.receivedDate === '' || appContext.shipmentForm.receivedDateUnknown) {
         data.receivedDate = null;
+      } else if (data.receivedDate) {
+        // Convert date string (YYYY-MM-DD) to DateTime (YYYY-MM-DDTHH:MM:SS.SSSZ)
+        data.receivedDate = new Date(data.receivedDate + 'T00:00:00.000Z').toISOString();
       }
 
       // Clear the non-selected material reference

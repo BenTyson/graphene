@@ -89,7 +89,7 @@ function getCompoundBatchModalHtml() {
                           <span class="text-xs text-gray-500" x-text="record.output ? record.output + 'g' : 'No output'"></span>
                         </div>
                         <div class="flex items-center space-x-4 mt-1">
-                          <span class="text-xs text-gray-500" x-text="record.experimentDate ? new Date(record.experimentDate).toLocaleDateString() : 'No date'"></span>
+                          <span class="text-xs text-gray-500" x-text="record.experimentDate ? window.formatDateSafe(record.experimentDate) : 'No date'"></span>
                           <span class="text-xs text-gray-500" x-text="record.species || 'No species'"></span>
                           <span class="text-xs text-gray-500" x-text="record.biocharExperiment ? 'Biochar: ' + record.biocharExperiment : (record.biocharLotNumber ? 'Lot: ' + record.biocharLotNumber : 'Various biochar')"></span>
                         </div>

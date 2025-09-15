@@ -257,7 +257,7 @@ function getGrapheneTabHtml() {
                     <span x-show="record.titleNote" x-text="' ' + record.titleNote" class="text-gray-600"></span>
                   </button>
                 </td>
-                <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.experimentDate)"></td>
+                <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="window.formatDateSafe(record.experimentDate)"></td>
                 <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.oven"></td>
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.quantity ? record.quantity + 'g' : ''"></td>
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
@@ -444,7 +444,7 @@ function getGrapheneTabHtml() {
                   class="text-link text-link-hover underline font-bold touch-target"
                   x-text="'Exp #' + record.experimentNumber">
                 </button>
-                <span class="text-xs text-gray-500" x-text="formatDate(record.experimentDate)"></span>
+                <span class="text-xs text-gray-500" x-text="window.formatDateSafe(record.experimentDate)"></span>
               </div>
             </div>
             
@@ -543,7 +543,7 @@ function getGrapheneTabHtml() {
                     <h5 class="font-medium text-gray-700 mb-1">BET Tests:</h5>
                     <template x-for="test in (grapheneRelatedData[record.experimentNumber] && grapheneRelatedData[record.experimentNumber].betTests) || []" :key="test.id">
                       <div class="mb-1 text-gray-600">
-                        <span x-text="formatDate(test.testDate)"></span> - 
+                        <span x-text="window.formatDateSafe(test.testDate)"></span> - 
                         <span x-text="test.multipointBetArea ? test.multipointBetArea + ' m²/g' : 'No data'"></span>
                       </div>
                     </template>
@@ -553,7 +553,7 @@ function getGrapheneTabHtml() {
                     <h5 class="font-medium text-gray-700 mb-1">Conductivity Tests:</h5>
                     <template x-for="test in (grapheneRelatedData[record.experimentNumber] && grapheneRelatedData[record.experimentNumber].conductivityTests) || []" :key="test.id">
                       <div class="mb-1 text-gray-600">
-                        <span x-text="formatDate(test.testDate)"></span> - 
+                        <span x-text="window.formatDateSafe(test.testDate)"></span> - 
                         <span x-text="test.conductivity20kN || 'No data'"></span>
                       </div>
                     </template>
@@ -563,7 +563,7 @@ function getGrapheneTabHtml() {
                     <h5 class="font-medium text-gray-700 mb-1">RAMAN Tests:</h5>
                     <template x-for="test in (grapheneRelatedData[record.experimentNumber] && grapheneRelatedData[record.experimentNumber].ramanTests) || []" :key="test.id">
                       <div class="mb-1 text-gray-600">
-                        <span x-text="formatDate(test.testDate)"></span> - 
+                        <span x-text="window.formatDateSafe(test.testDate)"></span> - 
                         <span x-text="test.testingLab || 'Lab data'"></span>
                       </div>
                     </template>

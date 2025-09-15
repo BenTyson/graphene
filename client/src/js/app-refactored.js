@@ -64,6 +64,31 @@ window.getAIInsightsTabHtml = getAIInsightsTabHtml;
 
 window.getNewsTabHtml = getNewsTabHtml;
 
+// Global safe date formatting function
+window.formatDateSafe = function(dateString) {
+  // Handle null, undefined, empty string, or invalid values
+  if (!dateString || dateString === '' || dateString === 'null' || dateString === '0') {
+    return 'Unknown';
+  }
+  
+  try {
+    const date = new Date(dateString);
+    
+    // Check if the date is invalid or represents Unix epoch (1970-01-01 or 1969-12-31)
+    if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+      return 'Unknown';
+    }
+    
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  } catch {
+    return 'Unknown';
+  }
+};
+
 // Main Alpine.js application
 window.grapheneApp = function() {
   return {

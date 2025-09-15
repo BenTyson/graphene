@@ -380,6 +380,9 @@ function formatNumber(num) {
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
+  if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+    return 'N/A';
+  }
   return date.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 
