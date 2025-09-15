@@ -516,12 +516,27 @@ function formatScientificNotation(value) {
  * Format dates for display
  */
 function formatDate(date) {
-  if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  });
+  // Handle null, undefined, empty string, or invalid values
+  if (!date || date === '' || date === 'null' || date === '0') {
+    return 'N/A';
+  }
+  
+  try {
+    const dateObj = new Date(date);
+    
+    // Check if the date is invalid or represents Unix epoch (1970-01-01 or 1969-12-31)
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      return 'N/A';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return 'N/A';
+  }
 }
 
 /**

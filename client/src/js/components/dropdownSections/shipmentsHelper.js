@@ -37,7 +37,7 @@ export function createShipmentsSection(config) {
                 <span class="text-sm font-medium text-gray-900" x-text="shipment.shipmentNumber"></span>
               </div>
               <div class="text-sm text-gray-500">
-                <span x-text="shipment.shipmentDate ? new Date(shipment.shipmentDate).toLocaleDateString() : 'Date unknown'"></span>
+                <span x-text="shipment.shipmentDate ? window.formatDateSafe(shipment.shipmentDate) : 'Date unknown'"></span>
               </div>
             </div>
             
@@ -74,7 +74,7 @@ export function createShipmentsSection(config) {
             <div x-show="shipment.receivedDate" class="mt-2">
               <div class="text-xs text-gray-500">
                 <span>Received: </span>
-                <span x-text="shipment.receivedDate ? new Date(shipment.receivedDate).toLocaleDateString() : 'Not received'"></span>
+                <span x-text="shipment.receivedDate ? window.formatDateSafe(shipment.receivedDate) : 'Not received'"></span>
               </div>
             </div>
           </div>

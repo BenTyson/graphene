@@ -7,12 +7,21 @@
  * @returns {string} Formatted date or 'Unknown'
  */
 export const formatDate = (dateString) => {
-  if (!dateString) return 'Unknown';
+  // Handle null, undefined, empty string, or invalid values
+  if (!dateString || dateString === '' || dateString === 'null' || dateString === '0') {
+    return 'Unknown';
+  }
   
   // Handle date-only strings (YYYY-MM-DD) - create local date to avoid timezone issues
   if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
     const [year, month, day] = dateString.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    // Check if the date is invalid or represents Unix epoch (1970-01-01 or 1969-12-31)
+    if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+      return 'Unknown';
+    }
+    
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
@@ -23,6 +32,12 @@ export const formatDate = (dateString) => {
   
   // Handle full ISO strings normally
   const date = new Date(dateString);
+  
+  // Check if the date is invalid or represents Unix epoch (1970-01-01 or 1969-12-31)
+  if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+    return 'Unknown';
+  }
+  
   return date.toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'short', 

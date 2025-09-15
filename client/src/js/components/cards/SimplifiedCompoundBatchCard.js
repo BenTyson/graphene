@@ -151,8 +151,8 @@ function formatCardDate(date) {
   
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    if (isNaN(dateObj.getTime())) {
-      return 'Invalid Date';
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      return 'N/A';
     }
     
     return dateObj.toLocaleDateString('en-US', { 

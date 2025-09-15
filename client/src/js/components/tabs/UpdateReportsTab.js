@@ -62,7 +62,7 @@ function getUpdateReportsTabHtml() {
           <template x-for="report in updateReports" :key="report.id">
             <tbody class="bg-white divide-y divide-gray-200">
               <tr class="hover:bg-gray-50">
-                <td class="table-cell-standard" x-text="report.weekOf ? new Date(report.weekOf).toLocaleDateString() : '-'"></td>
+                <td class="table-cell-standard" x-text="report.weekOf ? window.formatDateSafe(report.weekOf) : '-'"></td>
                 <td class="table-cell-standard">
                   <button @click="viewUpdateReport(report.filePath)" 
                           class="text-link text-link-hover font-medium">
@@ -95,7 +95,7 @@ function getUpdateReportsTabHtml() {
                     </template>
                   </div>
                 </td>
-                <td class="table-cell-standard" x-text="report.createdAt ? new Date(report.createdAt).toLocaleDateString() : '-'"></td>
+                <td class="table-cell-standard" x-text="report.createdAt ? window.formatDateSafe(report.createdAt) : '-'"></td>
                 <td class="table-cell-standard">
                   <div class="max-w-xs truncate" x-text="report.description || '-'"></div>
                 </td>
@@ -138,7 +138,7 @@ function getUpdateReportsTabHtml() {
                             </div>
                             
                             <div class="text-xs text-gray-600 space-y-1">
-                              <div><strong>Date:</strong> <span x-text="gr.graphene.experimentDate ? new Date(gr.graphene.experimentDate).toLocaleDateString() : 'N/A'"></span></div>
+                              <div><strong>Date:</strong> <span x-text="gr.graphene.experimentDate ? window.formatDateSafe(gr.graphene.experimentDate) : 'N/A'"></span></div>
                               <div><strong>Output:</strong> <span x-text="gr.graphene.output ? gr.graphene.output + 'g' : 'N/A'"></span></div>
                               <div><strong>Biochar Source:</strong> <span x-text="gr.graphene.biocharExperiment || gr.graphene.biocharLotNumber || 'N/A'"></span></div>
                             </div>
@@ -168,7 +168,7 @@ function getUpdateReportsTabHtml() {
                               </div>
                               <div class="text-xs text-gray-600">
                                 <div><strong>Name:</strong> <span x-text="cbr.compoundBatch.batchName || 'N/A'"></span></div>
-                                <div><strong>Created:</strong> <span x-text="cbr.compoundBatch.createdDate ? new Date(cbr.compoundBatch.createdDate).toLocaleDateString() : 'N/A'"></span></div>
+                                <div><strong>Created:</strong> <span x-text="cbr.compoundBatch.createdDate ? window.formatDateSafe(cbr.compoundBatch.createdDate) : 'N/A'"></span></div>
                               </div>
                             </div>
                           </template>
