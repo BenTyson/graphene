@@ -12,7 +12,7 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
     "client:dev": "vite",
-    "build": "vite build && cp -r client/src dist/",
+    "build": "vite build",
     "preview": "vite preview",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
