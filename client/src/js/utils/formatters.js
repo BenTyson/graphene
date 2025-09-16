@@ -184,6 +184,51 @@ export const formatHomogeneous = (value) => {
 };
 
 /**
+ * Format a date for HTML date input without timezone conversion issues
+ * This function ensures dates display correctly in HTML <input type="date"> elements
+ * by converting any date to local YYYY-MM-DD format without timezone shifts
+ * @param {string|Date} dateValue - Date string (ISO format) or Date object
+ * @returns {string} YYYY-MM-DD formatted string for HTML date inputs
+ */
+export const formatDateForInput = (dateValue) => {
+  if (!dateValue) return '';
+  
+  let date;
+  
+  // If it's already a Date object
+  if (dateValue instanceof Date) {
+    date = dateValue;
+  } 
+  // If it's a string that looks like a simple date (YYYY-MM-DD)
+  else if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // For simple date strings, split and create date in local timezone
+    const [year, month, day] = dateValue.split('-');
+    date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  }
+  // If it's an ISO string or other date string
+  else if (typeof dateValue === 'string') {
+    date = new Date(dateValue);
+    // Convert to local date to avoid timezone issues for date inputs
+    date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+  else {
+    return '';
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+  
+  // Format as YYYY-MM-DD for HTML date input
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
+/**
  * Format file size for display
  * @param {number} bytes - File size in bytes
  * @returns {string} Formatted file size
@@ -199,6 +244,7 @@ export const formatFileSize = (bytes) => {
 // Default export with all formatters
 export default {
   formatDate,
+  formatDateForInput,
   formatAcid,
   formatBase,
   formatAppearanceTags,

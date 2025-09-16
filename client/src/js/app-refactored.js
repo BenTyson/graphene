@@ -247,8 +247,8 @@ window.grapheneApp = function() {
     // Sorting states
     biocharSortColumn: null,
     biocharSortDirection: 'asc',
-    grapheneSortColumn: null,
-    grapheneSortDirection: 'asc',
+    grapheneSortColumn: 'experimentDate',
+    grapheneSortDirection: 'desc',
     
     // Modal states
     showAddBiochar: false,
@@ -925,15 +925,43 @@ window.grapheneApp = function() {
         let aVal = a[this.grapheneSortColumn];
         let bVal = b[this.grapheneSortColumn];
         
-        // Handle null/undefined values - always sort to end
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
+        // Special handling for date column
+        if (this.grapheneSortColumn === 'experimentDate') {
+          // Check for null/undefined/empty values
+          const aIsEmpty = !aVal || aVal === '' || aVal === 'null' || aVal === '0';
+          const bIsEmpty = !bVal || bVal === '' || bVal === 'null' || bVal === '0';
+          
+          // Both empty - maintain current order
+          if (aIsEmpty && bIsEmpty) return 0;
+          // Always sort empty dates to the end regardless of sort direction
+          if (aIsEmpty) return 1;
+          if (bIsEmpty) return -1;
+          
+          // Check for invalid dates (1969-1970)
+          const aDate = new Date(aVal);
+          const bDate = new Date(bVal);
+          const aIsInvalid = isNaN(aDate.getTime()) || aDate.getFullYear() <= 1970;
+          const bIsInvalid = isNaN(bDate.getTime()) || bDate.getFullYear() <= 1970;
+          
+          // Both invalid - maintain current order
+          if (aIsInvalid && bIsInvalid) return 0;
+          // Always sort invalid dates to the end
+          if (aIsInvalid) return 1;
+          if (bIsInvalid) return -1;
+          
+          // Both are valid dates - sort normally
+          aVal = aDate;
+          bVal = bDate;
+        } else {
+          // Handle null/undefined values for non-date columns
+          if (aVal == null && bVal == null) return 0;
+          if (aVal == null) return 1;
+          if (bVal == null) return -1;
+        }
         
         // Convert to appropriate types for comparison
         if (this.grapheneSortColumn === 'experimentDate') {
-          aVal = new Date(aVal);
-          bVal = new Date(bVal);
+          // Already converted to Date objects above
         } else if (this.isGrapheneNumericColumn(this.grapheneSortColumn)) {
           aVal = parseFloat(aVal) || 0;
           bVal = parseFloat(bVal) || 0;
@@ -3443,6 +3471,46 @@ window.addEventListener('alpine:init', () => {
       };
       window.closePdfViewer = appData.closePdfViewer.bind(appData);
       console.log('PDF modal functions exposed globally');
+      
+      // Expose timezone-safe date formatting function globally
+      window.formatDateSafe = function(dateString) {
+        if (!dateString) return 'Unknown';
+        
+        try {
+          // Use the same timezone-safe logic as the date picker
+          const parts = dateString.split('-');
+          if (parts.length === 3) {
+            const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
+            // Check for invalid dates (epoch dates like 1969-1970)
+            if (date.getFullYear() <= 1970) {
+              return 'Unknown';
+            }
+            
+            return date.toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            });
+          }
+          
+          // Fallback for other date formats
+          const date = new Date(dateString);
+          if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+            return 'Unknown';
+          }
+          
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+        } catch (error) {
+          return 'Unknown';
+        }
+      };
+      
+      console.log('Global date formatting function exposed');
     }
   }, 100);
 });
