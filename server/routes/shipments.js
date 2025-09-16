@@ -88,7 +88,14 @@ router.get('/', asyncHandler(async (req, res) => {
       ...queryOptions
     });
 
-    res.json(shipments);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentsWithFixedDates = shipments.map(s => ({
+      ...s,
+      shipmentDate: s.shipmentDate ? s.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: s.receivedDate ? s.receivedDate.toISOString().split('T')[0] : null
+    }));
+
+    res.json(shipmentsWithFixedDates);
 }));
 
 router.get('/locations', asyncHandler(async (req, res) => {
@@ -140,7 +147,14 @@ router.get('/graphene/:experimentNumber', asyncHandler(async (req, res) => {
       orderBy: { shipmentDate: 'desc' }
     });
 
-    res.json(shipments);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentsWithFixedDates = shipments.map(s => ({
+      ...s,
+      shipmentDate: s.shipmentDate ? s.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: s.receivedDate ? s.receivedDate.toISOString().split('T')[0] : null
+    }));
+
+    res.json(shipmentsWithFixedDates);
 }));
 
 router.get('/compound-batch/:batchNumber', asyncHandler(async (req, res) => {
@@ -161,7 +175,14 @@ router.get('/compound-batch/:batchNumber', asyncHandler(async (req, res) => {
       orderBy: { shipmentDate: 'desc' }
     });
 
-    res.json(shipments);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentsWithFixedDates = shipments.map(s => ({
+      ...s,
+      shipmentDate: s.shipmentDate ? s.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: s.receivedDate ? s.receivedDate.toISOString().split('T')[0] : null
+    }));
+
+    res.json(shipmentsWithFixedDates);
 }));
 
 router.get('/micronization/:sku', asyncHandler(async (req, res) => {
@@ -182,7 +203,14 @@ router.get('/micronization/:sku', asyncHandler(async (req, res) => {
       orderBy: { shipmentDate: 'desc' }
     });
 
-    res.json(shipments);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentsWithFixedDates = shipments.map(s => ({
+      ...s,
+      shipmentDate: s.shipmentDate ? s.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: s.receivedDate ? s.receivedDate.toISOString().split('T')[0] : null
+    }));
+
+    res.json(shipmentsWithFixedDates);
 }));
 
 router.get('/export/csv', asyncHandler(async (req, res) => {
@@ -310,7 +338,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
       return res.status(404).json({ error: 'Shipment not found' });
     }
 
-    res.json(shipment);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentWithFixedDates = {
+      ...shipment,
+      shipmentDate: shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : null
+    };
+
+    res.json(shipmentWithFixedDates);
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
@@ -373,7 +408,14 @@ router.post('/', asyncHandler(async (req, res) => {
       }
     });
 
-    res.status(201).json(shipment);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentWithFixedDates = {
+      ...shipment,
+      shipmentDate: shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : null
+    };
+
+    res.status(201).json(shipmentWithFixedDates);
 }));
 
 router.put('/:id', asyncHandler(async (req, res) => {
@@ -434,7 +476,14 @@ router.put('/:id', asyncHandler(async (req, res) => {
       }
     });
 
-    res.json(shipment);
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentWithFixedDates = {
+      ...shipment,
+      shipmentDate: shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : null
+    };
+
+    res.json(shipmentWithFixedDates);
 }));
 
 router.delete('/:id', asyncHandler(async (req, res) => {

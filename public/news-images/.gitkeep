@@ -1,0 +1,2 @@
+# This file ensures the news-images directory is included in git
+# while ignoring the cached images themselves
