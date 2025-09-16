@@ -3388,3 +3388,83 @@ window.grapheneApp = function() {
 };
 
 console.log('grapheneApp defined on window:', typeof window.grapheneApp);
+
+// Expose PDF modal functions globally for card modal system
+window.addEventListener('alpine:init', () => {
+  // Wait for Alpine to initialize the app, then expose PDF functions
+  setTimeout(() => {
+    const appElement = document.querySelector('[x-data*="grapheneApp"]');
+    if (appElement && appElement._x_dataStack && appElement._x_dataStack[0]) {
+      const appData = appElement._x_dataStack[0];
+      window.openPdfInModal = function(url, title) {
+        console.log('🔗 PDF Modal - Processing URL:', url);
+        
+        // Handle both Cloudinary URLs and local paths  
+        let finalUrl = url;
+        
+        // If it's already a full URL (Cloudinary or other CDN), use as-is
+        if (url.startsWith('https://') || url.startsWith('http://')) {
+          finalUrl = url;
+          console.log('✅ Using full URL as-is:', finalUrl);
+        } 
+        // If it's a relative path, make it local uploads path
+        else {
+          // Clean up the path and make it absolute for local development
+          const cleanPath = url.replace(/^\/+/, ''); // Remove leading slashes
+          finalUrl = '/uploads/' + cleanPath;
+          
+          // Add viewer params only for local PDFs
+          if (!finalUrl.includes('#')) {
+            finalUrl += '#navpanes=0&toolbar=0';
+          }
+          console.log('📁 Using local uploads path:', finalUrl);
+        }
+        
+        console.log('🎯 Final PDF URL:', finalUrl);
+        appData.openPdfInModal(finalUrl, title);
+      };
+      window.closePdfViewer = appData.closePdfViewer.bind(appData);
+      console.log('PDF modal functions exposed globally');
+      
+      // Expose timezone-safe date formatting function globally
+      window.formatDateSafe = function(dateString) {
+        if (!dateString) return 'Unknown';
+        
+        try {
+          // Use the same timezone-safe logic as the date picker
+          const parts = dateString.split('-');
+          if (parts.length === 3) {
+            const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            
+            // Check for invalid dates (epoch dates like 1969-1970)
+            if (date.getFullYear() <= 1970) {
+              return 'Unknown';
+            }
+            
+            return date.toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            });
+          }
+          
+          // Fallback for other date formats
+          const date = new Date(dateString);
+          if (isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+            return 'Unknown';
+          }
+          
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+        } catch (error) {
+          return 'Unknown';
+        }
+      };
+      
+      console.log('Global date formatting function exposed');
+    }
+  }, 100);
+});
