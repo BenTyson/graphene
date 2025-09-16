@@ -5,7 +5,7 @@ function getLoginPageHtml() {
       <div class="max-w-md w-full space-y-8">
         <!-- Company Logo -->
         <div class="text-center">
-          <img class="mx-auto h-24 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
+          <img class="mx-auto h-24 w-auto" src="/images/HGraphene_Logo_Iso.png" alt="HGraphene">
         </div>
 
         <!-- Login Form -->
