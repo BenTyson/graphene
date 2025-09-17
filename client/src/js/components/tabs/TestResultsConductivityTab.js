@@ -66,7 +66,7 @@ function getConductivityTabHtml() {
           <template x-for="record in conductivityRecords" :key="record.id">
             <tbody class="bg-white divide-y divide-gray-200">
               <tr class="hover:bg-gray-50">
-                <td class="table-cell-compact border-r border-gray-200" x-text="record.testDate ? new Date(record.testDate).toLocaleDateString() : ''"></td>
+                <td class="table-cell-compact border-r border-gray-200" x-text="window.formatDateSafe(record.testDate)"></td>
                 <td class="table-cell-compact font-mono border-r border-gray-200">
                   <button @click="toggleExpanded('conductivity', record.id)" class="text-link text-link-hover font-medium">
                     <div class="flex items-center space-x-2">

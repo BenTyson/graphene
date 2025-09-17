@@ -424,6 +424,30 @@ npm run dev
 
 ## Change History
 
+### Recent Updates (September 2025)
+
+#### HTML Date Picker Timezone Fix Implementation ✅ **CRITICAL BUG RESOLUTION**
+- **Problem**: Date pickers showing dates one day earlier than selected (Sept 15 displayed as Sept 14) due to UTC/local timezone conversion issues in production
+- **Root Cause**: Different date formatting between table cells and edit modals causing user confusion
+- **Solution**: Implemented comprehensive timezone-safe date handling across entire application
+- **Technical Implementation**:
+  - **Date Input Fix**: Changed from `x-model` to `:value/@input` pattern with local date construction
+  - **Global Function**: Added `window.formatDateSafe()` for consistent date display
+  - **Table Cell Updates**: Replaced `formatDate()` with `window.formatDateSafe()` in all table displays
+  - **Enhanced Formatters**: Updated `formatters.js` with epoch date protection (1969-1970 dates show as "Unknown")
+- **Files Modified**: 15 files including `GrapheneTab.js`, `formatters.js`, `dateFieldHelpers.js`, and multiple card components
+- **Git Workflow Cleanup**: 
+  - Deleted unused `develop` and `backup-current-state` branches
+  - Created clear git workflow documentation in `CLAUDE.md`
+  - Resolved multi-day commit tracking issues between local and GitHub
+- **Cherry-Pick Process**: Successfully merged staging fixes to production using selective commit cherry-picking
+- **Production Validation**: ✅ Confirmed table cells and modal dates now display identically
+- **Key Benefits**:
+  - Date consistency across entire application (table cells = modal dates)
+  - Proper timezone handling for MDT/MST users
+  - Elimination of confusing 1969 epoch date displays
+  - Clear git workflow to prevent future deployment confusion
+
 ### Recent Updates (January 2025)
 
 #### Modal Stacking & Simplified Card System Implementation ✅ **NEW ARCHITECTURE**
