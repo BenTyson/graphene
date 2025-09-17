@@ -93,7 +93,7 @@ function createCompoundBatchesSection(dataPath) {
                 <template x-for="experiment in ${dataPath}">
                   <tr class="hover:bg-gray-50">
                     <td class="px-2 py-1 font-mono font-semibold text-blue-700" x-text="experiment.graphene.experimentNumber"></td>
-                    <td class="px-2 py-1 text-gray-600" x-text="formatDate(experiment.graphene.experimentDate)"></td>
+                    <td class="px-2 py-1 text-gray-600" x-text="window.formatDateSafe(experiment.graphene.experimentDate)"></td>
                     <td class="px-2 py-1 text-gray-600" x-text="experiment.graphene.species || '-'"></td>
                     <td class="px-2 py-1 text-right font-mono text-gray-800" x-text="experiment.graphene.output ? experiment.graphene.output + 'g' : '-'"></td>
                     <td class="px-2 py-1 text-gray-500 text-xs">

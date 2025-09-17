@@ -41,13 +41,13 @@ function createUpdateReportsSection(dataPath, record = 'record') {
                           class="font-medium text-link text-link-hover text-left">
                     <span x-text="updateReport.updateReport.originalName"></span>
                   </button>
-                  <span class="text-gray-500" x-text="updateReport.updateReport.weekOf ? 'Week of ' + new Date(updateReport.updateReport.weekOf).toLocaleDateString() : 'No date'"></span>
+                  <span class="text-gray-500" x-text="updateReport.updateReport.weekOf ? 'Week of ' + window.formatDateSafe(updateReport.updateReport.weekOf) : 'No date'"></span>
                 </div>
                 <div x-show="updateReport.updateReport.description" class="text-gray-600">
                   <span x-text="updateReport.updateReport.description"></span>
                 </div>
                 <div class="text-gray-400 text-xs mt-1">
-                  Uploaded: <span x-text="formatDate(updateReport.updateReport.createdAt)"></span>
+                  Uploaded: <span x-text="window.formatDateSafe(updateReport.updateReport.createdAt)"></span>
                 </div>
               </div>
             </template>

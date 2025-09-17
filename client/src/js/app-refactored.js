@@ -40,6 +40,39 @@ import './components/cards/SimplifiedGrapheneCard.js';
 import './components/cards/SimplifiedCompoundBatchCard.js';
 import './components/cards/SimplifiedShipmentCard.js';
 import './components/modals/CardModalSystem.js';
+
+// Import authentication components
+import './services/AuthService.js';
+import './components/auth/LoginPage.js';
+import './components/auth/AuthWrapper.js';
+
+// Import card services and components
+import './services/CardService.js';
+import './components/cards/CardSection.js';
+import './components/cards/CardMetrics.js';
+import './components/cards/CardHeader.js';
+import './components/cards/CardContainer.js';
+import './components/cards/utils/cardConfig.js';
+import './components/cards/MasterDataCard.js';
+import './components/cards/CardFactory.js';
+
+// Import modal components
+import './components/modals/ModalPdfViewer.js';
+import './components/modals/ModalTemplates.js';
+import './components/modals/BETModal.js';
+import './components/modals/ConductivityModal.js';
+import './components/modals/TEMModal.js';
+import './components/modals/ShipmentModal.js';
+import './components/modals/GrapheneModal.js';
+
+// Import tab components
+import './components/tabs/TestResultsBETTab.js';
+import './components/tabs/TestResultsConductivityTab.js';
+import './components/tabs/TestResultsRAMANTab.js';
+import './components/tabs/TestResultsTEMTab.js';
+import './components/tabs/SEMReportsTab.js';
+import './components/tabs/UpdateReportsTab.js';
+import './components/tabs/AnalysisTab.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
 import FilterService from './services/FilterService.js';
 import NewsService from './services/NewsService.js';

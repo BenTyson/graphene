@@ -1130,6 +1130,7 @@
   <!-- Alpine.js Intersect plugin -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   
+<<<<<<< HEAD
   <!-- Component Scripts - loaded before main app for dependencies -->
   <script type="module" src="/src/js/services/CardService.js"></script>
   <script type="module" src="/src/js/components/cards/CardSection.js"></script>
@@ -1198,6 +1199,13 @@
       }, 200);
     });
   </script>
+=======
+  <!-- Main App Entry Point - Vite will bundle all dependencies -->
+  <script type="module" src="/src/js/app-refactored.js"></script>
+  
+  <!-- Alpine.js - loaded after app modules -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+>>>>>>> main
   
     </div> <!-- End Main Application -->
   </div> <!-- End Auth Wrapper -->

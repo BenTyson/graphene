@@ -81,7 +81,7 @@ function getSEMReportsTabHtml() {
                 </td>
                 
                 <!-- Date Column -->
-                <td class="table-cell-standard" x-text="formatDate(report.reportDate)"></td>
+                <td class="table-cell-standard" x-text="window.formatDateSafe(report.reportDate)"></td>
                 
                 <!-- Species Column -->
                 <td class="table-cell-standard">

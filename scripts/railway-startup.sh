@@ -16,22 +16,6 @@ else
 fi
 
 echo ""
-echo "2️⃣ STARTING: Database migration script"
-if node scripts/run-migration.js; then
-    echo "✅ SUCCESS: Migration script completed"
-else
-    echo "⚠️ WARNING: Migration script failed, continuing with deployment..."
-fi
-
-echo ""
-echo "3️⃣ STARTING: User seeding script" 
-if node scripts/seed-users.js; then
-    echo "✅ SUCCESS: User seeding completed"
-else
-    echo "⚠️ WARNING: User seeding failed, continuing with deployment..."
-fi
-
-echo ""
-echo "4️⃣ STARTING: Server startup"
+echo "2️⃣ STARTING: Server startup (skipping redundant seeding for existing production DB)"
 echo "🎯 Final check - about to start server..."
 npm start

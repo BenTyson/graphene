@@ -93,7 +93,7 @@ function getShipmentsTabHtml() {
                   <span x-text="shipment.shipToLocation"></span>
                 </td>
                 <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
-                  <span x-text="shipment.shipmentDate ? new Date(shipment.shipmentDate).toLocaleDateString() : 'Unknown'"></span>
+                  <span x-text="window.formatDateSafe(shipment.shipmentDate)"></span>
                 </td>
                 <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                   <span x-text="shipment.amountShipped ? \`\${shipment.amountShipped} \${shipment.unit}\` : '—'"></span>

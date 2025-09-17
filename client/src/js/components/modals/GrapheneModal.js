@@ -660,7 +660,7 @@ function getGrapheneModalHtml() {
                            class="rounded border-gray-300 focus:ring-black">
                     <span class="text-sm">
                       <strong x-text="report.originalName"></strong>
-                      <span class="text-gray-500" x-show="report.weekOf"> - Week of <span x-text="new Date(report.weekOf).toLocaleDateString()"></span></span>
+                      <span class="text-gray-500" x-show="report.weekOf"> - Week of <span x-text="window.formatDateSafe(report.weekOf)"></span></span>
                     </span>
                   </label>
                 </template>

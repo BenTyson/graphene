@@ -29,7 +29,7 @@ function createBiocharSourceSection(dataPath) {
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
           <table class="min-w-full text-xs">
             <tr><td class="font-medium">Experiment:</td><td x-text="${dataPath}.sourceBiochar.experimentNumber"></td></tr>
-            <tr><td class="font-medium">Date:</td><td x-text="formatDate(${dataPath}.sourceBiochar.experimentDate)"></td></tr>
+            <tr><td class="font-medium">Date:</td><td x-text="window.formatDateSafe(${dataPath}.sourceBiochar.experimentDate)"></td></tr>
             <tr><td class="font-medium">Material:</td><td x-text="${dataPath}.sourceBiochar.rawMaterial"></td></tr>
             <tr><td class="font-medium">Reactor:</td><td x-text="${dataPath}.sourceBiochar.reactor"></td></tr>
             <tr><td class="font-medium">Output:</td><td x-text="${dataPath}.sourceBiochar.output ? ${dataPath}.sourceBiochar.output + 'g' : ''"></td></tr>
@@ -46,7 +46,7 @@ function createBiocharSourceSection(dataPath) {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between">
                   <span class="font-medium" x-text="biochar.experimentNumber"></span>
-                  <span x-text="formatDate(biochar.experimentDate)"></span>
+                  <span x-text="window.formatDateSafe(biochar.experimentDate)"></span>
                 </div>
                 <div class="text-gray-600">
                   <span x-text="biochar.rawMaterial"></span> - 

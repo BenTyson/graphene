@@ -147,7 +147,7 @@ function getBiocharTabHtml() {
                     x-text="record.experimentNumber">
                   </button>
                 </td>
-                <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="formatDate(record.experimentDate)"></td>
+                <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="window.formatDateSafe(record.experimentDate)"></td>
                 <td class="px-2 py-2 text-xs border-r border-gray-300" x-text="record.reactor"></td>
                 <!-- Material columns -->
                 <td class="px-2 py-2 text-xs border-r border-gray-200" x-text="record.rawMaterial"></td>
@@ -250,7 +250,7 @@ function getBiocharTabHtml() {
                             <template x-for="graphene in (biocharRelatedData[record.experimentNumber] && biocharRelatedData[record.experimentNumber].directGraphene) || []" :key="graphene.id">
                               <tr class="border-t border-gray-200">
                                 <td class="px-2 py-1 font-mono" x-text="graphene.experimentNumber"></td>
-                                <td class="px-2 py-1" x-text="formatDate(graphene.experimentDate)"></td>
+                                <td class="px-2 py-1" x-text="window.formatDateSafe(graphene.experimentDate)"></td>
                                 <td class="px-2 py-1" x-text="graphene.oven"></td>
                                 <td class="px-2 py-1" x-text="graphene.quantity ? graphene.quantity + 'g' : ''"></td>
                                 <td class="px-2 py-1" x-text="graphene.species"></td>
@@ -287,7 +287,7 @@ function getBiocharTabHtml() {
                             <template x-for="graphene in (biocharRelatedData[record.experimentNumber] && biocharRelatedData[record.experimentNumber].lotGraphene) || []" :key="graphene.id">
                               <tr class="border-t border-gray-200">
                                 <td class="px-2 py-1 font-mono" x-text="graphene.experimentNumber"></td>
-                                <td class="px-2 py-1" x-text="formatDate(graphene.experimentDate)"></td>
+                                <td class="px-2 py-1" x-text="window.formatDateSafe(graphene.experimentDate)"></td>
                                 <td class="px-2 py-1" x-text="graphene.oven"></td>
                                 <td class="px-2 py-1" x-text="graphene.quantity ? graphene.quantity + 'g' : ''"></td>
                                 <td class="px-2 py-1" x-text="graphene.species"></td>
@@ -321,7 +321,7 @@ function getBiocharTabHtml() {
                           <tbody>
                             <template x-for="bet in (biocharRelatedData[record.experimentNumber] && biocharRelatedData[record.experimentNumber].betTests) || []" :key="bet.id">
                               <tr class="border-t border-gray-200">
-                                <td class="px-2 py-1" x-text="formatDate(bet.testDate)"></td>
+                                <td class="px-2 py-1" x-text="window.formatDateSafe(bet.testDate)"></td>
                                 <td class="px-2 py-1 font-mono" x-text="bet.grapheneSample"></td>
                                 <td class="px-2 py-1 font-mono" x-text="bet.multipointBetArea ? formatScientific(bet.multipointBetArea) : ''"></td>
                                 <td class="px-2 py-1 font-mono" x-text="bet.langmuirSurfaceArea ? formatScientific(bet.langmuirSurfaceArea) : ''"></td>
@@ -368,7 +368,7 @@ function getBiocharTabHtml() {
                     x-text="'Exp #' + record.experimentNumber">
                   </button>
                 </div>
-                <span class="text-xs text-gray-500" x-text="formatDate(record.experimentDate)"></span>
+                <span class="text-xs text-gray-500" x-text="window.formatDateSafe(record.experimentDate)"></span>
               </div>
             </div>
             

@@ -98,7 +98,7 @@ function getMicronizationTabHtml() {
                   <span class="font-medium" x-text="micronization.micronizationNumber"></span>
                 </td>
                 <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
-                  <span x-text="micronization.date ? new Date(micronization.date).toLocaleDateString() : 'Unknown'"></span>
+                  <span x-text="window.formatDateSafe(micronization.date)"></span>
                 </td>
                 <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
                   <div class="flex items-center space-x-2">

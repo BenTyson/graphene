@@ -42,7 +42,7 @@ function createBetTestSection(dataPath) {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between mb-1">
                   <span class="font-medium">BET Test</span>
-                  <span x-text="formatDate(bet.testDate)"></span>
+                  <span x-text="window.formatDateSafe(bet.testDate)"></span>
                 </div>
                 <table class="w-full">
                   <tr><td class="font-medium">Mass:</td><td x-text="bet.mass ? bet.mass + ' g' : 'N/A'"></td></tr>
@@ -100,7 +100,7 @@ function createConductivityTestSection(dataPath) {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between mb-1">
                   <span class="font-medium">Conductivity Test</span>
-                  <span x-text="formatDate(conductivity.testDate)"></span>
+                  <span x-text="window.formatDateSafe(conductivity.testDate)"></span>
                 </div>
                 <div class="mb-2" x-show="conductivity.description">
                   <div class="text-xs mb-1"><strong>Description:</strong> <span x-text="conductivity.description || 'N/A'"></span></div>
@@ -146,7 +146,7 @@ function createRamanTestSection(dataPath) {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between mb-1">
                   <span class="font-medium">RAMAN Test</span>
-                  <span x-text="formatDate(raman.testDate)"></span>
+                  <span x-text="window.formatDateSafe(raman.testDate)"></span>
                 </div>
                 <div class="mb-2">
                   <div class="text-xs mb-1">
@@ -237,7 +237,7 @@ function createTemTestSection(dataPath) {
               <div class="bg-white rounded p-2 text-xs border">
                 <div class="flex justify-between mb-1">
                   <span class="font-medium">TEM Test</span>
-                  <span x-text="formatDate(tem.testDate)"></span>
+                  <span x-text="window.formatDateSafe(tem.testDate)"></span>
                 </div>
                 <table class="w-full text-xs">
                   <tr x-show="tem.researchTeam"><td class="font-medium">Research Team:</td><td x-text="tem.researchTeam || 'N/A'"></td></tr>
