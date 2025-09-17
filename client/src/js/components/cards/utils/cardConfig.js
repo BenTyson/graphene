@@ -244,3 +244,11 @@ function getAvailablePresets() {
   ];
 }
 
+// Make functions globally available
+window.getCardConfig = getCardConfig;
+window.mergeCardConfig = mergeCardConfig;
+window.getResponsiveConfig = getResponsiveConfig;
+window.getTypeSpecificConfig = getTypeSpecificConfig;
+window.getSectionVisibility = getSectionVisibility;
+window.getAvailablePresets = getAvailablePresets;
+

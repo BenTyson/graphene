@@ -26,7 +26,21 @@ class CardFactory {
     };
     
     // Return the appropriate card
-    return createMasterDataCard(config);
+    if (window.createMasterDataCard) {
+      return window.createMasterDataCard(config);
+    } else {
+      // Fallback to simplified cards if master card isn't available
+      const cardType = this.detectCardType(data);
+      if (cardType === 'graphene' && window.createSimplifiedGrapheneCard) {
+        return window.createSimplifiedGrapheneCard(data, options);
+      } else if (cardType === 'compoundBatch' && window.createSimplifiedCompoundBatchCard) {
+        return window.createSimplifiedCompoundBatchCard(data, options);
+      } else if (cardType === 'shipment' && window.createSimplifiedShipmentCard) {
+        return window.createSimplifiedShipmentCard(data, options);
+      } else {
+        return this.createErrorCard(data.experimentNumber || data.batchNumber || 'Unknown', 'Card type not supported');
+      }
+    }
   }
   
   /**
@@ -286,3 +300,66 @@ class CardFactory {
 
 // Make CardFactory globally available
 window.CardFactory = CardFactory;
+
+// Create wrapper functions for dashboard compatibility
+window.createGrapheneCard = function(experiment, options = {}) {
+  if (window.createSimplifiedGrapheneCard) {
+    return window.createSimplifiedGrapheneCard(experiment, options);
+  }
+  return CardFactory.createCard(experiment, { preset: 'dashboard', context: 'dashboard', ...options });
+};
+
+window.createCompoundBatchCard = function(batch, options = {}) {
+  if (window.createSimplifiedCompoundBatchCard) {
+    return window.createSimplifiedCompoundBatchCard(batch, options);
+  }
+  return CardFactory.createCard(batch, { preset: 'compoundBatch', context: 'dashboard', ...options });
+};
+
+window.createShipmentCard = function(shipment, options = {}) {
+  if (window.createSimplifiedShipmentCard) {
+    return window.createSimplifiedShipmentCard(shipment, options);
+  }
+  return CardFactory.createShipmentCard(shipment, { context: 'dashboard', ...options });
+};
+
+// Add the missing getDetailedCardContent function that modals expect
+window.getDetailedCardContent = function(cardType, identifier) {
+  // This function should return detailed content for card modals
+  console.log('getDetailedCardContent called with:', cardType, identifier);
+  
+  // For now, prevent modal opening and instead redirect to the appropriate tab
+  const message = `Viewing details for ${identifier}. This will redirect to the appropriate tab.`;
+  
+  // Determine the correct tab based on the identifier
+  let targetTab = 'graphene';
+  if (identifier && identifier.startsWith('MB') || identifier.startsWith('BC')) {
+    targetTab = 'biochar';
+  } else if (identifier && identifier.includes('CB') || identifier.includes('batch')) {
+    targetTab = 'compound-batches';
+  } else if (identifier && identifier.includes('shipment')) {
+    targetTab = 'shipments';
+  }
+  
+  // Instead of showing a modal, switch to the appropriate tab
+  setTimeout(() => {
+    if (window.switchTab) {
+      window.switchTab(targetTab);
+    } else if (window.grapheneApp && window.grapheneApp().activeTab !== undefined) {
+      window.grapheneApp().activeTab = targetTab;
+    }
+  }, 100);
+  
+  return `
+    <div class="p-4 text-center">
+      <h3 class="text-lg font-semibold mb-2">Redirecting...</h3>
+      <p class="text-gray-600">${message}</p>
+      <div class="mt-4">
+        <button onclick="this.closest('.fixed').style.display = 'none'" 
+                class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+};
