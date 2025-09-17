@@ -1130,83 +1130,12 @@
   <!-- Alpine.js Intersect plugin -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   
-<<<<<<< HEAD
-  <!-- Component Scripts - loaded before main app for dependencies -->
-  <script type="module" src="/src/js/services/CardService.js"></script>
-  <script type="module" src="/src/js/components/cards/CardSection.js"></script>
-  <script type="module" src="/src/js/components/cards/CardMetrics.js"></script>
-  <script type="module" src="/src/js/components/cards/CardHeader.js"></script>
-  <script type="module" src="/src/js/components/cards/CardContainer.js"></script>
-  <script type="module" src="/src/js/components/cards/utils/cardConfig.js"></script>
-  <script type="module" src="/src/js/components/cards/MasterDataCard.js"></script>
-  <script type="module" src="/src/js/components/cards/CardFactory.js"></script>
-  <script type="module" src="/src/js/components/cards/SimplifiedGrapheneCard.js"></script>
-  <script type="module" src="/src/js/components/cards/SimplifiedCompoundBatchCard.js"></script>
-  <script type="module" src="/src/js/components/cards/SimplifiedShipmentCard.js"></script>
-  <script type="module" src="/src/js/components/modals/CardModalSystem.js"></script>
-  <script type="module" src="/src/js/components/modals/ModalPdfViewer.js"></script>
-  <script type="module" src="/src/js/components/modals/ModalTemplates.js"></script>
-  
-  <!-- Use modules for better code organization -->
-  <script type="module" src="/src/js/app-refactored.js"></script>
-  
-  <!-- Ensure Alpine.js waits for main app to load -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Wait a short moment to ensure modules have loaded
-      setTimeout(function() {
-        if (typeof window.grapheneApp === 'function') {
-          // Main app is loaded, Alpine can proceed
-          console.log('Main app loaded, Alpine.js can initialize');
-        } else {
-          console.error('Main app not loaded! Check app-refactored.js');
-        }
-      }, 100);
-    });
-  </script>
-  
-  <!-- Note: fileUtils.js removed - using inline URL handling instead -->
-  
-  <!-- Authentication Components - loaded before main app -->
-  <script type="module" src="/src/js/services/AuthService.js"></script>
-  <script type="module" src="/src/js/components/auth/LoginPage.js"></script>
-  <script type="module" src="/src/js/components/auth/AuthWrapper.js"></script>
-  
-  <!-- Tab and Modal Component Scripts - loaded after main app -->
-  <script type="module" src="/src/js/components/tabs/TestResultsBETTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/TestResultsConductivityTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/TestResultsRAMANTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/TestResultsTEMTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/SEMReportsTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/UpdateReportsTab.js"></script>
-  <script type="module" src="/src/js/components/tabs/AnalysisTab.js"></script>
-  <!-- AIInsightsTab is now loaded as ES6 module in app-refactored.js -->
-  <script type="module" src="/src/js/components/modals/BETModal.js"></script>
-  <script type="module" src="/src/js/components/modals/ConductivityModal.js"></script>
-  <script type="module" src="/src/js/components/modals/TEMModal.js"></script>
-  <script type="module" src="/src/js/components/modals/ShipmentModal.js"></script>
-  <script type="module" src="/src/js/components/modals/GrapheneModal.js"></script>
-  
-  <script>
-    // Delay Alpine.js initialization until components are loaded
-    window.addEventListener('DOMContentLoaded', function() {
-      // Load Alpine.js after a short delay to ensure all modules are loaded
-      setTimeout(function() {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js';
-        script.defer = true;
-        document.head.appendChild(script);
-      }, 200);
-    });
-  </script>
-=======
+
   <!-- Main App Entry Point - Vite will bundle all dependencies -->
   <script type="module" src="/src/js/app-refactored.js"></script>
   
   <!-- Alpine.js - loaded after app modules -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
->>>>>>> main
-  
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>  
     </div> <!-- End Main Application -->
   </div> <!-- End Auth Wrapper -->
   

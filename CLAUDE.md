@@ -16,6 +16,9 @@
 - ALWAYS ensure local branches track remote: `git push -u origin <branch-name>`
 - DELETE unused branches immediately to avoid confusion
 - ALL commits must be pushed to GitHub - verify with `git status` and `git log --oneline origin/main..HEAD`
+- NEVER allow main and staging to diverge - keep them synchronized
+- If cherry-picking between branches, immediately merge to prevent branch confusion
+- ALWAYS verify branch state before starting work: `git status` and `git log --oneline --graph --all`
 
 ## Railway Deployments
 - Production (main): admin.hgraphene.com
@@ -37,7 +40,20 @@ git cherry-pick <commit-hash>
 
 # Check what commits are in staging but not main
 git log --oneline staging ^main
+
+# Check what commits are in main but not staging
+git log --oneline main ^staging
+
+# Sync staging with main (recommended after any main changes)
+git checkout staging && git merge main && git push origin staging
 ```
+
+## Branch Synchronization Protocol
+After any direct commits to main or cherry-picking operations:
+1. Immediately sync staging: `git checkout staging && git merge main`
+2. Resolve any merge conflicts
+3. Push both branches: `git push origin staging && git push origin main`
+4. Verify sync: `git log --oneline main ^staging` (should be empty)
 
 ## Database Scripts
 - `server/routes/seed-staging.js`: Seeds staging with JSON data
