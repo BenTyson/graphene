@@ -624,6 +624,12 @@ window.grapheneApp = function() {
       window.logger?.debug('Route changed in handleRouteChange', { type: route.type, isDataPage: route.isDataPage });
       
       if (route.isDataPage) {
+        // Check authentication before showing data page
+        if (!this.isAuthenticated) {
+          console.log('⚠️ Attempted to access data page without authentication, ignoring route');
+          return;
+        }
+        
         // Show data page
         this.showDataPage = true;
         this.activeTab = 'data-page'; // Set a special tab for data pages
@@ -639,6 +645,14 @@ window.grapheneApp = function() {
 
     async loadDataPage(type, identifier) {
       console.log(`🔍 Loading data page: ${type}/${identifier}`);
+      
+      // Check if user is authenticated first
+      if (!this.isAuthenticated) {
+        console.log('⚠️ User not authenticated, redirecting to login');
+        this.showDataPage = false;
+        this.activeTab = 'dashboard';
+        return;
+      }
       
       this.dataPageLoading = true;
       this.dataPageError = null;
