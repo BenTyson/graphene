@@ -186,14 +186,14 @@ function createDataPageLoading(type, identifier) {
 function createDataPageHeader(type, identifier) {
   const breadcrumbs = getDataPageBreadcrumbs(type, identifier);
   return `
-    <div class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="bg-white border-b border-gray-200 px-6 py-4" x-data="{}">
       <nav class="flex" aria-label="Breadcrumb">
         <ol class="flex items-center space-x-4">
           ${breadcrumbs.map((crumb, index) => `
             <li class="flex">
               ${index > 0 ? '<svg class="flex-shrink-0 h-5 w-5 text-gray-400 mr-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>' : ''}
               ${crumb.href ? `
-                <a href="${crumb.href}" ${crumb.onclick ? `onclick="${crumb.onclick}"` : ''} class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                <a href="${crumb.href}" ${crumb.action ? `@click.prevent="${crumb.action}"` : ''} class="text-gray-500 hover:text-gray-700 text-sm font-medium">
                   ${crumb.label}
                 </a>
               ` : `
@@ -224,13 +224,13 @@ function getDataPageBreadcrumbs(type, identifier) {
   ];
   
   if (type === 'compound-batch') {
-    breadcrumbs.push({ label: 'Compound Batches', href: 'javascript:void(0)', onclick: 'navigateToCompoundBatches()' });
+    breadcrumbs.push({ label: 'Compound Batches', href: '#', action: 'window.navigateToCompoundBatches()' });
     breadcrumbs.push({ label: identifier, href: null });
   } else if (type === 'graphene') {
-    breadcrumbs.push({ label: 'Graphene', href: 'javascript:void(0)', onclick: 'navigateToGraphene()' });
+    breadcrumbs.push({ label: 'Graphene', href: '#', action: 'window.navigateToGraphene()' });
     breadcrumbs.push({ label: identifier, href: null });
   } else if (type === 'biochar') {
-    breadcrumbs.push({ label: 'Biochar', href: 'javascript:void(0)', onclick: 'navigateToBiochar()' });
+    breadcrumbs.push({ label: 'Biochar', href: '#', action: 'window.navigateToBiochar()' });
     breadcrumbs.push({ label: identifier, href: null });
   }
   
