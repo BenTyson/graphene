@@ -29,7 +29,8 @@ function createSimplifiedCompoundBatchCard(batch, options = {}) {
     <div class="simplified-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg hover:border-link transition-all duration-200 transform hover:-translate-y-1"
          data-batch="${batch.batchNumber || ''}"
          data-instance="${instanceId}"
-         @click="openCompoundBatchModal('${batch.batchNumber || ''}')">
+         @click="window.routerService.navigateToDataPage('compound-batch', '${batch.batchNumber || ''}')"
+         >
       
       <!-- Batch Number and Date - Primary line -->
       <div class="font-semibold text-lg text-gray-900 mb-2">

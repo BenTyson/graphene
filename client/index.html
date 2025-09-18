@@ -22,7 +22,7 @@
     </div>
 
     <!-- Main Application -->
-    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()">
+    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init()">
       <!-- Header with logout -->
       <header class="border-b border-gray-200 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -104,7 +104,7 @@
       </header>
 
     <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6" x-data="{ mobileMenuOpen: false }">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
       <!-- Mobile menu button -->
       <div class="flex md:hidden items-center justify-between mb-4">
         <button @click="mobileMenuOpen = !mobileMenuOpen" class="p-2 rounded-md text-gray-700 hover:bg-gray-100 touch-target">
@@ -130,10 +130,10 @@
       </div>
       
       <!-- Mobile dropdown menu -->
-      <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg" x-data="{ mobileProductionOpen: false, mobileAnalyticsOpen: false }">
+      <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg">
         <div class="py-2">
           <!-- Dashboard -->
-          <button @click="switchTab('dashboard'); mobileMenuOpen = false"
+          <button @click="console.log('[Navigation] Mobile dashboard button clicked'); switchTab('dashboard'); mobileMenuOpen = false"
                   :class="activeTab === 'dashboard' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                   class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
             Dashboard
@@ -141,7 +141,7 @@
 
           <!-- Production Category -->
           <div class="border-t border-gray-100">
-            <button @click="mobileProductionOpen = !mobileProductionOpen"
+            <button @click="console.log('[Navigation] Mobile production dropdown toggled:', !mobileProductionOpen); mobileProductionOpen = !mobileProductionOpen"
                     :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                     class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target flex items-center justify-between">
               <span>Production</span>
@@ -216,7 +216,7 @@
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Insights
                 </button>
-                <button @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'; mobileMenuOpen = false"
+                <button @click="switchTab(activeTab.startsWith('test-') ? activeTab : 'test-bet'); mobileMenuOpen = false"
                         :class="activeTab.startsWith('test-') ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Test Results
@@ -227,7 +227,7 @@
 
           <!-- News Feed -->
           <div class="border-t border-gray-100">
-            <button @click="activeTab = 'news'; mobileMenuOpen = false; initializeNewsTab()"
+            <button @click="switchTab('news'); mobileMenuOpen = false; initializeNewsTab()"
                     :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                     class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
               News Feed
@@ -237,11 +237,11 @@
       </div>
       
       <!-- Desktop navigation -->
-      <div class="border-b border-gray-200 hidden md:block" x-data="{ productionOpen: false, analyticsOpen: false }">
+      <div class="border-b border-gray-200 hidden md:block">
         <nav class="-mb-px flex space-x-8">
           <!-- Dashboard -->
           <button
-            @click="switchTab('dashboard')"
+            @click="console.log('[Navigation] Desktop dashboard button clicked'); switchTab('dashboard')"
             :class="activeTab === 'dashboard' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
@@ -251,7 +251,7 @@
           <!-- Production Dropdown -->
           <div class="relative" @click.away="productionOpen = false">
             <button
-              @click="productionOpen = !productionOpen"
+              @click="console.log('[Navigation] Desktop production dropdown toggled:', !productionOpen); productionOpen = !productionOpen"
               :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
               class="py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-1"
             >
@@ -272,11 +272,11 @@
               class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
             >
               <div class="py-1">
-                <button @click="activeTab = 'graphene'; productionOpen = false" :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Graphene</button>
-                <button @click="activeTab = 'biochar'; productionOpen = false" :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Biochar</button>
-                <button @click="activeTab = 'compound-batches'; productionOpen = false" :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Compound Batches</button>
-                <button @click="activeTab = 'micronization'; productionOpen = false" :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Micronization</button>
-                <button @click="activeTab = 'shipments'; productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
+                <button @click="switchTab('graphene'); productionOpen = false" :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Graphene</button>
+                <button @click="switchTab('biochar'); productionOpen = false" :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Biochar</button>
+                <button @click="switchTab('compound-batches'); productionOpen = false" :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Compound Batches</button>
+                <button @click="switchTab('micronization'); productionOpen = false" :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Micronization</button>
+                <button @click="switchTab('shipments'); productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
               </div>
             </div>
           </div>
@@ -307,14 +307,14 @@
               <div class="py-1">
                 <button @click="switchTab('analysis'); analyticsOpen = false" :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Analysis</button>
                 <button @click="switchTab('ai-insights'); analyticsOpen = false" :class="activeTab === 'ai-insights' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Insights</button>
-                <button @click="activeTab = activeTab.startsWith('test-') ? activeTab : 'test-bet'; analyticsOpen = false" :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Test Results</button>
+                <button @click="switchTab(activeTab.startsWith('test-') ? activeTab : 'test-bet'); analyticsOpen = false" :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Test Results</button>
               </div>
             </div>
           </div>
 
           <!-- News Feed -->
           <button
-            @click="activeTab = 'news'; initializeNewsTab()"
+            @click="switchTab('news'); initializeNewsTab()"
             :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
@@ -330,14 +330,14 @@
         <!-- Desktop: Horizontal Layout -->
         <nav class="hidden md:flex space-x-6 px-2 py-3">
           <button
-            @click="activeTab = 'test-bet'"
+            @click="switchTab('test-bet')"
             :class="activeTab === 'test-bet' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
             class="text-sm transition-colors"
           >
             BET
           </button>
           <button
-            @click="activeTab = 'test-conductivity'"
+            @click="switchTab('test-conductivity')"
             :class="activeTab === 'test-conductivity' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
             class="text-sm transition-colors"
           >
@@ -424,7 +424,13 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
-      <!-- Compound Batches Tab -->
+      <!-- Data Page Container -->
+      <div x-show="showDataPage" x-cloak x-html="getDataPageHtml()"></div>
+      
+      <!-- Standard Tab Content (hidden when data page is shown) -->
+      <div x-show="!showDataPage">
+        
+        <!-- Compound Batches Tab -->
       <div x-html="getCompoundBatchesTabHtml()"></div>
 
       <!-- Shipments Tab -->
@@ -469,6 +475,8 @@
 
       <!-- Update Reports Tab Component -->
       <div x-html="getUpdateReportsTabHtml()"></div>
+      
+      </div> <!-- End Standard Tab Content -->
     </main>
 
     <!-- Footer -->
@@ -1127,15 +1135,14 @@
   <!-- Marked.js for markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
   
+  <!-- Main App Entry Point - Load modules first -->
+  <script type="module" src="/src/js/app-refactored.js"></script>
+  
   <!-- Alpine.js Intersect plugin -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   
-
-  <!-- Main App Entry Point - Vite will bundle all dependencies -->
-  <script type="module" src="/src/js/app-refactored.js"></script>
-  
-  <!-- Alpine.js - loaded after app modules -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>  
+  <!-- Alpine.js - loaded after modules -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     </div> <!-- End Main Application -->
   </div> <!-- End Auth Wrapper -->
   

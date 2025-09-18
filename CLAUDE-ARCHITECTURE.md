@@ -829,6 +829,144 @@ The system has been fully componentized across four major phases, creating a mod
 
 All components preserve Alpine.js reactivity through dynamic HTML generation and maintain consistent styling patterns.
 
+## Navigation Architecture (September 2025)
+
+### Overview
+Comprehensive dual-routing system supporting both traditional tab navigation and dedicated data page routing. Features clean URL patterns, seamless transitions between routing modes, and robust error handling for malformed URLs.
+
+### Routing Patterns
+
+#### Dual URL Strategy
+**Normal Tab Navigation** (Path-based routing):
+- ✅ `http://localhost:5174/` (Dashboard)
+- ✅ `http://localhost:5174/graphene` (Graphene tab)
+- ✅ `http://localhost:5174/biochar` (Biochar tab)
+- ✅ `http://localhost:5174/analysis` (Analysis tab)
+
+**Data Page Navigation** (Hash-based routing):
+- ✅ `http://localhost:5174/#/data/graphene/MB2967A` (Graphene experiment detail)
+- ✅ `http://localhost:5174/#/data/biochar/BH123` (Biochar experiment detail)
+- ✅ `http://localhost:5174/#/data/compound-batch/CB-2024-15` (Compound batch detail)
+
+### Architecture Components
+
+#### RouterService (`/client/src/js/services/RouterService.js`)
+- **Purpose**: Client-side routing for data pages with hash-based navigation
+- **URL Pattern**: `#/data/{type}/{identifier}` for dedicated data page routes
+- **Features**:
+  - **Route Parsing**: Intelligent hash parsing with malformed URL detection
+  - **Data Page Detection**: `isDataPageRoute()` validates route structure and identifiers
+  - **Navigation Methods**: `navigateToDataPage()`, `navigateToHome()`, `navigateToTab()`
+  - **Enhanced Validation**: Prevents navigation with undefined/null/empty identifiers
+  - **Breadcrumb Support**: Automatic breadcrumb generation for data pages
+- **Error Handling**: Rejects malformed routes with invalid identifiers ("undefined", "null", "")
+
+#### Navigation State Management (`/client/src/js/app-refactored.js`)
+**Core State Properties**:
+```javascript
+// Tab management
+activeTab: 'dashboard',          // Current active tab
+showDataPage: false,            // Controls data page vs normal tab visibility
+
+// Mobile navigation state  
+mobileMenuOpen: false,
+mobileProductionOpen: false,
+mobileAnalyticsOpen: false,
+productionOpen: false,
+analyticsOpen: false
+```
+
+**Navigation Methods**:
+- **`switchTab(tab)`**: Primary navigation method with comprehensive logging and URL management
+- **`handleInitialRoute()`**: Processes initial URL on app load (path-based and hash-based)
+- **`handleRouteChange(route, previousRoute)`**: RouterService integration for data page transitions
+
+#### Navigation Flow Control
+
+**Tab Switching Logic** (`switchTab` function):
+1. **State Updates**: `activeTab` changes and `showDataPage` reset for normal tabs
+2. **RouterService Reset**: Clears data page state when transitioning to normal tabs
+3. **URL Management**: Uses `window.history.replaceState()` for clean path-based URLs
+4. **Data Loading**: Lazy loads tab-specific data (dashboard, analysis, AI insights, news)
+5. **Error Handling**: Comprehensive error catching with state reversion on failures
+
+**URL Transition Examples**:
+```javascript
+// Data page → Normal tab
+'/#/data/graphene/MB2967A' → '/graphene'
+
+// Normal tab → Normal tab  
+'/graphene' → '/biochar'
+
+// Normal tab → Data page
+'/graphene' → '/#/data/biochar/BH123'
+```
+
+#### UI Integration (`/client/index.html`)
+
+**Navigation Bar Structure**:
+```html
+<!-- Main app scope encompasses all navigation -->
+<div x-data="grapheneApp()" x-init="init()">
+  <!-- Navigation Tabs -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+    <!-- Mobile and Desktop navigation elements -->
+  </div>
+  
+  <!-- Content Areas -->
+  <!-- Data Page Container -->
+  <div x-show="showDataPage" x-cloak x-html="getDataPageHtml()"></div>
+  
+  <!-- Standard Tab Content -->
+  <div x-show="!showDataPage">
+    <!-- Individual tab content with activeTab conditions -->
+  </div>
+</div>
+```
+
+**Scope Resolution**: All navigation elements removed from isolated Alpine.js scopes and placed within main `grapheneApp()` scope for proper function access.
+
+### Technical Features
+
+#### Enhanced Logging System
+Comprehensive navigation tracking with timestamped logs:
+```javascript
+console.log('[Navigation] switchTab called', {
+  requestedTab: tab,
+  previousTab: previousTab, 
+  user: user?.username,
+  isDataPage: window.routerService?.isOnDataPage(),
+  showDataPage: this.showDataPage,
+  currentRoute: window.routerService?.getCurrentRoute(),
+  currentHash: window.location.hash
+});
+```
+
+#### Malformed URL Protection
+- **Validation**: RouterService prevents navigation with undefined/null identifiers
+- **Detection**: Automatic detection of `/undefined` paths in URLs
+- **Cleanup**: Complete URL cleaning using `history.replaceState()` for malformed URLs
+- **Prevention**: Enhanced validation in `navigateToDataPage()` prevents creation of malformed URLs
+
+#### State Synchronization
+- **showDataPage Reset**: Automatically resets when switching from data pages to normal tabs
+- **RouterService Coordination**: Bidirectional communication between app state and RouterService
+- **URL Consistency**: Maintains clean separation between path-based and hash-based routing
+
+### Migration Results (September 2025)
+- ✅ **Alpine.js Scope Issues Resolved**: Navigation functions now accessible across all UI elements
+- ✅ **URL Pattern Consistency**: Clean separation between normal tabs (path-based) and data pages (hash-based)
+- ✅ **Malformed URL Prevention**: Comprehensive validation prevents `/undefined` URL creation
+- ✅ **Seamless Transitions**: Smooth navigation between data pages and normal tabs
+- ✅ **Enhanced Debugging**: Comprehensive logging for navigation troubleshooting
+- ✅ **Zero Functionality Loss**: All existing navigation features preserved and improved
+
+### Performance Optimizations
+- **Lazy Loading**: Tab-specific data loads only when tab is accessed
+- **State Preservation**: Efficient state management prevents unnecessary re-renders
+- **URL Optimization**: Single `history.replaceState()` calls instead of multiple hash updates
+- **Memory Management**: Clean state transitions without memory leaks
+
 ### Modal Stacking Architecture (January 2025)
 
 #### Overview

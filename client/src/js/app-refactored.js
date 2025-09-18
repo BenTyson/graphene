@@ -78,6 +78,13 @@ import FilterService from './services/FilterService.js';
 import NewsService from './services/NewsService.js';
 import CRUDService from './services/CRUDService.js';
 import DashboardService from './services/DashboardService.js';
+
+// Import data page system
+import './services/RouterService.js';
+import './components/dataPage/DataPageLayout.js';
+import './components/dataPage/DataPageHeader.js';
+import './components/dataPage/DataPageSummary.js';
+import './components/dataPage/DataPageSection.js';
 import { DEFAULT_FORMS } from './utils/constants.js';
 
 console.log('Loading app-refactored.js...');
@@ -127,6 +134,67 @@ window.grapheneApp = function() {
   return {
     // Tab management
     activeTab: 'dashboard',
+    
+    // Mobile navigation state
+    mobileMenuOpen: false,
+    mobileProductionOpen: false,
+    mobileAnalyticsOpen: false,
+    productionOpen: false,
+    analyticsOpen: false,
+    
+    // Initialize app and handle initial route
+    init() {
+      // Handle initial URL hash on page load
+      this.handleInitialRoute();
+    },
+    
+    // Handle initial route from URL path and hash
+    handleInitialRoute() {
+      const hash = window.location.hash;
+      const path = window.location.pathname;
+      
+      console.log('[Navigation] handleInitialRoute called', {
+        hash,
+        path,
+        fullUrl: window.location.href
+      });
+      
+      // If it's a data page route (hash-based), let RouterService handle it
+      if (hash && window.routerService?.isDataPageRoute(hash)) {
+        console.log('[Navigation] Data page route detected, letting RouterService handle it');
+        return;
+      }
+      
+      // Handle path-based normal tab navigation
+      if (path && path !== '/') {
+        const tabName = path.slice(1); // Remove leading /
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        
+        if (validTabs.includes(tabName)) {
+          console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
+          this.activeTab = tabName; // Set directly without triggering switchTab to avoid URL change
+          return;
+        }
+      }
+      
+      // Handle legacy hash-based navigation (for backward compatibility)
+      if (hash && hash !== '#') {
+        const tabName = hash.slice(1); // Remove #
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        
+        if (validTabs.includes(tabName)) {
+          console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
+          this.switchTab(tabName); // This will convert to path-based URL
+          return;
+        }
+      }
+      
+      // Default to dashboard if no valid route found
+      if (path === '/' && (!hash || hash === '#')) {
+        console.log('[Navigation] Setting default dashboard tab');
+        this.activeTab = 'dashboard';
+      }
+    },
     
     // Dashboard data
     dashboardData: {
@@ -494,6 +562,13 @@ window.grapheneApp = function() {
       });
     },
     
+    // Data Page System
+    showDataPage: false,
+    currentDataPage: null,
+    dataPageData: null,
+    dataPageLoading: false,
+    dataPageError: null,
+    
     // Testing Infrastructure
     componentErrors: [],
     stateValidationErrors: [],
@@ -526,6 +601,209 @@ window.grapheneApp = function() {
       });
       
       console.log('🧪 Testing infrastructure initialized');
+    },
+
+    // Data Page System Methods
+    setupDataPageRouting() {
+      // Listen for route changes
+      window.routerService.addRouteChangeListener((route, previousRoute) => {
+        this.handleRouteChange(route, previousRoute);
+      });
+      
+      // Handle initial route
+      const currentRoute = window.routerService.getCurrentRoute();
+      if (currentRoute && currentRoute.isDataPage) {
+        this.handleRouteChange(currentRoute, null);
+      }
+      
+      console.log('🛣️ Data page routing initialized');
+    },
+
+    async handleRouteChange(route, previousRoute) {
+      console.log('🛣️ Route changed:', route);
+      
+      if (route.isDataPage) {
+        // Show data page
+        this.showDataPage = true;
+        this.activeTab = 'data-page'; // Set a special tab for data pages
+        await this.loadDataPage(route.type, route.identifier);
+      } else {
+        // Hide data page and return to normal tabs
+        this.showDataPage = false;
+        if (this.activeTab === 'data-page') {
+          this.activeTab = 'dashboard'; // Default back to dashboard
+        }
+      }
+    },
+
+    async loadDataPage(type, identifier) {
+      console.log(`🔍 Loading data page: ${type}/${identifier}`);
+      
+      this.dataPageLoading = true;
+      this.dataPageError = null;
+      this.currentDataPage = { type, identifier };
+      
+      try {
+        // Fetch data from API
+        const response = await fetch(`/api/data/${type}/${identifier}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load ${identifier}: ${response.statusText}`);
+        }
+        
+        this.dataPageData = await response.json();
+        console.log('✅ Data page loaded:', this.dataPageData);
+        
+      } catch (error) {
+        console.error('❌ Failed to load data page:', error);
+        this.dataPageError = error.message;
+        this.dataPageData = null;
+      } finally {
+        this.dataPageLoading = false;
+      }
+    },
+
+    getDataPageHtml() {
+      if (!this.showDataPage || !this.currentDataPage) {
+        return '';
+      }
+
+      if (this.dataPageLoading) {
+        return window.createDataPageLoading(this.currentDataPage.type, this.currentDataPage.identifier);
+      }
+
+      if (this.dataPageError) {
+        return window.createDataPageError('Failed to Load Data', this.dataPageError);
+      }
+
+      if (!this.dataPageData) {
+        return window.createDataPageError('No Data Available', 'The requested data could not be found.');
+      }
+
+      // Get sections configuration based on data type
+      const sections = this.getDataPageSections(this.currentDataPage.type);
+      
+      return window.createDataPageLayout({
+        type: this.currentDataPage.type,
+        identifier: this.currentDataPage.identifier,
+        data: this.dataPageData,
+        sections: sections,
+        actions: this.getDataPageActions(this.currentDataPage.type, this.dataPageData)
+      });
+    },
+
+    getDataPageSections(type) {
+      const sectionConfigs = {
+        graphene: [
+          { id: 'process', title: 'Process Details', component: 'ProcessSection', visible: true },
+          { id: 'source', title: 'Source Materials', component: 'SourceSection', visible: true },
+          { id: 'tests', title: 'Test Results', component: 'TestSection', visible: true },
+          { id: 'reports', title: 'Reports & Documentation', component: 'ReportsSection', visible: true },
+          { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true },
+          { id: 'related', title: 'Related Experiments', component: 'RelatedSection', visible: true }
+        ],
+        biochar: [
+          { id: 'process', title: 'Process Parameters', component: 'ProcessSection', visible: true },
+          { id: 'materials', title: 'Source Materials', component: 'MaterialsSection', visible: true },
+          { id: 'properties', title: 'Physical Properties', component: 'PropertiesSection', visible: true },
+          { id: 'downstream', title: 'Downstream Usage', component: 'DownstreamSection', visible: true }
+        ],
+        'compound-batch': [
+          { id: 'constituents', title: 'Constituent Experiments', component: 'ConstituentsSection', visible: true },
+          { id: 'process', title: 'Processing Details', component: 'ProcessSection', visible: true },
+          { id: 'tests', title: 'Quality Control Tests', component: 'TestSection', visible: true },
+          { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true }
+        ],
+        micronization: [
+          { id: 'source', title: 'Source Compound Batch', component: 'SourceSection', visible: true },
+          { id: 'process', title: 'Processing Parameters', component: 'ProcessSection', visible: true },
+          { id: 'tests', title: 'Quality Tests', component: 'TestSection', visible: true },
+          { id: 'shipments', title: 'Output Tracking', component: 'ShipmentsSection', visible: true }
+        ],
+        shipment: [
+          { id: 'details', title: 'Shipment Details', component: 'DetailsSection', visible: true },
+          { id: 'source', title: 'Source Materials', component: 'SourceSection', visible: true },
+          { id: 'tracking', title: 'Tracking Information', component: 'TrackingSection', visible: true }
+        ]
+      };
+
+      return sectionConfigs[type] || [];
+    },
+
+    getDataPageActions(type, data) {
+      return {
+        edit: `editDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`,
+        export: `exportDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`,
+        duplicate: `duplicateDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`
+      };
+    },
+
+    // Data page helper methods for Alpine.js templates
+    getDataPageHeader() {
+      if (!this.currentDataPage || !this.dataPageData) {
+        return '';
+      }
+
+      const breadcrumbs = window.routerService.getBreadcrumbs();
+      
+      return window.createDataPageHeader({
+        type: this.currentDataPage.type,
+        identifier: this.currentDataPage.identifier,
+        data: this.dataPageData,
+        breadcrumbs: breadcrumbs,
+        actions: this.getDataPageActions(this.currentDataPage.type, this.dataPageData)
+      });
+    },
+
+    getDataPageSummary() {
+      if (!this.currentDataPage || !this.dataPageData) {
+        return '';
+      }
+
+      return window.createDataPageSummary({
+        type: this.currentDataPage.type,
+        data: this.dataPageData
+      });
+    },
+
+    getDataPageNavigation() {
+      // For now, return empty - we'll implement section navigation later if needed
+      return '';
+    },
+
+    getDataPageSectionContent(sectionId, component) {
+      if (!this.currentDataPage || !this.dataPageData) {
+        return '';
+      }
+
+      return window.getSectionContent(sectionId, this.dataPageData, this.currentDataPage.type);
+    },
+
+    getDataPageFooter() {
+      if (!this.currentDataPage || !this.dataPageData) {
+        return '';
+      }
+
+      const auditData = this.dataPageData.auditTrail || {};
+      const createdDate = auditData.createdAt || this.dataPageData.createdDate || this.dataPageData.experimentDate;
+      const updatedDate = auditData.updatedAt || this.dataPageData.updatedDate;
+
+      return `
+        <div class="data-page-footer mt-12 pt-8 border-t border-gray-200 text-sm text-gray-500">
+          <div class="flex justify-between items-center">
+            <div>
+              ${createdDate ? `Created: ${window.formatDateSafe(createdDate)}` : ''}
+              ${updatedDate ? ` • Updated: ${window.formatDateSafe(updatedDate)}` : ''}
+            </div>
+            <div>
+              <button onclick="window.routerService.goBack()" 
+                      class="text-blue-600 hover:text-blue-800">
+                ← Back
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
     },
     
     validateApplicationState() {
@@ -598,6 +876,9 @@ window.grapheneApp = function() {
     async init() {
       // Setup testing infrastructure first
       this.setupTestingInfrastructure();
+      
+      // Setup data page routing
+      this.setupDataPageRouting();
       
       // Load dashboard data first if dashboard is active
       if (this.activeTab === 'dashboard') {
@@ -3062,22 +3343,106 @@ window.grapheneApp = function() {
     
     // Handle tab change to load data if needed
     async switchTab(tab) {
-      this.activeTab = tab;
-      if (tab === 'dashboard' && !this.dashboardData.production) {
-        await this.loadDashboardData();
-      } else if (tab === 'analysis') {
-        if (!this.analysisData) {
-          await this.loadAnalysisData();
+      const timestamp = new Date().toISOString();
+      const previousTab = this.activeTab;
+      const user = window.authService?.getCurrentUser();
+      
+      console.log(`[Navigation] switchTab called at ${timestamp}`, {
+        requestedTab: tab,
+        previousTab: previousTab,
+        user: user?.username || 'unknown',
+        isDataPage: window.routerService?.isOnDataPage() || false,
+        showDataPage: this.showDataPage,
+        currentRoute: window.routerService?.getCurrentRoute(),
+        currentHash: window.location.hash
+      });
+      
+      try {
+        this.activeTab = tab;
+        console.log(`[Navigation] activeTab updated: ${previousTab} -> ${tab}`);
+        
+        // Reset data page visibility for normal tab navigation
+        if (previousTab === 'data-page' || this.showDataPage) {
+          this.showDataPage = false;
+          console.log(`[Navigation] showDataPage reset to false for normal tab navigation`);
         }
-        if (!this.analysisChartData) {
-          await this.loadAnalysisChartData();
+        
+        // Reset RouterService to normal navigation mode for tab switching
+        if (window.routerService && window.routerService.isOnDataPage()) {
+          console.log(`[Navigation] Clearing data page state for normal tab navigation`);
+          // Force RouterService to recognize this as normal tab navigation
+          window.routerService.currentRoute = { 
+            type: tab, 
+            identifier: null, 
+            isDataPage: false,
+            fullPath: tab === 'dashboard' ? '' : tab,
+            params: {}
+          };
         }
-      } else if (tab === 'ai-insights') {
-        if (!this.aiInsightsData) {
-          await this.loadAIInsightsDashboard();
+        
+        // Use path-based URLs for normal tabs, hash-based only for data pages
+        const newPath = tab === 'dashboard' ? '/' : `/${tab}`;
+        const currentPath = window.location.pathname;
+        const currentHash = window.location.hash;
+        
+        // Always use path-based URLs for normal tab navigation
+        const newUrl = `${window.location.origin}${newPath}`;
+        
+        console.log(`[Navigation] Transitioning to path-based URL`, {
+          from: `${currentPath}${currentHash}`,
+          to: newUrl,
+          tab: tab,
+          wasDataPage: window.routerService?.isOnDataPage()
+        });
+        
+        // Use replaceState to set the correct path-based URL
+        window.history.replaceState(null, '', newUrl);
+        console.log(`[Navigation] URL updated to path-based: ${newUrl}`);
+        
+        // Handle tab-specific data loading
+        if (tab === 'dashboard' && !this.dashboardData.production) {
+          console.log(`[Navigation] Loading dashboard data for tab: ${tab}`);
+          await this.loadDashboardData();
+          console.log(`[Navigation] Dashboard data loaded successfully`);
+        } else if (tab === 'analysis') {
+          if (!this.analysisData) {
+            console.log(`[Navigation] Loading analysis data for tab: ${tab}`);
+            await this.loadAnalysisData();
+            console.log(`[Navigation] Analysis data loaded successfully`);
+          }
+          if (!this.analysisChartData) {
+            console.log(`[Navigation] Loading analysis chart data for tab: ${tab}`);
+            await this.loadAnalysisChartData();
+            console.log(`[Navigation] Analysis chart data loaded successfully`);
+          }
+        } else if (tab === 'ai-insights') {
+          if (!this.aiInsightsData) {
+            console.log(`[Navigation] Loading AI insights data for tab: ${tab}`);
+            await this.loadAIInsightsDashboard();
+            console.log(`[Navigation] AI insights data loaded successfully`);
+          }
+        } else if (tab === 'news') {
+          console.log(`[Navigation] Initializing news tab: ${tab}`);
+          await this.initializeNewsTab();
+          console.log(`[Navigation] News tab initialized successfully`);
+        } else {
+          console.log(`[Navigation] No data loading required for tab: ${tab}`);
         }
-      } else if (tab === 'news') {
-        await this.initializeNewsTab();
+        
+        console.log(`[Navigation] switchTab completed successfully for tab: ${tab}`);
+        
+      } catch (error) {
+        console.error(`[Navigation] Error in switchTab for tab: ${tab}`, {
+          error: error.message,
+          stack: error.stack,
+          timestamp: timestamp,
+          previousTab: previousTab,
+          user: user?.username || 'unknown'
+        });
+        
+        // Revert activeTab on error
+        this.activeTab = previousTab;
+        console.log(`[Navigation] Reverted activeTab to: ${previousTab} due to error`);
       }
     },
 
@@ -3502,7 +3867,7 @@ window.addEventListener('alpine:init', () => {
         console.log('🎯 Final PDF URL:', finalUrl);
         appData.openPdfInModal(finalUrl, title);
       };
-      window.closePdfViewer = appData.closePdfViewer.bind(appData);
+      window.closePdfViewer = appData.closePdfViewer ? appData.closePdfViewer.bind(appData) : () => console.log('closePdfViewer not available');
       console.log('PDF modal functions exposed globally');
       
       // Expose timezone-safe date formatting function globally
@@ -3544,6 +3909,30 @@ window.addEventListener('alpine:init', () => {
       };
       
       console.log('Global date formatting function exposed');
+      
+      // Expose modal fallback functions that redirect to data pages
+      window.openGrapheneModal = function(experimentNumber) {
+        console.log('openGrapheneModal called, redirecting to data page for:', experimentNumber);
+        if (window.routerService) {
+          window.routerService.navigateToDataPage('graphene', experimentNumber);
+        }
+      };
+      
+      window.openCompoundBatchModal = function(batchNumber) {
+        console.log('openCompoundBatchModal called, redirecting to data page for:', batchNumber);
+        if (window.routerService) {
+          window.routerService.navigateToDataPage('compound-batch', batchNumber);
+        }
+      };
+      
+      window.openShipmentModal = function(shipmentNumber) {
+        console.log('openShipmentModal called, redirecting to data page for:', shipmentNumber);
+        if (window.routerService) {
+          window.routerService.navigateToDataPage('shipment', shipmentNumber);
+        }
+      };
+      
+      console.log('Modal fallback functions exposed globally');
     }
   }, 100);
 });

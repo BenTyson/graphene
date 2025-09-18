@@ -36,7 +36,8 @@ function createSimplifiedShipmentCard(shipment, options = {}) {
     <div class="simplified-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg hover:border-link transition-all duration-200 transform hover:-translate-y-1"
          data-shipment="${shipment.shipmentNumber || ''}"
          data-instance="${instanceId}"
-         @click="openShipmentModal('${shipment.shipmentNumber || ''}')">
+         @click="window.routerService.navigateToDataPage('shipment', '${shipment.shipmentNumber || ''}')"
+         >
       
       <!-- Shipment Number and Date - Primary line -->
       <div class="font-semibold text-lg text-gray-900 mb-2">
