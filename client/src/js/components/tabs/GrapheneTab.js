@@ -251,7 +251,7 @@ function getGrapheneTabHtml() {
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.testOrder || '-'"></td>
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
                   <button 
-                    @click="toggleGrapheneExpansion(record.experimentNumber)" 
+                    @click="routerService.navigateToDataPage('graphene', record.experimentNumber)" 
                     class="text-link text-link-hover underline cursor-pointer">
                     <span x-text="record.experimentNumber" class="font-bold"></span>
                     <span x-show="record.titleNote" x-text="' ' + record.titleNote" class="text-gray-600"></span>
@@ -440,7 +440,7 @@ function getGrapheneTabHtml() {
             <div class="mobile-card-header">
               <div class="flex items-center justify-between">
                 <button 
-                  @click="toggleGrapheneExpansion(record.experimentNumber)" 
+                  @click="routerService.navigateToDataPage('graphene', record.experimentNumber)" 
                   class="text-link text-link-hover underline font-bold touch-target"
                   x-text="'Exp #' + record.experimentNumber">
                 </button>
