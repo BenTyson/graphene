@@ -291,5 +291,4 @@ function initializeModalTemplates() {
 // Initialize and expose the modal template system
 window.ModalTemplates = initializeModalTemplates();
 
-console.log('Modal Templates System initialized with support for:', 
-  ['graphene', 'compoundBatch', 'shipment', 'biochar', 'micronization', 'report']);
+// Modal Templates System initialized - removed excessive logging

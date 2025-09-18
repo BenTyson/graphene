@@ -1135,6 +1135,9 @@
   <!-- Marked.js for markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
   
+  <!-- LoggingService - Load first to be available globally -->
+  <script type="module" src="/src/js/services/LoggingService.js"></script>
+  
   <!-- Main App Entry Point - Load modules first -->
   <script type="module" src="/src/js/app-refactored.js"></script>
   

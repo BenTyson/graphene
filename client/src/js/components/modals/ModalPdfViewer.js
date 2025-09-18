@@ -184,4 +184,4 @@ function initializeModalPdfViewer() {
 // Initialize and expose the modal PDF viewer system
 window.ModalPdfViewer = initializeModalPdfViewer();
 
-console.log('Modal PDF Viewer system initialized');
+// Modal PDF Viewer system initialized - removed excessive logging

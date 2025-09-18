@@ -197,8 +197,6 @@ export const DEFAULT_FORMS = {
     shipToLocation: '',
     shipmentDate: '',
     dateUnknown: false,
-    receivedDate: '',
-    receivedDateUnknown: false,
     materialType: 'graphene',
     grapheneSample: '',
     compoundBatchNumber: '',

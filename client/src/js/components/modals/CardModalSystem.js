@@ -233,7 +233,7 @@ function initializeModalSystem() {
     getStyles: getModalSystemStyles
   };
   
-  console.log('Card Modal System initialized');
+  // Card Modal System initialized - removed excessive logging
 }
 
 // Initialize on load

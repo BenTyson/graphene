@@ -168,4 +168,4 @@ window.createSimplifiedLoadingCard = createSimplifiedLoadingCard;
 window.createSimplifiedErrorCard = createSimplifiedErrorCard;
 window.createSimplifiedGrapheneCardCollection = createSimplifiedGrapheneCardCollection;
 
-console.log('Simplified Graphene Card components initialized');
+// Component initialized - removed excessive logging

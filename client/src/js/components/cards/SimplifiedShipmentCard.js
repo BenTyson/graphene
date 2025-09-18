@@ -268,4 +268,4 @@ window.createSimplifiedShipmentLoadingCard = createSimplifiedShipmentLoadingCard
 window.createSimplifiedShipmentErrorCard = createSimplifiedShipmentErrorCard;
 window.createSimplifiedShipmentCardCollection = createSimplifiedShipmentCardCollection;
 
-console.log('Simplified Shipment Card components initialized');
+// Component initialized - removed excessive logging

@@ -5,7 +5,7 @@
  * - Dynamic modal title (Add vs Edit)
  * - Auto-generated shipment numbers
  * - Location management with dropdowns
- * - Date fields with unknown checkboxes
+ * - Shipment date field with unknown checkbox
  * - Triple material type selection (Individual Graphene, Compound Batch, Micronized SKU)
  * - Sample/batch/SKU selection dropdowns
  * - Amount, purpose, and status fields
@@ -65,17 +65,12 @@ function getShipmentModalHtml() {
               })"></div>
             </div>
 
-            <!-- Row 2: Dates -->
-            <div class="grid grid-cols-2 gap-4 mb-4">
+            <!-- Row 2: Shipment Date -->
+            <div class="grid grid-cols-1 gap-4 mb-4">
               <div x-html="getDateFieldHtml({
                 label: 'Shipment Date',
                 dateModelVariable: 'shipmentForm.shipmentDate',
                 unknownModelVariable: 'shipmentForm.dateUnknown'
-              })"></div>
-              <div x-html="getDateFieldHtml({
-                label: 'Received Date',
-                dateModelVariable: 'shipmentForm.receivedDate',
-                unknownModelVariable: 'shipmentForm.receivedDateUnknown'
               })"></div>
             </div>
 

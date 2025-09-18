@@ -600,7 +600,7 @@ window.grapheneApp = function() {
         console.error('Promise Rejection Detected:', error);
       });
       
-      console.log('🧪 Testing infrastructure initialized');
+      // Testing infrastructure initialized - reduced logging
     },
 
     // Data Page System Methods
@@ -616,11 +616,12 @@ window.grapheneApp = function() {
         this.handleRouteChange(currentRoute, null);
       }
       
-      console.log('🛣️ Data page routing initialized');
+      // Data page routing initialized - reduced logging
     },
 
     async handleRouteChange(route, previousRoute) {
-      console.log('🛣️ Route changed:', route);
+      // Route changed - reduced logging
+      window.logger?.debug('Route changed in handleRouteChange', { type: route.type, isDataPage: route.isDataPage });
       
       if (route.isDataPage) {
         // Show data page
@@ -652,7 +653,8 @@ window.grapheneApp = function() {
         }
         
         this.dataPageData = await response.json();
-        console.log('✅ Data page loaded:', this.dataPageData);
+        // Data page loaded successfully - reduced logging
+        window.logger?.success(`Data page loaded: ${type}/${identifier}`);
         
       } catch (error) {
         console.error('❌ Failed to load data page:', error);
@@ -824,7 +826,7 @@ window.grapheneApp = function() {
       if (errors.length > 0) {
         console.error('State Validation Errors:', errors);
       } else {
-        console.log('✅ Application state validation passed');
+        // Application state validation passed - reduced logging
       }
       
       return errors.length === 0;
@@ -858,7 +860,11 @@ window.grapheneApp = function() {
         }
       }
       
-      console.log('🏥 API Health Check Results:', results);
+      // API Health Check completed - reduced logging
+      window.logger?.debug('API Health Check completed', { 
+        endpoints: Object.keys(results).length,
+        errors: Object.values(results).filter(r => r.status === 'error').length
+      });
       return results;
     },
     
@@ -1739,6 +1745,23 @@ window.grapheneApp = function() {
 
     async deleteMicronization(id) {
       await CRUDService.deleteMicronization(id, this);
+    },
+
+    openMicronizationForm(micronization = null) {
+      if (micronization) {
+        // Edit mode
+        this.editingMicronization = micronization;
+        this.micronizationForm = {
+          ...micronization,
+          date: micronization.date ? new Date(micronization.date).toISOString().split('T')[0] : '',
+          dateUnknown: !micronization.date
+        };
+      } else {
+        // Add mode
+        this.editingMicronization = null;
+        this.micronizationForm = { ...DEFAULT_FORMS.micronization };
+      }
+      this.showAddMicronization = true;
     },
 
     duplicateMicronization(micronization) {
@@ -3347,24 +3370,20 @@ window.grapheneApp = function() {
       const previousTab = this.activeTab;
       const user = window.authService?.getCurrentUser();
       
-      console.log(`[Navigation] switchTab called at ${timestamp}`, {
-        requestedTab: tab,
-        previousTab: previousTab,
+      // Log navigation with debug level only
+      window.logger?.navigation(`switchTab: ${previousTab} -> ${tab}`, {
         user: user?.username || 'unknown',
-        isDataPage: window.routerService?.isOnDataPage() || false,
-        showDataPage: this.showDataPage,
-        currentRoute: window.routerService?.getCurrentRoute(),
-        currentHash: window.location.hash
+        isDataPage: window.routerService?.isOnDataPage() || false
       });
       
       try {
         this.activeTab = tab;
-        console.log(`[Navigation] activeTab updated: ${previousTab} -> ${tab}`);
+        // activeTab updated - reduced logging
         
         // Reset data page visibility for normal tab navigation
         if (previousTab === 'data-page' || this.showDataPage) {
           this.showDataPage = false;
-          console.log(`[Navigation] showDataPage reset to false for normal tab navigation`);
+          // showDataPage reset - reduced logging
         }
         
         // Reset RouterService to normal navigation mode for tab switching
@@ -3388,61 +3407,47 @@ window.grapheneApp = function() {
         // Always use path-based URLs for normal tab navigation
         const newUrl = `${window.location.origin}${newPath}`;
         
-        console.log(`[Navigation] Transitioning to path-based URL`, {
-          from: `${currentPath}${currentHash}`,
-          to: newUrl,
-          tab: tab,
-          wasDataPage: window.routerService?.isOnDataPage()
-        });
+        // Transitioning to path-based URL - reduced logging
+        window.logger?.navigation(`URL transition: ${tab}`, { from: currentPath, to: newPath });
         
         // Use replaceState to set the correct path-based URL
         window.history.replaceState(null, '', newUrl);
-        console.log(`[Navigation] URL updated to path-based: ${newUrl}`);
+        // URL updated to path-based - reduced logging
         
         // Handle tab-specific data loading
         if (tab === 'dashboard' && !this.dashboardData.production) {
-          console.log(`[Navigation] Loading dashboard data for tab: ${tab}`);
+          // Loading dashboard data - reduced logging
           await this.loadDashboardData();
-          console.log(`[Navigation] Dashboard data loaded successfully`);
         } else if (tab === 'analysis') {
           if (!this.analysisData) {
-            console.log(`[Navigation] Loading analysis data for tab: ${tab}`);
+            // Loading analysis data - reduced logging
             await this.loadAnalysisData();
-            console.log(`[Navigation] Analysis data loaded successfully`);
           }
           if (!this.analysisChartData) {
-            console.log(`[Navigation] Loading analysis chart data for tab: ${tab}`);
+            // Loading analysis chart data - reduced logging
             await this.loadAnalysisChartData();
-            console.log(`[Navigation] Analysis chart data loaded successfully`);
           }
         } else if (tab === 'ai-insights') {
           if (!this.aiInsightsData) {
-            console.log(`[Navigation] Loading AI insights data for tab: ${tab}`);
+            // Loading AI insights data - reduced logging
             await this.loadAIInsightsDashboard();
-            console.log(`[Navigation] AI insights data loaded successfully`);
           }
         } else if (tab === 'news') {
           console.log(`[Navigation] Initializing news tab: ${tab}`);
           await this.initializeNewsTab();
-          console.log(`[Navigation] News tab initialized successfully`);
+          // News tab initialized successfully - reduced logging
         } else {
-          console.log(`[Navigation] No data loading required for tab: ${tab}`);
+          // No data loading required - reduced logging
         }
         
-        console.log(`[Navigation] switchTab completed successfully for tab: ${tab}`);
+        // switchTab completed successfully - reduced logging
         
       } catch (error) {
-        console.error(`[Navigation] Error in switchTab for tab: ${tab}`, {
-          error: error.message,
-          stack: error.stack,
-          timestamp: timestamp,
-          previousTab: previousTab,
-          user: user?.username || 'unknown'
-        });
+        window.logger?.error(`Navigation error in switchTab(${tab})`, error.message);
         
         // Revert activeTab on error
         this.activeTab = previousTab;
-        console.log(`[Navigation] Reverted activeTab to: ${previousTab} due to error`);
+        // Reverted activeTab due to error - reduced logging
       }
     },
 

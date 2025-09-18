@@ -27,7 +27,7 @@ class RouterService {
     // Handle initial route
     this.handleRouteChange();
     
-    console.log('RouterService initialized');
+    // RouterService initialized - reduced logging
   }
 
   /**
@@ -49,7 +49,11 @@ class RouterService {
     const previousRoute = this.currentRoute;
     this.currentRoute = newRoute;
 
-    console.log('RouterService - Route changed:', previousRoute, '->', newRoute);
+    // Route changed - using debug logging only
+    window.logger?.router(`Route changed: ${previousRoute?.type || 'none'} -> ${newRoute.type}`, {
+      from: previousRoute?.fullPath,
+      to: newRoute.fullPath
+    });
 
     // Only notify listeners for data page routes
     if (newRoute.isDataPage || (previousRoute && previousRoute.isDataPage)) {

@@ -233,7 +233,8 @@ function dataPageController(type, identifier) {
     activeSection: null,
     
     init() {
-      console.log(`Initializing data page: ${type}/${identifier}`);
+      // Initializing data page - reduced logging
+      window.logger?.debug(`Initializing data page: ${type}/${identifier}`);
       this.loadData();
     },
     
@@ -250,10 +251,11 @@ function dataPageController(type, identifier) {
         }
         
         this.data = await response.json();
-        console.log('Data loaded:', this.data);
+        // Data loaded successfully - reduced logging
+        window.logger?.debug('Data loaded for data page', { type: this.type, identifier: this.identifier });
         
       } catch (error) {
-        console.error('Failed to load data page:', error);
+        window.logger?.error('Failed to load data page:', error.message);
         this.error = error.message;
       } finally {
         this.loading = false;

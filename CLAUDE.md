@@ -5,11 +5,11 @@
 - **staging**: Testing branch (deploys to staging Railway)
 
 ## Development Workflow
-1. Always work on main branch for regular development
-2. Push changes to main: `git push origin main`  
-3. For testing, merge to staging: `git checkout staging && git merge main && git push origin staging`
-4. Deploy staging to test changes
-5. If staging looks good, main will auto-deploy to production
+1. Always work on staging branch for regular development
+2. Push changes to staging: `git push origin staging`  
+3. Deploy staging to Railway for testing
+4. If staging looks good, merge to main for production: `git checkout main && git merge staging && git push origin main`
+5. Main auto-deploys to production
 
 ## Important Rules
 - NEVER create additional feature branches without documenting them here
@@ -49,11 +49,11 @@ git checkout staging && git merge main && git push origin staging
 ```
 
 ## Branch Synchronization Protocol
-After any direct commits to main or cherry-picking operations:
-1. Immediately sync staging: `git checkout staging && git merge main`
+After any direct commits to staging or cherry-picking operations:
+1. When ready for production, sync main: `git checkout main && git merge staging`
 2. Resolve any merge conflicts
 3. Push both branches: `git push origin staging && git push origin main`
-4. Verify sync: `git log --oneline main ^staging` (should be empty)
+4. Verify sync: `git log --oneline staging ^main` (should be empty after production merge)
 
 ## Database Scripts
 - `server/routes/seed-staging.js`: Seeds staging with JSON data

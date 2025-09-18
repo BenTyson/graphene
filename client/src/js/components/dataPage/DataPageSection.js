@@ -101,16 +101,88 @@ function getSectionContent(sectionId, data, type) {
  */
 function createProcessSection(data, type) {
   if (type === 'graphene') {
-    return createProcessGrid([
-      { label: 'Max Temperature', value: data.maxTemp, unit: '°C' },
-      { label: 'Time', value: data.time, unit: 'min' },
-      { label: 'Reactor', value: data.reactor },
-      { label: 'Acid Type', value: data.acidType },
-      { label: 'Wash Medium', value: data.washMedium },
-      { label: 'Base Type', value: data.baseType },
-      { label: 'Gas', value: data.gas },
-      { label: 'Wash Solution', value: data.washSolution }
-    ]);
+    return `
+      <div class="space-y-4">
+        <!-- Process Parameters -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Equipment & Base -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Equipment & Base</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-gray-600">Oven:</span> <span class="font-medium">${data.oven || 'N/A'}</span></div>
+              <div><span class="text-gray-600">Quantity:</span> <span class="font-medium">${data.quantity || 'N/A'} g</span></div>
+              <div><span class="text-gray-600">Gas:</span> <span class="font-medium">${data.gas || 'N/A'}</span></div>
+              <div><span class="text-gray-600">Base:</span> <span class="font-medium">${data.baseAmount || 'N/A'}g ${data.baseType || ''} ${data.baseConcentration ? '(' + data.baseConcentration + '%)' : ''}</span></div>
+            </div>
+          </div>
+
+          <!-- Grinding -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Grinding</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-gray-600">Method:</span> <span class="font-medium">${data.grindingMethod || 'N/A'}</span></div>
+              <div><span class="text-gray-600"># Grinds:</span> <span class="font-medium">${data.grindingCount || 'N/A'}</span></div>
+              <div><span class="text-gray-600">Time:</span> <span class="font-medium">${data.grindingTime || 'N/A'} min</span></div>
+              <div><span class="text-gray-600">Frequency:</span> <span class="font-medium">${data.grindingFrequency || 'N/A'} Hz</span></div>
+              <div class="col-span-2"><span class="text-gray-600">Homogeneous:</span> <span class="font-medium">${data.homogeneous || 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <!-- Temperature -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Temperature</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-gray-600">Rate:</span> <span class="font-medium">${data.tempRate || 'N/A'} °C/min</span></div>
+              <div><span class="text-gray-600">Max:</span> <span class="font-medium">${data.tempMax || 'N/A'} °C</span></div>
+              <div><span class="text-gray-600">Time:</span> <span class="font-medium">${data.time || 'N/A'} min</span></div>
+            </div>
+          </div>
+
+          <!-- Wash & Drying -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Wash & Drying</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-gray-600">Wash:</span> <span class="font-medium">${data.washAmount || 'N/A'}mL ${data.washSolution || ''}</span></div>
+              <div><span class="text-gray-600">Conc:</span> <span class="font-medium">${data.washConcentration || 'N/A'}%</span></div>
+              <div><span class="text-gray-600">Water:</span> <span class="font-medium">${data.washWater || 'N/A'} mL</span></div>
+              <div><span class="text-gray-600">Dry:</span> <span class="font-medium">${data.dryingTemp || 'N/A'}°C ${data.dryingAtmosphere || ''}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results & Output -->
+        <div class="bg-gray-50 rounded-lg p-3">
+          <h4 class="font-medium text-gray-900 mb-2 text-sm">Results</h4>
+          <div class="grid grid-cols-4 gap-2 text-xs">
+            <div><span class="text-gray-600">Volume:</span> <span class="font-medium">${data.volumeMl || 'N/A'} mL</span></div>
+            <div><span class="text-gray-600">Density:</span> <span class="font-medium">${data.volumeMl && data.output ? (data.output / data.volumeMl).toFixed(2) : 'N/A'} g/mL</span></div>
+            <div><span class="text-gray-600">Output:</span> <span class="font-medium">${data.output || 'N/A'} g</span></div>
+            <div><span class="text-gray-600">Yield:</span> <span class="font-medium">${data.quantity && data.output ? ((data.output / data.quantity) * 100).toFixed(1) : 'N/A'}%</span></div>
+          </div>
+        </div>
+
+        <!-- Appearance & Comments -->
+        <div class="space-y-3">
+          ${data.appearanceTags && data.appearanceTags.length > 0 ? `
+            <div class="bg-gray-50 rounded-lg p-3">
+              <h4 class="font-medium text-gray-900 mb-2 text-sm">Appearance</h4>
+              <div class="flex flex-wrap gap-1">
+                ${data.appearanceTags.map(tag => `
+                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${tag}</span>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+          
+          ${data.comments ? `
+            <div class="bg-gray-50 rounded-lg p-3">
+              <h4 class="font-medium text-gray-900 mb-2 text-sm">Comments</h4>
+              <p class="text-sm text-gray-700">${data.comments}</p>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
   } else if (type === 'biochar') {
     return createProcessGrid([
       { label: 'Pyrolysis Temperature', value: data.pyrolysisTemp, unit: '°C' },
@@ -197,9 +269,11 @@ function createSourceSection(data, type) {
  */
 function createTestsSection(data, type) {
   const testTypes = ['betTests', 'conductivityTests', 'ramanTests', 'temTests'];
+  const semReports = data.semReports || [];
   const hasTests = testTypes.some(testType => data[testType] && data[testType].length > 0);
+  const hasAnything = hasTests || semReports.length > 0;
   
-  if (!hasTests) {
+  if (!hasAnything) {
     return `
       <div class="text-center py-8 text-gray-500">
         <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,6 +293,52 @@ function createTestsSection(data, type) {
         const testLabel = getTestTypeLabel(testType);
         return createTestTypeSection(testLabel, tests, testType);
       }).filter(Boolean).join('')}
+      
+      ${semReports.length > 0 ? `
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h4 class="font-medium text-gray-900 mb-3">SEM Reports (${semReports.length})</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${semReports.map(reportRelation => {
+              // Handle nested structure: semReports[].semReport or flat semReports[]
+              const report = reportRelation.semReport || reportRelation;
+              const filePath = report.filePath || report.originalPath;
+              const originalName = report.originalName || 'SEM Report';
+              const reportDate = report.reportDate || reportRelation.reportDate;
+              
+              return `
+                <div class="bg-white rounded border p-3">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <div class="font-medium">${originalName}</div>
+                      <div class="text-sm text-gray-600">${reportDate ? window.formatDateSafe(reportDate) : 'N/A'}</div>
+                    </div>
+                    ${filePath ? `
+                      ${filePath.includes('cloudinary.com') ? `
+                        <a href="${filePath}" target="_blank" rel="noopener noreferrer"
+                           class="text-blue-600 hover:text-blue-800 transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M7 7l10 10M17 7v4M17 7h-4"></path>
+                          </svg>
+                        </a>
+                      ` : `
+                        <button @click="window.openPdfInModal('${filePath}', '${originalName}')"
+                                class="text-blue-600 hover:text-blue-800 transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                          </svg>
+                        </button>
+                      `}
+                    ` : `
+                      <span class="text-gray-400 text-sm">No file</span>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -269,10 +389,9 @@ function createTestTypeSection(label, tests, testType) {
  * @returns {string} Reports section HTML
  */
 function createReportsSection(data, type) {
-  const semReports = data.semReports || [];
   const updateReports = data.updateReports || [];
   
-  if (semReports.length === 0 && updateReports.length === 0) {
+  if (updateReports.length === 0) {
     return `
       <div class="text-center py-8 text-gray-500">
         <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,53 +404,50 @@ function createReportsSection(data, type) {
 
   return `
     <div class="space-y-6">
-      ${semReports.length > 0 ? `
-        <div class="bg-gray-50 rounded-lg p-4">
-          <h4 class="font-medium text-gray-900 mb-3">SEM Reports (${semReports.length})</h4>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            ${semReports.map(report => `
-              <div class="bg-white rounded border p-3">
-                <div class="flex justify-between items-center">
-                  <div>
-                    <div class="font-medium">${report.originalName || 'SEM Report'}</div>
-                    <div class="text-sm text-gray-600">${report.reportDate ? window.formatDateSafe(report.reportDate) : 'N/A'}</div>
-                  </div>
-                  <a href="${report.filePath}" target="_blank" 
-                     class="text-blue-600 hover:text-blue-800">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
-      
       ${updateReports.length > 0 ? `
         <div class="bg-gray-50 rounded-lg p-4">
           <h4 class="font-medium text-gray-900 mb-3">Update Reports (${updateReports.length})</h4>
           <div class="space-y-2">
-            ${updateReports.map(report => `
-              <div class="bg-white rounded border p-3">
-                <div class="flex justify-between items-center">
-                  <div>
-                    <div class="font-medium">${report.originalName || 'Update Report'}</div>
-                    <div class="text-sm text-gray-600">Week of ${report.weekOf ? window.formatDateSafe(report.weekOf) : 'N/A'}</div>
-                    ${report.description ? `<div class="text-sm text-gray-500 mt-1">${report.description}</div>` : ''}
+            ${updateReports.map(reportRelation => {
+              // Handle nested structure: updateReports[].updateReport or flat updateReports[]
+              const report = reportRelation.updateReport || reportRelation;
+              const filePath = report.filePath || report.originalPath;
+              const originalName = report.originalName || 'Update Report';
+              const weekOf = report.weekOf || reportRelation.weekOf;
+              const description = report.description || reportRelation.description;
+              
+              return `
+                <div class="bg-white rounded border p-3">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <div class="font-medium">${originalName}</div>
+                      <div class="text-sm text-gray-600">Week of ${weekOf ? window.formatDateSafe(weekOf) : 'N/A'}</div>
+                      ${description ? `<div class="text-sm text-gray-500 mt-1">${description}</div>` : ''}
+                    </div>
+                    ${filePath ? `
+                      ${filePath.includes('cloudinary.com') ? `
+                        <a href="${filePath}" target="_blank" rel="noopener noreferrer"
+                           class="text-blue-600 hover:text-blue-800 transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M7 7l10 10M17 7v4M17 7h-4"></path>
+                          </svg>
+                        </a>
+                      ` : `
+                        <button @click="window.openPdfInModal('${filePath}', '${originalName}')"
+                                class="text-blue-600 hover:text-blue-800 transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                          </svg>
+                        </button>
+                      `}
+                    ` : `
+                      <span class="text-gray-400 text-sm">No file</span>
+                    `}
                   </div>
-                  <a href="${report.filePath}" target="_blank" 
-                     class="text-blue-600 hover:text-blue-800">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                  </a>
                 </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       ` : ''}

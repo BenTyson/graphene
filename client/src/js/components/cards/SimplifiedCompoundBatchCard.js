@@ -173,4 +173,4 @@ window.createSimplifiedBatchLoadingCard = createSimplifiedBatchLoadingCard;
 window.createSimplifiedBatchErrorCard = createSimplifiedBatchErrorCard;
 window.createSimplifiedCompoundBatchCardCollection = createSimplifiedCompoundBatchCardCollection;
 
-console.log('Simplified Compound Batch Card components initialized');
+// Component initialized - removed excessive logging
