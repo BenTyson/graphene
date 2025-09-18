@@ -36,25 +36,17 @@ function createDataPageLayout(config) {
     <div class="data-page-layout" 
          data-type="${type}" 
          data-identifier="${identifier}"
-         data-instance="${instanceId}"
-         x-data="dataPageController('${type}', '${identifier}')">
+         data-instance="${instanceId}">
       
       <!-- Data Page Header -->
-      <div x-html="getDataPageHeader()"></div>
-      
-      <!-- Data Page Summary -->
-      <div x-html="getDataPageSummary()"></div>
-      
-      <!-- Data Page Navigation (for long pages) -->
-      <div x-html="getDataPageNavigation()" x-show="shouldShowNavigation()"></div>
+      <div>
+        ${createDataPageHeader(type, identifier)}
+      </div>
       
       <!-- Data Page Content Sections -->
       <div class="data-page-content space-y-8">
         ${sections.map(section => createDataPageSection(section, data, type)).join('')}
       </div>
-      
-      <!-- Data Page Footer -->
-      <div x-html="getDataPageFooter()"></div>
       
     </div>
   `;
@@ -77,40 +69,40 @@ function createDataPageSection(sectionConfig, data, type) {
   const sectionId = `section_${id}`;
   
   return `
-    <div class="data-page-section" 
-         data-section="${id}"
-         x-data="{ expanded: ${!collapsible} }"
-         x-show="shouldShowSection('${id}')">
+    <div class="data-page-section bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6" 
+         data-section="${id}">
       
       <!-- Section Header -->
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900">${title}</h2>
-        ${collapsible ? `
-          <button @click="expanded = !expanded" 
-                  class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg class="w-5 h-5 transition-transform" 
-                 :class="expanded ? 'rotate-180' : ''" 
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </button>
-        ` : ''}
       </div>
       
       <!-- Section Content -->
-      <div x-show="expanded" 
-           x-transition:enter="transition ease-out duration-200"
-           x-transition:enter-start="opacity-0 max-h-0"
-           x-transition:enter-end="opacity-100 max-h-screen"
-           x-transition:leave="transition ease-in duration-150"
-           x-transition:leave-start="opacity-100 max-h-screen"
-           x-transition:leave-end="opacity-0 max-h-0"
-           class="overflow-hidden">
-        <div x-html="getDataPageSectionContent('${id}', '${component}')"></div>
+      <div class="section-content">
+        ${createBasicSectionContent(id, data, type)}
       </div>
       
     </div>
   `;
+}
+
+/**
+ * Create basic section content as fallback
+ * @param {string} sectionId - Section ID
+ * @param {Object} data - Data object
+ * @param {string} type - Data type
+ * @returns {string} Section content HTML
+ */
+function createBasicSectionContent(sectionId, data, type) {
+  try {
+    if (window.getSectionContent) {
+      return window.getSectionContent(sectionId, data, type);
+    }
+    return `<div class="text-center py-8 text-gray-500">Section content for ${sectionId} loading...</div>`;
+  } catch (error) {
+    console.error(`Error creating section content for ${sectionId}:`, error);
+    return `<div class="text-center py-8 text-red-500">Error loading ${sectionId} section</div>`;
+  }
 }
 
 /**
@@ -183,6 +175,82 @@ function createDataPageLoading(type, identifier) {
       </div>
     </div>
   `;
+}
+
+/**
+ * Create data page header with breadcrumbs
+ * @param {string} type - Data type
+ * @param {string} identifier - Identifier
+ * @returns {string} Header HTML
+ */
+function createDataPageHeader(type, identifier) {
+  const breadcrumbs = getDataPageBreadcrumbs(type, identifier);
+  return `
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+      <nav class="flex" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-4">
+          ${breadcrumbs.map((crumb, index) => `
+            <li class="flex">
+              ${index > 0 ? '<svg class="flex-shrink-0 h-5 w-5 text-gray-400 mr-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>' : ''}
+              ${crumb.href ? `
+                <a href="${crumb.href}" ${crumb.onclick ? `onclick="${crumb.onclick}"` : ''} class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                  ${crumb.label}
+                </a>
+              ` : `
+                <span class="text-gray-900 text-sm font-medium">${crumb.label}</span>
+              `}
+            </li>
+          `).join('')}
+        </ol>
+      </nav>
+      <div class="mt-4">
+        <h1 class="text-2xl font-bold text-gray-900">${identifier}</h1>
+        <p class="mt-1 text-sm text-gray-500">${getDataPageSubtitle(type)}</p>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Get breadcrumbs for data page
+ * @param {string} type - Data type
+ * @param {string} identifier - Identifier
+ * @returns {Array} Breadcrumbs array
+ */
+function getDataPageBreadcrumbs(type, identifier) {
+  const breadcrumbs = [
+    { label: 'Home', href: '#' },
+    { label: 'Production', href: null }
+  ];
+  
+  if (type === 'compound-batch') {
+    breadcrumbs.push({ label: 'Compound Batches', href: 'javascript:void(0)', onclick: 'navigateToCompoundBatches()' });
+    breadcrumbs.push({ label: identifier, href: null });
+  } else if (type === 'graphene') {
+    breadcrumbs.push({ label: 'Graphene', href: 'javascript:void(0)', onclick: 'navigateToGraphene()' });
+    breadcrumbs.push({ label: identifier, href: null });
+  } else if (type === 'biochar') {
+    breadcrumbs.push({ label: 'Biochar', href: 'javascript:void(0)', onclick: 'navigateToBiochar()' });
+    breadcrumbs.push({ label: identifier, href: null });
+  }
+  
+  return breadcrumbs;
+}
+
+/**
+ * Get page subtitle based on type
+ * @param {string} type - Data type
+ * @returns {string} Subtitle
+ */
+function getDataPageSubtitle(type) {
+  if (type === 'compound-batch') {
+    return 'Compound Batch Details';
+  } else if (type === 'graphene') {
+    return 'Graphene Experiment Details';
+  } else if (type === 'biochar') {
+    return 'Biochar Experiment Details';
+  }
+  return 'Details';
 }
 
 /**
@@ -293,9 +361,91 @@ function dataPageController(type, identifier) {
           { id: 'materials', title: 'Source Materials', component: 'MaterialsSection' },
           { id: 'properties', title: 'Physical Properties', component: 'PropertiesSection' },
           { id: 'downstream', title: 'Downstream Usage', component: 'DownstreamSection' }
+        ],
+        'compound-batch': [
+          { id: 'process', title: 'Batch Details', component: 'ProcessSection' },
+          { id: 'constituents', title: 'Constituent Experiments', component: 'ConstituentsSection' },
+          { id: 'tests', title: 'Test Results', component: 'TestSection' },
+          { id: 'micronizations', title: 'Micronizations', component: 'MicronizationsSection' },
+          { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection' },
+          { id: 'reports', title: 'Reports & Documents', component: 'ReportsSection' }
         ]
-        // More types will be added
       };
+    },
+    
+    getDataPageHeader() {
+      const breadcrumbs = this.getBreadcrumbs();
+      return `
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+          <nav class="flex" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-4">
+              ${breadcrumbs.map((crumb, index) => `
+                <li class="flex">
+                  ${index > 0 ? '<svg class="flex-shrink-0 h-5 w-5 text-gray-400 mr-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>' : ''}
+                  ${crumb.href ? `
+                    <a href="${crumb.href}" ${crumb.onclick ? `onclick="${crumb.onclick}"` : ''} class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                      ${crumb.label}
+                    </a>
+                  ` : `
+                    <span class="text-gray-900 text-sm font-medium">${crumb.label}</span>
+                  `}
+                </li>
+              `).join('')}
+            </ol>
+          </nav>
+          <div class="mt-4">
+            <h1 class="text-2xl font-bold text-gray-900">${this.identifier}</h1>
+            <p class="mt-1 text-sm text-gray-500">${this.getPageSubtitle()}</p>
+          </div>
+        </div>
+      `;
+    },
+    
+    getBreadcrumbs() {
+      const breadcrumbs = [
+        { label: 'Home', href: '#' },
+        { label: 'Production', href: null }
+      ];
+      
+      if (this.type === 'compound-batch') {
+        breadcrumbs.push({ label: 'Compound Batches', href: 'javascript:void(0)', onclick: 'navigateToCompoundBatches()' });
+        breadcrumbs.push({ label: this.identifier, href: null });
+      } else if (this.type === 'graphene') {
+        breadcrumbs.push({ label: 'Graphene', href: 'javascript:void(0)', onclick: 'navigateToGraphene()' });
+        breadcrumbs.push({ label: this.identifier, href: null });
+      } else if (this.type === 'biochar') {
+        breadcrumbs.push({ label: 'Biochar', href: 'javascript:void(0)', onclick: 'navigateToBiochar()' });
+        breadcrumbs.push({ label: this.identifier, href: null });
+      }
+      
+      return breadcrumbs;
+    },
+    
+    getPageSubtitle() {
+      if (this.type === 'compound-batch') {
+        return 'Compound Batch Details';
+      } else if (this.type === 'graphene') {
+        return 'Graphene Experiment Details';
+      } else if (this.type === 'biochar') {
+        return 'Biochar Experiment Details';
+      }
+      return 'Details';
+    },
+    
+    getDataPageSummary() {
+      return '<div class="text-center py-4 text-gray-500">Summary section coming soon...</div>';
+    },
+    
+    getDataPageNavigation() {
+      return '<div class="text-center py-2 text-gray-500">Navigation coming soon...</div>';
+    },
+    
+    getDataPageSectionContent(sectionId, component) {
+      return '<div class="text-center py-4 text-gray-500">Section content loading...</div>';
+    },
+    
+    getDataPageFooter() {
+      return '<div class="text-center py-4 text-gray-500 text-xs">Footer coming soon...</div>';
     }
   };
 }
@@ -305,12 +455,12 @@ window.createDataPageLayout = createDataPageLayout;
 window.createDataPageSection = createDataPageSection;
 window.createDataPageLoading = createDataPageLoading;
 window.createDataPageError = createDataPageError;
-window.dataPageController = dataPageController;
+window.createDataPageHeader = createDataPageHeader;
 
 export { 
   createDataPageLayout, 
   createDataPageSection, 
   createDataPageLoading, 
   createDataPageError,
-  dataPageController 
+  createDataPageHeader
 };

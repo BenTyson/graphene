@@ -88,6 +88,8 @@ function getSectionContent(sectionId, data, type) {
       return createDownstreamSection(data, type);
     case 'constituents':
       return createConstituentsSection(data, type);
+    case 'micronizations':
+      return createMicronizationsSection(data, type);
     default:
       return createGenericSection(data, sectionId);
   }
@@ -200,6 +202,50 @@ function createProcessSection(data, type) {
       { label: 'Processing Time', value: data.processingTime, unit: 'min' },
       { label: 'Equipment', value: data.equipment }
     ]);
+  } else if (type === 'compound-batch') {
+    return `
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Batch Information -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Batch Information</h4>
+            <div class="grid grid-cols-1 gap-2 text-xs">
+              <div><span class="text-gray-600">Batch Number:</span> <span class="font-medium">${data.batchNumber || 'N/A'}</span></div>
+              <div><span class="text-gray-600">Batch Name:</span> <span class="font-medium">${data.batchName || 'N/A'}</span></div>
+              <div><span class="text-gray-600">Creation Date:</span> <span class="font-medium">${data.creationDate ? window.formatDateSafe(data.creationDate) : 'N/A'}</span></div>
+              <div><span class="text-gray-600">Created By:</span> <span class="font-medium">${data.createdBy || 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <!-- Batch Metrics -->
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Batch Metrics</h4>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-gray-600">Total Input:</span> <span class="font-medium">${data.totalInput || 'N/A'} g</span></div>
+              <div><span class="text-gray-600">Total Output:</span> <span class="font-medium">${data.totalOutput || 'N/A'} g</span></div>
+              <div><span class="text-gray-600">Constituents:</span> <span class="font-medium">${data.constituents?.length || 0}</span></div>
+              <div><span class="text-gray-600">Status:</span> <span class="font-medium">${data.status || 'Active'}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        ${data.description ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Description</h4>
+            <p class="text-sm text-gray-700">${data.description}</p>
+          </div>
+        ` : ''}
+
+        <!-- Comments -->
+        ${data.comments ? `
+          <div class="bg-gray-50 rounded-lg p-3">
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Comments</h4>
+            <p class="text-sm text-gray-700">${data.comments}</p>
+          </div>
+        ` : ''}
+      </div>
+    `;
   }
   
   return createGenericSection(data, 'process');
@@ -538,6 +584,172 @@ function createRelatedSection(data, type) {
 }
 
 /**
+ * Create constituents section for compound batches
+ * @param {Object} data - Data object
+ * @param {string} type - Data type
+ * @returns {string} Constituents section HTML
+ */
+function createConstituentsSection(data, type) {
+  const constituents = data.constituents || [];
+  
+  if (constituents.length === 0) {
+    return `
+      <div class="text-center py-8 text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        <p>No constituent experiments added</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="space-y-4">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Exp #</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Species</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Output (g)</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            ${constituents.map(constituent => {
+              const exp = constituent.graphene || constituent.grapheneExperiment || constituent;
+              return `
+                <tr class="hover:bg-gray-50">
+                  <td class="px-3 py-2 text-xs font-mono">
+                    <button @click="routerService.navigateToDataPage('graphene', '${exp.experimentNumber}')" 
+                            class="font-bold text-black hover:text-gray-700 underline">
+                      ${exp.experimentNumber || 'N/A'}
+                    </button>
+                  </td>
+                  <td class="px-3 py-2 text-xs">${exp.experimentDate ? window.formatDateSafe(exp.experimentDate) : 'N/A'}</td>
+                  <td class="px-3 py-2 text-xs">${exp.species || 'N/A'}</td>
+                  <td class="px-3 py-2 text-xs font-mono">${exp.output || 'N/A'}</td>
+                  <td class="px-3 py-2 text-xs">
+                    <button @click="routerService.navigateToDataPage('graphene', '${exp.experimentNumber}')" 
+                            class="text-amber-600 hover:text-amber-800">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Create micronizations section
+ * @param {Object} data - Data object
+ * @param {string} type - Data type
+ * @returns {string} Micronizations section HTML
+ */
+function createMicronizationsSection(data, type) {
+  const micronizations = data.micronizations || [];
+  
+  if (micronizations.length === 0) {
+    return `
+      <div class="text-center py-8 text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+        </svg>
+        <p>No micronizations recorded</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="space-y-4">
+      ${micronizations.map(micronization => `
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <span class="font-medium text-gray-900">${micronization.micronizationNumber || 'N/A'}</span>
+              <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                SKU: ${micronization.sku || 'N/A'}
+              </span>
+            </div>
+            ${micronization.micronizationNumber ? `
+              <button @click="routerService.navigateToDataPage('micronization', '${micronization.micronizationNumber}')" 
+                      class="text-blue-600 hover:text-blue-800 text-sm">
+                View Details →
+              </button>
+            ` : ''}
+          </div>
+          
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div>
+              <span class="text-gray-600">Date:</span>
+              <span class="ml-2 font-medium">${micronization.processingDate ? window.formatDateSafe(micronization.processingDate) : 'N/A'}</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Input:</span>
+              <span class="ml-2 font-medium">${micronization.inputAmount || 'N/A'} g</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Recovered:</span>
+              <span class="ml-2 font-medium">${micronization.recoveredAmount || 'N/A'} g</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Recovery:</span>
+              <span class="ml-2 font-medium">
+                ${micronization.inputAmount && micronization.recoveredAmount 
+                  ? ((micronization.recoveredAmount / micronization.inputAmount) * 100).toFixed(1) + '%'
+                  : 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-600">Location:</span>
+              <span class="ml-2 font-medium">${micronization.processingLocation || 'N/A'}</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Equipment:</span>
+              <span class="ml-2 font-medium">${micronization.equipment || 'N/A'}</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Operator:</span>
+              <span class="ml-2 font-medium">${micronization.operator || 'N/A'}</span>
+            </div>
+            <div>
+              <span class="text-gray-600">Status:</span>
+              <span class="ml-2 font-medium">${micronization.status || 'Complete'}</span>
+            </div>
+          </div>
+          
+          ${micronization.comments ? `
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <p class="text-sm text-gray-700">${micronization.comments}</p>
+            </div>
+          ` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Placeholder functions for unimplemented sections
+ */
+function createPropertiesSection(data, type) {
+  return createGenericSection(data, 'properties');
+}
+
+function createDownstreamSection(data, type) {
+  return createGenericSection(data, 'downstream');
+}
+
+/**
  * Create process grid layout
  * @param {Array} items - Process items
  * @returns {string} Process grid HTML
@@ -610,6 +822,10 @@ window.createTestsSection = createTestsSection;
 window.createReportsSection = createReportsSection;
 window.createShipmentsSection = createShipmentsSection;
 window.createRelatedSection = createRelatedSection;
+window.createConstituentsSection = createConstituentsSection;
+window.createMicronizationsSection = createMicronizationsSection;
+window.createPropertiesSection = createPropertiesSection;
+window.createDownstreamSection = createDownstreamSection;
 
 export { 
   createDataPageSection, 
@@ -619,5 +835,9 @@ export {
   createTestsSection,
   createReportsSection,
   createShipmentsSection,
-  createRelatedSection
+  createRelatedSection,
+  createConstituentsSection,
+  createMicronizationsSection,
+  createPropertiesSection,
+  createDownstreamSection
 };

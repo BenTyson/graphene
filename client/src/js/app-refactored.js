@@ -645,14 +645,77 @@ window.grapheneApp = function() {
       this.currentDataPage = { type, identifier };
       
       try {
-        // Fetch data from API
-        const response = await fetch(`/api/data/${type}/${identifier}`);
+        let data = null;
         
-        if (!response.ok) {
-          throw new Error(`Failed to load ${identifier}: ${response.statusText}`);
+        // Load data from existing app data instead of API
+        if (type === 'compound-batch') {
+          // Ensure compound batches are loaded
+          if (!this.compoundBatchRecords || this.compoundBatchRecords.length === 0) {
+            console.log('⏳ Compound batches not loaded yet, loading now...');
+            await this.loadCompoundBatches();
+          }
+          
+          console.log('🔍 Available compound batches:', this.compoundBatchRecords.map(b => b.batchNumber));
+          
+          // Find compound batch in existing data
+          const batch = this.compoundBatchRecords.find(b => b.batchNumber === identifier);
+          if (!batch) {
+            throw new Error(`Compound batch ${identifier} not found in ${this.compoundBatchRecords.length} available batches: ${this.compoundBatchRecords.map(b => b.batchNumber).join(', ')}`);
+          }
+          
+          // Get related data using existing API methods
+          console.log(`🔍 Loading related data for batch ID: ${batch.id}, batch number: ${batch.batchNumber}`);
+          const relatedData = await API.compoundBatch.getRelated(batch.id);
+          const micronizations = await API.micronization.getByCompoundBatch(batch.batchNumber);
+          
+          console.log('📊 Related data received:', {
+            constituents: relatedData?.constituents?.length || 0,
+            micronizations: micronizations?.length || 0,
+            shipments: relatedData?.shipments?.length || 0,
+            betTests: relatedData?.betTests?.length || 0,
+            relatedDataKeys: Object.keys(relatedData || {}),
+            fullRelatedData: relatedData
+          });
+          
+          // Combine all data
+          data = {
+            ...batch,
+            constituents: relatedData.compoundBatch?.experiments || [],
+            micronizations: micronizations || [],
+            shipments: relatedData.shipments || [],
+            betTests: relatedData.betTests || [],
+            conductivityTests: relatedData.conductivityTests || [],
+            ramanTests: relatedData.ramanTests || [],
+            temTests: relatedData.temTests || [],
+            semReports: relatedData.semReports || [],
+            updateReports: relatedData.updateReports || []
+          };
+        } else if (type === 'graphene') {
+          // Find graphene experiment in existing data
+          const experiment = this.grapheneRecords.find(e => e.experimentNumber === identifier);
+          if (!experiment) {
+            throw new Error(`Graphene experiment ${identifier} not found`);
+          }
+          data = experiment;
+        } else if (type === 'biochar') {
+          // Find biochar experiment in existing data
+          const experiment = this.biocharRecords.find(e => e.experimentNumber === identifier);
+          if (!experiment) {
+            throw new Error(`Biochar experiment ${identifier} not found`);
+          }
+          data = experiment;
+        } else if (type === 'micronization') {
+          // Find micronization in existing data
+          const micronization = this.micronizations.find(m => m.micronizationNumber === identifier);
+          if (!micronization) {
+            throw new Error(`Micronization ${identifier} not found`);
+          }
+          data = micronization;
+        } else {
+          throw new Error(`Unsupported data type: ${type}`);
         }
         
-        this.dataPageData = await response.json();
+        this.dataPageData = data;
         // Data page loaded successfully - reduced logging
         window.logger?.success(`Data page loaded: ${type}/${identifier}`);
         
@@ -711,10 +774,12 @@ window.grapheneApp = function() {
           { id: 'downstream', title: 'Downstream Usage', component: 'DownstreamSection', visible: true }
         ],
         'compound-batch': [
+          { id: 'process', title: 'Batch Details', component: 'ProcessSection', visible: true },
           { id: 'constituents', title: 'Constituent Experiments', component: 'ConstituentsSection', visible: true },
-          { id: 'process', title: 'Processing Details', component: 'ProcessSection', visible: true },
-          { id: 'tests', title: 'Quality Control Tests', component: 'TestSection', visible: true },
-          { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true }
+          { id: 'tests', title: 'Test Results', component: 'TestSection', visible: true },
+          { id: 'micronizations', title: 'Micronizations', component: 'MicronizationsSection', visible: true },
+          { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true },
+          { id: 'reports', title: 'Reports & Documents', component: 'ReportsSection', visible: true }
         ],
         micronization: [
           { id: 'source', title: 'Source Compound Batch', component: 'SourceSection', visible: true },
@@ -3935,6 +4000,34 @@ window.addEventListener('alpine:init', () => {
         if (window.routerService) {
           window.routerService.navigateToDataPage('shipment', shipmentNumber);
         }
+      };
+      
+      // Breadcrumb navigation functions
+      window.navigateToCompoundBatches = function() {
+        console.log('Navigating to compound batches tab');
+        if (appData.hideDataPage) {
+          appData.hideDataPage();
+        }
+        appData.activeTab = 'compound-batches';
+        window.location.hash = '#';
+      };
+      
+      window.navigateToGraphene = function() {
+        console.log('Navigating to graphene tab');
+        if (appData.hideDataPage) {
+          appData.hideDataPage();
+        }
+        appData.activeTab = 'graphene';
+        window.location.hash = '#';
+      };
+      
+      window.navigateToBiochar = function() {
+        console.log('Navigating to biochar tab');
+        if (appData.hideDataPage) {
+          appData.hideDataPage();
+        }
+        appData.activeTab = 'biochar';
+        window.location.hash = '#';
       };
       
       console.log('Modal fallback functions exposed globally');
