@@ -1,5 +1,34 @@
 # Graphene Production Control System - Process Guide
 
+## Agent Quick Reference
+
+### Common Tasks
+- **Database Backup**: Use `npm run backup:create` or `#dbbackup` slash command
+- **Environment Check**: Verify branch with `git branch -v`
+- **Development Server**: `npm run dev`
+- **Schema Changes**: `npx prisma generate && npx prisma db push`
+
+### Critical Before Making Changes
+1. **Always backup database first** (`npm run backup:create`)
+2. **Verify correct branch** (staging vs main vs develop)
+3. **Check environment variables** match intended target
+4. **Test locally before pushing** (`npm run dev`)
+
+### Troubleshooting Priority
+1. **Database Issues**: Check connection, run backup, verify schema
+2. **File Upload Issues**: Verify Cloudinary config and folder structure
+3. **Modal/Component Issues**: Check Alpine.js reactivity and console errors
+4. **Deployment Issues**: Check Railway logs and environment variables
+
+### Quick Decision Tree
+```
+Need to make changes?
+├── Database schema change? → #dbbackup first
+├── Component/UI change? → Test locally first
+├── File upload change? → Verify Cloudinary setup
+└── Production deployment? → Test in staging first
+```
+
 ## Environment Overview
 
 ### Production Environment (Railway)
@@ -9,6 +38,14 @@
 - **Deployment**: Automatic via Git push to main branch
 - **Runtime**: Node.js 20 on Railway platform
 
+### Staging Environment (Railway)
+- **URL**: [staging-specific Railway URL]
+- **Database**: Railway PostgreSQL (staging database)
+- **File Storage**: Cloudinary CDN (graphene-uploads-staging folder)
+- **Deployment**: Automatic via Git push to staging branch
+- **Runtime**: Node.js 20 on Railway platform
+- **Purpose**: Pre-production testing and agent development
+
 ### Development Environment
 - **URL**: http://localhost:5174
 - **Database**: Local PostgreSQL
@@ -17,8 +54,12 @@
 
 ## Development Workflow
 
-### Development Commands
-Local development commands:
+### Three-Tier Deployment Strategy
+The system uses a three-tier deployment approach:
+
+**develop** → **staging** → **main** (production)
+
+#### Local Development
 ```bash
 # Development server
 npm run dev
@@ -34,16 +75,39 @@ npx prisma studio    # Database GUI
 # Note: lint and typecheck commands not configured in this project
 ```
 
-### Production Deployment
-Production deployment is automatic via Railway:
+#### Staging Environment Workflow
 ```bash
-# Deploy to production
-git push origin main  # Triggers Railway deployment
+# Environment verification
+git branch -v  # Confirm on staging branch
+echo $DATABASE_URL  # Verify staging database
+
+# Deploy to staging
+git add .
+git commit -m "feat: description"
+git push origin staging  # Triggers Railway staging deployment
+
+# Testing in staging
+# - Verify changes in staging environment
+# - Test with staging database
+# - Validate before promoting to production
+```
+
+#### Production Deployment
+```bash
+# Deploy to production (after staging validation)
+git checkout main
+git merge staging  # Or create PR: staging → main
+git push origin main  # Triggers Railway production deployment
 
 # Monitor deployment
 # Check Railway dashboard or application logs
 # Production URL: https://admin.hgraphene.com
 ```
+
+### Environment-Specific Process
+1. **Local Development**: Test all changes locally first
+2. **Staging Validation**: Deploy to staging for pre-production testing
+3. **Production Release**: Only promote validated staging changes
 
 ### Claude Code Slash Commands
 
@@ -59,6 +123,32 @@ This command automatically:
 - Shows backup size and completion status
 - Lists recent backups for reference
 - **Critical before any schema changes or major development work**
+
+### Common Issues & Quick Fixes
+
+#### Alpine.js Issues
+- **Template not updating**: Use spread operator `{...state, key: value}` for reactivity
+- **Multiple `<tr>` in template**: Wrap in `<tbody>` element for proper HTML structure
+- **Property access error**: Add null checks with `?.` operator (`object?.property`)
+- **Reactivity broken**: Ensure state changes use proper Alpine.js data mutation
+
+#### Database Issues  
+- **Schema changes not recognized**: Run `npx prisma generate && restart server`
+- **Type conversion errors**: Check numeric field conversion in API routes
+- **Backup before changes**: Always run `npm run backup:create` before schema modifications
+- **Connection errors**: Verify DATABASE_URL matches current environment
+
+#### File Upload Issues
+- **Upload failures**: Exclude UI-only fields from FormData submission
+- **Wrong Cloudinary folder**: Verify environment-specific folder names (staging vs production)
+- **File size errors**: Check 10MB limit and supported formats (.pdf, .xlsx, .xls, .xlsm)
+- **Path resolution**: Use environment-appropriate URLs (local vs CDN)
+
+#### Environment Issues
+- **Wrong database**: Check current branch with `git branch -v` and verify DATABASE_URL
+- **Deployment failures**: Check Railway logs and environment variables in dashboard
+- **Local development broken**: Verify Node.js 20, PostgreSQL running, and `.env` configuration
+- **Staging vs Production**: Always test in staging before promoting to main branch
 
 ### Database Backup & Recovery
 
