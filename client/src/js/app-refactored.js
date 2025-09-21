@@ -710,7 +710,24 @@ window.grapheneApp = function() {
           if (!experiment) {
             throw new Error(`Graphene experiment ${identifier} not found`);
           }
-          data = experiment;
+
+          // Fetch related data to get biochar information
+          const relatedData = await API.graphene.getRelated(identifier);
+
+          // Merge the related data with the experiment data
+          data = {
+            ...experiment,
+            sourceBiochar: relatedData.sourceBiochar,
+            lotBiocharExperiments: relatedData.lotBiocharExperiments,
+            betTests: relatedData.betTests || [],
+            conductivityTests: relatedData.conductivityTests || [],
+            ramanTests: relatedData.ramanTests || [],
+            temTests: relatedData.temTests || [],
+            semReports: relatedData.semReports || [],
+            updateReports: relatedData.updateReports || [],
+            shipments: relatedData.shipments || [],
+            compoundBatches: relatedData.compoundBatches || []
+          };
         } else if (type === 'biochar') {
           // Find biochar experiment in existing data
           const experiment = this.biocharRecords.find(e => e.experimentNumber === identifier);
@@ -779,12 +796,12 @@ window.grapheneApp = function() {
           { id: 'tests', title: 'Test Results', component: 'TestSection', visible: true },
           { id: 'reports', title: 'Reports & Documentation', component: 'ReportsSection', visible: true },
           { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true },
-          { id: 'related', title: 'Related Experiments', component: 'RelatedSection', visible: true }
+          { id: 'related', title: 'Compound Batches', component: 'RelatedSection', visible: true }
         ],
         biochar: [
           { id: 'process', title: 'Process Parameters', component: 'ProcessSection', visible: true },
           { id: 'materials', title: 'Source Materials', component: 'MaterialsSection', visible: true },
-          { id: 'properties', title: 'Physical Properties', component: 'PropertiesSection', visible: true },
+          { id: 'properties', title: 'Output & Finishing', component: 'PropertiesSection', visible: true },
           { id: 'downstream', title: 'Downstream Usage', component: 'DownstreamSection', visible: true }
         ],
         'compound-batch': [

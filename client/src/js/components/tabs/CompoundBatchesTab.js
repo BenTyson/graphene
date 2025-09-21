@@ -80,7 +80,7 @@ function getCompoundBatchesTabHtml() {
             <tbody class="bg-white divide-y divide-gray-200">
               <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-xs font-mono" style="color: #212121;">
-                  <button @click="toggleCompoundBatchExpansion(batch.id)" 
+                  <button @click="routerService.navigateToDataPage('compound-batch', batch.batchNumber)"
                           class="text-link text-link-hover underline cursor-pointer font-bold">
                     <span x-text="batch.batchNumber"></span>
                   </button>

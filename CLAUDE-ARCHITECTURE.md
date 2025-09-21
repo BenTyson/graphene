@@ -38,16 +38,16 @@ A full-stack web application for tracking the complete production journey of mat
 │   └── middleware/
 │   │   └── errorHandler.js # Global error handling middleware
 ├── client/
-│   ├── index.html          # Main UI with Alpine.js templates (3,305 lines after componentization)
+│   ├── index.html          # Main UI with Alpine.js templates (1,153 lines after componentization)
 │   ├── src/
 │   │   ├── js/
-│   │   │   ├── app-refactored.js    # Main Alpine.js application (2,913 lines - optimized Sept 2025)
+│   │   │   ├── app-refactored.js    # Main Alpine.js application (4,050 lines - current as of Sept 2025)
 │   │   │   ├── services/            # Service-oriented architecture modules
 │   │   │   │   ├── api.js           # API client (default export)
 │   │   │   │   ├── AuthService.js   # Authentication service (192 lines)
-│   │   │   │   ├── FilterService.js # Filtering functionality (347 lines)
-│   │   │   │   ├── NewsService.js   # News system management (526 lines)
-│   │   │   │   ├── CRUDService.js   # All CRUD operations (1,169 lines)
+│   │   │   │   ├── FilterService.js # Filtering functionality (346 lines)
+│   │   │   │   ├── NewsService.js   # News system management (648 lines)
+│   │   │   │   ├── CRUDService.js   # All CRUD operations (1,201 lines)
 │   │   │   │   ├── DashboardService.js # Dashboard data loading (121 lines)
 │   │   │   │   └── CardService.js   # Centralized card data fetching with caching
 │   │   │   ├── utils/
@@ -773,7 +773,7 @@ The system has been fully componentized across four major phases, creating a mod
 - **4 Phase 4 Components** (Card system & modal stacking - COMPLETE)
 
 **Overall Impact**: 
-- **File Size Reduction**: index.html reduced from 4,788 to 3,305 lines (31% reduction)
+- **File Size Reduction**: index.html reduced from 4,788 to 1,153 lines (76% reduction)
 - **Code Elimination**: ~2,584+ lines of repetitive code eliminated
 - **Consistency**: 100% standardized styling and behavior across all UI elements
 - **Maintainability**: All changes centralized in component files
@@ -966,6 +966,177 @@ console.log('[Navigation] switchTab called', {
 - **State Preservation**: Efficient state management prevents unnecessary re-renders
 - **URL Optimization**: Single `history.replaceState()` calls instead of multiple hash updates
 - **Memory Management**: Clean state transitions without memory leaks
+
+## Data Page Architecture (September 2025)
+
+### Overview
+Comprehensive data page system providing detailed material journey visualization from raw materials through production to testing. Features dedicated pages for individual experiments, compound batches, and micronizations with complete traceability and test result integration.
+
+### Architecture Components
+
+#### Data Page Layout System (`/client/src/js/components/dataPage/DataPageLayout.js`)
+- **Purpose**: Complete data page infrastructure with header, breadcrumbs, and section management
+- **Features**:
+  - **Smart Breadcrumbs**: Context-aware navigation with proper URLs (`navigateToCompoundBatches()` for compound batch pages)
+  - **Authentication Guards**: CSP-compliant navigation using Alpine.js `@click.prevent` directives
+  - **Section Configuration**: Modular section system with show/hide toggles
+  - **Responsive Design**: Mobile-optimized layout with collapsible sections
+  - **Progress Indicators**: Loading states during data fetching
+
+**Supported Data Page Types**:
+```javascript
+'graphene': [
+  { id: 'process', title: 'Production Details', component: 'ProcessSection', visible: true },
+  { id: 'source', title: 'Source Materials', component: 'SourceSection', visible: true },
+  { id: 'tests', title: 'Test Results', component: 'TestSection', visible: true },
+  { id: 'micronizations', title: 'Micronizations', component: 'MicronizationsSection', visible: true },
+  { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true },
+  { id: 'reports', title: 'Reports & Documents', component: 'ReportsSection', visible: true }
+],
+'compound-batch': [
+  { id: 'process', title: 'Batch Details', component: 'ProcessSection', visible: true },
+  { id: 'constituents', title: 'Constituent Experiments', component: 'ConstituentsSection', visible: true },
+  { id: 'tests', title: 'Test Results', component: 'TestSection', visible: true },
+  { id: 'micronizations', title: 'Micronizations', component: 'MicronizationsSection', visible: true },
+  { id: 'shipments', title: 'Shipments', component: 'ShipmentsSection', visible: true },
+  { id: 'reports', title: 'Reports & Documents', component: 'ReportsSection', visible: true }
+]
+```
+
+#### Data Page Section System (`/client/src/js/components/dataPage/DataPageSection.js`)
+- **Purpose**: Modular section components for different data views
+- **Implementation Pattern**: Function-based section generators with consistent styling
+
+**Key Sections**:
+
+**Constituent Experiments Section** (`createConstituentsSection()`):
+- **Data Source**: Uses existing app data via `data.constituents` array
+- **Table Structure**: Experiment Number (clickable), Created Date, Research Team, Output
+- **Features**:
+  - **Experiment Navigation**: Click experiment numbers to navigate to individual data pages
+  - **Styled Elements**: Bold/black experiment numbers, copper-colored view icons
+  - **Data Path Resolution**: Handles both `constituent.graphene` and `constituent.grapheneExperiment` paths
+  - **Summary Statistics**: Shows total constituent count and combined output
+
+**Process Section** (`createProcessSection()`):
+- **Purpose**: Core experiment/batch details display
+- **Content**: Key metrics, dates, team information, production parameters
+- **Styling**: Clean key-value pairs with professional formatting
+
+**Test Results Section** (`createTestSection()`):
+- **Purpose**: Consolidated test results across all test types (BET, Conductivity, RAMAN, TEM)
+- **Features**: Test count badges, latest results, quick access to detailed views
+
+#### Data Page Summary System (`/client/src/js/components/dataPage/DataPageSummary.js`)
+- **Purpose**: Header summary cards with key metrics
+- **Features**: Production metrics, test counts, shipment status, quality indicators
+- **Design**: Card-based layout with consistent styling and status indicators
+
+#### Integration with Main Application (`/client/src/js/app-refactored.js`)
+
+**Data Loading Strategy**:
+```javascript
+// Compound batch data loading (line 683)
+constituents: relatedData.compoundBatch?.experiments || [],
+
+// Authentication-protected data page access
+if (!this.isAuthenticated) {
+  console.log('⚠️ User not authenticated, redirecting to login');
+  this.showDataPage = false;
+  this.activeTab = 'dashboard';
+  return;
+}
+```
+
+**Breadcrumb Navigation Functions**:
+```javascript
+// Global navigation functions for CSP compliance
+window.navigateToCompoundBatches = function() {
+  console.log('Navigating to compound batches tab');
+  if (appData.hideDataPage) {
+    appData.hideDataPage();
+  }
+  appData.activeTab = 'compound-batches';
+  window.location.hash = '#';
+};
+```
+
+### Data Flow Architecture
+
+#### Data Page Route Pattern
+- **URL Structure**: `/#/data/{type}/{identifier}`
+- **Supported Types**: `graphene`, `biochar`, `compound-batch`, `micronization`
+- **Data Loading**: Uses existing app state and `/api/{type}/:id/related` endpoints
+
+#### Data Transformation Pipeline
+1. **Route Parsing**: RouterService extracts type and identifier from URL
+2. **API Integration**: Fetches related data using existing endpoints
+3. **Data Mapping**: Transforms API response to component-ready format
+4. **Section Rendering**: Modular section components generate HTML
+5. **State Management**: Alpine.js reactivity maintains dynamic updates
+
+### Key Features
+
+#### Traceability and Navigation
+- **Material Journey**: Complete tracking from biochar → graphene → compound batch → micronization → shipment
+- **Cross-Reference Navigation**: Click any experiment number to view detailed data page
+- **Breadcrumb System**: Context-aware navigation back to source tables
+- **Deep Linking**: Direct URL access to any material or experiment
+
+#### Data Integration
+- **Unified Data Model**: Consistent section structure across all data page types
+- **Related Data Loading**: Automatic fetching of constituent experiments, test results, reports
+- **Real-time Updates**: Alpine.js reactivity ensures data freshness
+- **API Optimization**: Leverages existing related data endpoints
+
+#### User Experience
+- **Progressive Disclosure**: Collapsible sections for focused viewing
+- **Loading States**: Visual feedback during data fetching
+- **Error Handling**: Graceful degradation for missing or incomplete data
+- **Mobile Responsive**: Optimized layout for all device sizes
+
+### Content Security Policy (CSP) Compliance
+
+#### Production Deployment Issues Resolved
+- **Inline Event Handlers**: Replaced `onclick` with Alpine.js `@click.prevent` directives
+- **Navigation Security**: All breadcrumb and navigation functions use CSP-compliant Alpine.js methods
+- **CSP Error Resolution**: Fixed "Refused to execute inline event handler" violations
+
+**Before (CSP Violation)**:
+```html
+<a href="#" onclick="navigateToCompoundBatches(); return false;">Compound Batches</a>
+```
+
+**After (CSP Compliant)**:
+```html
+<a href="#" @click.prevent="navigateToCompoundBatches()">Compound Batches</a>
+```
+
+### Technical Implementation
+
+#### Data Loading Optimization
+- **Existing Data Utilization**: Uses app state data instead of redundant API calls
+- **Selective Loading**: Only fetches missing related data
+- **Caching Strategy**: Leverages existing CardService caching for performance
+
+#### Component Architecture
+- **Modular Design**: Each section is independently maintainable
+- **Consistent Patterns**: Standardized function signatures and return values
+- **Extensible Structure**: Easy addition of new section types or data page formats
+
+#### Error Handling and Resilience
+- **Authentication Guards**: Prevents unauthorized access to data pages
+- **Data Validation**: Handles missing or malformed data gracefully
+- **Fallback States**: Displays appropriate messages for empty or error states
+- **Debug Support**: Comprehensive logging for troubleshooting
+
+### Migration Results
+- ✅ **Complete Material Traceability**: Full journey visualization from raw materials to final products
+- ✅ **Constituent Experiments Integration**: Fixed data loading to show all compound batch components
+- ✅ **CSP Compliance**: Resolved all production deployment security violations
+- ✅ **Authentication Protection**: Secured all data page access with proper guards
+- ✅ **Navigation Consistency**: Unified navigation patterns across data pages and table views
+- ✅ **Performance Optimization**: Efficient data loading using existing app infrastructure
 
 ### Modal Stacking Architecture (January 2025)
 

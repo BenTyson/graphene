@@ -141,8 +141,8 @@ function getBiocharTabHtml() {
                 <!-- Basic Info columns -->
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-200" x-text="record.testOrder || '-'"></td>
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
-                  <button 
-                    @click="toggleBiocharExpansion(record.experimentNumber)" 
+                  <button
+                    @click="routerService.navigateToDataPage('biochar', record.experimentNumber)"
                     class="text-link text-link-hover underline cursor-pointer font-bold"
                     x-text="record.experimentNumber">
                   </button>

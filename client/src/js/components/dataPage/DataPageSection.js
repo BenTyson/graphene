@@ -187,12 +187,15 @@ function createProcessSection(data, type) {
     `;
   } else if (type === 'biochar') {
     return createProcessGrid([
-      { label: 'Pyrolysis Temperature', value: data.pyrolysisTemp, unit: '°C' },
-      { label: 'Hold Time', value: data.holdTime, unit: 'min' },
-      { label: 'Heating Rate', value: data.heatingRate, unit: '°C/min' },
-      { label: 'Atmosphere', value: data.atmosphere },
-      { label: 'Reactor Type', value: data.reactorType },
-      { label: 'Final pH', value: data.finalPH }
+      { label: 'Reactor', value: data.reactor },
+      { label: 'Temperature', value: data.temperature, unit: '°C' },
+      { label: 'Time', value: data.time, unit: 'min' },
+      { label: 'Acid Amount', value: data.acidAmount, unit: 'mL' },
+      { label: 'Acid Concentration', value: data.acidConcentration, unit: '%' },
+      { label: 'Acid Molarity', value: data.acidMolarity, unit: 'M' },
+      { label: 'Acid Type', value: data.acidType },
+      { label: 'Pressure Initial', value: data.pressureInitial, unit: 'bar' },
+      { label: 'Pressure Final', value: data.pressureFinal, unit: 'bar' }
     ]);
   } else if (type === 'micronization') {
     return createProcessGrid([
@@ -259,7 +262,21 @@ function createProcessSection(data, type) {
  */
 function createSourceSection(data, type) {
   if (type === 'graphene') {
-    const biocharData = data.biocharExperiment || {};
+    // Handle both direct biochar reference and lot reference
+    const biocharData = data.sourceBiochar || {};
+    const lotBiocharExperiments = data.lotBiocharExperiments || [];
+    const biocharExperimentNumber = data.biocharExperiment || biocharData.experimentNumber;
+
+    // Determine which biochar data to show
+    let displayData = biocharData;
+    let isLotBased = false;
+
+    if (!biocharData.experimentNumber && lotBiocharExperiments.length > 0) {
+      // If no direct biochar reference, but has lot experiments, show lot info
+      displayData = lotBiocharExperiments[0]; // Use first experiment in lot for species info
+      isLotBased = true;
+    }
+
     return `
       <div class="space-y-4">
         <div class="bg-gray-50 rounded-lg p-4">
@@ -267,27 +284,32 @@ function createSourceSection(data, type) {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <span class="text-sm text-gray-600">Experiment Number:</span>
-              <span class="ml-2 font-medium">${biocharData.experimentNumber || 'N/A'}</span>
+              <span class="ml-2 font-medium">${biocharExperimentNumber || 'N/A'}</span>
             </div>
             <div>
               <span class="text-sm text-gray-600">Species:</span>
-              <span class="ml-2 font-medium">${biocharData.species || 'N/A'}</span>
+              <span class="ml-2 font-medium">${displayData.species || displayData.rawMaterial || 'N/A'}</span>
             </div>
             <div>
               <span class="text-sm text-gray-600">Lot Number:</span>
               <span class="ml-2 font-medium">${data.biocharLotNumber || 'N/A'}</span>
             </div>
             <div>
-              <span class="text-sm text-gray-600">Input Weight:</span>
-              <span class="ml-2 font-medium">${data.inputWeight || 'N/A'} g</span>
+              <span class="text-sm text-gray-600">Output:</span>
+              <span class="ml-2 font-medium">${displayData.outputAmount || displayData.output || 'N/A'} g</span>
             </div>
           </div>
-          ${biocharData.experimentNumber ? `
+          ${biocharExperimentNumber && !isLotBased ? `
             <div class="mt-3">
-              <a href="#/data/biochar/${biocharData.experimentNumber}" 
+              <a href="#/data/biochar/${biocharExperimentNumber}"
                  class="text-blue-600 hover:text-blue-800 text-sm">
                 View Source Biochar Details →
               </a>
+            </div>
+          ` : ''}
+          ${isLotBased && lotBiocharExperiments.length > 0 ? `
+            <div class="mt-3">
+              <p class="text-sm text-gray-600 mb-2">Lot contains ${lotBiocharExperiments.length} biochar experiments</p>
             </div>
           ` : ''}
         </div>
@@ -295,12 +317,12 @@ function createSourceSection(data, type) {
     `;
   } else if (type === 'biochar') {
     return createProcessGrid([
-      { label: 'Species', value: data.species },
-      { label: 'Feedstock Type', value: data.feedstockType },
-      { label: 'Moisture Content', value: data.moistureContent, unit: '%' },
-      { label: 'Particle Size', value: data.particleSize, unit: 'mm' },
-      { label: 'Source Location', value: data.sourceLocation },
-      { label: 'Harvest Date', value: data.harvestDate ? window.formatDateSafe(data.harvestDate) : 'N/A' }
+      { label: 'Raw Material', value: data.rawMaterial },
+      { label: 'Starting Amount', value: data.startingAmount, unit: 'g' },
+      { label: 'Experiment Date', value: data.experimentDate ? window.formatDateSafe(data.experimentDate) : 'N/A' },
+      { label: 'Test Order', value: data.testOrder },
+      { label: 'Research Team', value: data.researchTeam },
+      { label: 'Lot Number', value: data.lotNumber }
     ]);
   }
   
@@ -397,32 +419,402 @@ function createTestsSection(data, type) {
  * @returns {string} Test type section HTML
  */
 function createTestTypeSection(label, tests, testType) {
+  switch(testType) {
+    case 'betTests':
+      return createDetailedBetSection(label, tests);
+    case 'conductivityTests':
+      return createDetailedConductivitySection(label, tests);
+    case 'ramanTests':
+      return createDetailedRamanSection(label, tests);
+    case 'temTests':
+      return createDetailedTemSection(label, tests);
+    default:
+      return createGenericTestSection(label, tests, testType);
+  }
+}
+
+function createDetailedBetSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No BET tests found for this graphene sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">BET Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                ${test.mass !== null && test.mass !== undefined ? `
+                  <div><span class="text-gray-600">Mass:</span> <span class="font-medium">${test.mass} g</span></div>
+                ` : ''}
+                ${test.multipointBetArea !== null && test.multipointBetArea !== undefined ? `
+                  <div><span class="text-gray-600">Multipoint BET:</span> <span class="font-medium">${window.formatScientific ? window.formatScientific(test.multipointBetArea) : test.multipointBetArea} m²/g</span></div>
+                ` : ''}
+                ${test.langmuirSurfaceArea !== null && test.langmuirSurfaceArea !== undefined ? `
+                  <div><span class="text-gray-600">Langmuir:</span> <span class="font-medium">${window.formatScientific ? window.formatScientific(test.langmuirSurfaceArea) : test.langmuirSurfaceArea} m²/g</span></div>
+                ` : ''}
+                ${test.researchTeam ? `
+                  <div><span class="text-gray-600">Team:</span> <span class="font-medium">${test.researchTeam}</span></div>
+                ` : ''}
+                ${test.testingLab ? `
+                  <div><span class="text-gray-600">Lab:</span> <span class="font-medium">${test.testingLab}</span></div>
+                ` : ''}
+              </div>
+              ${test.betReportPath ? `
+                <div class="mt-2 pt-2 border-t">
+                  ${test.betReportPath.includes('cloudinary.com') ? `
+                    <a href="${test.betReportPath}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </a>
+                  ` : `
+                    <button @click="window.openPdfInModal('${test.betReportPath}', 'BET Report')"
+                            class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedConductivitySection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No conductivity tests found for this graphene sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">Conductivity Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              ${test.name || test.description ? `
+                <div class="mb-2">
+                  <span class="text-xs font-medium">Description:</span>
+                  <span class="text-xs">${test.name || test.description}</span>
+                </div>
+              ` : ''}
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div><span class="text-gray-600">1kN:</span> <span class="font-medium">${test.conductivity1kN || 'N/A'} S/cm²</span></div>
+                <div><span class="text-gray-600">8kN:</span> <span class="font-medium">${test.conductivity8kN || 'N/A'} S/cm²</span></div>
+                <div><span class="text-gray-600">12kN:</span> <span class="font-medium">${test.conductivity12kN || 'N/A'} S/cm²</span></div>
+                <div><span class="text-gray-600">20kN:</span> <span class="font-medium">${test.conductivity20kN || 'N/A'} S/cm²</span></div>
+              </div>
+              ${test.conductivityReportPath ? `
+                <div class="mt-2 pt-2 border-t">
+                  ${test.conductivityReportPath.includes('cloudinary.com') ? `
+                    <a href="${test.conductivityReportPath}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      ${test.conductivityReportPath.endsWith('.xlsx') || test.conductivityReportPath.endsWith('.xls') ? 'Download File' : 'View PDF'}
+                    </a>
+                  ` : `
+                    <button @click="window.openPdfInModal('${test.conductivityReportPath}', 'Conductivity Report')"
+                            class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View Report
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedRamanSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No RAMAN tests found for this graphene sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">RAMAN Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="text-xs mb-2">
+                ${test.researchTeam ? `<span class="text-gray-600">Team:</span> <span class="font-medium">${test.researchTeam}</span>` : ''}
+                ${test.testingLab ? `<span class="text-gray-600 ml-3">Lab:</span> <span class="font-medium">${test.testingLab}</span>` : ''}
+              </div>
+              <div class="overflow-x-auto">
+                <table class="text-xs w-full">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left py-1"></th>
+                      <th class="text-center px-2">2D</th>
+                      <th class="text-center px-2">G</th>
+                      <th class="text-center px-2">D</th>
+                      <th class="text-center px-2">D/G</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b">
+                      <td class="font-medium py-1">Int. Range</td>
+                      <td class="text-center">
+                        ${(test.integrationRange2DLow !== null && test.integrationRange2DLow !== undefined &&
+                           test.integrationRange2DHigh !== null && test.integrationRange2DHigh !== undefined)
+                          ? `${test.integrationRange2DLow}-${test.integrationRange2DHigh}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integrationRangeGLow !== null && test.integrationRangeGLow !== undefined &&
+                           test.integrationRangeGHigh !== null && test.integrationRangeGHigh !== undefined)
+                          ? `${test.integrationRangeGLow}-${test.integrationRangeGHigh}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integrationRangeDLow !== null && test.integrationRangeDLow !== undefined &&
+                           test.integrationRangeDHigh !== null && test.integrationRangeDHigh !== undefined)
+                          ? `${test.integrationRangeDLow}-${test.integrationRangeDHigh}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integrationRangeDGLow !== null && test.integrationRangeDGLow !== undefined &&
+                           test.integrationRangeDGHigh !== null && test.integrationRangeDGHigh !== undefined)
+                          ? `${test.integrationRangeDGLow}-${test.integrationRangeDGHigh}`
+                          : '-'}
+                      </td>
+                    </tr>
+                    <tr class="border-b">
+                      <td class="font-medium py-1">Integral A</td>
+                      <td class="text-center">
+                        ${(test.integralTypA2D1 !== null && test.integralTypA2D1 !== undefined &&
+                           test.integralTypA2D2 !== null && test.integralTypA2D2 !== undefined)
+                          ? `${test.integralTypA2D1}, ${test.integralTypA2D2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypAG1 !== null && test.integralTypAG1 !== undefined &&
+                           test.integralTypAG2 !== null && test.integralTypAG2 !== undefined)
+                          ? `${test.integralTypAG1}, ${test.integralTypAG2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypAD1 !== null && test.integralTypAD1 !== undefined &&
+                           test.integralTypAD2 !== null && test.integralTypAD2 !== undefined)
+                          ? `${test.integralTypAD1}, ${test.integralTypAD2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypADG1 !== null && test.integralTypADG1 !== undefined &&
+                           test.integralTypADG2 !== null && test.integralTypADG2 !== undefined)
+                          ? `${test.integralTypADG1}, ${test.integralTypADG2}`
+                          : '-'}
+                      </td>
+                    </tr>
+                    <tr class="border-b">
+                      <td class="font-medium py-1">Integral B</td>
+                      <td class="text-center">
+                        ${(test.integralTypB2D1 !== null && test.integralTypB2D1 !== undefined &&
+                           test.integralTypB2D2 !== null && test.integralTypB2D2 !== undefined)
+                          ? `${test.integralTypB2D1}, ${test.integralTypB2D2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypBG1 !== null && test.integralTypBG1 !== undefined &&
+                           test.integralTypBG2 !== null && test.integralTypBG2 !== undefined)
+                          ? `${test.integralTypBG1}, ${test.integralTypBG2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypBD1 !== null && test.integralTypBD1 !== undefined &&
+                           test.integralTypBD2 !== null && test.integralTypBD2 !== undefined)
+                          ? `${test.integralTypBD1}, ${test.integralTypBD2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.integralTypBDG1 !== null && test.integralTypBDG1 !== undefined &&
+                           test.integralTypBDG2 !== null && test.integralTypBDG2 !== undefined)
+                          ? `${test.integralTypBDG1}, ${test.integralTypBDG2}`
+                          : '-'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-medium py-1">Peak J</td>
+                      <td class="text-center">
+                        ${(test.peakHighTypJ2D1 !== null && test.peakHighTypJ2D1 !== undefined &&
+                           test.peakHighTypJ2D2 !== null && test.peakHighTypJ2D2 !== undefined)
+                          ? `${test.peakHighTypJ2D1}, ${test.peakHighTypJ2D2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.peakHighTypJG1 !== null && test.peakHighTypJG1 !== undefined &&
+                           test.peakHighTypJG2 !== null && test.peakHighTypJG2 !== undefined)
+                          ? `${test.peakHighTypJG1}, ${test.peakHighTypJG2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">
+                        ${(test.peakHighTypJD1 !== null && test.peakHighTypJD1 !== undefined &&
+                           test.peakHighTypJD2 !== null && test.peakHighTypJD2 !== undefined)
+                          ? `${test.peakHighTypJD1}, ${test.peakHighTypJD2}`
+                          : '-'}
+                      </td>
+                      <td class="text-center">-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              ${test.ramanReportPath ? `
+                <div class="mt-2 pt-2 border-t">
+                  ${test.ramanReportPath.includes('cloudinary.com') ? `
+                    <a href="${test.ramanReportPath}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </a>
+                  ` : `
+                    <button @click="window.openPdfInModal('${test.ramanReportPath}', 'RAMAN Report')"
+                            class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedTemSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No TEM analysis found for this graphene sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">TEM Analysis</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                ${test.researchTeam ? `
+                  <div><span class="text-gray-600">Team:</span> <span class="font-medium">${test.researchTeam}</span></div>
+                ` : ''}
+                ${test.testingLab ? `
+                  <div><span class="text-gray-600">Lab:</span> <span class="font-medium">${test.testingLab}</span></div>
+                ` : ''}
+              </div>
+              ${test.comments ? `
+                <div class="mt-2 text-xs text-gray-600">${test.comments}</div>
+              ` : ''}
+              ${test.temReportPath ? `
+                <div class="mt-2 pt-2 border-t">
+                  ${test.temReportPath.includes('cloudinary.com') ? `
+                    <a href="${test.temReportPath}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </a>
+                  ` : `
+                    <button @click="window.openPdfInModal('${test.temReportPath}', 'TEM Report')"
+                            class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View PDF
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createGenericTestSection(label, tests, testType) {
   return `
     <div class="bg-gray-50 rounded-lg p-4">
       <h4 class="font-medium text-gray-900 mb-3">${label} (${tests.length})</h4>
       <div class="space-y-2">
-        ${tests.slice(0, 3).map(test => `
+        ${tests.map(test => `
           <div class="flex justify-between items-center py-2 px-3 bg-white rounded border">
             <div>
               <span class="font-medium">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
               ${test.value ? `<span class="ml-2 text-gray-600">${test.value} ${test.unit || ''}</span>` : ''}
             </div>
             ${test.reportPath ? `
-              <a href="${test.reportPath}" target="_blank" 
+              <a href="${test.reportPath}" target="_blank"
                  class="text-blue-600 hover:text-blue-800 text-sm">
                 View Report
               </a>
             ` : ''}
           </div>
         `).join('')}
-        ${tests.length > 3 ? `
-          <div class="text-center pt-2">
-            <button onclick="showAllTests('${testType}')" 
-                    class="text-blue-600 hover:text-blue-800 text-sm">
-              View all ${tests.length} ${label.toLowerCase()}
-            </button>
-          </div>
-        ` : ''}
       </div>
     </div>
   `;
@@ -572,13 +964,83 @@ function createShipmentsSection(data, type) {
  * @returns {string} Related section HTML
  */
 function createRelatedSection(data, type) {
-  // This would show related experiments, compound batches, etc.
+  if (type === 'graphene') {
+    // Show compound batches that include this graphene experiment
+    const compoundBatches = data.compoundBatches || [];
+
+    if (compoundBatches.length === 0) {
+      return `
+        <div class="text-center py-8 text-gray-500">
+          <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          <p>Not part of any compound batch</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="space-y-4">
+        ${compoundBatches.map(cb => {
+          const batch = cb.compoundBatch;
+          const experimentCount = batch.experiments ? batch.experiments.length : 0;
+
+          return `
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <button @click="routerService.navigateToDataPage('compound-batch', '${batch.batchNumber}')"
+                          class="font-medium text-blue-600 hover:text-blue-800 text-lg">
+                    ${batch.batchNumber}
+                  </button>
+                  ${batch.batchName ? `
+                    <span class="ml-2 text-gray-600">${batch.batchName}</span>
+                  ` : ''}
+                </div>
+                <button @click="routerService.navigateToDataPage('compound-batch', '${batch.batchNumber}')"
+                        class="text-blue-600 hover:text-blue-800 text-sm">
+                  View Batch Details →
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <span class="text-gray-600">Created:</span>
+                  <span class="ml-2 font-medium">${batch.createdDate || 'N/A'}</span>
+                </div>
+                <div>
+                  <span class="text-gray-600">Total Output:</span>
+                  <span class="ml-2 font-medium">${batch.totalOutput || 'N/A'} g</span>
+                </div>
+                <div>
+                  <span class="text-gray-600">Constituents:</span>
+                  <span class="ml-2 font-medium">${experimentCount} experiments</span>
+                </div>
+                <div>
+                  <span class="text-gray-600">Status:</span>
+                  <span class="ml-2 font-medium">${batch.status || 'Active'}</span>
+                </div>
+              </div>
+
+              ${batch.description ? `
+                <div class="mt-3 pt-3 border-t border-gray-200">
+                  <p class="text-sm text-gray-700">${batch.description}</p>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Default placeholder for other types
   return `
     <div class="text-center py-8 text-gray-500">
       <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
       </svg>
-      <p>Related experiments coming soon</p>
+      <p>Related data coming soon</p>
     </div>
   `;
 }
@@ -739,9 +1201,19 @@ function createMicronizationsSection(data, type) {
 }
 
 /**
- * Placeholder functions for unimplemented sections
+ * Create properties section (for biochar: output and finishing data)
  */
 function createPropertiesSection(data, type) {
+  if (type === 'biochar') {
+    return createProcessGrid([
+      { label: 'Output', value: data.output, unit: 'g' },
+      { label: 'Wash Amount', value: data.washAmount, unit: 'mL' },
+      { label: 'Wash Medium', value: data.washMedium },
+      { label: 'Drying Temperature', value: data.dryingTemp, unit: '°C' },
+      { label: 'KFT Percentage', value: data.kftPercentage, unit: '%' },
+      { label: 'Comments', value: data.comments }
+    ]);
+  }
   return createGenericSection(data, 'properties');
 }
 
