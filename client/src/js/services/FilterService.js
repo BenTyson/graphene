@@ -19,36 +19,47 @@ class FilterService {
    * @param {Object} appContext - Reference to the main app context for state updates
    */
   async initFilters(tableName, appContext) {
+    console.log(`🔧 FilterService: Initializing filters for table: ${tableName}`);
     this.filterLoading = true;
     this.filterError = null;
-    
+
     // Update app context loading state
     if (appContext) {
       appContext.filterLoading = true;
       appContext.filterError = null;
     }
-    
+
     try {
       // Load filter configuration
+      console.log(`🌐 FilterService: Fetching config from /api/${tableName}/filters/config`);
       const configResponse = await fetch(`/api/${tableName}/filters/config`);
+      console.log(`📡 FilterService: Config response status: ${configResponse.status}`);
+
       if (!configResponse.ok) {
+        const errorText = await configResponse.text();
+        console.error(`❌ FilterService: Config fetch failed:`, errorText);
         throw new Error(`Failed to load filter configuration: ${configResponse.statusText}`);
       }
-      
+
       const config = await configResponse.json();
+      console.log(`✅ FilterService: Config loaded for ${tableName}:`, config);
       this.filterConfigs[tableName] = config;
       
       // Initialize filter options object
       this.filterOptions[tableName] = {};
       
       // Load dynamic filter options
+      console.log(`🔄 FilterService: Loading filter options for ${tableName}`);
       await this.loadFilterOptions(tableName);
-      
+      console.log(`✅ FilterService: Filter options loaded:`, this.filterOptions[tableName]);
+
       // Initialize active filters state
+      console.log(`🎛️ FilterService: Initializing filter values for ${tableName}`);
       this.initializeFilterValues(tableName, appContext);
-      
+      console.log(`✅ FilterService: Filter initialization completed for ${tableName}`);
+
     } catch (error) {
-      console.error('Error initializing filters:', error);
+      console.error(`❌ FilterService: Failed to initialize filters for ${tableName}:`, error);
       this.filterError = error.message;
       if (appContext) {
         appContext.filterError = error.message;
@@ -125,11 +136,18 @@ class FilterService {
   }
 
   generateFilterFields(tableName, filterStateVariable, onFilterChange) {
+    console.log(`🎨 FilterService: Generating filter fields for ${tableName}`);
+    console.log(`🎨 FilterService: Available filter configs:`, Object.keys(this.filterConfigs));
     const config = this.filterConfigs[tableName];
+    console.log(`🎨 FilterService: Config for ${tableName}:`, config);
+
     if (!config || !config.filters) {
+      console.warn(`⚠️ FilterService: No filter config found for ${tableName}. Config:`, config);
       return '<div class="text-xs text-gray-500">No filters available</div>';
     }
-    
+
+    console.log(`✅ FilterService: Found ${config.filters.length} filters for ${tableName}`);
+
     return config.filters
       .map(filterConfig => {
         const { field, type, label, multiple, options, min, max, step } = filterConfig;
