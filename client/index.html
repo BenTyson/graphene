@@ -22,7 +22,7 @@
     </div>
 
     <!-- Main Application -->
-    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init()">
+    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init(); updateCurrentUser()">
       <!-- Header with logout -->
       <header class="border-b border-gray-200 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,9 +33,9 @@
             </div>
             <div class="flex items-center space-x-4">
               <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
-              <div class="flex items-center space-x-2 text-sm text-gray-600" x-data="{ user: window.authService?.getCurrentUser() }" x-init="user = window.authService?.getCurrentUser()">
-                <span x-text="user?.firstName + ' ' + user?.lastName"></span>
-                <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
+              <div class="flex items-center space-x-2 text-sm text-gray-600">
+                <span x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></span>
+                <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
                 <button @click="window.authService?.logout().then(() => location.reload())" 
                         class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded hover:bg-gray-100 transition-colors">
                   Logout
@@ -45,7 +45,7 @@
           </div>
 
           <!-- Mobile Header -->
-          <div class="md:hidden" x-data="{ showUserMenu: false, user: window.authService?.getCurrentUser() }" x-init="user = window.authService?.getCurrentUser()">
+          <div class="md:hidden" x-data="{ showUserMenu: false }">
             <div class="flex justify-between items-center h-16">
               <!-- Logo -->
               <div class="flex items-center">
@@ -57,7 +57,7 @@
                       class="flex items-center space-x-2 p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
                 <div class="flex items-center space-x-2">
                   <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span class="text-xs font-medium text-gray-600" x-text="user?.firstName?.charAt(0) + user?.lastName?.charAt(0)"></span>
+                    <span class="text-xs font-medium text-gray-600" x-text="currentUser?.firstName?.charAt(0) + currentUser?.lastName?.charAt(0)"></span>
                   </div>
                   <svg class="w-4 h-4 transition-transform" :class="showUserMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -79,11 +79,11 @@
               
               <!-- User Info -->
               <div class="px-4 py-3 border-b border-gray-100">
-                <div class="text-sm font-medium text-gray-900" x-text="user?.firstName + ' ' + user?.lastName"></div>
-                <div class="text-xs text-gray-500" x-text="user?.email"></div>
+                <div class="text-sm font-medium text-gray-900" x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></div>
+                <div class="text-xs text-gray-500" x-text="currentUser?.email"></div>
                 <div class="mt-1">
-                  <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600" 
-                        x-text="user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600"
+                        x-text="currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
                 </div>
               </div>
 
@@ -125,7 +125,8 @@
           activeTab === 'biochar' ? 'Production → Biochar' :
           activeTab === 'compound-batches' ? 'Production → Compound Batches' :
           activeTab === 'micronization' ? 'Production → Micronization' :
-          activeTab === 'shipments' ? 'Production → Shipments' : ''
+          activeTab === 'shipments' ? 'Production → Shipments' :
+          activeTab === 'user-management' ? 'User Management' : ''
         "></span>
       </div>
       
@@ -233,6 +234,15 @@
               News Feed
             </button>
           </div>
+
+          <!-- User Management (Super Admin Only) -->
+          <div class="border-t border-gray-100" x-show="isSuperAdmin()">
+            <button @click="switchTab('user-management'); mobileMenuOpen = false; initializeUserManagementTab()"
+                    :class="activeTab === 'user-management' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
+              User Management
+            </button>
+          </div>
         </div>
       </div>
       
@@ -319,6 +329,16 @@
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             News Feed
+          </button>
+
+          <!-- User Management (Super Admin Only) -->
+          <button
+            x-show="isSuperAdmin()"
+            @click="switchTab('user-management'); initializeUserManagementTab()"
+            :class="activeTab === 'user-management' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            User Management
           </button>
         </nav>
       </div>
@@ -457,6 +477,9 @@
       <!-- Graphene Tab -->
       <div x-html="getGrapheneTabHtml()"></div>
 
+      <!-- User Management Tab -->
+      <div x-html="getUserManagementTabHtml()"></div>
+
 
       <!-- BET Tab Component -->
       <div x-html="getBETTabHtml()"></div>
@@ -501,6 +524,9 @@
     
     <!-- Micronization Modal -->
     <div x-html="getMicronizationModalHtml()"></div>
+
+    <!-- User Add/Edit Modal -->
+    <div x-html="getUserModalHtml()"></div>
     
     <!-- Add New Material Modal -->
     <div x-show="showAddMaterial" x-cloak

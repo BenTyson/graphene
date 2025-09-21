@@ -843,6 +843,74 @@ export const shipmentAPI = {
   }
 };
 
+// Users API endpoints
+export const usersAPI = {
+  // Get all users with optional search
+  getAll: (params = {}) => {
+    const query = params.search ? `?search=${encodeURIComponent(params.search)}` : '';
+    const headers = {
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users${query}`, { headers }).then(handleResponse);
+  },
+
+  // Get single user
+  getById: (id) => {
+    const headers = {
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users/${id}`, { headers }).then(handleResponse);
+  },
+
+  // Create new user
+  create: (data) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data)
+    }).then(handleResponse);
+  },
+
+  // Update user
+  update: (id, data) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data)
+    }).then(handleResponse);
+  },
+
+  // Delete user
+  delete: (id) => {
+    const headers = {
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers
+    }).then(handleResponse);
+  },
+
+  // Toggle user status
+  toggleStatus: (id) => {
+    const headers = {
+      ...window.authService?.getAuthHeader()
+    };
+    return fetch(`${API_BASE}/users/${id}/toggle-status`, {
+      method: 'POST',
+      headers
+    }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -855,5 +923,6 @@ export default {
   semReport: semReportAPI,
   compoundBatch: compoundBatchAPI,
   micronization: micronizationAPI,
-  shipment: shipmentAPI
+  shipment: shipmentAPI,
+  users: usersAPI
 };

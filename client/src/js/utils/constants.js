@@ -222,5 +222,16 @@ export const DEFAULT_FORMS = {
     micronizationReportFile: null,
     removeMicronizationReport: false,
     replaceMicronizationReport: false
+  },
+  user: {
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    password: '',
+    confirmPassword: '',
+    role: '',
+    isActive: 'true',
+    changePassword: false
   }
 };

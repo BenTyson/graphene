@@ -26,12 +26,14 @@ import { getMicronizationTabHtml } from './components/tabs/MicronizationTab.js';
 import { getCompoundBatchesTabHtml } from './components/tabs/CompoundBatchesTab.js';
 import { getBiocharTabHtml } from './components/tabs/BiocharTab.js';
 import { getGrapheneTabHtml } from './components/tabs/GrapheneTab.js';
+import { getUserManagementTabHtml } from './components/tabs/UserManagementTab.js';
 // Tab components are loaded as separate scripts and made available globally
 // import { getAnalysisTabHtml } from './components/tabs/AnalysisTab.js';
 import { getAIInsightsTabHtml } from './components/tabs/AIInsightsTab.js';
 import { getNewsTabHtml } from './components/tabs/NewsTab.js';
 import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
 import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
+import { getUserModalHtml } from './components/modals/UserModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
 import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
 
@@ -96,7 +98,9 @@ window.getMicronizationTabHtml = getMicronizationTabHtml;
 window.getCompoundBatchesTabHtml = getCompoundBatchesTabHtml;
 window.getBiocharTabHtml = getBiocharTabHtml;
 window.getGrapheneTabHtml = getGrapheneTabHtml;
-// Tab functions are made globally available in their component files  
+window.getUserManagementTabHtml = getUserManagementTabHtml;
+window.getUserModalHtml = getUserModalHtml;
+// Tab functions are made globally available in their component files
 // window.getAnalysisTabHtml = getAnalysisTabHtml;
 
 // AI Insights tab is now loaded from the actual component
@@ -168,7 +172,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -180,7 +184,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -325,7 +329,11 @@ window.grapheneApp = function() {
     availableLots: [],
     availableGrapheneSamples: [],
     availableCompoundBatches: [],
-    
+    users: [],
+
+    // Current authenticated user (reactive)
+    currentUser: null,
+
     // Expansion states
     expandedCompoundBatches: {},
     compoundBatchRelatedData: {},
@@ -344,7 +352,8 @@ window.grapheneApp = function() {
     compoundBatchSearch: '',
     shipmentSearch: '',
     micronizationSearch: '',
-    
+    userSearch: '',
+
     // Sorting states
     biocharSortColumn: null,
     biocharSortDirection: 'asc',
@@ -375,7 +384,8 @@ window.grapheneApp = function() {
     currentUpdateReport: null,
     showAddShipment: false,
     showMicronizationModal: false,
-    
+    showAddUser: false,
+
     // Editing states
     editingBiochar: null,
     editingGraphene: null,
@@ -388,7 +398,8 @@ window.grapheneApp = function() {
     editingCompoundBatch: null,
     editingShipment: null,
     editingMicronization: null,
-    
+    editingUser: null,
+
     // Forms
     biocharForm: { ...DEFAULT_FORMS.biochar },
     grapheneForm: { ...DEFAULT_FORMS.graphene },
@@ -402,7 +413,8 @@ window.grapheneApp = function() {
     compoundBatchForm: { ...DEFAULT_FORMS.compoundBatch },
     shipmentForm: { ...DEFAULT_FORMS.shipment },
     micronizationForm: { ...DEFAULT_FORMS.micronization },
-    
+    userForm: { ...DEFAULT_FORMS.user },
+
     // Selection states
     selectedBiocharIds: [],
     selectedGrapheneIds: [],
@@ -3928,6 +3940,215 @@ window.grapheneApp = function() {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
       };
+    },
+
+    // User Management Methods
+    async loadUsers() {
+      try {
+        const response = await API.users.getAll({ search: this.userSearch });
+        this.users = response.data.users || [];
+      } catch (error) {
+        console.error('Error loading users:', error);
+        alert('Failed to load users');
+      }
+    },
+
+    async searchUsers() {
+      await this.loadUsers();
+    },
+
+    openUserForm() {
+      this.editingUser = null;
+      this.userForm = { ...DEFAULT_FORMS.user };
+      this.showAddUser = true;
+    },
+
+    editUser(user) {
+      this.editingUser = user;
+      this.userForm = {
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        password: '',
+        confirmPassword: '',
+        role: user.role,
+        isActive: user.isActive ? 'true' : 'false',
+        changePassword: false
+      };
+      this.showAddUser = true;
+    },
+
+    async saveUser() {
+      try {
+        // Validate form
+        if (!this.userForm.username || !this.userForm.email || !this.userForm.role) {
+          alert('Please fill in all required fields');
+          return;
+        }
+
+        if (!this.editingUser && !this.userForm.password) {
+          alert('Password is required for new users');
+          return;
+        }
+
+        if (this.userForm.password && this.userForm.password !== this.userForm.confirmPassword) {
+          alert('Passwords do not match');
+          return;
+        }
+
+        const userData = {
+          username: this.userForm.username,
+          email: this.userForm.email,
+          firstName: this.userForm.firstName,
+          lastName: this.userForm.lastName,
+          role: this.userForm.role,
+          isActive: this.userForm.isActive === 'true'
+        };
+
+        if (this.userForm.password) {
+          userData.password = this.userForm.password;
+        }
+
+        let response;
+        if (this.editingUser) {
+          response = await API.users.update(this.editingUser.id, userData);
+        } else {
+          response = await API.users.create(userData);
+        }
+
+        if (response.success) {
+          await this.loadUsers();
+          this.showAddUser = false;
+          this.editingUser = null;
+          this.userForm = { ...DEFAULT_FORMS.user };
+          alert(this.editingUser ? 'User updated successfully' : 'User created successfully');
+        } else {
+          alert(response.error || 'Failed to save user');
+        }
+      } catch (error) {
+        console.error('Error saving user:', error);
+        alert('Failed to save user');
+      }
+    },
+
+    async deleteUser(user) {
+      if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await API.users.delete(user.id);
+        if (response.success) {
+          await this.loadUsers();
+          alert('User deleted successfully');
+        } else {
+          alert(response.error || 'Failed to delete user');
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user');
+      }
+    },
+
+    async toggleUserStatus(user) {
+      try {
+        const response = await API.users.toggleStatus(user.id);
+        if (response.success) {
+          await this.loadUsers();
+          alert(`User ${response.data.user.isActive ? 'activated' : 'deactivated'} successfully`);
+        } else {
+          alert(response.error || 'Failed to update user status');
+        }
+      } catch (error) {
+        console.error('Error toggling user status:', error);
+        alert('Failed to update user status');
+      }
+    },
+
+    async exportData(type) {
+      if (type === 'users') {
+        try {
+          const csvContent = this.generateUserCSV();
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Error exporting users:', error);
+          alert('Failed to export users');
+        }
+      }
+    },
+
+    generateUserCSV() {
+      const headers = ['Username', 'Email', 'First Name', 'Last Name', 'Role', 'Status', 'Last Login', 'Created'];
+      const rows = this.users.map(user => [
+        user.username,
+        user.email,
+        user.firstName || '',
+        user.lastName || '',
+        this.getRoleLabel(user.role),
+        user.isActive ? 'Active' : 'Inactive',
+        user.lastLogin ? window.formatDateSafe(user.lastLogin) : 'Never',
+        window.formatDateSafe(user.createdAt)
+      ]);
+
+      return [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+    },
+
+    getCurrentUserId() {
+      const currentUser = window.authService?.getCurrentUser();
+      return currentUser?.id;
+    },
+
+    // Initialize user management tab
+    async initializeUserManagementTab() {
+      if (this.activeTab === 'user-management') {
+        await this.loadUsers();
+      }
+    },
+
+    // Update current user from AuthService
+    updateCurrentUser() {
+      this.currentUser = window.authService?.getCurrentUser() || null;
+
+      // If no user found, wait for AuthService to finish initialization
+      if (!this.currentUser && window.authService) {
+        // Keep checking until we get user data or max attempts reached
+        let attempts = 0;
+        const maxAttempts = 20; // 10 seconds total
+        const checkInterval = 500; // Check every 500ms
+
+        const checkForUser = () => {
+          attempts++;
+          this.currentUser = window.authService?.getCurrentUser() || null;
+
+          if (this.currentUser) {
+            // User found - Alpine should automatically update the UI
+            return;
+          }
+
+          if (attempts < maxAttempts) {
+            setTimeout(checkForUser, checkInterval);
+          }
+        };
+
+        // Start checking
+        setTimeout(checkForUser, checkInterval);
+      }
+    },
+
+    // Check if current user is super admin
+    isSuperAdmin() {
+      return this.currentUser?.role === 'SUPER_ADMIN';
     }
   };
 };

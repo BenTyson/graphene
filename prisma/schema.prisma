@@ -675,8 +675,11 @@ enum ProcessingStatus {
 }
 
 enum UserRole {
-  TEAM_MEMBER
   SUPER_ADMIN
+  SCIENCE_TEAM
+  EXECUTIVE_TEAM
+  INVESTOR
+  TEAM_MEMBER
 }
 
 model User {
