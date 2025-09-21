@@ -16,6 +16,15 @@ else
 fi
 
 echo ""
-echo "2️⃣ STARTING: Server startup (skipping redundant seeding for existing production DB)"
+echo "2️⃣ STARTING: Admin user migration"
+if node scripts/migrate-admin-user.js; then
+    echo "✅ SUCCESS: Admin user migration completed"
+else
+    echo "❌ FAILED: Admin user migration failed"
+    exit 1
+fi
+
+echo ""
+echo "3️⃣ STARTING: Server startup (skipping redundant seeding for existing production DB)"
 echo "🎯 Final check - about to start server..."
 npm start
