@@ -95,23 +95,29 @@ export function formatErrorResponse(message, statusCode = 500, details = null) {
  * @returns {object} Parsed filters object
  */
 export function parseFilters(query) {
+  console.log(`🔍 Server: Parsing filters from query:`, query.filters);
   const filters = {};
-  
+
   if (query.filters) {
     try {
       // Handle JSON string filters
       if (typeof query.filters === 'string') {
-        return JSON.parse(query.filters);
+        const parsed = JSON.parse(query.filters);
+        console.log(`✅ Server: Successfully parsed filters:`, parsed);
+        return parsed;
       }
       // Handle already parsed object
       if (typeof query.filters === 'object') {
+        console.log(`✅ Server: Using object filters:`, query.filters);
         return query.filters;
       }
     } catch (error) {
-      console.warn('Error parsing filters:', error);
+      console.warn('❌ Server: Error parsing filters:', error);
       return {};
     }
   }
+
+  console.log(`📭 Server: No filters in query`);
   
   // Handle individual filter parameters (legacy support)
   Object.keys(query).forEach(key => {

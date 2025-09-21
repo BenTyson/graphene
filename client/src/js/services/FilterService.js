@@ -68,6 +68,10 @@ class FilterService {
       this.filterLoading = false;
       if (appContext) {
         appContext.filterLoading = false;
+        // Trigger Alpine.js reactivity to re-render filter fields
+        appContext.$nextTick && appContext.$nextTick(() => {
+          console.log(`🔄 FilterService: Triggering filter field re-render for ${tableName}`);
+        });
       }
     }
   }
@@ -143,6 +147,10 @@ class FilterService {
 
     if (!config || !config.filters) {
       console.warn(`⚠️ FilterService: No filter config found for ${tableName}. Config:`, config);
+      // Check if we're still loading filters
+      if (this.filterLoading) {
+        return '<div class="text-xs text-gray-500">Loading filters...</div>';
+      }
       return '<div class="text-xs text-gray-500">No filters available</div>';
     }
 
@@ -309,36 +317,51 @@ class FilterService {
   }
 
   buildFilterQueryParams(tableName, additionalParams = {}, appContext) {
+    console.log(`🔍 FilterService: Building query params for ${tableName}`);
     const filters = appContext && appContext.grapheneFilterState ? appContext.grapheneFilterState.filters : {};
-    if (!filters) return additionalParams;
-    
+    console.log(`🔍 FilterService: Current filter state:`, filters);
+
+    if (!filters) {
+      console.log(`⚠️ FilterService: No filters found, returning base params`);
+      return additionalParams;
+    }
+
     const params = { ...additionalParams };
-    
+
     // Add filters as JSON string
     const activeFilters = {};
     Object.entries(filters).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
         activeFilters[key] = value;
+        console.log(`✅ FilterService: Added array filter ${key}:`, value);
       } else if (typeof value === 'object' && value !== null) {
         const hasValues = Object.values(value).some(v => v !== null && v !== '');
         if (hasValues) {
           activeFilters[key] = value;
+          console.log(`✅ FilterService: Added object filter ${key}:`, value);
         }
       } else if (value !== null && value !== '') {
         activeFilters[key] = value;
+        console.log(`✅ FilterService: Added filter ${key}:`, value);
       }
     });
-    
+
     if (Object.keys(activeFilters).length > 0) {
       params.filters = JSON.stringify(activeFilters);
+      console.log(`🎯 FilterService: Final params with filters:`, params);
+    } else {
+      console.log(`📭 FilterService: No active filters, returning base params`);
     }
-    
+
     return params;
   }
 
   applyFilters(appContext) {
+    console.log(`🔄 FilterService: Applying filters, reloading data...`);
     if (appContext && appContext.loadGrapheneRecords) {
       appContext.loadGrapheneRecords();
+    } else {
+      console.error(`❌ FilterService: No loadGrapheneRecords method found in appContext`);
     }
   }
 
