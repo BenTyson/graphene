@@ -82,12 +82,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // Create new BET record
 router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  
+
   // Prepare data using utility function
   const data = prepareDataForDB(req.body, {
     numericFields: ['mass', 'multipointBetArea', 'langmuirSurfaceArea'],
     dateFields: ['testDate'],
-    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species']
+    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species', 'materialType', 'dateUnknown']
   });
   
   // Handle file upload
@@ -99,7 +99,15 @@ router.post('/', upload.single('betReport'), asyncHandler(async (req, res) => {
       console.error('Failed to upload BET report:', uploadResult.error);
     }
   }
-  
+
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
+
   // Remove system fields
   delete data.id;
   delete data.createdAt;
@@ -142,9 +150,9 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
   const data = prepareDataForDB(req.body, {
     numericFields: ['mass', 'multipointBetArea', 'langmuirSurfaceArea'],
     dateFields: ['testDate'],
-    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species']
+    fieldsToRemove: ['betReportFile', 'removeBetReport', 'replaceBetReport', 'grapheneRef', 'species', 'materialType', 'dateUnknown']
   });
-  
+
   // Handle file operations
   if (req.body.removeBetReport === 'true') {
     data.betReportPath = null;
@@ -161,7 +169,15 @@ router.put('/:id', upload.single('betReport'), asyncHandler(async (req, res) => 
       console.error('Failed to replace BET report:', replaceResult.error);
     }
   }
-  
+
+  // Handle material selection - only one should be set, others should be null
+  if (!data.grapheneSample || data.grapheneSample === '') {
+    data.grapheneSample = null;
+  }
+  if (!data.compoundBatchNumber || data.compoundBatchNumber === '') {
+    data.compoundBatchNumber = null;
+  }
+
   // Remove system fields
   delete data.id;
   delete data.createdAt;
