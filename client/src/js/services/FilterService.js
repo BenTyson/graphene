@@ -186,7 +186,7 @@ class FilterService {
                         <input type="checkbox"
                                :value="option.value"
                                :checked="${filterStateVariable}.filters.${field}.includes(option.value)"
-                               @change="console.log('🧪 Checkbox changed for ${field}:', option.value, $event.target.checked); toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
+                               @change="toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span x-text="option.label" class="text-gray-700"></span>
                       </label>
