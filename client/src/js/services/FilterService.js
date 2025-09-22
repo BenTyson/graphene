@@ -141,6 +141,7 @@ class FilterService {
 
   generateFilterFields(tableName, filterStateVariable, onFilterChange) {
     console.log(`🎨 FilterService: Generating filter fields for ${tableName}`);
+    console.log(`🎨 FilterService: onFilterChange parameter:`, onFilterChange);
     console.log(`🎨 FilterService: Available filter configs:`, Object.keys(this.filterConfigs));
     const config = this.filterConfigs[tableName];
     console.log(`🎨 FilterService: Config for ${tableName}:`, config);
@@ -185,7 +186,7 @@ class FilterService {
                         <input type="checkbox"
                                :value="option.value"
                                :checked="${filterStateVariable}.filters.${field}.includes(option.value)"
-                               @change="toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); ${onFilterChange}"
+                               @change="console.log('🧪 Checkbox changed for ${field}:', option.value, $event.target.checked); toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span x-text="option.label" class="text-gray-700"></span>
                       </label>
