@@ -2476,6 +2476,7 @@ window.grapheneApp = function() {
     },
 
     applyFilters() {
+      console.log(`🚀 App: applyFilters() called!`);
       FilterService.applyFilters(this);
     },
     
