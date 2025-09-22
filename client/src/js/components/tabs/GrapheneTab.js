@@ -102,8 +102,13 @@ function getGrapheneTabHtml() {
              class="p-4">
           
           <!-- Filter Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
-               x-html="generateFilterFields('graphene', 'grapheneFilterState', 'applyFilters()')">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <template x-if="filterConfigs && filterConfigs.graphene">
+              <div x-html="generateFilterFields('graphene', 'grapheneFilterState', 'applyFilters()')"></div>
+            </template>
+            <template x-if="!filterConfigs || !filterConfigs.graphene">
+              <div class="text-xs text-gray-500">Loading filters...</div>
+            </template>
           </div>
           
           <!-- Filter Actions -->
