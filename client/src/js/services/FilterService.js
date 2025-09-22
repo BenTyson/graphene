@@ -19,7 +19,6 @@ class FilterService {
    * @param {Object} appContext - Reference to the main app context for state updates
    */
   async initFilters(tableName, appContext) {
-    console.log(`🔧 FilterService: Initializing filters for table: ${tableName}`);
     this.filterLoading = true;
     this.filterError = null;
 
@@ -31,35 +30,25 @@ class FilterService {
 
     try {
       // Load filter configuration
-      console.log(`🌐 FilterService: Fetching config from /api/${tableName}/filters/config`);
       const configResponse = await fetch(`/api/${tableName}/filters/config`);
-      console.log(`📡 FilterService: Config response status: ${configResponse.status}`);
 
       if (!configResponse.ok) {
-        const errorText = await configResponse.text();
-        console.error(`❌ FilterService: Config fetch failed:`, errorText);
         throw new Error(`Failed to load filter configuration: ${configResponse.statusText}`);
       }
 
       const config = await configResponse.json();
-      console.log(`✅ FilterService: Config loaded for ${tableName}:`, config);
       this.filterConfigs[tableName] = config;
       
       // Initialize filter options object
       this.filterOptions[tableName] = {};
       
       // Load dynamic filter options
-      console.log(`🔄 FilterService: Loading filter options for ${tableName}`);
       await this.loadFilterOptions(tableName);
-      console.log(`✅ FilterService: Filter options loaded:`, this.filterOptions[tableName]);
 
       // Initialize active filters state
-      console.log(`🎛️ FilterService: Initializing filter values for ${tableName}`);
       this.initializeFilterValues(tableName, appContext);
-      console.log(`✅ FilterService: Filter initialization completed for ${tableName}`);
 
     } catch (error) {
-      console.error(`❌ FilterService: Failed to initialize filters for ${tableName}:`, error);
       this.filterError = error.message;
       if (appContext) {
         appContext.filterError = error.message;
@@ -68,10 +57,6 @@ class FilterService {
       this.filterLoading = false;
       if (appContext) {
         appContext.filterLoading = false;
-        // Trigger Alpine.js reactivity to re-render filter fields
-        appContext.$nextTick && appContext.$nextTick(() => {
-          console.log(`🔄 FilterService: Triggering filter field re-render for ${tableName}`);
-        });
       }
     }
   }
@@ -140,22 +125,15 @@ class FilterService {
   }
 
   generateFilterFields(tableName, filterStateVariable, onFilterChange) {
-    console.log(`🎨 FilterService: Generating filter fields for ${tableName}`);
-    console.log(`🎨 FilterService: onFilterChange parameter:`, onFilterChange);
-    console.log(`🎨 FilterService: Available filter configs:`, Object.keys(this.filterConfigs));
     const config = this.filterConfigs[tableName];
-    console.log(`🎨 FilterService: Config for ${tableName}:`, config);
 
     if (!config || !config.filters) {
-      console.warn(`⚠️ FilterService: No filter config found for ${tableName}. Config:`, config);
       // Check if we're still loading filters
       if (this.filterLoading) {
         return '<div class="text-xs text-gray-500">Loading filters...</div>';
       }
       return '<div class="text-xs text-gray-500">No filters available</div>';
     }
-
-    console.log(`✅ FilterService: Found ${config.filters.length} filters for ${tableName}`);
 
     return config.filters
       .map(filterConfig => {
@@ -179,14 +157,14 @@ class FilterService {
               // Render multiple select as checkboxes for better UX
               return `
                 <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label} <span x-text="'(' + ((filterOptions && filterOptions['${tableName}'] && filterOptions['${tableName}']['${field}']) || []).length + ')'" class="text-gray-400"></span></label>
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
                   <div class="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-2">
                     <template x-for="option in (filterOptions && filterOptions['${tableName}'] && filterOptions['${tableName}']['${field}']) || []" :key="option.value">
                       <label class="flex items-center space-x-2 text-xs cursor-pointer">
                         <input type="checkbox"
                                :value="option.value"
                                :checked="${filterStateVariable}.filters.${field}.includes(option.value)"
-                               @change="toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
+                               @change="toggleMultiSelectOption('${field}', $event.target.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span x-text="option.label" class="text-gray-700"></span>
                       </label>
@@ -320,41 +298,28 @@ class FilterService {
   }
 
   toggleMultiSelectOption(field, option, checked, stateVariable, appContext) {
-    console.log(`☑️ FilterService: toggleMultiSelectOption called - field: ${field}, option: ${option}, checked: ${checked}`);
-    if (!appContext) {
-      console.error(`❌ FilterService: No appContext provided to toggleMultiSelectOption`);
-      return;
-    }
+    if (!appContext) return;
 
     const filterState = appContext[stateVariable];
-    if (!filterState) {
-      console.error(`❌ FilterService: No filterState found for ${stateVariable}`);
-      return;
-    }
+    if (!filterState) return;
 
     if (!filterState.filters[field]) {
-      console.log(`🔧 FilterService: Initializing empty array for ${field}`);
       filterState.filters[field] = [];
     }
 
     if (checked) {
       if (!filterState.filters[field].includes(option)) {
         filterState.filters[field].push(option);
-        console.log(`✅ FilterService: Added ${option} to ${field}. New array:`, filterState.filters[field]);
       }
     } else {
       filterState.filters[field] = filterState.filters[field].filter(item => item !== option);
-      console.log(`❌ FilterService: Removed ${option} from ${field}. New array:`, filterState.filters[field]);
     }
   }
 
   buildFilterQueryParams(tableName, additionalParams = {}, appContext) {
-    console.log(`🔍 FilterService: Building query params for ${tableName}`);
     const filters = appContext && appContext.grapheneFilterState ? appContext.grapheneFilterState.filters : {};
-    console.log(`🔍 FilterService: Current filter state:`, filters);
 
     if (!filters) {
-      console.log(`⚠️ FilterService: No filters found, returning base params`);
       return additionalParams;
     }
 
@@ -365,35 +330,26 @@ class FilterService {
     Object.entries(filters).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
         activeFilters[key] = value;
-        console.log(`✅ FilterService: Added array filter ${key}:`, value);
       } else if (typeof value === 'object' && value !== null) {
         const hasValues = Object.values(value).some(v => v !== null && v !== '');
         if (hasValues) {
           activeFilters[key] = value;
-          console.log(`✅ FilterService: Added object filter ${key}:`, value);
         }
       } else if (value !== null && value !== '') {
         activeFilters[key] = value;
-        console.log(`✅ FilterService: Added filter ${key}:`, value);
       }
     });
 
     if (Object.keys(activeFilters).length > 0) {
       params.filters = JSON.stringify(activeFilters);
-      console.log(`🎯 FilterService: Final params with filters:`, params);
-    } else {
-      console.log(`📭 FilterService: No active filters, returning base params`);
     }
 
     return params;
   }
 
   applyFilters(appContext) {
-    console.log(`🔄 FilterService: Applying filters, reloading data...`);
     if (appContext && appContext.loadGrapheneRecords) {
       appContext.loadGrapheneRecords();
-    } else {
-      console.error(`❌ FilterService: No loadGrapheneRecords method found in appContext`);
     }
   }
 

@@ -2441,22 +2441,15 @@ window.grapheneApp = function() {
     
     // Filter system methods - delegated to FilterService
     async initFilters(tableName) {
-      console.log(`🚀 App: Starting filter initialization for ${tableName}`);
       await FilterService.initFilters(tableName, this);
       // Expose filter data to app context for template access
       this.filterConfigs = FilterService.getFilterConfigs();
       this.filterOptions = FilterService.getFilterOptions();
       this.activeFilters = FilterService.getActiveFilters();
-      console.log(`🎯 App: Filter initialization complete. filterConfigs:`, this.filterConfigs);
-      console.log(`🎯 App: Available tables in filterConfigs:`, Object.keys(this.filterConfigs));
     },
 
     generateFilterFields(tableName, filterStateVariable, onFilterChange) {
-      console.log(`🎨 App: generateFilterFields called for ${tableName}`);
-      console.log(`🎨 App: Current filterConfigs in app:`, this.filterConfigs);
-      const result = FilterService.generateFilterFields(tableName, filterStateVariable, onFilterChange);
-      console.log(`🎨 App: generateFilterFields result length:`, result.length);
-      return result;
+      return FilterService.generateFilterFields(tableName, filterStateVariable, onFilterChange);
     },
 
     getActiveFilterCount(filterState) {
@@ -2476,7 +2469,6 @@ window.grapheneApp = function() {
     },
 
     applyFilters() {
-      console.log(`🚀 App: applyFilters() called!`);
       FilterService.applyFilters(this);
     },
     
