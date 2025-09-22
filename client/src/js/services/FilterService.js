@@ -174,25 +174,41 @@ class FilterService {
             `;
           
           case 'select':
-            const modelAttribute = `x-model="${filterStateVariable}.filters.${field}"`;
-            const multipleAttribute = multiple ? 'multiple' : '';
-            const sizeAttribute = multiple ? 'size="4"' : '';
-            
-            return `
-              <div class="space-y-2">
-                <label class="text-xs font-medium text-gray-700">${label}</label>
-                <select ${modelAttribute}
-                        @change="${onFilterChange}"
-                        ${multipleAttribute}
-                        ${sizeAttribute}
-                        class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${multiple ? 'h-20' : ''}">
-                  <option value="">All ${label}</option>
-                  <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
-                    <option :value="option.value" x-text="option.label"></option>
-                  </template>
-                </select>
-              </div>
-            `;
+            if (multiple) {
+              // Render multiple select as checkboxes for better UX
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <div class="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-2">
+                    <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
+                      <label class="flex items-center space-x-2 text-xs cursor-pointer">
+                        <input type="checkbox"
+                               :value="option.value"
+                               :checked="${filterStateVariable}.filters.${field}.includes(option.value)"
+                               @change="toggleMultiSelectOption('${field}', option.value, $event.target.checked, '${filterStateVariable}'); ${onFilterChange}"
+                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span x-text="option.label" class="text-gray-700"></span>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              `;
+            } else {
+              // Single select dropdown
+              return `
+                <div class="space-y-2">
+                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <select x-model="${filterStateVariable}.filters.${field}"
+                          @change="${onFilterChange}"
+                          class="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All ${label}</option>
+                    <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </div>
+              `;
+            }
           
           case 'dateRange':
             return `
@@ -300,19 +316,31 @@ class FilterService {
   }
 
   toggleMultiSelectOption(field, option, checked, stateVariable, appContext) {
-    if (!appContext) return;
-    
+    console.log(`☑️ FilterService: toggleMultiSelectOption called - field: ${field}, option: ${option}, checked: ${checked}`);
+    if (!appContext) {
+      console.error(`❌ FilterService: No appContext provided to toggleMultiSelectOption`);
+      return;
+    }
+
     const filterState = appContext[stateVariable];
+    if (!filterState) {
+      console.error(`❌ FilterService: No filterState found for ${stateVariable}`);
+      return;
+    }
+
     if (!filterState.filters[field]) {
+      console.log(`🔧 FilterService: Initializing empty array for ${field}`);
       filterState.filters[field] = [];
     }
-    
+
     if (checked) {
       if (!filterState.filters[field].includes(option)) {
         filterState.filters[field].push(option);
+        console.log(`✅ FilterService: Added ${option} to ${field}. New array:`, filterState.filters[field]);
       }
     } else {
       filterState.filters[field] = filterState.filters[field].filter(item => item !== option);
+      console.log(`❌ FilterService: Removed ${option} from ${field}. New array:`, filterState.filters[field]);
     }
   }
 
