@@ -178,9 +178,9 @@ class FilterService {
               // Render multiple select as checkboxes for better UX
               return `
                 <div class="space-y-2">
-                  <label class="text-xs font-medium text-gray-700">${label}</label>
+                  <label class="text-xs font-medium text-gray-700">${label} <span x-text="'(' + ((filterOptions && filterOptions['${tableName}'] && filterOptions['${tableName}']['${field}']) || []).length + ')'" class="text-gray-400"></span></label>
                   <div class="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-2">
-                    <template x-for="option in filterOptions['${tableName}']['${field}'] || []" :key="option.value">
+                    <template x-for="option in (filterOptions && filterOptions['${tableName}'] && filterOptions['${tableName}']['${field}']) || []" :key="option.value">
                       <label class="flex items-center space-x-2 text-xs cursor-pointer">
                         <input type="checkbox"
                                :value="option.value"
@@ -190,6 +190,9 @@ class FilterService {
                         <span x-text="option.label" class="text-gray-700"></span>
                       </label>
                     </template>
+                    <div x-show="!(filterOptions && filterOptions['${tableName}'] && filterOptions['${tableName}']['${field}']) || (filterOptions['${tableName}']['${field}'] || []).length === 0" class="text-xs text-gray-500 p-2">
+                      No options available
+                    </div>
                   </div>
                 </div>
               `;
