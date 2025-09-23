@@ -164,7 +164,7 @@ class FilterService {
                         <input type="checkbox"
                                :value="option.value"
                                :checked="${filterStateVariable}.filters.${field}.includes(option.value)"
-                               @change="toggleMultiSelectOption('${field}', $event.target.value, $event.target.checked, '${filterStateVariable}'); applyFilters()"
+                               @change="toggleMultiSelectOption('${field}', $event.target.value, $event.target.checked, '${filterStateVariable}'); $nextTick(() => ${onFilterChange})"
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span x-text="option.label" class="text-gray-700"></span>
                       </label>
@@ -245,7 +245,7 @@ class FilterService {
                     <label class="flex items-center space-x-2 text-xs">
                       <input type="checkbox"
                              :checked="(${filterStateVariable}.filters.${field} || []).includes('${option}')"
-                             @change="toggleMultiSelectOption('${field}', '${option}', $event.target.checked, '${filterStateVariable}'); ${onFilterChange}"
+                             @change="toggleMultiSelectOption('${field}', '${option}', $event.target.checked, '${filterStateVariable}'); $nextTick(() => ${onFilterChange})"
                              class="rounded text-blue-600">
                       <span>${option}</span>
                     </label>

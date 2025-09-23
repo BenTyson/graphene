@@ -23,11 +23,18 @@
 function getAnalysisTabHtml() {
   return `
     <!-- Analysis Tab -->
-    <div x-show="activeTab === 'analysis'" x-cloak>
-      
-      <!-- Header -->
+    <div x-show="activeTab === 'analysis'" x-cloak x-init="if (activeTab === 'analysis') { loadCharacterizationData(); loadCharacterizationReferences(); }">
+
+      <!-- Characterization Comparison Section -->
+      ${window.getCharacterizationComparisonHtml?.() || ''}
+
+      <!-- Divider -->
+      <div class="border-t border-gray-200 my-12"></div>
+
+      <!-- Competitive Analysis Header -->
       <div class="mb-8">
         <h2 class="text-3xl font-bold text-gray-900">Competitive Analysis</h2>
+        <p class="text-sm text-gray-600 mt-1">Compare our best results against industry standards and competitive materials</p>
       </div>
 
       <!-- Loading State -->

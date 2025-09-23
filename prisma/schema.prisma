@@ -700,3 +700,27 @@ model User {
   @@index([role])
   @@map("users")
 }
+
+model CharacterizationReference {
+  id          String    @id @default(cuid())
+  source      String    // "Dr. Li", "ISO", "ASTM", "GEIC Raw", "GEIC Milled", etc.
+  sourceType  String    @map("source_type") // "academic", "standard", "external_lab", "production"
+  testType    String    @map("test_type") // "BET", "Conductivity", "RAMAN", "XPS", "ICP-OES", "TGA", etc.
+  value       Decimal?  @db.Decimal(20, 6)
+  valueString String?   @map("value_string") // For non-numeric values or complex notations
+  unit        String?
+  conditions  Json?     // { pressure: "20kN", temperature: "25C", etc. }
+  testDate    DateTime? @map("test_date")
+  notes       String?
+  isRange     Boolean   @default(false) @map("is_range") // For standards that specify ranges
+  minValue    Decimal?  @map("min_value") @db.Decimal(20, 6) // For range values
+  maxValue    Decimal?  @map("max_value") @db.Decimal(20, 6) // For range values
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([source, testType])
+  @@index([source])
+  @@index([testType])
+  @@index([sourceType])
+  @@map("characterization_references")
+}

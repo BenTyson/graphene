@@ -75,6 +75,7 @@ import './components/tabs/TestResultsTEMTab.js';
 import './components/tabs/SEMReportsTab.js';
 import './components/tabs/UpdateReportsTab.js';
 import './components/tabs/AnalysisTab.js';
+import './components/analysis/CharacterizationComparison.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
 import FilterService from './services/FilterService.js';
 import NewsService from './services/NewsService.js';
@@ -223,6 +224,31 @@ window.grapheneApp = function() {
     betChart: null,
     conductivityChart: null,
     ramanChart: null,
+
+    // Characterization reference data
+    characterizationData: null,
+    characterizationLoading: false,
+    characterizationError: null,
+    selectedCharacterizationTest: 'BET',
+    characterizationReferences: [],
+    showCharacterizationModal: false,
+    characterizationChart: null,
+    characterizationChartInitialized: false,
+    characterizationSortOrder: 'desc', // 'asc' or 'desc'
+    characterizationForm: {
+      source: '',
+      sourceType: 'academic',
+      testType: 'BET',
+      value: '',
+      valueString: '',
+      unit: 'm²/g',
+      isRange: false,
+      minValue: '',
+      maxValue: '',
+      conditions: {},
+      testDate: null,
+      notes: ''
+    },
     
     // AI Insights data
     aiInsightsData: null,
@@ -3207,7 +3233,381 @@ window.grapheneApp = function() {
         }
       });
     },
-    
+
+    // Load characterization comparison data
+    async loadCharacterizationData(testType = null) {
+      this.characterizationLoading = true;
+      this.characterizationError = null;
+
+      const test = testType || this.selectedCharacterizationTest;
+
+      try {
+        const response = await fetch(`/api/analysis/characterization-comparison?testType=${test}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.characterizationData = result.data;
+
+        // Initialize chart after data is loaded
+        await this.$nextTick();
+        this.initializeCharacterizationChart();
+      } catch (error) {
+        console.error('Failed to load characterization data:', error);
+        this.characterizationError = 'Failed to load characterization comparison data.';
+      } finally {
+        this.characterizationLoading = false;
+      }
+    },
+
+    // Initialize characterization comparison chart
+    initializeCharacterizationChart() {
+      // Wait for DOM to be fully ready
+      setTimeout(() => {
+        try {
+          const ctx = document.getElementById('characterizationChart');
+
+          // Detailed logging for debugging
+          console.log('Chart initialization:', {
+            canvasFound: !!ctx,
+            hasData: !!this.characterizationData,
+            hasSources: !!this.characterizationData?.sources,
+            sourceCount: this.characterizationData?.sources ? Object.keys(this.characterizationData.sources).length : 0
+          });
+
+          if (!ctx) {
+            console.error('Canvas element not found in DOM');
+            return;
+          }
+
+          if (!this.characterizationData?.sources) {
+            console.log('No characterization data available yet');
+            return;
+          }
+
+          // Check if canvas has valid context
+          const testContext = ctx.getContext('2d');
+          if (!testContext) {
+            console.error('Cannot get 2D context from canvas');
+            return;
+          }
+
+          // Destroy existing chart if it exists
+          if (this.characterizationChart) {
+            console.log('Destroying existing chart');
+            try {
+              // Stop the chart's animations before destroying
+              this.characterizationChart.stop();
+              this.characterizationChart.destroy();
+            } catch (destroyError) {
+              console.warn('Error destroying chart:', destroyError);
+            }
+            this.characterizationChart = null;
+            this.characterizationChartInitialized = false;
+          }
+
+          // Prepare data for chart
+          const sources = this.characterizationData.sources;
+          const labels = [];
+          const values = [];
+          const backgroundColors = [];
+          const borderColors = [];
+
+          // Process each source
+          Object.entries(sources).forEach(([key, source]) => {
+            // Create label
+            const label = source.source || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            labels.push(label);
+
+            // Get value (handle ranges)
+            let value = null;
+            if (source.isRange && source.minValue !== null && source.maxValue !== null) {
+              // For ranges, show the average
+              value = (parseFloat(source.minValue) + parseFloat(source.maxValue)) / 2;
+            } else if (source.value !== null) {
+              value = parseFloat(source.value);
+            }
+            values.push(value);
+
+            // Set colors based on source type - black, gray, copper palette
+            let bgColor, borderColor;
+            if (source.type === 'system') {
+              bgColor = 'rgba(0, 0, 0, 0.8)';  // Black for system data
+              borderColor = 'rgba(0, 0, 0, 1)';
+            } else if (source.sourceType === 'academic') {
+              bgColor = 'rgba(184, 115, 51, 0.8)';  // Copper for academic
+              borderColor = 'rgba(184, 115, 51, 1)';
+            } else if (source.sourceType === 'standard') {
+              bgColor = 'rgba(156, 163, 175, 0.8)';  // Gray for standards
+              borderColor = 'rgba(156, 163, 175, 1)';
+            } else if (source.sourceType === 'external_lab') {
+              bgColor = 'rgba(107, 114, 128, 0.8)';  // Dark gray for external lab
+              borderColor = 'rgba(107, 114, 128, 1)';
+            } else {
+              bgColor = 'rgba(75, 85, 99, 0.8)';  // Medium gray for others
+              borderColor = 'rgba(75, 85, 99, 1)';
+            }
+            backgroundColors.push(bgColor);
+            borderColors.push(borderColor);
+          });
+
+          // Create chart
+          this.characterizationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: this.selectedCharacterizationTest,
+                data: values,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 3, // Very slight rounded edges
+                borderSkipped: false
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false, // Disable animations to prevent canvas access errors
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const source = Object.values(sources)[context.dataIndex];
+                      const lines = [];
+
+                      // Value line
+                      if (source.isRange) {
+                        lines.push(`Range: ${source.minValue} - ${source.maxValue} ${source.unit || ''}`);
+                      } else if (context.parsed.y !== null) {
+                        lines.push(`Value: ${context.parsed.y} ${source.unit || ''}`);
+                      } else if (source.valueString) {
+                        lines.push(`Value: ${source.valueString}`);
+                      }
+
+                      // Type line
+                      lines.push(`Type: ${source.type === 'system' ? 'System Data' : source.sourceType}`);
+
+                      // Sample ID if available
+                      if (source.sampleId) {
+                        lines.push(`Sample: ${source.sampleId}`);
+                      }
+
+                      // Conditions if available
+                      if (source.conditions && Object.keys(source.conditions).length > 0) {
+                        Object.entries(source.conditions).forEach(([key, value]) => {
+                          if (value) lines.push(`${key}: ${value}`);
+                        });
+                      }
+
+                      // Notes if available
+                      if (source.notes) {
+                        lines.push(`Notes: ${source.notes}`);
+                      }
+
+                      return lines;
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: sources[Object.keys(sources)[0]]?.unit || 'Value'
+                  }
+                },
+                x: {
+                  ticks: {
+                    autoSkip: false,
+                    maxRotation: 45,
+                    minRotation: 45
+                  }
+                }
+              }
+            }
+          });
+
+          // Mark as initialized
+          this.characterizationChartInitialized = true;
+          console.log('Chart successfully initialized');
+
+        } catch (error) {
+          console.error('Error initializing characterization chart:', error);
+          console.error('Error stack:', error.stack);
+          this.characterizationChartInitialized = false;
+        }
+      }, 300); // Increased delay to ensure DOM is stable
+    },
+
+    // Load all characterization references
+    async loadCharacterizationReferences() {
+      try {
+        const response = await fetch('/api/analysis/characterization-references');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        this.characterizationReferences = result.data;
+      } catch (error) {
+        console.error('Failed to load characterization references:', error);
+      }
+    },
+
+    // Save characterization reference
+    async saveCharacterizationReference() {
+      try {
+        const formData = { ...this.characterizationForm };
+
+        // Clean up data based on isRange
+        if (formData.isRange) {
+          formData.value = null;
+          formData.valueString = null;
+        } else {
+          formData.minValue = null;
+          formData.maxValue = null;
+        }
+
+        const response = await fetch('/api/analysis/characterization-references', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Reload data
+        await this.loadCharacterizationReferences();
+        await this.loadCharacterizationData();
+
+        // Close modal and reset form
+        this.showCharacterizationModal = false;
+        this.resetCharacterizationForm();
+
+      } catch (error) {
+        console.error('Failed to save characterization reference:', error);
+        alert('Failed to save reference data. Please try again.');
+      }
+    },
+
+    // Delete characterization reference
+    async deleteCharacterizationReference(id) {
+      if (!confirm('Are you sure you want to delete this reference?')) return;
+
+      try {
+        const response = await fetch(`/api/analysis/characterization-references/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Reload data
+        await this.loadCharacterizationReferences();
+        await this.loadCharacterizationData();
+
+      } catch (error) {
+        console.error('Failed to delete characterization reference:', error);
+        alert('Failed to delete reference. Please try again.');
+      }
+    },
+
+    // Reset characterization form
+    resetCharacterizationForm() {
+      this.characterizationForm = {
+        source: '',
+        sourceType: 'academic',
+        testType: 'BET',
+        value: '',
+        valueString: '',
+        unit: 'm²/g',
+        isRange: false,
+        minValue: '',
+        maxValue: '',
+        conditions: {},
+        testDate: null,
+        notes: ''
+      };
+    },
+
+    // Update characterization test type
+    async selectCharacterizationTest(testType) {
+      this.selectedCharacterizationTest = testType;
+
+      // Update form defaults based on test type
+      if (testType === 'BET') {
+        this.characterizationForm.unit = 'm²/g';
+      } else if (testType === 'Conductivity') {
+        this.characterizationForm.unit = 'S/cm';
+      } else if (testType === 'RAMAN') {
+        this.characterizationForm.unit = 'D/G Ratio';
+      }
+
+      await this.loadCharacterizationData(testType);
+    },
+
+    // Get sorted characterization sources with percentage calculations
+    getSortedCharacterizationSources() {
+      if (!this.characterizationData?.sources) return [];
+
+      const entries = Object.entries(this.characterizationData.sources);
+
+      // Calculate numeric values and find highest/lowest
+      const sourcesWithValues = entries.map(([key, source]) => {
+        let numericValue = null;
+        if (source.isRange && source.minValue !== null && source.maxValue !== null) {
+          numericValue = (parseFloat(source.minValue) + parseFloat(source.maxValue)) / 2;
+        } else if (source.value !== null) {
+          numericValue = parseFloat(source.value);
+        }
+        return { key, source, numericValue };
+      });
+
+      // Find highest and lowest values
+      const validValues = sourcesWithValues.filter(s => s.numericValue !== null).map(s => s.numericValue);
+      const highest = validValues.length > 0 ? Math.max(...validValues) : null;
+      const lowest = validValues.length > 0 ? Math.min(...validValues) : null;
+
+      // Determine if lower is better (for RAMAN D/G ratio)
+      const lowerIsBetter = this.selectedCharacterizationTest === 'RAMAN';
+
+      // Add percentage calculations
+      const sourcesWithPercentages = sourcesWithValues.map(item => {
+        let percentChange = null;
+        if (item.numericValue !== null && highest !== null && lowest !== null) {
+          const reference = lowerIsBetter ? lowest : highest;
+          if (reference !== 0) {
+            percentChange = ((item.numericValue - reference) / reference) * 100;
+          }
+        }
+        return { ...item, percentChange };
+      });
+
+      // Sort by numeric value
+      const sorted = sourcesWithPercentages.sort((a, b) => {
+        if (a.numericValue === null) return 1;
+        if (b.numericValue === null) return -1;
+        return this.characterizationSortOrder === 'desc'
+          ? b.numericValue - a.numericValue
+          : a.numericValue - b.numericValue;
+      });
+
+      return sorted;
+    },
+
+    // Toggle sort order
+    toggleCharacterizationSort() {
+      this.characterizationSortOrder = this.characterizationSortOrder === 'desc' ? 'asc' : 'desc';
+    },
+
     // Initialize RAMAN Chart
     initializeRAMANChart() {
       const ctx = document.getElementById('ramanChart');
