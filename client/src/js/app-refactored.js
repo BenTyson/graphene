@@ -3313,8 +3313,33 @@ window.grapheneApp = function() {
           const backgroundColors = [];
           const borderColors = [];
 
-          // Process each source
-          Object.entries(sources).forEach(([key, source]) => {
+          // Define custom ordering for sources
+          const getSourceOrder = (key, source) => {
+            const sourceName = (source.source || '').toLowerCase();
+
+            // Priority order: Dr Li (1), Curia (2), GEIC (3), ISO/ASTM (4), Others (5)
+            if (sourceName.includes('dr') && sourceName.includes('li')) return 1;
+            if (sourceName.includes('curia') || key.includes('curia')) return 2;
+            if (sourceName.includes('geic')) return 3;
+            if (sourceName.includes('iso') || sourceName.includes('astm')) return 4;
+            return 5; // Others go last
+          };
+
+          // Sort sources by custom order
+          const sortedSources = Object.entries(sources).sort(([keyA, sourceA], [keyB, sourceB]) => {
+            const orderA = getSourceOrder(keyA, sourceA);
+            const orderB = getSourceOrder(keyB, sourceB);
+
+            if (orderA !== orderB) return orderA - orderB;
+
+            // If same priority, sort alphabetically by source name
+            const nameA = sourceA.source || keyA;
+            const nameB = sourceB.source || keyB;
+            return nameA.localeCompare(nameB);
+          });
+
+          // Process each source in sorted order
+          sortedSources.forEach(([key, source]) => {
             // Create label
             const label = source.source || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             labels.push(label);
@@ -3329,9 +3354,18 @@ window.grapheneApp = function() {
             }
             values.push(value);
 
-            // Set colors based on source type - black, gray, copper palette
+            // Set colors based on source type and specific source names
             let bgColor, borderColor;
-            if (source.type === 'system') {
+            const sourceName = (source.source || '').toLowerCase();
+
+            // Check for specific source names first
+            if (sourceName.includes('curia') || key.includes('curia')) {
+              bgColor = 'rgba(88, 28, 135, 0.8)';  // Dark purple for Curia
+              borderColor = 'rgba(88, 28, 135, 1)';
+            } else if (sourceName.includes('geic')) {
+              bgColor = 'rgba(0, 0, 0, 0.8)';  // Black for GEIC
+              borderColor = 'rgba(0, 0, 0, 1)';
+            } else if (source.type === 'system') {
               bgColor = 'rgba(0, 0, 0, 0.8)';  // Black for system data
               borderColor = 'rgba(0, 0, 0, 1)';
             } else if (source.sourceType === 'academic') {
