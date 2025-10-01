@@ -2994,22 +2994,12 @@ window.grapheneApp = function() {
     // Load chart data
     async loadAnalysisChartData() {
       try {
-        console.log('Loading analysis chart data...');
         const response = await fetch('/api/analysis/chart-data');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const result = await response.json();
         this.analysisChartData = result.data;
-
-        console.log('Analysis chart data loaded:', {
-          hasBET: !!this.analysisChartData?.bet,
-          hasConductivity: !!this.analysisChartData?.conductivity,
-          hasRAMAN: !!this.analysisChartData?.raman,
-          betDataPoints: this.analysisChartData?.bet?.datasets?.[0]?.data?.length || 0,
-          conductivityDataPoints: this.analysisChartData?.conductivity?.datasets?.[0]?.data?.length || 0,
-          ramanDataPoints: this.analysisChartData?.raman?.datasets?.[0]?.data?.length || 0
-        });
 
         // Initialize charts after data is loaded
         await this.$nextTick();
@@ -3021,15 +3011,7 @@ window.grapheneApp = function() {
     
     // Initialize all analysis charts
     initializeAnalysisCharts() {
-      console.log('Initializing analysis charts...', {
-        hasData: !!this.analysisChartData,
-        chartjsAvailable: typeof Chart !== 'undefined'
-      });
-
-      if (!this.analysisChartData) {
-        console.warn('No analysis chart data available for initialization');
-        return;
-      }
+      if (!this.analysisChartData) return;
 
       this.initializeBETChart();
       this.initializeConductivityChart();
@@ -3039,16 +3021,7 @@ window.grapheneApp = function() {
     // Initialize BET Surface Area Chart
     initializeBETChart() {
       const ctx = document.getElementById('betChart');
-      console.log('Initializing BET chart:', {
-        canvasFound: !!ctx,
-        betDataAvailable: !!this.analysisChartData?.bet,
-        betDatasets: this.analysisChartData?.bet?.datasets?.length || 0
-      });
-
-      if (!ctx || !this.analysisChartData?.bet) {
-        console.warn('BET chart initialization failed - missing canvas or data');
-        return;
-      }
+      if (!ctx || !this.analysisChartData?.bet) return;
       
       // Destroy existing chart if it exists
       if (this.betChart) {
