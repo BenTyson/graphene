@@ -38,6 +38,7 @@ Step-by-step guides for common development tasks:
 
 Feature-specific implementation documentation:
 
+- **[GRAPHENE-FILTERING.md](features/GRAPHENE-FILTERING.md)** - Species classification and test type filtering system
 - **[AI-INSIGHTS.md](features/AI-INSIGHTS.md)** - GPT-4 integration, knowledge base, document processing
 - **[NEWS-SYSTEM.md](features/NEWS-SYSTEM.md)** - RSS aggregation, summarization, filtering
 - **[NEWS-FILTERING.md](features/NEWS-FILTERING.md)** - Advanced filtering implementation details
@@ -94,5 +95,5 @@ Historical records of major refactors and migrations:
 
 ---
 
-**Last Updated:** November 2025
+**Last Updated:** January 2025
 **Documentation Structure Version:** 2.0 (Reorganized for session-start efficiency)

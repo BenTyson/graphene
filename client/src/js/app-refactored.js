@@ -453,20 +453,11 @@ window.grapheneApp = function() {
     biocharRelatedData: {},
     grapheneRelatedData: {},
     
-    // Filter states
-    grapheneFilterState: {
-      filters: {
-        experimentDate: { from: '', to: '' },
-        tempMax: { min: '', max: '' },
-        output: { min: '', max: '' }
-      },
-      meta: {}
-    },
-    filterConfigs: {},
-    filterOptions: {},
-    activeFilters: {},
-    filterLoading: false,
-    filterError: null,
+    // Species filter
+    grapheneSpeciesFilter: 'all',
+
+    // Tested filters (multi-select)
+    grapheneTestedFilters: [],
     
     // Tooltip state
     showTooltip: null,
@@ -1024,10 +1015,7 @@ window.grapheneApp = function() {
       if (this.activeTab === 'dashboard') {
         await this.loadDashboardData();
       }
-      
-      // Initialize filter system for graphene table
-      await this.initFilters('graphene');
-      
+
       await Promise.all([
         this.loadBiocharRecords(),
         this.loadGrapheneRecords(),
@@ -1065,39 +1053,48 @@ window.grapheneApp = function() {
     
     async loadGrapheneRecords() {
       try {
-        // Build filter parameters using both old search and new filters
-        const baseParams = {};
+        // Build query parameters
+        const params = new URLSearchParams();
+
         if (this.grapheneSearch) {
-          baseParams.search = this.grapheneSearch;
+          params.append('search', this.grapheneSearch);
         }
-        
-        const params = this.buildFilterQueryParams('graphene', baseParams);
-        params.limit = '500'; // Request all records
-        const response = await fetch(`/api/graphene?${new URLSearchParams(params)}`);
-        
+
+        if (this.grapheneSpeciesFilter) {
+          params.append('species', this.grapheneSpeciesFilter);
+        }
+
+        // Add tested filters if any selected
+        if (this.grapheneTestedFilters && this.grapheneTestedFilters.length > 0) {
+          this.grapheneTestedFilters.forEach(testType => {
+            params.append('tested[]', testType);
+          });
+        }
+
+        params.append('limit', '500'); // Request all records
+
+        const response = await fetch(`/api/graphene?${params}`);
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         // Handle both old format (direct array) and new format (with metadata)
         if (result.success !== undefined) {
           // New format with metadata
           this.grapheneRecords = result.data || [];
-          this.grapheneFilterState.meta = result.meta || {};
         } else {
           // Old format - direct array
           this.grapheneRecords = Array.isArray(result) ? result : [];
-          this.grapheneFilterState.meta = {};
         }
-        
+
         this.applySortingToGraphene();
         this.loadAvailableGrapheneSamples();
       } catch (error) {
         console.error('Failed to load graphene records:', error);
         this.grapheneRecords = [];
-        this.grapheneFilterState.meta = {};
       }
     },
     
@@ -1239,7 +1236,19 @@ window.grapheneApp = function() {
       }
       this._debouncedSearchGraphene();
     },
-    
+
+    // Toggle tested filter selection (multi-select)
+    toggleTestedFilter(testType) {
+      const index = this.grapheneTestedFilters.indexOf(testType);
+      if (index > -1) {
+        // Remove if already selected - create new array to trigger Alpine reactivity
+        this.grapheneTestedFilters = this.grapheneTestedFilters.filter(t => t !== testType);
+      } else {
+        // Add if not selected - create new array to trigger Alpine reactivity
+        this.grapheneTestedFilters = [...this.grapheneTestedFilters, testType];
+      }
+    },
+
     searchBet() {
       if (!this._debouncedSearchBet) {
         this._debouncedSearchBet = dataHelpers.debounce(async () => {
@@ -2463,40 +2472,6 @@ window.grapheneApp = function() {
     // PDF viewer modal HTML generation using helpers
     getPdfViewerModalHtml(config) {
       return pdfViewerHelpers.createPdfViewerModal(config);
-    },
-    
-    // Filter system methods - delegated to FilterService
-    async initFilters(tableName) {
-      await FilterService.initFilters(tableName, this);
-      // Expose filter data to app context for template access
-      this.filterConfigs = FilterService.getFilterConfigs();
-      this.filterOptions = FilterService.getFilterOptions();
-      this.activeFilters = FilterService.getActiveFilters();
-    },
-
-    generateFilterFields(tableName, filterStateVariable, onFilterChange) {
-      return FilterService.generateFilterFields(tableName, filterStateVariable, onFilterChange);
-    },
-
-    getActiveFilterCount(filterState) {
-      return FilterService.getActiveFilterCount(filterState);
-    },
-
-    clearAllFilters(tableName) {
-      FilterService.clearAllFilters(tableName, this);
-    },
-
-    toggleMultiSelectOption(field, option, checked, stateVariable) {
-      FilterService.toggleMultiSelectOption(field, option, checked, stateVariable, this);
-    },
-
-    buildFilterQueryParams(tableName, additionalParams = {}) {
-      return FilterService.buildFilterQueryParams(tableName, additionalParams, this);
-    },
-
-    applyFilters() {
-      console.log('🔄 Apply filters called');
-      FilterService.applyFilters(this);
     },
     
     // Dashboard methods - Delegated to DashboardService

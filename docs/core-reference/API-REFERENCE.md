@@ -186,8 +186,48 @@ GET /api/graphene
 ```
 
 **Query Parameters:**
+- `search` (string, optional): Search experiments, biochar source, species
+- `species` (string, optional): Filter by species classification
+  - `all` (default): Show all experiments
+  - `species1`: KOH only (no NaOH in base2Type)
+  - `species2`: KOH + NaOH (has NaOH in base2Type)
+- `tested[]` (array, optional): Filter by test types (AND logic - must have all selected)
+  - `bet`: Has at least one BET test
+  - `conductivity`: Has at least one Conductivity test
+  - `raman`: Has at least one RAMAN test
+- `limit` (number, optional): Maximum records to return (default: 500)
 - Sort: DESC by default
-- Filters supported for all fields
+
+**Example Requests:**
+```http
+GET /api/graphene?species=species2
+GET /api/graphene?tested[]=bet&tested[]=conductivity
+GET /api/graphene?species=species1&tested[]=raman&search=MB
+```
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "string",
+      "experimentNumber": "MB3079",
+      "baseType": "KOH",
+      "baseAmount": "10.00",
+      "baseConcentration": "50.00",
+      "base2Type": "NaOH",
+      "base2Amount": "5.00",
+      "base2Concentration": "30.00",
+      // ... other fields
+    }
+  ],
+  "meta": {
+    "totalRecords": 150,
+    "filteredRecords": 25
+  }
+}
+```
 
 #### Get Related Data
 ```http

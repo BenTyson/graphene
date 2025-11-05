@@ -28,7 +28,38 @@ router.get('/', asyncHandler(async (req, res) => {
     
     // Build enhanced where clause using the filter system
     const where = buildFilterWhere(tableName, filters, search);
-    
+
+    // Apply species filter if provided
+    const speciesFilter = req.query.species;
+    if (speciesFilter === 'species1') {
+      // Species 1: Only KOH (no NaOH in base2Type)
+      where.OR = [
+        { base2Type: null },
+        { base2Type: { not: 'NaOH' } }
+      ];
+    } else if (speciesFilter === 'species2') {
+      // Species 2: Has both KOH and NaOH (base2Type is NaOH)
+      where.base2Type = 'NaOH';
+    }
+    // 'all' or undefined = no additional filtering
+
+    // Apply tested filters if provided (AND logic - must have all selected test types)
+    const testedFilters = req.query['tested[]'] || req.query.tested;
+    if (testedFilters) {
+      const filters = Array.isArray(testedFilters) ? testedFilters : [testedFilters];
+
+      // Add AND conditions for each selected test type
+      filters.forEach(testType => {
+        if (testType === 'bet') {
+          where.betTests = { some: {} };
+        } else if (testType === 'conductivity') {
+          where.conductivityTests = { some: {} };
+        } else if (testType === 'raman') {
+          where.ramanTests = { some: {} };
+        }
+      });
+    }
+
     // Build enhanced order by clause
     const sortMappings = {
       chronological: 'experimentDate'

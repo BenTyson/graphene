@@ -109,12 +109,12 @@ function createProcessSection(data, type) {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <!-- Equipment & Base -->
           <div class="bg-gray-50 rounded-lg p-3">
-            <h4 class="font-medium text-gray-900 mb-2 text-sm">Equipment & Base</h4>
+            <h4 class="font-medium text-gray-900 mb-2 text-sm">Equipment & Base ${data.base2Type === 'NaOH' ? '(Species 2)' : '(Species 1)'}</h4>
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div><span class="text-gray-600">Oven:</span> <span class="font-medium">${data.oven || 'N/A'}</span></div>
               <div><span class="text-gray-600">Quantity:</span> <span class="font-medium">${data.quantity || 'N/A'} g</span></div>
               <div><span class="text-gray-600">Gas:</span> <span class="font-medium">${data.gas || 'N/A'}</span></div>
-              <div><span class="text-gray-600">Base:</span> <span class="font-medium">${data.baseAmount || 'N/A'}g ${data.baseType || ''} ${data.baseConcentration ? '(' + data.baseConcentration + '%)' : ''}</span></div>
+              <div><span class="text-gray-600">Base:</span> <span class="font-medium">${data.baseAmount || 'N/A'}g ${data.baseType || ''}${data.baseConcentration ? ' (' + data.baseConcentration + '%)' : ''}${data.base2Type ? ' + ' + data.base2Amount + 'g ' + data.base2Type + (data.base2Concentration ? ' (' + data.base2Concentration + '%)' : '') : ''}</span></div>
             </div>
           </div>
 
@@ -165,14 +165,22 @@ function createProcessSection(data, type) {
 
         <!-- Appearance & Comments -->
         <div class="space-y-3">
-          ${data.appearanceTags && data.appearanceTags.length > 0 ? `
+          ${(data.species || (data.appearanceTags && data.appearanceTags.length > 0)) ? `
             <div class="bg-gray-50 rounded-lg p-3">
               <h4 class="font-medium text-gray-900 mb-2 text-sm">Appearance</h4>
-              <div class="flex flex-wrap gap-1">
-                ${data.appearanceTags.map(tag => `
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${tag}</span>
-                `).join('')}
-              </div>
+              ${data.species ? `
+                <div class="mb-2">
+                  <span class="text-gray-600 text-xs">Visual Appearance:</span>
+                  <span class="font-medium text-xs">${data.species}</span>
+                </div>
+              ` : ''}
+              ${data.appearanceTags && data.appearanceTags.length > 0 ? `
+                <div class="flex flex-wrap gap-1">
+                  ${data.appearanceTags.map(tag => `
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${tag}</span>
+                  `).join('')}
+                </div>
+              ` : ''}
             </div>
           ` : ''}
           

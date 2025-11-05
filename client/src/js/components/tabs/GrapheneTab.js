@@ -51,79 +51,52 @@ function getGrapheneTabHtml() {
         >
       </div>
 
-      <!-- Filter Panel -->
-      <div class="bg-white border border-gray-200 rounded-lg shadow-sm mb-6" x-data="{ showFilters: false }">
-        <!-- Filter Header -->
-        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-gray-700 flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586a1 1 0 01-.293.707l-2 2A1 1 0 0111 21v-6.586a1 1 0 00-.293-.707L4.293 7.293A1 1 0 014 6.586V4z"></path>
-            </svg>
-            Filters
-          </h3>
-          
-          <div class="flex items-center space-x-2">
-            <!-- Active Filter Count -->
-            <span x-show="getActiveFilterCount(grapheneFilterState) > 0" 
-                  x-text="getActiveFilterCount(grapheneFilterState) + ' active'"
-                  class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-            </span>
-            
-            <!-- Clear All Filters -->
-            <button type="button" 
-                    x-show="getActiveFilterCount(grapheneFilterState) > 0"
-                    @click="clearAllFilters('graphene')"
-                    class="text-xs text-gray-500 hover:text-gray-700">
-              Clear All
+      <!-- Filters Row -->
+      <div class="mb-4 flex flex-wrap items-center gap-4">
+        <!-- Species Filter -->
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-medium text-gray-700">Species:</span>
+          <div class="inline-flex rounded-md shadow-sm">
+            <button @click="grapheneSpeciesFilter = 'all'; loadGrapheneRecords()"
+                    :class="grapheneSpeciesFilter === 'all' ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-l-md transition-colors">
+              All
             </button>
-            
-            <!-- Toggle Button -->
-            <button type="button" 
-                    @click="showFilters = !showFilters"
-                    class="text-sm text-gray-600 hover:text-gray-800 flex items-center">
-              <span x-text="showFilters ? 'Hide' : 'Show'"></span>
-              <svg class="w-4 h-4 ml-1 transform transition-transform duration-200" 
-                   :class="showFilters ? 'rotate-180' : ''"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
+            <button @click="grapheneSpeciesFilter = 'species1'; loadGrapheneRecords()"
+                    :class="grapheneSpeciesFilter === 'species1' ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border-t border-b border-gray-300 -ml-px transition-colors">
+              Species 1 (KOH only)
+            </button>
+            <button @click="grapheneSpeciesFilter = 'species2'; loadGrapheneRecords()"
+                    :class="grapheneSpeciesFilter === 'species2' ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-r-md -ml-px transition-colors">
+              Species 2 (KOH + NaOH)
             </button>
           </div>
         </div>
-        
-        <!-- Filter Content -->
-        <div x-show="showFilters" 
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 transform scale-95"
-             x-transition:enter-end="opacity-100 transform scale-100"
-             x-transition:leave="transition ease-in duration-100"
-             x-transition:leave-start="opacity-100 transform scale-100"
-             x-transition:leave-end="opacity-0 transform scale-95"
-             class="p-4">
-          
-          <!-- Filter Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <template x-if="filterConfigs && filterConfigs.graphene">
-              <div x-html="generateFilterFields('graphene', 'grapheneFilterState', 'applyFilters()')"></div>
-            </template>
-            <template x-if="!filterConfigs || !filterConfigs.graphene">
-              <div class="text-xs text-gray-500">Loading filters...</div>
-            </template>
-          </div>
-          
-          <!-- Filter Actions -->
-          <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-            <div class="text-xs text-gray-500">
-              <span x-text="'Showing ' + (grapheneFilterState.meta?.filteredRecords || grapheneRecords.length || 0) + ' of ' + (grapheneFilterState.meta?.totalRecords || grapheneRecords.length || 0) + ' records'"></span>
-            </div>
-            
-            <div class="flex space-x-2">
-              <button type="button"
-                      @click="clearAllFilters('graphene')"
-                      class="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50">
-                Reset Filters
-              </button>
-            </div>
+
+        <!-- Divider -->
+        <div class="h-8 w-px bg-gray-300"></div>
+
+        <!-- Tested Filter -->
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-medium text-gray-700">Tested:</span>
+          <div class="inline-flex rounded-md shadow-sm">
+            <button @click="toggleTestedFilter('bet'); loadGrapheneRecords()"
+                    :class="grapheneTestedFilters.includes('bet') ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-l-md transition-colors">
+              BET
+            </button>
+            <button @click="toggleTestedFilter('conductivity'); loadGrapheneRecords()"
+                    :class="grapheneTestedFilters.includes('conductivity') ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border-t border-b border-gray-300 -ml-px transition-colors">
+              Conductivity
+            </button>
+            <button @click="toggleTestedFilter('raman'); loadGrapheneRecords()"
+                    :class="grapheneTestedFilters.includes('raman') ? 'bg-black text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-r-md -ml-px transition-colors">
+              RAMAN
+            </button>
           </div>
         </div>
       </div>
@@ -170,7 +143,7 @@ function getGrapheneTabHtml() {
                   <span x-html="getSortIcon('biocharExperiment')"></span>
                 </button>
               </th>
-              <th colspan="3" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Base</th>
+              <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Base</th>
               <th colspan="4" class="px-2 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Grinding</th>
               <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Homog.</th>
               <th rowspan="2" class="px-2 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Gas</th>
@@ -192,6 +165,7 @@ function getGrapheneTabHtml() {
               <!-- Base sub-headers -->
               <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Amt</th>
               <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Type</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">NaOH%</th>
               <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">Conc%</th>
               <!-- Grinding sub-headers -->
               <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Method</th>
@@ -279,6 +253,20 @@ function getGrapheneTabHtml() {
                   <span x-text="record.baseType"></span>
                   <span x-show="record.base2Type" x-text="' + ' + record.base2Type" class="text-gray-500"></span>
                 </td>
+                <td class="px-2 py-2 text-xs font-mono border-r border-gray-200">
+                  <span x-text="(() => {
+                    const baseAmt = parseFloat(record.baseAmount) || 0;
+                    const base2Amt = parseFloat(record.base2Amount) || 0;
+                    const totalBase = baseAmt + base2Amt;
+                    if (totalBase === 0) return '0%';
+                    if (record.base2Type === 'NaOH') {
+                      return ((base2Amt / totalBase) * 100).toFixed(1) + '%';
+                    } else if (record.baseType === 'NaOH') {
+                      return base2Amt > 0 ? ((baseAmt / totalBase) * 100).toFixed(1) + '%' : '100%';
+                    }
+                    return '0%';
+                  })()"></span>
+                </td>
                 <td class="px-2 py-2 text-xs font-mono border-r border-gray-300">
                   <span x-text="record.baseConcentration ? record.baseConcentration + '%' : ''"></span>
                   <span x-show="record.base2Concentration" x-text="' + ' + record.base2Concentration + '%'" class="text-gray-500"></span>
@@ -359,7 +347,7 @@ function getGrapheneTabHtml() {
                   x-transition:leave-start="opacity-100 transform scale-100"
                   x-transition:leave-end="opacity-0 transform scale-95"
                   class="bg-gray-50">
-                <td colspan="28" class="px-4 py-4">
+                <td colspan="29" class="px-4 py-4">
                   <div class="bg-white border border-gray-300 rounded-lg p-4 space-y-4">
                     <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
                       Material Journey: <span class="font-mono text-black" x-text="record.experimentNumber"></span>
@@ -477,6 +465,25 @@ function getGrapheneTabHtml() {
               <div class="mobile-card-row">
                 <span class="mobile-card-label">Base:</span>
                 <span class="mobile-card-value" x-text="record.baseType ? (record.baseAmount + 'g ' + record.baseType + ' ' + record.baseConcentration + '%') : '-'"></span>
+              </div>
+              <div class="mobile-card-row" x-show="record.base2Type">
+                <span class="mobile-card-label">Base 2:</span>
+                <span class="mobile-card-value" x-text="record.base2Type ? (record.base2Amount + 'g ' + record.base2Type + ' ' + record.base2Concentration + '%') : '-'"></span>
+              </div>
+              <div class="mobile-card-row" x-show="record.baseType || record.base2Type">
+                <span class="mobile-card-label">NaOH %:</span>
+                <span class="mobile-card-value" x-text="(() => {
+                  const baseAmt = parseFloat(record.baseAmount) || 0;
+                  const base2Amt = parseFloat(record.base2Amount) || 0;
+                  const totalBase = baseAmt + base2Amt;
+                  if (totalBase === 0) return '0%';
+                  if (record.base2Type === 'NaOH') {
+                    return ((base2Amt / totalBase) * 100).toFixed(1) + '%';
+                  } else if (record.baseType === 'NaOH') {
+                    return base2Amt > 0 ? ((baseAmt / totalBase) * 100).toFixed(1) + '%' : '100%';
+                  }
+                  return '0%';
+                })()"></span>
               </div>
               <div class="mobile-card-row">
                 <span class="mobile-card-label">Temperature:</span>

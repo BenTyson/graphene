@@ -14,6 +14,13 @@
 - Frontend: Alpine.js + Tailwind CSS + Chart.js
 - Build: Vite (Frontend: 5174, Backend: 3000)
 
+**Key Features:**
+- **Species Classification**: Experiments categorized as Species 1 (KOH only) or Species 2 (KOH + NaOH)
+- **Smart Filtering**: Toggle-based filters for Species and Test types (BET, Conductivity, RAMAN)
+- **NaOH Tracking**: Automatic calculation of NaOH percentage in base composition
+- **Visual Appearance**: Separate tracking of material visual characteristics vs. chemical species
+- **Test Association**: Efficient filtering by which tests have been performed on experiments
+
 ---
 
 ## 🚨 CRITICAL: Deployment Workflow
@@ -112,7 +119,6 @@ Biochar → Graphene → CompoundBatch/Micronization → Tests → Shipments
   - `client/src/js/services/AuthService.js` - Authentication
   - `client/src/js/services/CRUDService.js` - All CRUD operations
   - `client/src/js/services/NewsService.js` - News system
-  - `client/src/js/services/FilterService.js` - Filtering
   - `client/src/js/services/DashboardService.js` - Dashboard data
 - **Components**: `client/src/js/components/` (30+ modular UI components)
 - **Modals**: `client/src/js/components/modals/` (GrapheneModal, BiocharModal, etc.)
@@ -186,6 +192,7 @@ railway run bash         # SSH into service
 - **[COMPONENT-SYSTEM.md](../core-reference/COMPONENT-SYSTEM.md)** - UI component library
 
 ### For Features
+- **[GRAPHENE-FILTERING.md](../features/GRAPHENE-FILTERING.md)** - Species and test type filtering
 - **[AI-INSIGHTS.md](../features/AI-INSIGHTS.md)** - GPT-4 integration and knowledge base
 - **[NEWS-SYSTEM.md](../features/NEWS-SYSTEM.md)** - RSS aggregation and summarization
 - **[CHARACTERIZATION-ANALYSIS.md](../features/CHARACTERIZATION-ANALYSIS.md)** - Comparison charts
@@ -244,5 +251,5 @@ Before starting work:
 
 ---
 
-**Last Updated:** November 2025
+**Last Updated:** January 2025
 **For Questions:** Check [README.md](../README.md) for full documentation map
