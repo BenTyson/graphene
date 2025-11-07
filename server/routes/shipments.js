@@ -58,6 +58,7 @@ router.get('/', asyncHandler(async (req, res) => {
           { grapheneSample: { contains: search, mode: 'insensitive' } },
           { compoundBatchNumber: { contains: search, mode: 'insensitive' } },
           { micronizationSku: { contains: search, mode: 'insensitive' } },
+          { mcbNumber: { contains: search, mode: 'insensitive' } },
           { purpose: { contains: search, mode: 'insensitive' } },
           { status: { contains: search, mode: 'insensitive' } }
         ]
@@ -82,6 +83,14 @@ router.get('/', asyncHandler(async (req, res) => {
             micronizationNumber: true,
             sku: true,
             recoveredAmount: true
+          }
+        },
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
+            sku: true,
+            totalRecoveredAmount: true
           }
         }
       },
@@ -188,7 +197,7 @@ router.get('/compound-batch/:batchNumber', asyncHandler(async (req, res) => {
 router.get('/micronization/:sku', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { sku } = req.params;
-  
+
   const shipments = await prisma.materialShipment.findMany({
       where: { micronizationSku: sku },
       include: {
@@ -213,9 +222,39 @@ router.get('/micronization/:sku', asyncHandler(async (req, res) => {
     res.json(shipmentsWithFixedDates);
 }));
 
+// Get shipments for specific MCB
+router.get('/mcb/:mcbNumber', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { mcbNumber } = req.params;
+
+  const shipments = await prisma.materialShipment.findMany({
+      where: { mcbNumber },
+      include: {
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
+            sku: true,
+            totalRecoveredAmount: true
+          }
+        }
+      },
+      orderBy: { shipmentDate: 'desc' }
+    });
+
+    // Convert dates to date-only strings to avoid timezone issues
+    const shipmentsWithFixedDates = shipments.map(s => ({
+      ...s,
+      shipmentDate: s.shipmentDate ? s.shipmentDate.toISOString().split('T')[0] : null,
+      receivedDate: s.receivedDate ? s.receivedDate.toISOString().split('T')[0] : null
+    }));
+
+    res.json(shipmentsWithFixedDates);
+}));
+
 router.get('/export/csv', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  
+
   const shipments = await prisma.materialShipment.findMany({
       include: {
         grapheneRef: {
@@ -233,6 +272,13 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
         micronizationRef: {
           select: {
             micronizationNumber: true,
+            sku: true
+          }
+        },
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
             sku: true
           }
         }
@@ -261,7 +307,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       let materialType = '';
       let materialReference = '';
       let materialSpeciesName = '';
-      
+
       if (shipment.grapheneSample) {
         materialType = 'Graphene';
         materialReference = shipment.grapheneSample;
@@ -274,8 +320,12 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
         materialType = 'Micronized';
         materialReference = shipment.micronizationSku;
         materialSpeciesName = shipment.micronizationRef?.micronizationNumber || '';
+      } else if (shipment.mcbNumber) {
+        materialType = 'MCB';
+        materialReference = shipment.mcbNumber;
+        materialSpeciesName = shipment.mcbRef?.mcbName || '';
       }
-      
+
       return [
         shipment.shipmentNumber,
         shipment.shipFromLocation,
@@ -306,7 +356,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const { id } = req.params;
-  
+
   const shipment = await prisma.materialShipment.findUnique({
       where: { id },
       include: {
@@ -329,6 +379,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
             micronizationNumber: true,
             sku: true,
             recoveredAmount: true
+          }
+        },
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
+            sku: true,
+            totalRecoveredAmount: true
           }
         }
       }
@@ -368,6 +426,9 @@ router.post('/', asyncHandler(async (req, res) => {
     if (!data.micronizationSku || data.micronizationSku === '') {
       data.micronizationSku = null;
     }
+    if (!data.mcbNumber || data.mcbNumber === '') {
+      data.mcbNumber = null;
+    }
     
     if (!data.shipmentNumber) {
       data.shipmentNumber = generateShipmentNumber();
@@ -404,6 +465,14 @@ router.post('/', asyncHandler(async (req, res) => {
             sku: true,
             recoveredAmount: true
           }
+        },
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
+            sku: true,
+            totalRecoveredAmount: true
+          }
         }
       }
     });
@@ -439,6 +508,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
     if (!data.micronizationSku || data.micronizationSku === '') {
       data.micronizationSku = null;
     }
+    if (!data.mcbNumber || data.mcbNumber === '') {
+      data.mcbNumber = null;
+    }
     
     if (data.shipmentDate === null || data.shipmentDate === '') {
       data.shipmentDate = null;
@@ -471,6 +543,14 @@ router.put('/:id', asyncHandler(async (req, res) => {
             micronizationNumber: true,
             sku: true,
             recoveredAmount: true
+          }
+        },
+        mcbRef: {
+          select: {
+            mcbNumber: true,
+            mcbName: true,
+            sku: true,
+            totalRecoveredAmount: true
           }
         }
       }

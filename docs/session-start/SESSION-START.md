@@ -59,8 +59,9 @@ Full schema: [/prisma/schema.prisma](/prisma/schema.prisma) or [DATABASE-SCHEMA.
 
 ### Material Production Pipeline
 ```
-Biochar → Graphene → CompoundBatch/Micronization → Tests → Shipments
+Biochar → Graphene → CompoundBatch/Micronization → MCB (optional) → Tests → Shipments
 ```
+**Note:** MCB (Micronized Compound Batch) allows combining multiple micronizations into a single logical batch for shipment.
 
 #### Core Tables
 
@@ -81,8 +82,15 @@ Biochar → Graphene → CompoundBatch/Micronization → Tests → Shipments
 
 **Micronization** (micronization processes)
 - `micronizationNumber` (unique), `sku` (unique)
-- Links to: `Graphene`, `CompoundBatch`, `MaterialShipment`
-- Key fields: dx50, grindPressure, recoveredAmount
+- Links to: `Graphene`, `CompoundBatch`, `MaterialShipment`, `MicronizationMCB` (optional)
+- Key fields: dx50, grindPressure, recoveredAmount, micronizationLocation
+
+**MicronizedCompoundBatch** (MCB - combined micronizations)
+- `mcbNumber` (unique), `sku` (unique)
+- Links to: Multiple `Micronization` (via `MicronizationMCB` junction), `MaterialShipment`
+- Key fields: totalRecoveredAmount (auto-calculated), mcbLocation
+- Purpose: Logical grouping of micronizations for shipment tracking
+- **Important**: Micronizations in an MCB are excluded from individual inventory counts to prevent double-counting
 
 #### Testing Models
 - **BET**: Surface area testing (multipointBetArea, langmuirSurfaceArea)
@@ -121,7 +129,7 @@ Biochar → Graphene → CompoundBatch/Micronization → Tests → Shipments
   - `client/src/js/services/NewsService.js` - News system
   - `client/src/js/services/DashboardService.js` - Dashboard data
 - **Components**: `client/src/js/components/` (30+ modular UI components)
-- **Modals**: `client/src/js/components/modals/` (GrapheneModal, BiocharModal, etc.)
+- **Modals**: `client/src/js/components/modals/` (GrapheneModal, BiocharModal, MicronizationModal, MCBModal, etc.)
 
 ### Configuration
 - **Railway**: `railway.json`, `nixpacks.toml`
@@ -251,5 +259,5 @@ Before starting work:
 
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** January 2025 (MCB feature added)
 **For Questions:** Check [README.md](../README.md) for full documentation map

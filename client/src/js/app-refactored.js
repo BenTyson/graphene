@@ -35,6 +35,7 @@ import { getBiocharModalHtml } from './components/modals/BiocharModal.js';
 import { getCompoundBatchModalHtml } from './components/modals/CompoundBatchModal.js';
 import { getUserModalHtml } from './components/modals/UserModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
+import { getMCBModalHtml } from './components/modals/MCBModal.js';
 import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
 
 // Import new components for simplified cards and modals
@@ -351,6 +352,8 @@ window.grapheneApp = function() {
     compoundBatchRecords: [],
     shipments: [],
     micronizations: [],
+    mcbs: [],
+    availableMicronizations: [],
     availableExperiments: [],
     availableLots: [],
     availableGrapheneSamples: [],
@@ -378,6 +381,7 @@ window.grapheneApp = function() {
     compoundBatchSearch: '',
     shipmentSearch: '',
     micronizationSearch: '',
+    mcbSearch: '',
     userSearch: '',
 
     // Sorting states
@@ -410,6 +414,7 @@ window.grapheneApp = function() {
     currentUpdateReport: null,
     showAddShipment: false,
     showMicronizationModal: false,
+    showMCBModal: false,
     showAddUser: false,
 
     // Editing states
@@ -424,6 +429,7 @@ window.grapheneApp = function() {
     editingCompoundBatch: null,
     editingShipment: null,
     editingMicronization: null,
+    editingMCB: null,
     editingUser: null,
 
     // Forms
@@ -439,6 +445,7 @@ window.grapheneApp = function() {
     compoundBatchForm: { ...DEFAULT_FORMS.compoundBatch },
     shipmentForm: { ...DEFAULT_FORMS.shipment },
     micronizationForm: { ...DEFAULT_FORMS.micronization },
+    mcbForm: { ...DEFAULT_FORMS.mcb },
     userForm: { ...DEFAULT_FORMS.user },
 
     // Selection states
@@ -1027,7 +1034,9 @@ window.grapheneApp = function() {
         this.loadSemReports(),
         this.loadCompoundBatches(),
         this.loadShipments(),
-        this.loadMicronizations()
+        this.loadMicronizations(),
+        this.loadMCBs(),
+        this.loadAvailableMicronizations()
       ]);
       this.loadDropdownOptions();
       
@@ -1179,7 +1188,25 @@ window.grapheneApp = function() {
         this.micronizations = [];
       }
     },
-    
+
+    async loadMCBs() {
+      try {
+        this.mcbs = await API.mcb.getAll(this.mcbSearch);
+      } catch (error) {
+        console.error('Failed to load MCBs:', error);
+        this.mcbs = [];
+      }
+    },
+
+    async loadAvailableMicronizations() {
+      try {
+        this.availableMicronizations = await API.mcb.getAvailableMicronizations();
+      } catch (error) {
+        console.error('Failed to load available micronizations:', error);
+        this.availableMicronizations = [];
+      }
+    },
+
     async loadAvailableLots() {
       try {
         this.availableLots = await API.biochar.getLots();
@@ -1470,7 +1497,26 @@ window.grapheneApp = function() {
     },
 
     get filteredMicronizations() {
-      return this.micronizations;
+      // Combine micronizations and MCBs for display in the same table
+      const micros = this.micronizations.map(m => ({ ...m, isMCB: false }));
+      const mcbsAsMicros = this.mcbs.map(mcb => ({
+        ...mcb,
+        isMCB: true,
+        micronizationNumber: mcb.mcbNumber,
+        // MCBs don't have individual processing params
+        startingMaterialAmount: null,
+        recoveredAmount: mcb.totalRecoveredAmount,
+        grindPressure: null,
+        dx50: null,
+        materialSource: `${mcb.micronizationCount} batches`,
+        grapheneSample: null,
+        compoundBatchNumber: null
+      }));
+      return [...micros, ...mcbsAsMicros];
+    },
+
+    get filteredMCBs() {
+      return this.mcbs;
     },
 
     get compoundBatches() {
@@ -1890,29 +1936,37 @@ window.grapheneApp = function() {
       await CRUDService.deleteMicronization(id, this);
     },
 
-    openMicronizationForm(micronization = null) {
-      if (micronization) {
-        // Edit mode
-        this.editingMicronization = micronization;
-        this.micronizationForm = {
-          ...micronization,
-          date: micronization.date ? new Date(micronization.date).toISOString().split('T')[0] : '',
-          dateUnknown: !micronization.date
-        };
-      } else {
-        // Add mode
-        this.editingMicronization = null;
-        this.micronizationForm = { ...DEFAULT_FORMS.micronization };
-      }
-      this.showAddMicronization = true;
-    },
-
     duplicateMicronization(micronization) {
       CRUDService.duplicateMicronization(micronization, this);
     },
 
     closeMicronizationForm() {
       CRUDService.closeMicronizationForm(this);
+    },
+
+    // MCB CRUD operations - Delegated to CRUDService
+    async openMCBForm(mcb = null) {
+      await CRUDService.openMCBForm(mcb, this);
+    },
+
+    async saveMCB() {
+      await CRUDService.saveMCB(this);
+    },
+
+    async deleteMCB(id) {
+      await CRUDService.deleteMCB(id, this);
+    },
+
+    duplicateMCB(mcb) {
+      CRUDService.duplicateMCB(mcb, this);
+    },
+
+    closeMCBForm() {
+      CRUDService.closeMCBForm(this);
+    },
+
+    searchMCBs() {
+      this.loadMCBs();
     },
 
     // Export methods
@@ -1935,6 +1989,8 @@ window.grapheneApp = function() {
         API.shipment.exportCSV();
       } else if (type === 'micronization') {
         API.micronization.exportCSV();
+      } else if (type === 'mcb') {
+        API.mcb.exportCSV();
       }
     },
     
@@ -2929,7 +2985,11 @@ window.grapheneApp = function() {
     getMicronizationModalHtml() {
       return getMicronizationModalHtml();
     },
-    
+
+    getMCBModalHtml() {
+      return getMCBModalHtml();
+    },
+
     getRAMANModalHtml() {
       return getRAMANModalHtml();
     },

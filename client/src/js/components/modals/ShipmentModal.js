@@ -77,7 +77,7 @@ function getShipmentModalHtml() {
             <!-- Row 3: Material Selection -->
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">Material Source</label>
-              <div class="flex space-x-4">
+              <div class="flex space-x-4 flex-wrap gap-y-2">
                 <label class="flex items-center">
                   <input type="radio" x-model="shipmentForm.materialType" value="graphene" class="mr-2">
                   <span>Individual Graphene Batch</span>
@@ -89,6 +89,10 @@ function getShipmentModalHtml() {
                 <label class="flex items-center">
                   <input type="radio" x-model="shipmentForm.materialType" value="micronized" class="mr-2">
                   <span>Micronized SKU</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" x-model="shipmentForm.materialType" value="mcb" class="mr-2">
+                  <span class="font-medium">Micronized Compound Batch (MCB)</span>
                 </label>
               </div>
             </div>
@@ -132,14 +136,30 @@ function getShipmentModalHtml() {
                 <select
                   x-model="shipmentForm.micronizationSku"
                   name="micronizationSku"
-                  @change="shipmentForm.grapheneSample = ''; shipmentForm.compoundBatchNumber = ''"
+                  @change="shipmentForm.grapheneSample = ''; shipmentForm.compoundBatchNumber = ''; shipmentForm.mcbNumber = ''"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
                   :required="shipmentForm.materialType === 'micronized'"
                 >
                   <option value="">Select micronized SKU...</option>
                   <template x-for="micronization in micronizations" :key="micronization.id">
-                    <option :value="micronization.sku" 
+                    <option :value="micronization.sku"
                             x-text="\`\${micronization.sku} - \${micronization.micronizationNumber} (\${micronization.recoveredAmount || 0}g)\`"></option>
+                  </template>
+                </select>
+              </div>
+              <div x-show="shipmentForm.materialType === 'mcb'">
+                <label class="block text-sm font-medium text-gray-700 mb-1">MCB</label>
+                <select
+                  x-model="shipmentForm.mcbNumber"
+                  name="mcbNumber"
+                  @change="shipmentForm.grapheneSample = ''; shipmentForm.compoundBatchNumber = ''; shipmentForm.micronizationSku = ''"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  :required="shipmentForm.materialType === 'mcb'"
+                >
+                  <option value="">Select MCB...</option>
+                  <template x-for="mcb in mcbs" :key="mcb.id">
+                    <option :value="mcb.mcbNumber"
+                            x-text="\`\${mcb.mcbNumber} - \${mcb.mcbName || 'Unnamed'} (\${mcb.totalRecoveredAmount || 0}g) - \${mcb.micronizationCount} batches\`"></option>
                   </template>
                 </select>
               </div>

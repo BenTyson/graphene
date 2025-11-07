@@ -24,13 +24,13 @@ Complete Prisma schema documentation for the Graphene Production Control System.
 ### Material Pipeline
 
 ```
-Raw Materials → Biochar → Graphene → Compound Batch/Micronization → Testing → Shipment
+Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB (optional) → Testing → Shipment
 ```
 
 ### Model Categories
 
 - **Authentication**: User
-- **Core Production**: Biochar, BiocharLot, Graphene, CompoundBatch, Micronization
+- **Core Production**: Biochar, BiocharLot, Graphene, CompoundBatch, Micronization, MicronizedCompoundBatch, MicronizationMCB
 - **Testing**: BET, ConductivityTest, RamanTest, TEMTest
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
@@ -239,23 +239,24 @@ model GrapheneCompoundBatch {
 }
 
 model Micronization {
-  id                      String             @id @default(cuid())
-  micronizationNumber     String             @unique @map("micronization_number")
-  date                    DateTime?          @map("date")
-  sku                     String?            @unique
-  startingMaterialAmount  Decimal?           @map("starting_material_amount") @db.Decimal(10, 2)
-  recoveredAmount         Decimal?           @map("recovered_amount") @db.Decimal(10, 2)
-  grindPressure           Int?               @map("grind_pressure")
-  micronizationReportPath String?            @map("micronization_report_path")
-  grapheneSample          String?            @map("graphene_sample")
-  compoundBatchNumber     String?            @map("compound_batch_number")
-  createdAt               DateTime           @default(now()) @map("created_at")
-  updatedAt               DateTime           @updatedAt @map("updated_at")
-  dx50                    String?            @map("dx50")
-  micronizationLocation   String?            @map("micronization_location")
+  id                      String            @id @default(cuid())
+  micronizationNumber     String            @unique @map("micronization_number")
+  date                    DateTime?         @map("date")
+  sku                     String?           @unique
+  startingMaterialAmount  Decimal?          @map("starting_material_amount") @db.Decimal(10, 2)
+  recoveredAmount         Decimal?          @map("recovered_amount") @db.Decimal(10, 2)
+  grindPressure           Int?              @map("grind_pressure")
+  micronizationReportPath String?           @map("micronization_report_path")
+  grapheneSample          String?           @map("graphene_sample")
+  compoundBatchNumber     String?           @map("compound_batch_number")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+  dx50                    String?           @map("dx50")
+  micronizationLocation   String?           @map("micronization_location")
   shipments               MaterialShipment[] @relation("MicronizationShipments")
-  compoundBatchRef        CompoundBatch?     @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef             Graphene?          @relation(fields: [grapheneSample], references: [experimentNumber])
+  compoundBatchRef        CompoundBatch?    @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef             Graphene?         @relation(fields: [grapheneSample], references: [experimentNumber])
+  mcbMembership           MicronizationMCB? // Optional - only populated if part of an MCB
 
   @@index([date])
   @@index([grapheneSample])
@@ -267,6 +268,36 @@ model Micronization {
   @@index([sku, date])
   @@index([micronizationLocation, date])
   @@map("micronizations")
+}
+
+model MicronizedCompoundBatch {
+  id                   String              @id @default(cuid())
+  mcbNumber            String              @unique @map("mcb_number")
+  mcbName              String?             @map("mcb_name")
+  sku                  String?             @unique
+  totalRecoveredAmount Decimal?            @map("total_recovered_amount") @db.Decimal(10, 2)
+  mcbLocation          String?             @map("mcb_location")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  comments             String?
+  micronizations       MicronizationMCB[]
+  shipments            MaterialShipment[]
+
+  @@index([mcbNumber])
+  @@index([sku])
+  @@index([createdAt])
+  @@map("micronized_compound_batches")
+}
+
+model MicronizationMCB {
+  id                        String                  @id @default(cuid())
+  micronizationId           String                  @unique @map("micronization_id")
+  micronizedCompoundBatchId String                  @map("mcb_id")
+  micronization             Micronization           @relation(fields: [micronizationId], references: [id], onDelete: Cascade)
+  mcb                       MicronizedCompoundBatch @relation(fields: [micronizedCompoundBatchId], references: [id], onDelete: Cascade)
+
+  @@unique([micronizationId])
+  @@map("micronization_mcbs")
 }
 
 // ============================================================================
@@ -498,36 +529,40 @@ model CompoundBatchUpdateReport {
 // ============================================================================
 
 model MaterialShipment {
-  id                  String         @id @default(cuid())
-  shipmentNumber      String         @unique @map("shipment_number")
-  shipFromLocation    String         @map("ship_from_location")
-  shipToLocation      String         @map("ship_to_location")
-  shipmentDate        DateTime?      @map("shipment_date")
-  amountShipped       Decimal?       @map("amount_shipped") @db.Decimal(10, 2)
-  unit                String         @default("g")
+  id                  String                   @id @default(cuid())
+  shipmentNumber      String                   @unique @map("shipment_number")
+  shipFromLocation    String                   @map("ship_from_location")
+  shipToLocation      String                   @map("ship_to_location")
+  shipmentDate        DateTime?                @map("shipment_date")
+  amountShipped       Decimal?                 @map("amount_shipped") @db.Decimal(10, 2)
+  unit                String                   @default("g")
   purpose             String?
-  grapheneSample      String?        @map("graphene_sample")
-  compoundBatchNumber String?        @map("compound_batch_number")
+  grapheneSample      String?                  @map("graphene_sample")
+  compoundBatchNumber String?                  @map("compound_batch_number")
   comments            String?
-  status              String?        @default("shipped")
-  receivedDate        DateTime?      @map("received_date")
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-  micronizationSku    String?        @map("micronization_sku")
-  compoundBatchRef    CompoundBatch? @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef         Graphene?      @relation(fields: [grapheneSample], references: [experimentNumber])
-  micronizationRef    Micronization? @relation("MicronizationShipments", fields: [micronizationSku], references: [sku])
+  status              String?                  @default("shipped")
+  receivedDate        DateTime?                @map("received_date")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  micronizationSku    String?                  @map("micronization_sku")
+  mcbNumber           String?                  @map("mcb_number")
+  compoundBatchRef    CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef         Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
+  micronizationRef    Micronization?           @relation("MicronizationShipments", fields: [micronizationSku], references: [sku])
+  mcbRef              MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
 
   @@index([shipmentDate])
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
   @@index([micronizationSku])
+  @@index([mcbNumber])
   @@index([status, shipmentDate])
   @@index([shipFromLocation, shipmentDate])
   @@index([shipToLocation, shipmentDate])
   @@index([grapheneSample, shipmentDate])
   @@index([compoundBatchNumber, shipmentDate])
   @@index([micronizationSku, shipmentDate])
+  @@index([mcbNumber, shipmentDate])
   @@map("material_shipments")
 }
 
@@ -838,9 +873,22 @@ enum ProcessingStatus {
 - **Relationships**: Many-to-many with Graphene
 
 **Micronization** - Micronization processing records
-- **Key Fields**: micronizationNumber (unique), sku (unique), grindPressure, dx50, location
+- **Key Fields**: micronizationNumber (unique), sku (unique), grindPressure, dx50, micronizationLocation
 - **Features**: SKU tracking, recovery rate calculation
-- **Relationships**: Links to Graphene OR CompoundBatch
+- **Relationships**: Links to Graphene OR CompoundBatch, optional MCB membership
+- **Exclusivity**: Each micronization can only belong to one MCB (enforced by unique constraint)
+
+**MicronizedCompoundBatch (MCB)** - Logical grouping of micronizations for shipment
+- **Key Fields**: mcbNumber (unique), sku (auto-generated: `{mcbNumber}_MCB`), mcbLocation
+- **Auto-calculated**: totalRecoveredAmount (sum of component micronizations)
+- **Purpose**: Combine multiple micronizations into a single trackable batch
+- **Relationships**: Links to multiple Micronizations via MicronizationMCB junction table
+- **Inventory**: Component micronizations are excluded from individual counts to prevent double-counting
+
+**MicronizationMCB** - Junction table for MCB membership
+- **Purpose**: Links micronizations to their parent MCB
+- **Constraint**: Each micronization can only belong to one MCB (@@unique on micronizationId)
+- **Cascade Delete**: Deleting an MCB frees up its component micronizations
 
 ### Testing Models (All Support Dual Referencing)
 
@@ -878,8 +926,10 @@ enum ProcessingStatus {
 
 **MaterialShipment** - Material shipment tracking
 - **Key Fields**: shipmentNumber (auto-generated), shipFromLocation, shipToLocation, status
-- **Triple Reference**: Can link to grapheneSample, compoundBatchNumber, OR micronizationSku
+- **Quad Reference**: Can link to grapheneSample, compoundBatchNumber, micronizationSku, OR mcbNumber
 - **Status Levels**: pending, shipped, in_transit, received
+- **Partial MCB Shipments**: Supports shipping portions of an MCB (e.g., 10g from 100g MCB)
+- **Inventory Tracking**: Shipments automatically update location-based inventory calculations
 
 ### News & AI
 
@@ -905,10 +955,22 @@ Graphene (production)
   ↓
 CompoundBatch (grouping) / Micronization (processing)
   ↓
+MCB (optional - combines micronizations)
+  ↓
 Tests (BET, Conductivity, RAMAN, TEM)
   ↓
 MaterialShipment (distribution)
 ```
+
+### MCB (Micronized Compound Batch) Architecture
+- **Purpose**: Logical grouping of micronizations for shipment tracking
+- **Relationship**: One-to-many with Micronizations via MicronizationMCB junction table
+- **Exclusivity**: Each micronization can belong to at most one MCB
+- **Inventory Logic**:
+  - MCBs stored at their designated location (mcbLocation)
+  - Component micronizations excluded from individual inventory counts
+  - Prevents double-counting of material
+  - Supports partial shipments (e.g., ship 10g from 100g MCB)
 
 ### Test Referencing (Dual Architecture)
 - Tests can reference **either** individual Graphene experiments **or** CompoundBatch
@@ -921,11 +983,12 @@ MaterialShipment (distribution)
 - SemReports ↔ Graphene (via GrapheneSemReport junction)
 - SemReports ↔ CompoundBatch (via CompoundBatchSemReport junction)
 
-### Shipment Referencing (Triple Architecture)
+### Shipment Referencing (Quad Architecture)
 - MaterialShipment can reference:
   - Individual Graphene experiments (via grapheneSample)
   - CompoundBatch (via compoundBatchNumber)
-  - Micronized SKU (via micronizationSku)
+  - Individual Micronization (via micronizationSku)
+  - MCB (via mcbNumber) - supports partial shipments from MCBs
 
 ---
 
@@ -936,10 +999,12 @@ MaterialShipment (distribution)
 - Provides flexibility for referencing experiments or batches
 - Maintains data integrity without rigid constraints
 
-### Dual/Triple Architecture
+### Multi-Reference Architecture
 - Tests support dual referencing (Graphene OR CompoundBatch)
-- Shipments support triple referencing (Graphene, CompoundBatch, OR Micronization)
-- Never modifies original data when creating batches or micronizations
+- Shipments support quad referencing (Graphene, CompoundBatch, Micronization, OR MCB)
+- MCBs use exclusive membership (each micronization in at most one MCB)
+- Never modifies original data when creating batches, micronizations, or MCBs
+- Inventory tracking prevents double-counting by excluding MCB members from individual counts
 
 ### Full Traceability
 - Complete audit trail from raw materials to final testing
@@ -973,6 +1038,13 @@ MaterialShipment (distribution)
 - **Local Development**: `/uploads/` directories
 - **Production**: Cloudinary CDN
 - **Path Format**: Full Cloudinary URLs stored in database
+
+### MCB Inventory Tracking
+- **Component Exclusion**: Micronizations in an MCB are excluded from individual inventory counts
+- **Query Pattern**: `WHERE mcbMembership: null` filters out MCB members
+- **Location Tracking**: MCBs tracked at their mcbLocation, not component locations
+- **Partial Shipments**: System correctly subtracts partial shipments from MCB totals
+- **Example**: 100g MCB with 10g shipped shows 90g remaining at origin, 10g at destination
 
 ---
 
@@ -1009,6 +1081,6 @@ psql $DATABASE_URL < backups/backup_file.sql
 
 ---
 
-**Last Updated:** November 2025
+**Last Updated:** January 2025 (MCB feature added)
 **Schema Version:** Current (January 2025)
 **For API Usage:** See [API-REFERENCE.md](API-REFERENCE.md)

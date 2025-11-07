@@ -201,6 +201,7 @@ export const DEFAULT_FORMS = {
     grapheneSample: '',
     compoundBatchNumber: '',
     micronizationSku: '',
+    mcbNumber: '',
     amountShipped: '',
     unit: 'g',
     purpose: '',
@@ -222,6 +223,15 @@ export const DEFAULT_FORMS = {
     micronizationReportFile: null,
     removeMicronizationReport: false,
     replaceMicronizationReport: false
+  },
+  mcb: {
+    mcbNumber: '',
+    mcbName: '',
+    mcbLocation: '',
+    sku: '',
+    selectedMicronizationIds: [],
+    totalRecoveredAmount: 0,
+    comments: ''
   },
   user: {
     username: '',

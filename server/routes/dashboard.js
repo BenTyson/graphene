@@ -153,7 +153,11 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
     });
     
     // Get all micronization data grouped by location to track transformations
+    // EXCLUDE micronizations that are part of an MCB to avoid double-counting
     const micronizations = await prisma.micronization.findMany({
+      where: {
+        mcbMembership: null  // Only count micronizations NOT in an MCB
+      },
       select: {
         startingMaterialAmount: true,
         recoveredAmount: true,
@@ -162,28 +166,52 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
         compoundBatchNumber: true
       }
     });
+
+    // Get all MCBs grouped by location
+    const mcbs = await prisma.micronizedCompoundBatch.findMany({
+      select: {
+        totalRecoveredAmount: true,
+        mcbLocation: true
+      }
+    });
     
-    // Calculate micronization totals by location
+    // Calculate micronization totals by location (excluding MCB members)
     const micronizationByLocation = {};
     let totalMicronizationInput = 0;
     let totalMicronizationRecovered = 0;
-    
+
     micronizations.forEach(m => {
       const input = m.startingMaterialAmount ? parseFloat(m.startingMaterialAmount) : 0;
       const recovered = m.recoveredAmount ? parseFloat(m.recoveredAmount) : 0;
       const location = m.micronizationLocation || 'Unknown';
-      
+
       if (!micronizationByLocation[location]) {
         micronizationByLocation[location] = { input: 0, recovered: 0 };
       }
-      
+
       micronizationByLocation[location].input += input;
       micronizationByLocation[location].recovered += recovered;
-      
+
       totalMicronizationInput += input;
       totalMicronizationRecovered += recovered;
     });
-    
+
+    // Calculate MCB totals by location
+    const mcbByLocation = {};
+    let totalMCBAmount = 0;
+
+    mcbs.forEach(mcb => {
+      const amount = mcb.totalRecoveredAmount ? parseFloat(mcb.totalRecoveredAmount) : 0;
+      const location = mcb.mcbLocation || 'Unknown';
+
+      if (!mcbByLocation[location]) {
+        mcbByLocation[location] = 0;
+      }
+
+      mcbByLocation[location] += amount;
+      totalMCBAmount += amount;
+    });
+
     const micronizationLoss = totalMicronizationInput - totalMicronizationRecovered;
     
     // Calculate true physical inventory at each location
@@ -229,7 +257,7 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
         _sum: { amountShipped: true }
       });
       
-      // Micronized material shipments IN and OUT
+      // Micronized material shipments IN and OUT (individual micronizations)
       const micronizedIn = await prisma.materialShipment.aggregate({
         where: {
           shipToLocation: location,
@@ -238,12 +266,31 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
         },
         _sum: { amountShipped: true }
       });
-      
+
       const micronizedOut = await prisma.materialShipment.aggregate({
         where: {
           shipFromLocation: location,
           status: { in: ['shipped', 'in_transit', 'received'] },
           micronizationSku: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
+
+      // MCB shipments IN and OUT
+      const mcbIn = await prisma.materialShipment.aggregate({
+        where: {
+          shipToLocation: location,
+          status: 'received',
+          mcbNumber: { not: null }
+        },
+        _sum: { amountShipped: true }
+      });
+
+      const mcbOut = await prisma.materialShipment.aggregate({
+        where: {
+          shipFromLocation: location,
+          status: { in: ['shipped', 'in_transit', 'received'] },
+          mcbNumber: { not: null }
         },
         _sum: { amountShipped: true }
       });
@@ -254,11 +301,14 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       const compoundBatchOutAmount = compoundBatchOut._sum.amountShipped || 0;
       const micronizedInAmount = micronizedIn._sum.amountShipped || 0;
       const micronizedOutAmount = micronizedOut._sum.amountShipped || 0;
-      
+      const mcbInAmount = mcbIn._sum.amountShipped || 0;
+      const mcbOutAmount = mcbOut._sum.amountShipped || 0;
+
       // Calculate PHYSICAL inventory currently at location
       let rawGraphenePhysical = rawGrapheneInAmount - rawGrapheneOutAmount;
       let compoundBatchPhysical = compoundBatchInAmount - compoundBatchOutAmount;
       let micronizedPhysical = micronizedInAmount - micronizedOutAmount;
+      let mcbPhysical = mcbInAmount - mcbOutAmount;
       
       // For Curia Frankfurt (production origin), add total production
       if (location === 'Curia Frankfurt') {
@@ -270,15 +320,20 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       // For locations with micronization processing
       if (micronizationByLocation[location]) {
         const locationMicronization = micronizationByLocation[location];
-        
+
         // Compound batch physical = received - what was actually processed
         compoundBatchPhysical = Math.max(0, compoundBatchInAmount - locationMicronization.input);
-        
+
         // Micronized physical = local processing recovered + received - shipped out
         micronizedPhysical = locationMicronization.recovered + micronizedInAmount - micronizedOutAmount;
       }
-      
-      const totalPhysicalInventory = rawGraphenePhysical + compoundBatchPhysical + micronizedPhysical;
+
+      // Add MCBs stored at this location
+      if (mcbByLocation[location]) {
+        mcbPhysical += mcbByLocation[location];
+      }
+
+      const totalPhysicalInventory = rawGraphenePhysical + compoundBatchPhysical + micronizedPhysical + mcbPhysical;
       
       locationInventory[location] = {
         location,
@@ -298,6 +353,12 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
           shipped: micronizedOutAmount,
           producedHere: micronizationByLocation[location]?.recovered || 0,
           current: micronizedPhysical
+        },
+        mcb: {
+          received: mcbInAmount,
+          shipped: mcbOutAmount,
+          storedHere: mcbByLocation[location] || 0,
+          current: mcbPhysical
         },
         totalCurrent: totalPhysicalInventory,
         isProductionOrigin: location === 'Curia Frankfurt'
@@ -337,6 +398,17 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
       },
       _count: true
     });
+
+    const mcbInTransit = await prisma.materialShipment.aggregate({
+      where: {
+        status: 'in_transit',
+        mcbNumber: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      },
+      _count: true
+    });
     
     // Unshipped materials
     const totalRawShipped = await prisma.materialShipment.aggregate({
@@ -365,11 +437,21 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
         amountShipped: true
       }
     });
-    
+
+    const totalMCBShipped = await prisma.materialShipment.aggregate({
+      where: {
+        mcbNumber: { not: null }
+      },
+      _sum: {
+        amountShipped: true
+      }
+    });
+
     // Calculate unshipped amounts accounting for materials sent for processing
     const totalRawGrapheneShipped = (totalRawShipped._sum.amountShipped || 0) + (totalCompoundShipped._sum.amountShipped || 0);
     const unshippedRaw = (totalProduction._sum.output || 0) - totalRawGrapheneShipped;
     const unshippedMicronized = totalMicronizationRecovered - (totalMicronizedShipped._sum.amountShipped || 0);
+    const unshippedMCB = totalMCBAmount - (totalMCBShipped._sum.amountShipped || 0);
     
     res.json({
       locations: Object.values(locationInventory),
@@ -386,19 +468,26 @@ router.get('/inventory-by-location', asyncHandler(async (req, res) => {
           amount: micronizedInTransit._sum.amountShipped || 0,
           count: micronizedInTransit._count || 0
         },
+        mcb: {
+          amount: mcbInTransit._sum.amountShipped || 0,
+          count: mcbInTransit._count || 0
+        },
         total: {
-          amount: (rawGrapheneInTransit._sum.amountShipped || 0) + 
-                  (compoundBatchInTransit._sum.amountShipped || 0) + 
-                  (micronizedInTransit._sum.amountShipped || 0),
-          count: (rawGrapheneInTransit._count || 0) + 
-                 (compoundBatchInTransit._count || 0) + 
-                 (micronizedInTransit._count || 0)
+          amount: (rawGrapheneInTransit._sum.amountShipped || 0) +
+                  (compoundBatchInTransit._sum.amountShipped || 0) +
+                  (micronizedInTransit._sum.amountShipped || 0) +
+                  (mcbInTransit._sum.amountShipped || 0),
+          count: (rawGrapheneInTransit._count || 0) +
+                 (compoundBatchInTransit._count || 0) +
+                 (micronizedInTransit._count || 0) +
+                 (mcbInTransit._count || 0)
         }
       },
       unshipped: {
         rawGraphene: unshippedRaw,
         micronized: unshippedMicronized,
-        total: unshippedRaw + unshippedMicronized
+        mcb: unshippedMCB,
+        total: unshippedRaw + unshippedMicronized + unshippedMCB
       },
       micronizationSummary: {
         totalInput: totalMicronizationInput,

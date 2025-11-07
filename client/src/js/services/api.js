@@ -790,6 +790,44 @@ export const micronizationAPI = {
   }
 };
 
+export const mcbAPI = {
+  // Get all MCBs with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/mcb${query}`).then(handleResponse);
+  },
+
+  // Get single MCB record
+  getById: (id) => {
+    return fetch(`${API_BASE}/mcb/${id}`).then(handleResponse);
+  },
+
+  // Get available micronizations (not yet in any MCB)
+  getAvailableMicronizations: () => {
+    return fetch(`${API_BASE}/mcb/available/micronizations`).then(handleResponse);
+  },
+
+  // Create new MCB record
+  create: (data) => {
+    return jsonRequest(`${API_BASE}/mcb`, 'POST', data);
+  },
+
+  // Update MCB record
+  update: (id, data) => {
+    return jsonRequest(`${API_BASE}/mcb/${id}`, 'PUT', data);
+  },
+
+  // Delete MCB record
+  delete: (id) => {
+    return fetch(`${API_BASE}/mcb/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/mcb/export/csv`, '_blank');
+  }
+};
+
 export const shipmentAPI = {
   // Get all shipments with optional search
   getAll: (search = '') => {
@@ -923,6 +961,7 @@ export default {
   semReport: semReportAPI,
   compoundBatch: compoundBatchAPI,
   micronization: micronizationAPI,
+  mcb: mcbAPI,
   shipment: shipmentAPI,
   users: usersAPI
 };

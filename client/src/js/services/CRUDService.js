@@ -977,10 +977,11 @@ class CRUDService {
         dateUnknown: !shipment.shipmentDate,
         receivedDate: shipment.receivedDate ? new Date(shipment.receivedDate).toISOString().split('T')[0] : '',
         receivedDateUnknown: !shipment.receivedDate,
-        materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
+        materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : shipment.mcbNumber ? 'mcb' : 'micronized',
         grapheneSample: shipment.grapheneSample || '',
         compoundBatchNumber: shipment.compoundBatchNumber || '',
         micronizationSku: shipment.micronizationSku || '',
+        mcbNumber: shipment.mcbNumber || '',
         amountShipped: shipment.amountShipped || '',
         unit: shipment.unit || 'g',
         purpose: shipment.purpose || '',
@@ -1021,8 +1022,20 @@ class CRUDService {
       // Clear the non-selected material reference
       if (appContext.shipmentForm.materialType === 'graphene') {
         data.compoundBatchNumber = null;
-      } else {
+        data.micronizationSku = null;
+        data.mcbNumber = null;
+      } else if (appContext.shipmentForm.materialType === 'compound') {
         data.grapheneSample = null;
+        data.micronizationSku = null;
+        data.mcbNumber = null;
+      } else if (appContext.shipmentForm.materialType === 'micronized') {
+        data.grapheneSample = null;
+        data.compoundBatchNumber = null;
+        data.mcbNumber = null;
+      } else if (appContext.shipmentForm.materialType === 'mcb') {
+        data.grapheneSample = null;
+        data.compoundBatchNumber = null;
+        data.micronizationSku = null;
       }
 
       if (appContext.editingShipment) {
@@ -1061,10 +1074,11 @@ class CRUDService {
       dateUnknown: false,
       receivedDate: '',
       receivedDateUnknown: true,
-      materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : 'micronized',
+      materialType: shipment.grapheneSample ? 'graphene' : shipment.compoundBatchNumber ? 'compound' : shipment.mcbNumber ? 'mcb' : 'micronized',
       grapheneSample: shipment.grapheneSample || '',
       compoundBatchNumber: shipment.compoundBatchNumber || '',
       micronizationSku: shipment.micronizationSku || '',
+      mcbNumber: shipment.mcbNumber || '',
       amountShipped: shipment.amountShipped || '',
       unit: shipment.unit || 'g',
       purpose: shipment.purpose || '',
@@ -1190,6 +1204,86 @@ class CRUDService {
     appContext.showMicronizationModal = false;
     appContext.editingMicronization = null;
     appContext.micronizationForm = { ...DEFAULT_FORMS.micronization };
+  }
+
+  // MCB (Micronized Compound Batch) CRUD operations
+  async openMCBForm(mcb, appContext) {
+    if (mcb) {
+      // Fetch full MCB data from backend to get all fields including selectedMicronizationIds
+      try {
+        const fullMcbData = await API.mcb.getById(mcb.id);
+        appContext.editingMCB = fullMcbData;
+        appContext.mcbForm = {
+          mcbNumber: fullMcbData.mcbNumber || '',
+          mcbName: fullMcbData.mcbName || '',
+          mcbLocation: fullMcbData.mcbLocation || '',
+          sku: fullMcbData.sku || '',
+          selectedMicronizationIds: fullMcbData.selectedMicronizationIds || [],
+          totalRecoveredAmount: fullMcbData.totalRecoveredAmount || 0,
+          comments: fullMcbData.comments || ''
+        };
+      } catch (error) {
+        console.error('Failed to load MCB data:', error);
+        alert('Failed to load MCB data');
+        return;
+      }
+    } else {
+      appContext.editingMCB = null;
+      appContext.mcbForm = { ...DEFAULT_FORMS.mcb };
+    }
+    appContext.showMCBModal = true;
+  }
+
+  async saveMCB(appContext) {
+    try {
+      const data = { ...appContext.mcbForm };
+
+      if (appContext.editingMCB) {
+        await API.mcb.update(appContext.editingMCB.id, data);
+      } else {
+        await API.mcb.create(data);
+      }
+
+      await appContext.loadMCBs();
+      await appContext.loadMicronizations(); // Refresh to update available micronizations
+      this.closeMCBForm(appContext);
+    } catch (error) {
+      console.error('Failed to save MCB:', error);
+      alert(`Failed to save MCB: ${error.message}`);
+    }
+  }
+
+  async deleteMCB(id, appContext) {
+    if (confirm('Are you sure you want to delete this MCB record? This will free up the component micronizations.')) {
+      try {
+        await API.mcb.delete(id);
+        await appContext.loadMCBs();
+        await appContext.loadMicronizations(); // Refresh to update available micronizations
+      } catch (error) {
+        console.error('Failed to delete MCB:', error);
+        alert(`Failed to delete MCB: ${error.message}`);
+      }
+    }
+  }
+
+  duplicateMCB(mcb, appContext) {
+    appContext.editingMCB = null;
+    appContext.mcbForm = {
+      mcbNumber: '', // Clear number for new record
+      mcbName: mcb.mcbName || '',
+      mcbLocation: mcb.mcbLocation || '',
+      sku: '', // Clear SKU for new record
+      selectedMicronizationIds: [], // Clear selected micronizations
+      totalRecoveredAmount: 0,
+      comments: mcb.comments || ''
+    };
+    appContext.showMCBModal = true;
+  }
+
+  closeMCBForm(appContext) {
+    appContext.showMCBModal = false;
+    appContext.editingMCB = null;
+    appContext.mcbForm = { ...DEFAULT_FORMS.mcb };
   }
 }
 

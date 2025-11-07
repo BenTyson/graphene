@@ -19,14 +19,14 @@
 function getMicronizationModalHtml() {
   return `
     <!-- Micronization Add/Edit Modal -->
-    <div x-show="showAddMicronization" x-cloak
-         @click.away="showAddMicronization = false; editingMicronization = null"
+    <div x-show="showMicronizationModal" x-cloak
+         @click.away="showMicronizationModal = false; editingMicronization = null"
          class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black opacity-50"></div>
         <div class="relative bg-white rounded-none md:rounded-lg w-full md:max-w-3xl h-full md:h-auto md:max-h-[90vh] overflow-y-auto p-4 md:p-6">
           <h3 class="text-lg font-semibold mb-4" x-text="editingMicronization ? 'Edit Micronization Record' : 'Add Micronization Record'"></h3>
-          
+
           <form @submit.prevent="saveMicronization()" class="space-y-6">
             <!-- Basic Information -->
             <div>
@@ -59,14 +59,14 @@ function getMicronizationModalHtml() {
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Material Source</h4>
               <div class="space-y-4">
-                <!-- Material Type Selection -->
+                <!-- Material Source Selection -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Material Type</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">What are you micronizing?</label>
                   <div class="space-y-2">
                     <label class="flex items-center">
                       <input type="radio" x-model="micronizationForm.materialType" value="graphene"
                              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2">
-                      <span class="text-sm">Individual Graphene Experiment</span>
+                      <span class="text-sm">Individual Graphene</span>
                     </label>
                     <label class="flex items-center">
                       <input type="radio" x-model="micronizationForm.materialType" value="compoundBatch"
@@ -96,7 +96,7 @@ function getMicronizationModalHtml() {
                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                     <option value="">Select compound batch...</option>
                     <template x-for="batch in compoundBatches" :key="batch.batchNumber">
-                      <option :value="batch.batchNumber" 
+                      <option :value="batch.batchNumber"
                               x-text="batch.batchNumber + ' (' + (batch.totalOutput || 'No output') + 'g) - ' + (batch.batchName || 'No name')"></option>
                     </template>
                   </select>
@@ -108,19 +108,19 @@ function getMicronizationModalHtml() {
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">Processing Parameters</h4>
               <div class="grid grid-cols-2 gap-4 mb-4">
-                <div x-html="getNumericFieldHtml({
-                  label: 'Starting Material Amount',
-                  unit: 'g',
-                  modelVariable: 'micronizationForm.startingMaterialAmount',
-                  step: '0.01',
-                  required: true
-                })"></div>
-                <div x-html="getNumericFieldHtml({
-                  label: 'Recovered Amount',
-                  unit: 'g',
-                  modelVariable: 'micronizationForm.recoveredAmount',
-                  step: '0.01'
-                })"></div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Starting Material Amount (g)</label>
+                  <input type="number" step="0.01" x-model="micronizationForm.startingMaterialAmount"
+                         required
+                         placeholder=""
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Recovered Amount (g)</label>
+                  <input type="number" step="0.01" x-model="micronizationForm.recoveredAmount"
+                         placeholder=""
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                </div>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -144,15 +144,15 @@ function getMicronizationModalHtml() {
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-                  <input type="text" x-model="micronizationForm.sku" 
+                  <input type="text" x-model="micronizationForm.sku"
                          placeholder="Auto-generated or custom"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Recovery Rate (%)</label>
-                  <input type="text" 
-                         :value="micronizationForm.recoveredAmount && micronizationForm.startingMaterialAmount ? 
-                                 ((parseFloat(micronizationForm.recoveredAmount) / parseFloat(micronizationForm.startingMaterialAmount)) * 100).toFixed(1) + '%' : 
+                  <input type="text"
+                         :value="micronizationForm.recoveredAmount && micronizationForm.startingMaterialAmount ?
+                                 ((parseFloat(micronizationForm.recoveredAmount) / parseFloat(micronizationForm.startingMaterialAmount)) * 100).toFixed(1) + '%' :
                                  'Enter amounts to calculate'"
                          readonly
                          class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600">
@@ -180,13 +180,13 @@ function getMicronizationModalHtml() {
             </div>
 
             <div class="flex justify-end space-x-2 pt-4">
-              <button type="button" @click="showAddMicronization = false; editingMicronization = null; micronizationForm = {}"
+              <button type="button" @click="showMicronizationModal = false; editingMicronization = null; micronizationForm = {}"
                       class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">
                 Cancel
               </button>
               <button type="submit"
                       class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800">
-                <span x-text="editingMicronization ? 'Update' : 'Create'"></span> Micronization Record
+                <span x-text="(editingMicronization ? 'Update' : 'Create') + ' Micronization Record'"></span>
               </button>
             </div>
           </form>
