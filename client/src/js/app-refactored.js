@@ -384,6 +384,10 @@ window.grapheneApp = function() {
     mcbSearch: '',
     userSearch: '',
 
+    // Micronization sub-tab state
+    activeMicronizationSubTab: 'individual', // 'individual' or 'mcb'
+    expandedMCBRows: {}, // Track which MCB rows are expanded
+
     // Sorting states
     biocharSortColumn: null,
     biocharSortDirection: 'asc',
@@ -1191,9 +1195,14 @@ window.grapheneApp = function() {
 
     async loadMCBs() {
       try {
-        this.mcbs = await API.mcb.getAll(this.mcbSearch);
+        console.log('[loadMCBs] Starting MCB load...');
+        const data = await API.mcb.getAll(this.mcbSearch);
+        console.log('[loadMCBs] Received MCB data:', data);
+        console.log('[loadMCBs] Number of MCBs:', data?.length);
+        this.mcbs = data;
+        console.log('[loadMCBs] Set this.mcbs to:', this.mcbs);
       } catch (error) {
-        console.error('Failed to load MCBs:', error);
+        console.error('[loadMCBs] Failed to load MCBs:', error);
         this.mcbs = [];
       }
     },
@@ -1496,27 +1505,41 @@ window.grapheneApp = function() {
       return this.shipments;
     },
 
-    get filteredMicronizations() {
-      // Combine micronizations and MCBs for display in the same table
-      const micros = this.micronizations.map(m => ({ ...m, isMCB: false }));
-      const mcbsAsMicros = this.mcbs.map(mcb => ({
-        ...mcb,
-        isMCB: true,
-        micronizationNumber: mcb.mcbNumber,
-        // MCBs don't have individual processing params
-        startingMaterialAmount: null,
-        recoveredAmount: mcb.totalRecoveredAmount,
-        grindPressure: null,
-        dx50: null,
-        materialSource: `${mcb.micronizationCount} batches`,
-        grapheneSample: null,
-        compoundBatchNumber: null
-      }));
-      return [...micros, ...mcbsAsMicros];
+    get filteredIndividualMicronizations() {
+      // Only return micronizations that are NOT part of an MCB
+      const searchLower = this.micronizationSearch.toLowerCase();
+      if (!searchLower) {
+        return this.micronizations;
+      }
+
+      return this.micronizations.filter(m => {
+        return (m.micronizationNumber && m.micronizationNumber.toLowerCase().includes(searchLower)) ||
+               (m.sku && m.sku.toLowerCase().includes(searchLower)) ||
+               (m.grapheneSample && m.grapheneSample.toLowerCase().includes(searchLower)) ||
+               (m.compoundBatchNumber && m.compoundBatchNumber.toLowerCase().includes(searchLower)) ||
+               (m.dx50 && m.dx50.toLowerCase().includes(searchLower)) ||
+               (m.micronizationLocation && m.micronizationLocation.toLowerCase().includes(searchLower));
+      });
     },
 
     get filteredMCBs() {
-      return this.mcbs;
+      const searchLower = this.micronizationSearch.toLowerCase();
+      if (!searchLower) {
+        return this.mcbs;
+      }
+
+      return this.mcbs.filter(mcb => {
+        return (mcb.mcbNumber && mcb.mcbNumber.toLowerCase().includes(searchLower)) ||
+               (mcb.mcbName && mcb.mcbName.toLowerCase().includes(searchLower)) ||
+               (mcb.sku && mcb.sku.toLowerCase().includes(searchLower)) ||
+               (mcb.mcbLocation && mcb.mcbLocation.toLowerCase().includes(searchLower));
+      });
+    },
+
+    // Legacy getter for backward compatibility (used by old combined table view)
+    get filteredMicronizations() {
+      // Return individual micronizations by default
+      return this.filteredIndividualMicronizations;
     },
 
     get compoundBatches() {

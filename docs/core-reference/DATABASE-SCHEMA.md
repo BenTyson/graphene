@@ -273,10 +273,9 @@ model Micronization {
 model MicronizedCompoundBatch {
   id                   String              @id @default(cuid())
   mcbNumber            String              @unique @map("mcb_number")
-  mcbName              String?             @map("mcb_name")
-  sku                  String?             @unique
   totalRecoveredAmount Decimal?            @map("total_recovered_amount") @db.Decimal(10, 2)
   mcbLocation          String?             @map("mcb_location")
+  combinedDate         DateTime?           @map("combined_date")
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @updatedAt @map("updated_at")
   comments             String?
@@ -284,8 +283,8 @@ model MicronizedCompoundBatch {
   shipments            MaterialShipment[]
 
   @@index([mcbNumber])
-  @@index([sku])
   @@index([createdAt])
+  @@index([combinedDate])
   @@map("micronized_compound_batches")
 }
 
@@ -879,11 +878,12 @@ enum ProcessingStatus {
 - **Exclusivity**: Each micronization can only belong to one MCB (enforced by unique constraint)
 
 **MicronizedCompoundBatch (MCB)** - Logical grouping of micronizations for shipment
-- **Key Fields**: mcbNumber (unique), sku (auto-generated: `{mcbNumber}_MCB`), mcbLocation
+- **Key Fields**: mcbNumber (unique identifier/SKU), mcbLocation, combinedDate
 - **Auto-calculated**: totalRecoveredAmount (sum of component micronizations)
 - **Purpose**: Combine multiple micronizations into a single trackable batch
 - **Relationships**: Links to multiple Micronizations via MicronizationMCB junction table
 - **Inventory**: Component micronizations are excluded from individual counts to prevent double-counting
+- **Date Tracking**: combinedDate tracks when micronizations were physically combined (distinct from createdAt)
 
 **MicronizationMCB** - Junction table for MCB membership
 - **Purpose**: Links micronizations to their parent MCB
@@ -1081,6 +1081,6 @@ psql $DATABASE_URL < backups/backup_file.sql
 
 ---
 
-**Last Updated:** January 2025 (MCB feature added)
+**Last Updated:** January 2025 (MCB simplified - removed name/SKU fields, added combinedDate)
 **Schema Version:** Current (January 2025)
 **For API Usage:** See [API-REFERENCE.md](API-REFERENCE.md)

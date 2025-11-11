@@ -86,10 +86,11 @@ Biochar → Graphene → CompoundBatch/Micronization → MCB (optional) → Test
 - Key fields: dx50, grindPressure, recoveredAmount, micronizationLocation
 
 **MicronizedCompoundBatch** (MCB - combined micronizations)
-- `mcbNumber` (unique), `sku` (unique)
+- `mcbNumber` (unique - serves as both identifier and SKU)
 - Links to: Multiple `Micronization` (via `MicronizationMCB` junction), `MaterialShipment`
-- Key fields: totalRecoveredAmount (auto-calculated), mcbLocation
+- Key fields: totalRecoveredAmount (auto-calculated), mcbLocation, combinedDate
 - Purpose: Logical grouping of micronizations for shipment tracking
+- **Date Tracking**: combinedDate tracks when micronizations were physically combined
 - **Important**: Micronizations in an MCB are excluded from individual inventory counts to prevent double-counting
 
 #### Testing Models

@@ -88,8 +88,6 @@ router.get('/', asyncHandler(async (req, res) => {
         mcbRef: {
           select: {
             mcbNumber: true,
-            mcbName: true,
-            sku: true,
             totalRecoveredAmount: true
           }
         }
@@ -233,8 +231,6 @@ router.get('/mcb/:mcbNumber', asyncHandler(async (req, res) => {
         mcbRef: {
           select: {
             mcbNumber: true,
-            mcbName: true,
-            sku: true,
             totalRecoveredAmount: true
           }
         }
@@ -277,9 +273,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
         },
         mcbRef: {
           select: {
-            mcbNumber: true,
-            mcbName: true,
-            sku: true
+            mcbNumber: true
           }
         }
       },
@@ -323,7 +317,7 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       } else if (shipment.mcbNumber) {
         materialType = 'MCB';
         materialReference = shipment.mcbNumber;
-        materialSpeciesName = shipment.mcbRef?.mcbName || '';
+        materialSpeciesName = ''; // MCB no longer has a name field
       }
 
       return [
@@ -384,8 +378,6 @@ router.get('/:id', asyncHandler(async (req, res) => {
         mcbRef: {
           select: {
             mcbNumber: true,
-            mcbName: true,
-            sku: true,
             totalRecoveredAmount: true
           }
         }
@@ -469,8 +461,6 @@ router.post('/', asyncHandler(async (req, res) => {
         mcbRef: {
           select: {
             mcbNumber: true,
-            mcbName: true,
-            sku: true,
             totalRecoveredAmount: true
           }
         }
@@ -548,8 +538,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
         mcbRef: {
           select: {
             mcbNumber: true,
-            mcbName: true,
-            sku: true,
             totalRecoveredAmount: true
           }
         }

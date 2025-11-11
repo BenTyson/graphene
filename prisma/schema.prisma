@@ -448,10 +448,9 @@ model Micronization {
 model MicronizedCompoundBatch {
   id                   String              @id @default(cuid())
   mcbNumber            String              @unique @map("mcb_number")
-  mcbName              String?             @map("mcb_name")
-  sku                  String?             @unique
   totalRecoveredAmount Decimal?            @map("total_recovered_amount") @db.Decimal(10, 2)
   mcbLocation          String?             @map("mcb_location")
+  combinedDate         DateTime?           @map("combined_date")
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @updatedAt @map("updated_at")
   comments             String?
@@ -459,8 +458,8 @@ model MicronizedCompoundBatch {
   shipments            MaterialShipment[]
 
   @@index([mcbNumber])
-  @@index([sku])
   @@index([createdAt])
+  @@index([combinedDate])
   @@map("micronized_compound_batches")
 }
 

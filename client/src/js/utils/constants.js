@@ -226,9 +226,8 @@ export const DEFAULT_FORMS = {
   },
   mcb: {
     mcbNumber: '',
-    mcbName: '',
     mcbLocation: '',
-    sku: '',
+    combinedDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     selectedMicronizationIds: [],
     totalRecoveredAmount: 0,
     comments: ''

@@ -197,9 +197,9 @@ router.post('/', upload.single('micronizationReport'), asyncHandler(async (req, 
   }
   
   // Generate full SKU from base material + suffix
-  if (data.skuSuffix) {
+  if ('skuSuffix' in data) {
     const baseSku = data.grapheneSample || data.compoundBatchNumber || '';
-    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix;
+    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix || null;
     delete data.skuSuffix;
   }
   
@@ -300,9 +300,9 @@ router.put('/:id', upload.single('micronizationReport'), asyncHandler(async (req
   }
   
   // Generate full SKU from base material + suffix
-  if (data.skuSuffix) {
+  if ('skuSuffix' in data) {
     const baseSku = data.grapheneSample || data.compoundBatchNumber || '';
-    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix;
+    data.sku = baseSku && data.skuSuffix ? `${baseSku}_${data.skuSuffix}` : data.skuSuffix || null;
     delete data.skuSuffix;
   }
   

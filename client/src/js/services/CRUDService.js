@@ -1208,6 +1208,9 @@ class CRUDService {
 
   // MCB (Micronized Compound Batch) CRUD operations
   async openMCBForm(mcb, appContext) {
+    // Always refresh the list of available micronizations before opening the modal
+    await appContext.loadAvailableMicronizations();
+
     if (mcb) {
       // Fetch full MCB data from backend to get all fields including selectedMicronizationIds
       try {
@@ -1215,9 +1218,8 @@ class CRUDService {
         appContext.editingMCB = fullMcbData;
         appContext.mcbForm = {
           mcbNumber: fullMcbData.mcbNumber || '',
-          mcbName: fullMcbData.mcbName || '',
           mcbLocation: fullMcbData.mcbLocation || '',
-          sku: fullMcbData.sku || '',
+          combinedDate: fullMcbData.combinedDate ? new Date(fullMcbData.combinedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           selectedMicronizationIds: fullMcbData.selectedMicronizationIds || [],
           totalRecoveredAmount: fullMcbData.totalRecoveredAmount || 0,
           comments: fullMcbData.comments || ''
@@ -1270,9 +1272,8 @@ class CRUDService {
     appContext.editingMCB = null;
     appContext.mcbForm = {
       mcbNumber: '', // Clear number for new record
-      mcbName: mcb.mcbName || '',
       mcbLocation: mcb.mcbLocation || '',
-      sku: '', // Clear SKU for new record
+      combinedDate: new Date().toISOString().split('T')[0], // Today's date for duplicate
       selectedMicronizationIds: [], // Clear selected micronizations
       totalRecoveredAmount: 0,
       comments: mcb.comments || ''

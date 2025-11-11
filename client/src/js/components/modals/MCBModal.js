@@ -22,7 +22,7 @@ function getMCBModalHtml() {
         <div class="fixed inset-0 bg-black opacity-50"></div>
         <div class="relative bg-white rounded-none md:rounded-lg w-full md:max-w-3xl h-full md:h-auto md:max-h-[90vh] overflow-y-auto p-4 md:p-6">
           <h3 class="text-lg font-semibold mb-4 flex items-center space-x-2">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
               MCB
             </span>
             <span x-text="editingMCB ? 'Edit Micronized Compound Batch' : 'Create Micronized Compound Batch'"></span>
@@ -32,20 +32,13 @@ function getMCBModalHtml() {
             <!-- MCB Identification -->
             <div>
               <h4 class="text-sm font-medium text-gray-700 mb-3">MCB Identification</h4>
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">MCB Number *</label>
                   <input type="text" x-model="mcbForm.mcbNumber" required
                          placeholder="MCB001"
                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                  <p class="text-xs text-gray-500 mt-1">Unique identifier for this MCB</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">MCB Name</label>
-                  <input type="text" x-model="mcbForm.mcbName"
-                         placeholder="Optional descriptive name"
-                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
-                  <p class="text-xs text-gray-500 mt-1">Helps identify this batch</p>
+                  <p class="text-xs text-gray-500 mt-1">Unique identifier / SKU for this MCB</p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Location *</label>
@@ -58,6 +51,12 @@ function getMCBModalHtml() {
                   </select>
                   <p class="text-xs text-gray-500 mt-1">Where MCB is stored</p>
                 </div>
+              </div>
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Combined Date *</label>
+                <input type="date" x-model="mcbForm.combinedDate" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                <p class="text-xs text-gray-500 mt-1">Date when micronizations were combined into this MCB</p>
               </div>
             </div>
 
@@ -72,7 +71,7 @@ function getMCBModalHtml() {
                         <input type="checkbox" :value="micro.id"
                                x-model="mcbForm.selectedMicronizationIds"
                                @change="mcbForm.totalRecoveredAmount = availableMicronizations.filter(m => mcbForm.selectedMicronizationIds.includes(m.id)).reduce((sum, m) => sum + (m.recoveredAmount || 0), 0)"
-                               class="rounded border-gray-300 text-purple-600 focus:ring-purple-500 mr-3">
+                               class="rounded border-gray-300 text-gray-600 focus:ring-gray-500 mr-3">
                         <div class="flex-1">
                           <div class="flex items-center space-x-2">
                             <span class="font-medium text-sm" x-text="micro.micronizationNumber"></span>
@@ -130,14 +129,6 @@ function getMCBModalHtml() {
               <p class="text-xs text-gray-500 mt-2">Auto-calculated from selected micronizations</p>
             </div>
 
-            <!-- Auto-Generated SKU Display -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Auto-Generated SKU</label>
-              <input type="text" :value="mcbForm.mcbNumber ? mcbForm.mcbNumber + '_MCB' : 'Will be generated'" readonly
-                     class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600">
-              <p class="text-xs text-gray-500 mt-1">Automatically generated based on MCB Number</p>
-            </div>
-
             <!-- Comments -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
@@ -154,8 +145,8 @@ function getMCBModalHtml() {
               </button>
               <button type="submit"
                       :disabled="mcbForm.selectedMicronizationIds.length === 0"
-                      :class="mcbForm.selectedMicronizationIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'"
-                      class="px-4 py-2 text-sm bg-purple-600 text-white rounded">
+                      :class="mcbForm.selectedMicronizationIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'"
+                      class="px-4 py-2 text-sm bg-black text-white rounded">
                 <span x-text="editingMCB ? 'Update MCB' : 'Create MCB'"></span>
               </button>
             </div>

@@ -31,8 +31,7 @@ router.get('/', asyncHandler(async (req, res) => {
     where = {
       OR: [
         { mcbNumber: { contains: search, mode: 'insensitive' } },
-        { mcbName: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } }
+        { mcbLocation: { contains: search, mode: 'insensitive' } }
       ]
     };
   }
@@ -47,10 +46,10 @@ router.get('/', asyncHandler(async (req, res) => {
             select: {
               id: true,
               micronizationNumber: true,
-              sku: true,
               recoveredAmount: true,
               grapheneSample: true,
-              compoundBatchNumber: true
+              compoundBatchNumber: true,
+              date: true
             }
           }
         }
@@ -166,6 +165,14 @@ router.post('/', asyncHandler(async (req, res) => {
   delete data.selectedMicronizationIds;
   delete data.micronizationIds;
 
+  // Handle combinedDate field
+  if (data.combinedDate && data.combinedDate !== '') {
+    data.combinedDate = new Date(data.combinedDate);
+  } else {
+    // Default to today for new MCBs
+    data.combinedDate = new Date();
+  }
+
   // Remove UI-only fields from data
   delete data.id;
   delete data.createdAt;
@@ -188,11 +195,6 @@ router.post('/', asyncHandler(async (req, res) => {
     );
   } else {
     data.totalRecoveredAmount = 0;
-  }
-
-  // Generate SKU if not provided
-  if (!data.sku && data.mcbNumber) {
-    data.sku = `${data.mcbNumber}_MCB`;
   }
 
   // Create MCB with micronization relationships in a transaction
@@ -271,6 +273,14 @@ router.put('/:id', asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('MCB record not found');
   }
+
+  // Handle combinedDate field
+  if (data.combinedDate && data.combinedDate !== '') {
+    data.combinedDate = new Date(data.combinedDate);
+  } else if (data.combinedDate === null || data.combinedDate === '') {
+    data.combinedDate = null;
+  }
+  // If combinedDate is undefined, it won't be updated (keeps existing value)
 
   // Remove UI-only and relational fields from data
   delete data.id;
@@ -385,8 +395,8 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   });
 
   const headers = [
-    'MCB #', 'MCB Name', 'SKU', 'Total Recovered Amount (g)',
-    'Micronization Count', 'Component Micronizations', 'Created At'
+    'MCB #', 'Total Recovered Amount (g)', 'Location',
+    'Micronization Count', 'Component Micronizations', 'Combined Date', 'Created At'
   ];
 
   let csv = headers.join(',') + '\n';
@@ -398,11 +408,11 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
 
     const row = [
       m.mcbNumber || '',
-      m.mcbName || '',
-      m.sku || '',
       m.totalRecoveredAmount || '',
+      m.mcbLocation || '',
       m.micronizations.length,
       componentMicronizations,
+      m.combinedDate ? new Date(m.combinedDate).toISOString() : '',
       m.createdAt.toISOString()
     ];
     csv += row.join(',') + '\n';
