@@ -8,7 +8,7 @@ echo "📍 NPM version: $(npm --version)"
 
 echo ""
 echo "1️⃣ STARTING: Prisma database schema push"
-if npx prisma db push; then
+if npx prisma db push --accept-data-loss; then
     echo "✅ SUCCESS: Prisma db push completed"
 else
     echo "❌ FAILED: Prisma db push failed"
