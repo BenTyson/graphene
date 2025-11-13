@@ -118,6 +118,12 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     orderBy: { createdAt: 'desc' }
   });
 
+  // Get Particle Size tests for this compound batch
+  const particleSizeTests = await prisma.particleSizeTest.findMany({
+    where: { compoundBatchNumber: compoundBatch.batchNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+
   // Get shipments for this compound batch
   const shipments = await prisma.materialShipment.findMany({
     where: { compoundBatchNumber: compoundBatch.batchNumber },
@@ -139,7 +145,16 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     conductivity12kN: record.conductivity12kN ? Number(record.conductivity12kN) : null,
     conductivity20kN: record.conductivity20kN ? Number(record.conductivity20kN) : null
   }));
-  
+
+  const processedParticleSizeTests = particleSizeTests.map(record => ({
+    ...record,
+    d10: record.d10 ? Number(record.d10) : null,
+    d50: record.d50 ? Number(record.d50) : null,
+    d90: record.d90 ? Number(record.d90) : null,
+    meanSize: record.meanSize ? Number(record.meanSize) : null,
+    spanValue: record.spanValue ? Number(record.spanValue) : null
+  }));
+
   // Process SEM reports for frontend display
   const processedSemReports = compoundBatch.semReports?.map(sr => ({
     ...sr.semReport,
@@ -156,6 +171,7 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     ramanTests,
     conductivityTests: processedConductivityTests,
     temTests,
+    particleSizeTests: processedParticleSizeTests,
     shipments,
     semReports: processedSemReports
   });
@@ -185,7 +201,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
       betTests: true,
       conductivityTests: true,
       ramanTests: true,
-      temTests: true
+      temTests: true,
+      particleSizeTests: true
     }
   });
   

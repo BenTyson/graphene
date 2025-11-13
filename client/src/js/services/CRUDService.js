@@ -491,6 +491,88 @@ class CRUDService {
     appContext.temForm = { ...DEFAULT_FORMS.tem };
   }
 
+  // Particle Size CRUD operations
+  editParticleSize(record, appContext) {
+    appContext.editingParticleSize = record;
+
+    // Determine materialType based on which sample field is populated
+    let materialType = 'graphene';
+    if (record.mcbNumber) materialType = 'mcb';
+    else if (record.micronizationSku) materialType = 'micronization';
+    else if (record.compoundBatchNumber) materialType = 'compound';
+
+    appContext.particleSizeForm = {
+      testDate: record.testDate ? record.testDate.split('T')[0] : '',
+      dateUnknown: !record.testDate,
+      grapheneSample: record.grapheneSample || '',
+      compoundBatchNumber: record.compoundBatchNumber || '',
+      micronizationSku: record.micronizationSku || '',
+      mcbNumber: record.mcbNumber || '',
+      materialType: materialType,
+      d10: record.d10 || '',
+      d50: record.d50 || '',
+      d90: record.d90 || '',
+      meanSize: record.meanSize || '',
+      spanValue: record.spanValue || '',
+      testingLab: record.testingLab || '',
+      testingMethod: record.testingMethod || '',
+      particleSizeReportFile: null,
+      removeParticleSizeReport: false,
+      replaceParticleSizeReport: false,
+      comments: record.comments || ''
+    };
+    appContext.showAddParticleSize = true;
+  }
+
+  async saveParticleSize(appContext) {
+    try {
+      // Extract file before processing
+      const file = appContext.particleSizeForm.particleSizeReportFile;
+
+      // Create clean data object
+      const data = { ...appContext.particleSizeForm };
+
+      // Remove file and UI fields
+      delete data.particleSizeReportFile;
+
+      // Handle report removal
+      if (data.removeParticleSizeReport) {
+        data.removeParticleSizeReport = 'true';
+      }
+
+      let result;
+      if (appContext.editingParticleSize) {
+        result = await API.particleSize.update(appContext.editingParticleSize.id, data, file);
+      } else {
+        result = await API.particleSize.create(data, file);
+      }
+
+      await appContext.loadParticleSizeRecords();
+      this.closeParticleSizeForm(appContext);
+    } catch (error) {
+      console.error('Failed to save Particle Size record:', error);
+      alert(`Failed to save record: ${error.message}`);
+    }
+  }
+
+  async deleteParticleSize(id, appContext) {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+
+    try {
+      await API.particleSize.delete(id);
+      await appContext.loadParticleSizeRecords();
+    } catch (error) {
+      console.error('Failed to delete Particle Size record:', error);
+      alert(`Failed to delete record: ${error.message}`);
+    }
+  }
+
+  closeParticleSizeForm(appContext) {
+    appContext.showAddParticleSize = false;
+    appContext.editingParticleSize = null;
+    appContext.particleSizeForm = { ...DEFAULT_FORMS.particleSize };
+  }
+
   // Update Report CRUD operations
   editUpdateReport(record, appContext) {
     appContext.editingUpdateReport = record;

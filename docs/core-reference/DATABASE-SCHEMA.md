@@ -31,7 +31,7 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 
 - **Authentication**: User
 - **Core Production**: Biochar, BiocharLot, Graphene, CompoundBatch, Micronization, MicronizedCompoundBatch, MicronizationMCB
-- **Testing**: BET, ConductivityTest, RamanTest, TEMTest
+- **Testing**: BET, ConductivityTest, RamanTest, TEMTest, ParticleSizeTest
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument

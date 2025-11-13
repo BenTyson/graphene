@@ -321,19 +321,19 @@ export const temAPI = {
   // Create new TEM record (with file upload support)
   create: async (data, file = null) => {
     const formData = new FormData();
-    
+
     // Add all other fields (excluding file field)
     Object.keys(data).forEach(key => {
       if (key !== 'temReportFile' && data[key] !== null && data[key] !== undefined) {
         formData.append(key, data[key]);
       }
     });
-    
+
     // Add file if provided
     if (file) {
       formData.append('temReport', file);
     }
-    
+
     return fetch(`${API_BASE}/tem`, {
       method: 'POST',
       body: formData
@@ -343,19 +343,19 @@ export const temAPI = {
   // Update TEM record (with file upload support)
   update: async (id, data, file = null) => {
     const formData = new FormData();
-    
+
     // Add all other fields (excluding file field)
     Object.keys(data).forEach(key => {
       if (key !== 'temReportFile' && data[key] !== null && data[key] !== undefined) {
         formData.append(key, data[key]);
       }
     });
-    
+
     // Add file if provided
     if (file) {
       formData.append('temReport', file);
     }
-    
+
     return fetch(`${API_BASE}/tem/${id}`, {
       method: 'PUT',
       body: formData
@@ -370,6 +370,74 @@ export const temAPI = {
   // Export to CSV
   exportCSV: () => {
     window.open(`${API_BASE}/tem/export/csv`, '_blank');
+  }
+};
+
+// Particle Size API endpoints
+export const particleSizeAPI = {
+  // Get all Particle Size records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/particle-size${query}`).then(handleResponse);
+  },
+
+  // Get single Particle Size record
+  getById: (id) => {
+    return fetch(`${API_BASE}/particle-size/${id}`).then(handleResponse);
+  },
+
+  // Create new Particle Size record (with file upload support)
+  create: async (data, file = null) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'particleSizeReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add file if provided
+    if (file) {
+      formData.append('particleSizeReport', file);
+    }
+
+    return fetch(`${API_BASE}/particle-size`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update Particle Size record (with file upload support)
+  update: async (id, data, file = null) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file field)
+    Object.keys(data).forEach(key => {
+      if (key !== 'particleSizeReportFile' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add file if provided
+    if (file) {
+      formData.append('particleSizeReport', file);
+    }
+
+    return fetch(`${API_BASE}/particle-size/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete Particle Size record
+  delete: (id) => {
+    return fetch(`${API_BASE}/particle-size/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/particle-size/export/csv`, '_blank');
   }
 };
 
@@ -956,6 +1024,7 @@ export default {
   bet: betAPI,
   conductivity: conductivityAPI,
   tem: temAPI,
+  particleSize: particleSizeAPI,
   raman: ramanAPI,
   updateReport: updateReportAPI,
   semReport: semReportAPI,

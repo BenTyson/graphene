@@ -83,16 +83,39 @@ async function getGrapheneData(experimentNumber) {
         include: {
           semReport: true
         }
+      },
+      betTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      conductivityTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      ramanTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      temTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      particleSizeTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      compoundBatches: {
+        include: {
+          compoundBatch: true
+        }
+      },
+      shipments: {
+        orderBy: { shipmentDate: 'desc' }
       }
     }
   });
-  
+
   if (!experiment) return null;
-  
+
   // Add derived fields
   experiment.status = getExperimentStatus(experiment);
   experiment.testCount = getTestCount(experiment);
-  
+
   return experiment;
 }
 
@@ -120,16 +143,59 @@ async function getBiocharData(experimentNumber) {
  * Get comprehensive compound batch data
  */
 async function getCompoundBatchData(batchNumber) {
-  // Simplified for now - just return basic compound batch data
-  return { batchNumber, message: 'Compound batch data not yet implemented' };
-  
+  const batch = await prisma.compoundBatch.findUnique({
+    where: { batchNumber },
+    include: {
+      experiments: {
+        include: {
+          graphene: {
+            select: {
+              experimentNumber: true,
+              output: true,
+              experimentDate: true,
+              species: true,
+              biocharExperiment: true
+            }
+          }
+        }
+      },
+      betTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      conductivityTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      ramanTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      temTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      particleSizeTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      semReports: {
+        include: {
+          semReport: true
+        }
+      },
+      shipments: {
+        orderBy: { shipmentDate: 'desc' }
+      },
+      micronizations: {
+        orderBy: { date: 'desc' }
+      }
+    }
+  });
+
   if (!batch) return null;
-  
+
   // Add derived fields
   batch.status = getBatchStatus(batch);
   batch.micronized = batch.micronizations?.length > 0;
-  batch.totalShipped = batch.shipments?.reduce((sum, shipment) => sum + (shipment.weight || 0), 0) || 0;
-  
+  batch.totalShipped = batch.shipments?.reduce((sum, shipment) => sum + (parseFloat(shipment.amountShipped) || 0), 0) || 0;
+  batch.constituents = batch.experiments || [];
+
   return batch;
 }
 
@@ -214,6 +280,7 @@ function getTestCount(experiment) {
   if (experiment.conductivityTests) count += experiment.conductivityTests.length;
   if (experiment.ramanTests) count += experiment.ramanTests.length;
   if (experiment.temTests) count += experiment.temTests.length;
+  if (experiment.particleSizeTests) count += experiment.particleSizeTests.length;
   return count;
 }
 

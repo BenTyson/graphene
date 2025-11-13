@@ -114,6 +114,7 @@ model Graphene {
   micronizations       Micronization[]
   ramanTests           RamanTest[]
   temTests             TEMTest[]
+  particleSizeTests    ParticleSizeTest[]
 
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
@@ -141,6 +142,7 @@ model CompoundBatch {
   micronizations    Micronization[]
   ramanTests        RamanTest[]
   temTests          TEMTest[]
+  particleSizeTests ParticleSizeTest[]
 
   @@index([createdAt])
   @@index([createdDate])
@@ -293,6 +295,43 @@ model TEMTest {
   @@map("tem_tests")
 }
 
+model ParticleSizeTest {
+  id                      String                   @id @default(cuid())
+  testDate                DateTime?                @map("test_date")
+  grapheneSample          String?                  @map("graphene_sample")
+  compoundBatchNumber     String?                  @map("compound_batch_number")
+  micronizationSku        String?                  @map("micronization_sku")
+  mcbNumber               String?                  @map("mcb_number")
+  d10                     Decimal?                 @db.Decimal(10, 4)
+  d50                     Decimal?                 @db.Decimal(10, 4)
+  d90                     Decimal?                 @db.Decimal(10, 4)
+  meanSize                Decimal?                 @map("mean_size") @db.Decimal(10, 4)
+  spanValue               Decimal?                 @map("span_value") @db.Decimal(10, 4)
+  testingLab              String?                  @map("testing_lab")
+  testingMethod           String?                  @map("testing_method")
+  particleSizeReportPath  String?                  @map("particle_size_report_path")
+  comments                String?
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  compoundBatchRef        CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef             Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
+  micronizationRef        Micronization?           @relation(fields: [micronizationSku], references: [sku])
+  mcbRef                  MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
+
+  @@index([grapheneSample])
+  @@index([compoundBatchNumber])
+  @@index([micronizationSku])
+  @@index([mcbNumber])
+  @@index([createdAt])
+  @@index([testDate])
+  @@index([grapheneSample, testDate])
+  @@index([compoundBatchNumber, testDate])
+  @@index([micronizationSku, testDate])
+  @@index([mcbNumber, testDate])
+  @@index([testingLab, testDate])
+  @@map("particle_size_tests")
+}
+
 model UpdateReport {
   id                   String                      @id @default(cuid())
   filename             String                      @map("filename")
@@ -432,6 +471,7 @@ model Micronization {
   compoundBatchRef        CompoundBatch?    @relation(fields: [compoundBatchNumber], references: [batchNumber])
   grapheneRef             Graphene?         @relation(fields: [grapheneSample], references: [experimentNumber])
   mcbMembership           MicronizationMCB? // Optional - only populated if part of an MCB
+  particleSizeTests       ParticleSizeTest[]
 
   @@index([date])
   @@index([grapheneSample])
@@ -456,6 +496,7 @@ model MicronizedCompoundBatch {
   comments             String?
   micronizations       MicronizationMCB[]
   shipments            MaterialShipment[]
+  particleSizeTests    ParticleSizeTest[]
 
   @@index([mcbNumber])
   @@index([createdAt])

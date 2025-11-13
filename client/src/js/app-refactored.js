@@ -65,6 +65,7 @@ import './components/modals/ModalTemplates.js';
 import './components/modals/BETModal.js';
 import './components/modals/ConductivityModal.js';
 import './components/modals/TEMModal.js';
+import './components/modals/ParticleSizeModal.js';
 import './components/modals/ShipmentModal.js';
 import './components/modals/GrapheneModal.js';
 
@@ -73,6 +74,7 @@ import './components/tabs/TestResultsBETTab.js';
 import './components/tabs/TestResultsConductivityTab.js';
 import './components/tabs/TestResultsRAMANTab.js';
 import './components/tabs/TestResultsTEMTab.js';
+import './components/tabs/TestResultsParticleSizeTab.js';
 import './components/tabs/SEMReportsTab.js';
 import './components/tabs/UpdateReportsTab.js';
 import './components/tabs/AnalysisTab.js';
@@ -346,6 +348,7 @@ window.grapheneApp = function() {
     conductivityRecords: [],
     ramanRecords: [],
     temRecords: [],
+    particleSizeRecords: [],
     updateReports: [],
     semReports: [],
     compoundBatches: [],
@@ -376,6 +379,7 @@ window.grapheneApp = function() {
     conductivitySearch: '',
     ramanSearch: '',
     temSearch: '',
+    particleSizeSearch: '',
     updateReportSearch: '',
     semReportSearch: '',
     compoundBatchSearch: '',
@@ -401,6 +405,7 @@ window.grapheneApp = function() {
     showAddConductivity: false,
     showAddRaman: false,
     showAddTem: false,
+    showAddParticleSize: false,
     showAddMicronization: false,
     showCombineModal: false,
     showCompoundBatchModal: false,
@@ -412,6 +417,8 @@ window.grapheneApp = function() {
     currentBetPdf: null,
     showTemModal: false,
     currentTemPdf: null,
+    showParticleSizeModal: false,
+    currentParticleSizePdf: null,
     showAddUpdateReport: false,
     showAddSemReport: false,
     showUpdateReportModal: false,
@@ -428,6 +435,7 @@ window.grapheneApp = function() {
     editingConductivity: null,
     editingRaman: null,
     editingTem: null,
+    editingParticleSize: null,
     editingUpdateReport: null,
     editingSemReport: null,
     editingCompoundBatch: null,
@@ -443,6 +451,7 @@ window.grapheneApp = function() {
     conductivityForm: { ...DEFAULT_FORMS.conductivity },
     ramanForm: { ...DEFAULT_FORMS.raman },
     temForm: { ...DEFAULT_FORMS.tem },
+    particleSizeForm: { ...DEFAULT_FORMS.particleSize },
     combineForm: { ...DEFAULT_FORMS.combine },
     updateReportForm: { ...DEFAULT_FORMS.updateReport },
     semReportForm: { ...DEFAULT_FORMS.semReport },
@@ -495,7 +504,7 @@ window.grapheneApp = function() {
     washMediums: ['Water'],
     reactors: ['AV1', 'AV5'],
     researchTeams: ['Curia - Germany'],
-    testingLabs: ['Fraunhofer-Institut', 'Clariant'],
+    testingLabs: ['Fraunhofer-Institut', 'Clariant', 'NEI', 'SpectraPower', 'GEIC'],
     baseTypes: ['KOH', 'NaOH'],
     gases: ['Ar', 'N2'],
     washSolutions: ['HCl'],
@@ -1034,6 +1043,7 @@ window.grapheneApp = function() {
         this.loadConductivityRecords(),
         this.loadRamanRecords(),
         this.loadTemRecords(),
+        this.loadParticleSizeRecords(),
         this.loadUpdateReports(),
         this.loadSemReports(),
         this.loadCompoundBatches(),
@@ -1146,7 +1156,16 @@ window.grapheneApp = function() {
         this.temRecords = [];
       }
     },
-    
+
+    async loadParticleSizeRecords() {
+      try {
+        this.particleSizeRecords = await API.particleSize.getAll(this.particleSizeSearch);
+      } catch (error) {
+        console.error('Failed to load Particle Size records:', error);
+        this.particleSizeRecords = [];
+      }
+    },
+
     async loadUpdateReports() {
       try {
         this.updateReports = await API.updateReport.getAll();
@@ -1787,6 +1806,23 @@ window.grapheneApp = function() {
       CRUDService.closeTemForm(this);
     },
 
+    // Particle Size CRUD operations - Delegated to CRUDService
+    editParticleSize(record) {
+      CRUDService.editParticleSize(record, this);
+    },
+
+    async saveParticleSize() {
+      await CRUDService.saveParticleSize(this);
+    },
+
+    async deleteParticleSize(id) {
+      await CRUDService.deleteParticleSize(id, this);
+    },
+
+    closeParticleSizeForm() {
+      CRUDService.closeParticleSizeForm(this);
+    },
+
     // Update Report CRUD operations - Delegated to CRUDService
     editUpdateReport(record) {
       CRUDService.editUpdateReport(record, this);
@@ -2122,6 +2158,23 @@ window.grapheneApp = function() {
     closeTemModal() {
       this.showTemModal = false;
       this.currentTemPdf = null;
+    },
+
+    viewParticleSizePdf(particleSizeReportPath) {
+      if (particleSizeReportPath) {
+        // Handle both Cloudinary URLs and local paths
+        if (particleSizeReportPath.startsWith('https://')) {
+          this.currentParticleSizePdf = particleSizeReportPath; // Cloudinary URL - use as is
+        } else {
+          this.currentParticleSizePdf = '/uploads/' + particleSizeReportPath + '#navpanes=0&toolbar=0'; // Local path
+        }
+        this.showParticleSizeModal = true;
+      }
+    },
+
+    closeParticleSizeModal() {
+      this.showParticleSizeModal = false;
+      this.currentParticleSizePdf = null;
     },
 
     viewBetPdf(betReportPath) {
@@ -2501,6 +2554,12 @@ window.grapheneApp = function() {
       this.temForm = { ...DEFAULT_FORMS.tem };
       this.editingTem = null;
       this.showAddTem = true;
+    },
+
+    initParticleSizeForm() {
+      this.particleSizeForm = { ...DEFAULT_FORMS.particleSize };
+      this.editingParticleSize = null;
+      this.showAddParticleSize = true;
     },
 
     // Date field HTML generation using helpers

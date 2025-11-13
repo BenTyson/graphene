@@ -379,6 +379,13 @@
             TEM
           </button>
           <button
+            @click="activeTab = 'test-particle-size'"
+            :class="activeTab === 'test-particle-size' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            Particle Size
+          </button>
+          <button
             @click="activeTab = 'test-sem'"
             :class="activeTab === 'test-sem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
             class="text-sm transition-colors"
@@ -423,6 +430,13 @@
             class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
           >
             TEM
+          </button>
+          <button
+            @click="activeTab = 'test-particle-size'"
+            :class="activeTab === 'test-particle-size' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            Particle Size
           </button>
           <button
             @click="activeTab = 'test-sem'"
@@ -493,6 +507,9 @@
 
       <!-- TEM Tab Component -->
       <div x-html="getTEMTabHtml()"></div>
+
+      <!-- Particle Size Tab Component -->
+      <div x-html="getParticleSizeTabHtml()"></div>
 
       <!-- SEM Reports Tab Component -->
       <div x-html="getSEMReportsTabHtml()"></div>
@@ -813,6 +830,9 @@
     <!-- TEM Add/Edit Modal Component -->
     <div x-html="getTEMModalHtml()"></div>
 
+    <!-- Particle Size Add/Edit Modal Component -->
+    <div x-html="getParticleSizeModalHtml()"></div>
+
     <!-- Shipment Add/Edit Modal Component -->
     <div x-html="getShipmentModalHtml()"></div>
 
@@ -1121,6 +1141,14 @@
       pdfSourceVariable: 'currentTemPdf',
       closeMethod: 'closeTemModal',
       title: 'TEM Report'
+    })"></div>
+
+    <!-- Particle Size Report Modal (Using Dynamic Helper) -->
+    <div x-html="getPdfViewerModalHtml({
+      showVariable: 'showParticleSizeModal',
+      pdfSourceVariable: 'currentParticleSizePdf',
+      closeMethod: 'closeParticleSizeModal',
+      title: 'Particle Size Report'
     })"></div>
 
     <!-- Add New Research Team Modal (Using Dynamic Helper) -->

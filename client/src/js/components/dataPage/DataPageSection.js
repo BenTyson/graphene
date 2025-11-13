@@ -344,7 +344,7 @@ function createSourceSection(data, type) {
  * @returns {string} Tests section HTML
  */
 function createTestsSection(data, type) {
-  const testTypes = ['betTests', 'conductivityTests', 'ramanTests', 'temTests'];
+  const testTypes = ['betTests', 'conductivityTests', 'ramanTests', 'temTests', 'particleSizeTests'];
   const semReports = data.semReports || [];
   const hasTests = testTypes.some(testType => data[testType] && data[testType].length > 0);
   const hasAnything = hasTests || semReports.length > 0;
@@ -436,6 +436,8 @@ function createTestTypeSection(label, tests, testType) {
       return createDetailedRamanSection(label, tests);
     case 'temTests':
       return createDetailedTemSection(label, tests);
+    case 'particleSizeTests':
+      return createDetailedParticleSizeSection(label, tests);
     default:
       return createGenericTestSection(label, tests, testType);
   }
@@ -792,6 +794,82 @@ function createDetailedTemSection(label, tests) {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                       </svg>
                       View PDF
+                    </button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedParticleSizeSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No particle size tests found for this sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">Particle Size Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                ${test.d10 !== null && test.d10 !== undefined ? `
+                  <div><span class="text-gray-600">D10:</span> <span class="font-medium">${test.d10} μm</span></div>
+                ` : ''}
+                ${test.d50 !== null && test.d50 !== undefined ? `
+                  <div><span class="text-gray-600">D50 (Median):</span> <span class="font-medium">${test.d50} μm</span></div>
+                ` : ''}
+                ${test.d90 !== null && test.d90 !== undefined ? `
+                  <div><span class="text-gray-600">D90:</span> <span class="font-medium">${test.d90} μm</span></div>
+                ` : ''}
+                ${test.meanSize !== null && test.meanSize !== undefined ? `
+                  <div><span class="text-gray-600">Mean Size:</span> <span class="font-medium">${test.meanSize} μm</span></div>
+                ` : ''}
+                ${test.spanValue !== null && test.spanValue !== undefined ? `
+                  <div><span class="text-gray-600">Span Value:</span> <span class="font-medium">${test.spanValue}</span></div>
+                ` : ''}
+                ${test.testingLab ? `
+                  <div><span class="text-gray-600">Lab:</span> <span class="font-medium">${test.testingLab}</span></div>
+                ` : ''}
+                ${test.testingMethod ? `
+                  <div><span class="text-gray-600">Method:</span> <span class="font-medium">${test.testingMethod}</span></div>
+                ` : ''}
+              </div>
+              ${test.comments ? `
+                <div class="mt-2 text-xs text-gray-600">${test.comments}</div>
+              ` : ''}
+              ${test.particleSizeReportPath ? `
+                <div class="mt-2 pt-2 border-t">
+                  ${test.particleSizeReportPath.includes('cloudinary.com') ? `
+                    <a href="${test.particleSizeReportPath}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View Report
+                    </a>
+                  ` : `
+                    <button @click="window.openPdfInModal('${test.particleSizeReportPath}', 'Particle Size Report')"
+                            class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      View Report
                     </button>
                   `}
                 </div>
@@ -1273,7 +1351,8 @@ function getTestTypeLabel(testType) {
     betTests: 'BET Tests',
     conductivityTests: 'Conductivity Tests',
     ramanTests: 'RAMAN Tests',
-    temTests: 'TEM Tests'
+    temTests: 'TEM Tests',
+    particleSizeTests: 'Particle Size Tests'
   };
   return labels[testType] || testType;
 }

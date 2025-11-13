@@ -164,6 +164,26 @@ export const DEFAULT_FORMS = {
     replaceTEMReport: false,
     comments: ''
   },
+  particleSize: {
+    testDate: '',
+    dateUnknown: false,
+    materialType: 'graphene',
+    grapheneSample: '',
+    compoundBatchNumber: '',
+    micronizationSku: '',
+    mcbNumber: '',
+    d10: '',
+    d50: '',
+    d90: '',
+    meanSize: '',
+    spanValue: '',
+    testingLab: '',
+    testingMethod: '',
+    particleSizeReportFile: null,
+    removeParticleSizeReport: false,
+    replaceParticleSizeReport: false,
+    comments: ''
+  },
   combine: {
     lotNumber: '',
     lotName: '',

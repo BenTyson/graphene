@@ -20,6 +20,8 @@ export function createTestResultsSection(config) {
       return createRamanTestSection(dataPath);
     case 'tem':
       return createTemTestSection(dataPath);
+    case 'particleSize':
+      return createParticleSizeTestSection(dataPath);
     default:
       return '';
   }
@@ -269,6 +271,66 @@ function createTemTestSection(dataPath) {
       <template x-if="!${dataPath} || ${dataPath}.length === 0">
         <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
           No TEM analysis found for this graphene sample
+        </div>
+      </template>
+    </div>
+  `;
+}
+
+function createParticleSizeTestSection(dataPath) {
+  return `
+    <!-- Particle Size Test Results -->
+    <div>
+      <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Particle Size Analysis
+      </h4>
+      <template x-if="${dataPath} && ${dataPath}.length > 0">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div class="space-y-2">
+            <template x-for="ps in ${dataPath}">
+              <div class="bg-white rounded p-2 text-xs border">
+                <div class="flex justify-between mb-1">
+                  <span class="font-medium">Particle Size Test</span>
+                  <span x-text="window.formatDateSafe(ps.testDate)"></span>
+                </div>
+                <table class="w-full text-xs">
+                  <tr><td class="font-medium">D10:</td><td x-text="ps.d10 ? ps.d10 + ' μm' : 'N/A'"></td></tr>
+                  <tr><td class="font-medium">D50 (Median):</td><td x-text="ps.d50 ? ps.d50 + ' μm' : 'N/A'"></td></tr>
+                  <tr><td class="font-medium">D90:</td><td x-text="ps.d90 ? ps.d90 + ' μm' : 'N/A'"></td></tr>
+                  <tr x-show="ps.meanSize"><td class="font-medium">Mean Size:</td><td x-text="ps.meanSize ? ps.meanSize + ' μm' : 'N/A'"></td></tr>
+                  <tr x-show="ps.spanValue"><td class="font-medium">Span Value:</td><td x-text="ps.spanValue || 'N/A'"></td></tr>
+                  <tr x-show="ps.testingLab"><td class="font-medium">Testing Lab:</td><td x-text="ps.testingLab || 'N/A'"></td></tr>
+                  <tr x-show="ps.testingMethod"><td class="font-medium">Testing Method:</td><td x-text="ps.testingMethod || 'N/A'"></td></tr>
+                </table>
+                <template x-if="ps.comments">
+                  <p class="text-gray-600 mt-1" x-text="ps.comments"></p>
+                </template>
+                <template x-if="ps.particleSizeReportPath">
+                  <div class="mt-2 pt-2 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-medium text-gray-700">Particle Size Report:</span>
+                      <button @click="viewParticleSizePdf(ps.particleSizeReportPath)"
+                              class="text-link text-link-hover text-xs font-medium flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        View Report
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!${dataPath} || ${dataPath}.length === 0">
+        <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+          No particle size analysis found for this sample
         </div>
       </template>
     </div>
