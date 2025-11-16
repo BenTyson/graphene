@@ -441,6 +441,150 @@ export const particleSizeAPI = {
   }
 };
 
+// XRD API endpoints
+export const xrdAPI = {
+  // Get all XRD records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/xrd${query}`).then(handleResponse);
+  },
+
+  // Get single XRD record
+  getById: (id) => {
+    return fetch(`${API_BASE}/xrd/${id}`).then(handleResponse);
+  },
+
+  // Create new XRD record (with MULTIPLE file upload support)
+  create: async (data, files = []) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file fields)
+    Object.keys(data).forEach(key => {
+      if (key !== 'xrdReportFiles' && key !== 'removeFileIndices' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add MULTIPLE files if provided
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        formData.append('xrdReports', file);
+      });
+    }
+
+    return fetch(`${API_BASE}/xrd`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update XRD record (with MULTIPLE file upload support)
+  update: async (id, data, files = []) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file fields)
+    Object.keys(data).forEach(key => {
+      if (key !== 'xrdReportFiles' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add MULTIPLE new files if provided
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        formData.append('xrdReports', file);
+      });
+    }
+
+    return fetch(`${API_BASE}/xrd/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete XRD record
+  delete: (id) => {
+    return fetch(`${API_BASE}/xrd/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/xrd/export/csv`, '_blank');
+  }
+};
+
+// XPS API endpoints
+export const xpsAPI = {
+  // Get all XPS records with optional search
+  getAll: (search = '') => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return fetch(`${API_BASE}/xps${query}`).then(handleResponse);
+  },
+
+  // Get single XPS record
+  getById: (id) => {
+    return fetch(`${API_BASE}/xps/${id}`).then(handleResponse);
+  },
+
+  // Create new XPS record (with MULTIPLE file upload support)
+  create: async (data, files = []) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file fields)
+    Object.keys(data).forEach(key => {
+      if (key !== 'xpsReportFiles' && key !== 'removeFileIndices' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add MULTIPLE files if provided
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        formData.append('xpsReports', file);
+      });
+    }
+
+    return fetch(`${API_BASE}/xps`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Update XPS record (with MULTIPLE file upload support)
+  update: async (id, data, files = []) => {
+    const formData = new FormData();
+
+    // Add all other fields (excluding file fields)
+    Object.keys(data).forEach(key => {
+      if (key !== 'xpsReportFiles' && data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Add MULTIPLE new files if provided
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        formData.append('xpsReports', file);
+      });
+    }
+
+    return fetch(`${API_BASE}/xps/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  // Delete XPS record
+  delete: (id) => {
+    return fetch(`${API_BASE}/xps/${id}`, { method: 'DELETE' }).then(handleResponse);
+  },
+
+  // Export to CSV
+  exportCSV: () => {
+    window.open(`${API_BASE}/xps/export/csv`, '_blank');
+  }
+};
+
 // RAMAN API endpoints
 export const ramanAPI = {
   // Get all RAMAN records with optional search
@@ -1025,6 +1169,8 @@ export default {
   conductivity: conductivityAPI,
   tem: temAPI,
   particleSize: particleSizeAPI,
+  xrd: xrdAPI,
+  xps: xpsAPI,
   raman: ramanAPI,
   updateReport: updateReportAPI,
   semReport: semReportAPI,

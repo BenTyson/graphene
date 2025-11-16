@@ -386,6 +386,20 @@
             Particle Size
           </button>
           <button
+            @click="activeTab = 'test-xrd'"
+            :class="activeTab === 'test-xrd' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            XRD
+          </button>
+          <button
+            @click="activeTab = 'test-xps'"
+            :class="activeTab === 'test-xps' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
+            class="text-sm transition-colors"
+          >
+            XPS
+          </button>
+          <button
             @click="activeTab = 'test-sem'"
             :class="activeTab === 'test-sem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
             class="text-sm transition-colors"
@@ -437,6 +451,20 @@
             class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
           >
             Particle Size
+          </button>
+          <button
+            @click="activeTab = 'test-xrd'"
+            :class="activeTab === 'test-xrd' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            XRD
+          </button>
+          <button
+            @click="activeTab = 'test-xps'"
+            :class="activeTab === 'test-xps' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
+            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
+          >
+            XPS
           </button>
           <button
             @click="activeTab = 'test-sem'"
@@ -510,6 +538,12 @@
 
       <!-- Particle Size Tab Component -->
       <div x-html="getParticleSizeTabHtml()"></div>
+
+      <!-- XRD Tab Component -->
+      <div x-html="getXRDTabHtml()"></div>
+
+      <!-- XPS Tab Component -->
+      <div x-html="getXPSTabHtml()"></div>
 
       <!-- SEM Reports Tab Component -->
       <div x-html="getSEMReportsTabHtml()"></div>
@@ -832,6 +866,12 @@
 
     <!-- Particle Size Add/Edit Modal Component -->
     <div x-html="getParticleSizeModalHtml()"></div>
+
+    <!-- XRD Add/Edit Modal Component -->
+    <div x-html="getXRDModalHtml()"></div>
+
+    <!-- XPS Add/Edit Modal Component -->
+    <div x-html="getXPSModalHtml()"></div>
 
     <!-- Shipment Add/Edit Modal Component -->
     <div x-html="getShipmentModalHtml()"></div>

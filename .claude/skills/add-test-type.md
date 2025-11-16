@@ -38,7 +38,8 @@ Ask the user for the following information:
 
 4. **File Upload** - Does this test need file upload?
    - If yes: accepted file types (PDF, images, Excel, etc.)
-   - Field name for the file path
+   - **Single file or multiple files?** (multi-file allows up to 10 files per test)
+   - Field name for the file path (e.g., `reportPath` for single, `reportPaths` for multi-file)
 
 5. **Additional Features**:
    - Testing lab dropdown? (yes/no)
@@ -71,8 +72,10 @@ model TestNameTest {
   testingMethod         String?       @map("testing_method")
   researchTeam          String?       @map("research_team")
 
-  // File upload field
-  reportPath            String?       @map("report_path")
+  // File upload field (choose one based on requirements)
+  reportPath            String?       @map("report_path")      // Single file
+  // OR for multi-file upload:
+  // reportPaths        String[]      @map("report_paths")     // Multiple files
 
   comments              String?
   createdAt             DateTime      @default(now()) @map("created_at")
@@ -120,6 +123,10 @@ model MicronizedCompoundBatch {
 **Run migration**: `npx prisma db push` (or create a proper migration)
 
 ## Step 3: Create Backend API Route
+
+### Option A: Single-File Upload
+
+Use this pattern for tests that need only one file per record.
 
 Create `server/routes/testName.js`:
 
@@ -357,6 +364,169 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
 
 export default router;
 ```
+
+### Option B: Multi-File Upload
+
+Use this pattern for tests that need multiple files per record (e.g., XRD, XPS with multiple charts/reports).
+
+Create `server/routes/testName.js` with multi-file support:
+
+```javascript
+import express from 'express';
+import asyncHandler from 'express-async-handler';
+import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
+import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
+import { prepareDataForDB } from '../utils/dataConversion.js';
+import AIInsightsService from '../services/AIInsightsService.js';
+
+const router = express.Router();
+
+// IMPORTANT: Use upload.array() for multi-file support
+const upload = createFileUploadMiddleware('test-name-reports', {
+  allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+  allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png'],
+  validateContent: false
+});
+
+// GET all records (same as single-file)
+router.get('/', asyncHandler(async (req, res) => {
+  // ... same as Option A
+}));
+
+// POST create new record - MULTI-FILE
+router.post('/', upload.array('reportFiles', 10), asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+
+  const data = prepareDataForDB(req.body, {
+    numericFields: ['fieldName1'],
+    dateFields: ['testDate'],
+    fieldsToRemove: ['reportFiles', 'removeFileIndices', 'grapheneRef', 'compoundBatchRef', 'micronizationRef', 'mcbRef', 'materialType', 'dateUnknown']
+  });
+
+  // Upload MULTIPLE files in parallel
+  if (req.files && req.files.length > 0) {
+    const uploadPromises = req.files.map(file => uploadFile(file, 'test-name-reports'));
+    const results = await Promise.all(uploadPromises);
+    data.reportPaths = results.filter(r => r.success).map(r => r.path);
+  }
+
+  // Handle material selection
+  if (!data.grapheneSample) data.grapheneSample = null;
+  if (!data.compoundBatchNumber) data.compoundBatchNumber = null;
+  if (!data.micronizationSku) data.micronizationSku = null;
+  if (!data.mcbNumber) data.mcbNumber = null;
+
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
+
+  const record = await prisma.testNameTest.create({ data });
+
+  AIInsightsService.onNewData('testName');
+
+  const processedRecord = {
+    ...record,
+    fieldName1: record.fieldName1 ? Number(record.fieldName1) : null
+  };
+
+  res.status(201).json(processedRecord);
+}));
+
+// PUT update record - MULTI-FILE
+router.put('/:id', upload.array('reportFiles', 10), asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { id } = req.params;
+
+  const existingRecord = await prisma.testNameTest.findUnique({ where: { id } });
+  if (!existingRecord) {
+    res.status(404);
+    throw new Error('Record not found');
+  }
+
+  const data = prepareDataForDB(req.body, {
+    numericFields: ['fieldName1'],
+    dateFields: ['testDate'],
+    fieldsToRemove: ['reportFiles', 'removeFileIndices', 'grapheneRef', 'compoundBatchRef', 'micronizationRef', 'mcbRef', 'materialType', 'dateUnknown']
+  });
+
+  // Handle file deletions by index
+  if (req.body.removeFileIndices) {
+    const indicesToRemove = JSON.parse(req.body.removeFileIndices);
+    const newPaths = existingRecord.reportPaths.filter((_, index) =>
+      !indicesToRemove.includes(index)
+    );
+
+    // Delete removed files from storage
+    for (const index of indicesToRemove) {
+      await deleteFileFromStorage(existingRecord.reportPaths[index]);
+    }
+
+    data.reportPaths = newPaths;
+  }
+
+  // Add new files to existing array
+  if (req.files && req.files.length > 0) {
+    const uploadPromises = req.files.map(file => uploadFile(file, 'test-name-reports'));
+    const results = await Promise.all(uploadPromises);
+    const newPaths = results.filter(r => r.success).map(r => r.path);
+    data.reportPaths = [...(data.reportPaths || existingRecord.reportPaths || []), ...newPaths];
+  }
+
+  // Handle material selection
+  if (!data.grapheneSample) data.grapheneSample = null;
+  if (!data.compoundBatchNumber) data.compoundBatchNumber = null;
+  if (!data.micronizationSku) data.micronizationSku = null;
+  if (!data.mcbNumber) data.mcbNumber = null;
+
+  delete data.id;
+  delete data.createdAt;
+  delete data.updatedAt;
+
+  const record = await prisma.testNameTest.update({ where: { id }, data });
+
+  AIInsightsService.onNewData('testName');
+
+  const processedRecord = {
+    ...record,
+    fieldName1: record.fieldName1 ? Number(record.fieldName1) : null
+  };
+
+  res.json(processedRecord);
+}));
+
+// DELETE record - MULTI-FILE
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const { id } = req.params;
+
+  const existingRecord = await prisma.testNameTest.findUnique({ where: { id } });
+
+  // Delete ALL files from array
+  if (existingRecord?.reportPaths && existingRecord.reportPaths.length > 0) {
+    for (const filePath of existingRecord.reportPaths) {
+      await deleteFileFromStorage(filePath);
+    }
+  }
+
+  await prisma.testNameTest.delete({ where: { id } });
+  res.status(204).send();
+}));
+
+// Export to CSV (same as single-file, adjust column for file count)
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  // ... similar to Option A, but show file count instead of single path
+}));
+
+export default router;
+```
+
+**Key differences for multi-file:**
+- Middleware: `upload.array('reportFiles', 10)` instead of `upload.single('report')`
+- Upload: `Promise.all()` to upload files in parallel
+- Update: Filter files by index + append new files
+- Delete: Loop through all files in array
+- Schema field: `reportPaths` (String[]) instead of `reportPath` (String?)
+- Form handling: `removeFileIndices` array for tracking deletions
 
 **Register route** in `server/index.js`:
 
@@ -597,7 +767,7 @@ function getTestNameModalHtml() {
               </select>
             </div>
 
-            <!-- File Upload -->
+            <!-- File Upload - Single File -->
             <div x-html="getFileFieldHtml({
               label: 'Test Report (PDF, JPG, PNG)',
               fileModelVariable: 'testNameForm.reportFile',
@@ -606,6 +776,19 @@ function getTestNameModalHtml() {
               removeFileVariable: 'testNameForm.removeReport',
               acceptTypes: 'application/pdf,image/jpeg,image/png'
             })"></div>
+
+            <!-- File Upload - Multi-File (use this instead of single-file if needed) -->
+            <!--
+            <div x-html="getMultiFileFieldHtml({
+              label: 'Test Reports (PDF, JPG, PNG)',
+              fileModelVariable: 'testNameForm.reportFiles',
+              editingVariable: 'editingTestName',
+              currentFilePathsField: 'reportPaths',
+              removeFileIndicesVariable: 'testNameForm.removeFileIndices',
+              acceptTypes: 'application/pdf,image/jpeg,image/png',
+              maxFiles: 10
+            })"></div>
+            -->
 
             <!-- Comments -->
             <div>
@@ -637,6 +820,8 @@ window.getTestNameModalHtml = getTestNameModalHtml;
 ## Step 6: Update API Service
 
 Add to `client/src/js/services/api.js`:
+
+### Option A: Single-File API
 
 ```javascript
 export const testNameAPI = {
@@ -672,6 +857,67 @@ export const testNameAPI = {
   exportCSV: () => window.open(`${API_BASE}/test-name/export/csv`, '_blank')
 };
 ```
+
+### Option B: Multi-File API
+
+```javascript
+export const testNameAPI = {
+  getAll: (search = '') => fetch(`${API_BASE}/test-name${search ? `?search=${encodeURIComponent(search)}` : ''}`).then(handleResponse),
+  getById: (id) => fetch(`${API_BASE}/test-name/${id}`).then(handleResponse),
+  create: async (data, files = []) => {
+    const formData = new FormData();
+
+    // Add all data fields except file-related ones
+    Object.keys(data).forEach(key => {
+      if (key !== 'reportFiles' && key !== 'removeFileIndices') {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Append MULTIPLE files with same field name
+    if (files && files.length > 0) {
+      files.forEach(file => formData.append('reportFiles', file));
+    }
+
+    return fetch(`${API_BASE}/test-name`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+  update: async (id, data, files = []) => {
+    const formData = new FormData();
+
+    // Include removeFileIndices for backend processing
+    if (data.removeFileIndices && data.removeFileIndices.length > 0) {
+      formData.append('removeFileIndices', JSON.stringify(data.removeFileIndices));
+    }
+
+    // Add all data fields except file-related ones
+    Object.keys(data).forEach(key => {
+      if (key !== 'reportFiles' && key !== 'removeFileIndices') {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Append new files
+    if (files && files.length > 0) {
+      files.forEach(file => formData.append('reportFiles', file));
+    }
+
+    return fetch(`${API_BASE}/test-name/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  },
+  delete: (id) => fetch(`${API_BASE}/test-name/${id}`, { method: 'DELETE' }).then(handleResponse),
+  exportCSV: () => window.open(`${API_BASE}/test-name/export/csv`, '_blank')
+};
+```
+
+**Key differences for multi-file:**
+- Parameter: `files = []` instead of `file`
+- FormData: Loop through files and append each with same field name
+- Update: Include `removeFileIndices` as JSON string
 
 Export it in the API object.
 
@@ -774,6 +1020,8 @@ closeTestNameModal(appContext) {
 
 Add to `client/src/js/utils/constants.js`:
 
+### Option A: Single-File Form
+
 ```javascript
 testName: {
   testDate: '',
@@ -791,6 +1039,29 @@ testName: {
 }
 ```
 
+### Option B: Multi-File Form
+
+```javascript
+testName: {
+  testDate: '',
+  dateUnknown: false,
+  materialType: 'graphene',
+  grapheneSample: '',
+  compoundBatchNumber: '',
+  micronizationSku: '',
+  mcbNumber: '',
+  fieldName1: '',
+  testingLab: '',
+  reportFiles: [],           // Array for new files
+  removeFileIndices: [],     // Array of indices to remove from existing files
+  comments: ''
+}
+```
+
+**Key differences for multi-file:**
+- `reportFiles: []` instead of `reportFile: null`
+- `removeFileIndices: []` instead of `removeReport: false`
+
 ## Step 9: Update App State and Methods
 
 In `client/src/js/app-refactored.js`:
@@ -804,6 +1075,11 @@ editingTestName: null,
 showAddTestName: false,
 showTestNameModal: false,
 currentTestNamePdf: null,
+
+// For multi-file upload, add these instead of currentTestNamePdf:
+// showTestNameReports: false,
+// currentTestNameReports: [],
+// currentTestNameSample: '',
 ```
 
 **Add load method:**
@@ -848,7 +1124,14 @@ viewTestNamePdf(path) {
 closeTestNameModal() {
   CRUDService.closeTestNameModal(this);
 }
+
+// For multi-file upload, add this helper method:
+getMultiFileFieldHtml(config) {
+  return fileFieldHelpers.createMultiFileUploadField(config);
+}
 ```
+
+**Note**: The `getMultiFileFieldHtml` helper is only needed if using multi-file upload. It calls the `createMultiFileUploadField` function from `fileFieldHelpers.js`.
 
 ## Step 10: Update Navigation
 
@@ -1083,16 +1366,29 @@ testNameTests: true
 ## Final Checklist
 
 - [ ] Database schema created and migrated
+  - [ ] If multi-file: Use `String[]` for reportPaths field
 - [ ] Backend route created and registered
+  - [ ] If multi-file: Use `upload.array('reportFiles', 10)` middleware
+  - [ ] If multi-file: Handle `removeFileIndices` in update endpoint
+  - [ ] If multi-file: Loop through file array in delete endpoint
 - [ ] Frontend tab component created
+  - [ ] If multi-file: Show file count + viewer modal instead of direct link
 - [ ] Frontend modal component created
+  - [ ] If multi-file: Use `getMultiFileFieldHtml()` instead of `getFileFieldHtml()`
 - [ ] API service updated
+  - [ ] If multi-file: Accept `files = []` array parameter
+  - [ ] If multi-file: Loop through files in FormData append
+  - [ ] If multi-file: Include `removeFileIndices` in update
 - [ ] CRUD service updated
 - [ ] Constants updated
+  - [ ] If multi-file: Use `reportFiles: []` and `removeFileIndices: []`
 - [ ] App state and methods added
+  - [ ] If multi-file: Add `getMultiFileFieldHtml()` helper method
+  - [ ] If multi-file: Add viewer modal state variables
 - [ ] Navigation added (desktop and mobile)
 - [ ] Tab and modal rendered
 - [ ] PDF viewer added (if applicable)
+  - [ ] If multi-file: Multi-file viewer modal instead of single PDF viewer
 - [ ] Component imports added
 - [ ] Test results helper updated
 - [ ] Data page section updated
@@ -1102,6 +1398,9 @@ testNameTests: true
 - [ ] Server restarted
 - [ ] Browser refreshed
 - [ ] Functionality tested
+  - [ ] If multi-file: Test adding multiple files at once
+  - [ ] If multi-file: Test removing individual files during edit
+  - [ ] If multi-file: Test viewer modal shows all files
 
 ## Notes
 
@@ -1111,3 +1410,8 @@ testNameTests: true
 - Update CSV export headers and data mapping
 - Customize table columns and display logic
 - Add any test-specific calculations or formatting
+- **Multi-file upload**: If the test needs to attach multiple files per record:
+  - See "Option B: Multi-File Upload" sections throughout this skill
+  - Reference `/docs/core-reference/TEST-TYPES-PATTERN.md` for complete multi-file patterns
+  - Example implementation: XRD/XPS tests (November 2025)
+  - Key files: `fileFieldHelpers.js` contains `createMultiFileUploadField()` helper

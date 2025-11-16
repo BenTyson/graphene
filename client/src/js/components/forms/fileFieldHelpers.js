@@ -57,7 +57,110 @@ export function createFileUploadField(config) {
   `;
 }
 
+/**
+ * Creates a MULTIPLE file upload field with current files display and management
+ * Supports uploading multiple files and managing them individually
+ *
+ * @param {Object} config - Field configuration
+ * @param {string} config.label - Field label text (e.g., "XRD Reports (PDF, JPG, PNG)")
+ * @param {string} config.fileModelVariable - Alpine.js variable for file array
+ * @param {string} config.editingVariable - Alpine.js variable for editing state
+ * @param {string} config.currentFilePathsField - Field name for current file paths array
+ * @param {string} config.removeFileIndicesVariable - Alpine.js variable for removal indices array
+ * @param {string} config.acceptTypes - File accept types (default: "application/pdf")
+ * @param {number} config.maxFiles - Maximum files allowed (default: 10)
+ * @param {boolean} config.required - Whether at least one file is required (default: false)
+ * @returns {string} HTML string for the multi-file upload field with management
+ */
+export function createMultiFileUploadField(config) {
+  const {
+    label,
+    fileModelVariable,
+    editingVariable,
+    currentFilePathsField,
+    removeFileIndicesVariable,
+    acceptTypes = 'application/pdf',
+    maxFiles = 10,
+    required = false
+  } = config;
+
+  const requiredAttr = required ? 'required' : '';
+  const requiredIndicator = required ? '<span class="text-red-500">*</span>' : '';
+
+  return `
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">
+        ${label} ${requiredIndicator}
+      </label>
+
+      <div class="space-y-2">
+        <!-- Multiple file input -->
+        <input type="file"
+               accept="${acceptTypes}"
+               multiple
+               @change="${fileModelVariable} = Array.from($event.target.files).slice(0, ${maxFiles})"
+               ${requiredAttr}
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+
+        <p class="text-xs text-gray-500">
+          You can select up to ${maxFiles} files
+        </p>
+
+        <!-- Display currently selected files (for new upload) -->
+        <template x-if="${fileModelVariable} && ${fileModelVariable}.length > 0">
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-700">Selected files:</p>
+            <template x-for="(file, index) in ${fileModelVariable}" :key="index">
+              <div class="flex items-center justify-between bg-blue-50 p-2 rounded text-sm">
+                <span x-text="file.name" class="truncate flex-1 mr-2"></span>
+                <button type="button"
+                        @click="${fileModelVariable}.splice(index, 1)"
+                        class="text-red-600 hover:text-red-800 text-xs flex-shrink-0">
+                  Remove
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Display existing files (when editing) -->
+        <template x-if="${editingVariable} && ${editingVariable}.${currentFilePathsField} && ${editingVariable}.${currentFilePathsField}.length > 0">
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-700">Current files:</p>
+            <template x-for="(filePath, index) in ${editingVariable}.${currentFilePathsField}" :key="index">
+              <div class="flex items-center justify-between bg-link-light p-2 rounded">
+                <span class="text-sm text-link-dark truncate flex-1 mr-2"
+                      x-text="'File ' + (index + 1) + ': ' + filePath.split('/').pop()"></span>
+                <div class="flex space-x-2 flex-shrink-0">
+                  <button type="button"
+                          @click="window.open(filePath.startsWith('https://') ? filePath : '/uploads/' + filePath, '_blank')"
+                          class="text-link hover:text-link-hover text-sm">
+                    View
+                  </button>
+                  <button type="button"
+                          @click="if (!${removeFileIndicesVariable}) ${removeFileIndicesVariable} = []; if (!${removeFileIndicesVariable}.includes(index)) ${removeFileIndicesVariable}.push(index)"
+                          class="text-red-600 hover:text-red-800 text-sm">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Show files marked for removal -->
+        <template x-if="${removeFileIndicesVariable} && ${removeFileIndicesVariable}.length > 0">
+          <div class="text-red-600 text-sm">
+            <span x-text="${removeFileIndicesVariable}.length"></span> file(s) will be removed when saved
+          </div>
+        </template>
+      </div>
+    </div>
+  `;
+}
+
 // Export as default object for easy importing
 export default {
-  createFileUploadField
+  createFileUploadField,
+  createMultiFileUploadField
 };

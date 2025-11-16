@@ -115,6 +115,8 @@ model Graphene {
   ramanTests           RamanTest[]
   temTests             TEMTest[]
   particleSizeTests    ParticleSizeTest[]
+  xrdTests             XRDTest[]
+  xpsTests             XPSTest[]
 
   @@index([biocharExperiment])
   @@index([biocharLotNumber])
@@ -143,6 +145,8 @@ model CompoundBatch {
   ramanTests        RamanTest[]
   temTests          TEMTest[]
   particleSizeTests ParticleSizeTest[]
+  xrdTests          XRDTest[]
+  xpsTests          XPSTest[]
 
   @@index([createdAt])
   @@index([createdDate])
@@ -332,6 +336,89 @@ model ParticleSizeTest {
   @@map("particle_size_tests")
 }
 
+model XRDTest {
+  id                  String                   @id @default(cuid())
+  testDate            DateTime?                @map("test_date")
+  grapheneSample      String?                  @map("graphene_sample")
+  compoundBatchNumber String?                  @map("compound_batch_number")
+  micronizationSku    String?                  @map("micronization_sku")
+  mcbNumber           String?                  @map("mcb_number")
+  peak1_position      Decimal?                 @map("peak1_position") @db.Decimal(10, 4)
+  peak1_assignment    String?                  @map("peak1_assignment")
+  peak2_position      Decimal?                 @map("peak2_position") @db.Decimal(10, 4)
+  peak2_assignment    String?                  @map("peak2_assignment")
+  crystallite_size    Decimal?                 @map("crystallite_size") @db.Decimal(10, 4)
+  testingLab          String?                  @map("testing_lab")
+  xrdReportPaths      String[]                 @map("xrd_report_paths")
+  comments            String?
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  grapheneRef         Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
+  compoundBatchRef    CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  micronizationRef    Micronization?           @relation(fields: [micronizationSku], references: [sku])
+  mcbRef              MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
+
+  @@index([grapheneSample])
+  @@index([compoundBatchNumber])
+  @@index([micronizationSku])
+  @@index([mcbNumber])
+  @@index([testDate])
+  @@index([testingLab, testDate])
+  @@map("xrd_tests")
+}
+
+model XPSTest {
+  id                  String                   @id @default(cuid())
+  testDate            DateTime?                @map("test_date")
+  grapheneSample      String?                  @map("graphene_sample")
+  compoundBatchNumber String?                  @map("compound_batch_number")
+  micronizationSku    String?                  @map("micronization_sku")
+  mcbNumber           String?                  @map("mcb_number")
+  c1s_percent         Decimal?                 @map("c1s_percent") @db.Decimal(10, 4)
+  c1s_percent_error   Decimal?                 @map("c1s_percent_error") @db.Decimal(10, 4)
+  cl2p_percent        Decimal?                 @map("cl2p_percent") @db.Decimal(10, 4)
+  cl2p_percent_error  Decimal?                 @map("cl2p_percent_error") @db.Decimal(10, 4)
+  mo3d_percent        Decimal?                 @map("mo3d_percent") @db.Decimal(10, 4)
+  mo3d_percent_error  Decimal?                 @map("mo3d_percent_error") @db.Decimal(10, 4)
+  n1s_percent         Decimal?                 @map("n1s_percent") @db.Decimal(10, 4)
+  n1s_percent_error   Decimal?                 @map("n1s_percent_error") @db.Decimal(10, 4)
+  o1s_percent         Decimal?                 @map("o1s_percent") @db.Decimal(10, 4)
+  o1s_percent_error   Decimal?                 @map("o1s_percent_error") @db.Decimal(10, 4)
+  s2p_percent         Decimal?                 @map("s2p_percent") @db.Decimal(10, 4)
+  s2p_percent_error   Decimal?                 @map("s2p_percent_error") @db.Decimal(10, 4)
+  si2p_percent        Decimal?                 @map("si2p_percent") @db.Decimal(10, 4)
+  si2p_percent_error  Decimal?                 @map("si2p_percent_error") @db.Decimal(10, 4)
+  c1s_cc_percent      Decimal?                 @map("c1s_cc_percent") @db.Decimal(10, 4)
+  c1s_cc_error        Decimal?                 @map("c1s_cc_error") @db.Decimal(10, 4)
+  c1s_co_percent      Decimal?                 @map("c1s_co_percent") @db.Decimal(10, 4)
+  c1s_co_error        Decimal?                 @map("c1s_co_error") @db.Decimal(10, 4)
+  c1s_ceo_percent     Decimal?                 @map("c1s_ceo_percent") @db.Decimal(10, 4)
+  c1s_ceo_error       Decimal?                 @map("c1s_ceo_error") @db.Decimal(10, 4)
+  c1s_co3_percent     Decimal?                 @map("c1s_co3_percent") @db.Decimal(10, 4)
+  c1s_co3_error       Decimal?                 @map("c1s_co3_error") @db.Decimal(10, 4)
+  c1s_oceo_percent    Decimal?                 @map("c1s_oceo_percent") @db.Decimal(10, 4)
+  c1s_oceo_error      Decimal?                 @map("c1s_oceo_error") @db.Decimal(10, 4)
+  c1s_sp2_percent     Decimal?                 @map("c1s_sp2_percent") @db.Decimal(10, 4)
+  c1s_sp2_error       Decimal?                 @map("c1s_sp2_error") @db.Decimal(10, 4)
+  testingLab          String?                  @map("testing_lab")
+  xpsReportPaths      String[]                 @map("xps_report_paths")
+  comments            String?
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  grapheneRef         Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
+  compoundBatchRef    CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  micronizationRef    Micronization?           @relation(fields: [micronizationSku], references: [sku])
+  mcbRef              MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
+
+  @@index([grapheneSample])
+  @@index([compoundBatchNumber])
+  @@index([micronizationSku])
+  @@index([mcbNumber])
+  @@index([testDate])
+  @@index([testingLab, testDate])
+  @@map("xps_tests")
+}
+
 model UpdateReport {
   id                   String                      @id @default(cuid())
   filename             String                      @map("filename")
@@ -472,6 +559,8 @@ model Micronization {
   grapheneRef             Graphene?         @relation(fields: [grapheneSample], references: [experimentNumber])
   mcbMembership           MicronizationMCB? // Optional - only populated if part of an MCB
   particleSizeTests       ParticleSizeTest[]
+  xrdTests                XRDTest[]
+  xpsTests                XPSTest[]
 
   @@index([date])
   @@index([grapheneSample])
@@ -497,6 +586,8 @@ model MicronizedCompoundBatch {
   micronizations       MicronizationMCB[]
   shipments            MaterialShipment[]
   particleSizeTests    ParticleSizeTest[]
+  xrdTests             XRDTest[]
+  xpsTests             XPSTest[]
 
   @@index([mcbNumber])
   @@index([createdAt])

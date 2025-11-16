@@ -1,6 +1,6 @@
 # Test Types Architecture Pattern
 
-Complete reference for adding new test types to the system. Last updated: January 2025 (Particle Size implementation).
+Complete reference for adding new test types to the system. Last updated: November 2025 (XRD/XPS implementation with multi-file upload support).
 
 ---
 
@@ -17,6 +17,8 @@ Test types follow a consistent full-stack pattern that includes database schema,
 - **RAMAN** - Spectroscopy analysis (2D, G, D, D/G peaks with integration ranges)
 - **TEM** - Transmission Electron Microscopy
 - **Particle Size** - Particle size distribution analysis (D10, D50, D90, Mean, Span)
+- **XRD** - X-Ray Diffraction (Peak positions, assignments, crystallite size) - **Multi-file upload**
+- **XPS** - X-ray Photoelectron Spectroscopy (Elemental composition, C-1s decomposition) - **Multi-file upload**
 
 ---
 
@@ -352,14 +354,311 @@ if (experiment.testNameTests) count += experiment.testNameTests.length;
 
 ## File Upload Patterns
 
-### Supported File Types
+### Single-File Upload
+
+#### Supported File Types
 - **PDF only**: `allowedTypes: ['application/pdf']`, `allowedExtensions: ['.pdf']`, `validateContent: true`
 - **PDF + Images**: `allowedTypes: ['application/pdf', 'image/jpeg', 'image/png']`, `allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png']`, `validateContent: false`
 - **Excel files**: `allowedTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']`, etc.
 
-### File Upload Helpers
+#### File Upload Helpers
 - Frontend: `getFileFieldHtml({ label, fileModelVariable, editingVariable, currentFilePathField, removeFileVariable, acceptTypes })`
 - Backend: `uploadFile()`, `replaceFileInStorage()`, `deleteFileFromStorage()`
+
+#### Database Schema
+```prisma
+reportPath  String?  @map("report_path")  // Single file
+```
+
+#### Backend Route
+```javascript
+const upload = createFileUploadMiddleware('test-reports', { /* config */ });
+router.post('/', upload.single('reportFile'), asyncHandler(async (req, res) => {
+  if (req.file) {
+    const result = await uploadFile(req.file, 'test-reports');
+    if (result.success) data.reportPath = result.path;
+  }
+}));
+```
+
+---
+
+### Multi-File Upload
+
+**Added**: November 2025 (XRD/XPS implementation)
+
+Multi-file upload allows tests to attach multiple reports, charts, or images per record.
+
+#### Database Schema
+```prisma
+reportPaths  String[]  @map("report_paths")  // Array for multiple files
+```
+
+#### Backend Route
+```javascript
+// Use upload.array() instead of upload.single()
+const upload = createFileUploadMiddleware('test-reports', {
+  allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+  allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png'],
+  validateContent: false
+});
+
+// CREATE: Process multiple files
+router.post('/', upload.array('reportFiles', 10), asyncHandler(async (req, res) => {
+  const data = prepareDataForDB(req.body, {
+    numericFields: ['field1', 'field2'],
+    dateFields: ['testDate'],
+    fieldsToRemove: ['reportFiles', 'removeFileIndices', 'materialType', 'dateUnknown']
+  });
+
+  // Upload all files in parallel
+  if (req.files && req.files.length > 0) {
+    const uploadPromises = req.files.map(file => uploadFile(file, 'test-reports'));
+    const results = await Promise.all(uploadPromises);
+    data.reportPaths = results.filter(r => r.success).map(r => r.path);
+  }
+
+  const record = await prisma.testType.create({ data });
+  res.status(201).json(record);
+}));
+
+// UPDATE: Handle individual file deletion and new file addition
+router.put('/:id', upload.array('reportFiles', 10), asyncHandler(async (req, res) => {
+  const existingRecord = await prisma.testType.findUnique({ where: { id } });
+
+  // Handle file deletions by index
+  if (req.body.removeFileIndices) {
+    const indicesToRemove = JSON.parse(req.body.removeFileIndices);
+    const newPaths = existingRecord.reportPaths.filter((_, index) =>
+      !indicesToRemove.includes(index)
+    );
+
+    // Delete removed files from storage
+    for (const index of indicesToRemove) {
+      await deleteFileFromStorage(existingRecord.reportPaths[index]);
+    }
+
+    data.reportPaths = newPaths;
+  }
+
+  // Add new files to existing array
+  if (req.files && req.files.length > 0) {
+    const uploadPromises = req.files.map(file => uploadFile(file, 'test-reports'));
+    const results = await Promise.all(uploadPromises);
+    const newPaths = results.filter(r => r.success).map(r => r.path);
+    data.reportPaths = [...(data.reportPaths || existingRecord.reportPaths || []), ...newPaths];
+  }
+
+  const updated = await prisma.testType.update({ where: { id }, data });
+  res.json(updated);
+}));
+```
+
+#### Frontend Helper
+**File**: `client/src/js/components/forms/fileFieldHelpers.js`
+
+```javascript
+export function createMultiFileUploadField(config) {
+  const {
+    label,
+    fileModelVariable,           // e.g., 'xrdForm.reportFiles'
+    editingVariable,              // e.g., 'editingXRD'
+    currentFilePathsField,        // e.g., 'reportPaths' (array field name)
+    removeFileIndicesVariable,    // e.g., 'xrdForm.removeFileIndices'
+    acceptTypes = 'application/pdf',
+    maxFiles = 10,
+    required = false
+  } = config;
+
+  return `
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1">${label}</label>
+
+      <!-- File input for multiple files -->
+      <input type="file"
+             accept="${acceptTypes}"
+             multiple
+             @change="${fileModelVariable} = Array.from($event.target.files).slice(0, ${maxFiles})"
+             class="w-full px-3 py-2 border border-gray-300 rounded-md">
+
+      <!-- Display newly selected files -->
+      <template x-if="${fileModelVariable} && ${fileModelVariable}.length > 0">
+        <div class="mt-2 space-y-1">
+          <template x-for="(file, index) in ${fileModelVariable}" :key="index">
+            <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <span class="text-sm" x-text="file.name"></span>
+              <button type="button" @click="${fileModelVariable}.splice(index, 1)"
+                      class="text-red-600 hover:text-red-800">Remove</button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Display existing files when editing -->
+      <template x-if="${editingVariable} && ${editingVariable}.${currentFilePathsField} && ${editingVariable}.${currentFilePathsField}.length > 0">
+        <div class="mt-2 space-y-1">
+          <div class="text-sm font-medium text-gray-700">Current Files:</div>
+          <template x-for="(filePath, index) in ${editingVariable}.${currentFilePathsField}" :key="index">
+            <div class="flex items-center justify-between p-2 bg-blue-50 rounded"
+                 x-show="!${removeFileIndicesVariable}.includes(index)">
+              <span class="text-sm" x-text="filePath.split('/').pop()"></span>
+              <div class="flex space-x-2">
+                <button type="button" @click="window.open(filePath.startsWith('https://') ? filePath : '/uploads/' + filePath, '_blank')"
+                        class="text-blue-600 hover:text-blue-800">View</button>
+                <button type="button" @click="${removeFileIndicesVariable}.push(index)"
+                        class="text-red-600 hover:text-red-800">Remove</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  `;
+}
+```
+
+#### Frontend Modal Usage
+```javascript
+// In modal component
+<div x-html="getMultiFileFieldHtml({
+  label: 'Reports (PDF, JPG, PNG)',
+  fileModelVariable: 'testNameForm.reportFiles',
+  editingVariable: 'editingTestName',
+  currentFilePathsField: 'reportPaths',
+  removeFileIndicesVariable: 'testNameForm.removeFileIndices',
+  acceptTypes: 'application/pdf,image/jpeg,image/png',
+  maxFiles: 10
+})"></div>
+```
+
+#### Frontend API Service
+```javascript
+export const testNameAPI = {
+  create: async (data, files = []) => {
+    const formData = new FormData();
+
+    // Add all data fields except file-related ones
+    Object.keys(data).forEach(key => {
+      if (key !== 'reportFiles' && key !== 'removeFileIndices') {
+        formData.append(key, data[key]);
+      }
+    });
+
+    // Append MULTIPLE files with same field name
+    if (files && files.length > 0) {
+      files.forEach(file => formData.append('reportFiles', file));
+    }
+
+    return fetch(`${API_BASE}/test-name`, {
+      method: 'POST',
+      body: formData
+    }).then(handleResponse);
+  },
+
+  update: async (id, data, files = []) => {
+    const formData = new FormData();
+
+    // Include removeFileIndices for backend processing
+    if (data.removeFileIndices && data.removeFileIndices.length > 0) {
+      formData.append('removeFileIndices', JSON.stringify(data.removeFileIndices));
+    }
+
+    // Same pattern as create
+    Object.keys(data).forEach(key => {
+      if (key !== 'reportFiles' && key !== 'removeFileIndices') {
+        formData.append(key, data[key]);
+      }
+    });
+
+    if (files && files.length > 0) {
+      files.forEach(file => formData.append('reportFiles', file));
+    }
+
+    return fetch(`${API_BASE}/test-name/${id}`, {
+      method: 'PUT',
+      body: formData
+    }).then(handleResponse);
+  }
+};
+```
+
+#### Frontend Constants
+```javascript
+testName: {
+  // ... other fields
+  reportFiles: [],        // Array for new files
+  removeFileIndices: [],  // Array of indices to remove from existing files
+  // ... other fields
+}
+```
+
+#### Frontend Table Display
+```javascript
+// Show file count with viewer button
+<td class="table-cell-compact">
+  <template x-if="record.reportPaths && record.reportPaths.length > 0">
+    <div class="flex items-center space-x-2">
+      <span class="text-xs text-gray-600" x-text="record.reportPaths.length + ' file(s)'"></span>
+      <button @click="showReports = true; currentReports = record.reportPaths; currentSample = record.grapheneSample || record.compoundBatchNumber || record.micronizationSku || record.mcbNumber"
+              class="text-link text-link-hover text-xs">
+        View
+      </button>
+    </div>
+  </template>
+  <template x-if="!record.reportPaths || record.reportPaths.length === 0">
+    <span class="text-gray-400 text-xs">-</span>
+  </template>
+</td>
+
+// Multi-file viewer modal
+<div x-show="showReports" x-cloak @click.away="showReports = false"
+     class="fixed inset-0 z-50 overflow-y-auto bg-gray-600 bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">
+        Reports - <span x-text="currentSample"></span>
+      </h3>
+      <button @click="showReports = false" class="text-gray-500 hover:text-gray-700">✕</button>
+    </div>
+    <div class="space-y-2">
+      <template x-for="(filePath, index) in currentReports" :key="index">
+        <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+          <span class="text-sm" x-text="'File ' + (index + 1) + ': ' + filePath.split('/').pop()"></span>
+          <button @click="window.open(filePath.startsWith('https://') ? filePath : '/uploads/' + filePath, '_blank')"
+                  class="text-blue-600 hover:text-blue-800 text-sm">
+            View
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+```
+
+#### App State Variables
+```javascript
+// In app-refactored.js
+showReports: false,
+currentReports: [],
+currentSample: '',
+
+// Helper method
+getMultiFileFieldHtml(config) {
+  return fileFieldHelpers.createMultiFileUploadField(config);
+},
+```
+
+#### Key Differences from Single-File
+| Aspect | Single-File | Multi-File |
+|--------|-------------|------------|
+| **Schema Field** | `String?` | `String[]` |
+| **Middleware** | `upload.single('fieldName')` | `upload.array('fieldName', maxCount)` |
+| **Upload Logic** | Single `uploadFile()` call | `Promise.all()` with multiple uploads |
+| **Form State** | `reportFile: null` | `reportFiles: [], removeFileIndices: []` |
+| **Update Logic** | Replace entire file | Filter by indices + append new |
+| **FormData** | Single `formData.append('file', file)` | Multiple `files.forEach(f => formData.append('files', f))` |
+| **Table Display** | Direct "View" link | File count + modal viewer |
+| **Helper Function** | `getFileFieldHtml()` | `createMultiFileUploadField()` |
 
 ---
 
@@ -518,6 +817,96 @@ After implementing a new test type, verify:
 - 1 constants file
 - 1 app integration file
 - 1 index.html file
+
+---
+
+## Example Implementation: XRD/XPS
+
+**Added**: November 2025
+
+**First multi-file upload implementation** in the system. Established patterns for handling multiple file attachments per test record.
+
+### XRD Test Type
+
+**Fields**:
+- Peak 1 Position (2θ angle, Decimal)
+- Peak 1 Assignment (String)
+- Peak 2 Position (2θ angle, Decimal)
+- Peak 2 Assignment (String)
+- Crystallite Size (nm, Decimal, calculated from Scherrer equation)
+- Testing Lab (String)
+- XRD Reports (PDF/JPG/PNG, **multi-file**, up to 10)
+- Comments (String)
+
+**Material Support**: Graphene, Compound Batch, Micronization, MCB
+
+**Special Features**:
+- **Multi-file upload support** (first implementation)
+- File count display with viewer modal
+- Individual file viewing from array
+- File deletion by index during editing
+
+### XPS Test Type
+
+**Fields**:
+- **Elemental Composition** (7 elements, each with percentage and error):
+  - C-1s, Cl-2p, Mo-3d, N-1s, O-1s, S-2p, Si-2p
+  - Each: `element_percent` and `element_percent_error` (Decimal, @db.Decimal(10, 4))
+- **C-1s Decomposition** (6 components, each with percentage and error):
+  - C-C, C-O, C=O, CO₃, O-C=O, sp²
+  - Each: `c1s_component_percent` and `c1s_component_error` (Decimal)
+- Testing Lab (String)
+- XPS Reports (PDF/JPG/PNG/Excel, **multi-file**, up to 10)
+- Comments (String)
+
+**Total Fields**: 26 numeric fields (13 measurements + 13 errors) + metadata
+
+**Material Support**: Graphene, Compound Batch, Micronization, MCB
+
+**Special Features**:
+- **Multi-file upload support** for charts, reports, and Excel files
+- Organized modal sections (Elemental Composition, C-1s Decomposition)
+- Comprehensive decimal field handling (26 fields)
+- Excel file upload support (.xlsx)
+- Detailed data display in data page sections
+
+### Implementation Highlights
+
+**Multi-File Upload Pattern Established**:
+- Created `createMultiFileUploadField()` helper in `fileFieldHelpers.js`
+- Backend: `upload.array('fieldName', 10)` instead of `upload.single()`
+- Database: `String[]` schema type for file paths
+- Individual file deletion by index using `removeFileIndices` array
+- Multi-file viewer modal with individual file access
+
+**Backend Processing**:
+- Parallel file uploads using `Promise.all()`
+- File array management on update (remove by index + append new)
+- Decimal to Number conversion for frontend (26 fields for XPS)
+
+**Frontend Features**:
+- File count badge in table with "View" button
+- Modal viewer listing all files with individual view buttons
+- Selected file display with individual remove during creation
+- Existing file display with individual remove during editing
+
+**Files Modified**: 20 files total
+- 1 schema file (2 new models with reverse relations)
+- 2 backend route files (xrd.js, xps.js)
+- 3 backend integration files (server/index.js, data.js, compoundBatch.js)
+- 2 frontend component files (XRDModal.js, XPSModal.js)
+- 2 frontend tab files (TestResultsXRDTab.js, TestResultsXPSTab.js)
+- 1 file upload helper (fileFieldHelpers.js)
+- 4 service files (api.js, CRUDService.js, constants.js, app-refactored.js)
+- 2 data page files (testResultsHelper.js, DataPageSection.js)
+- 1 index.html file (navigation + rendering)
+
+**Key Learnings**:
+- Multi-file upload requires coordinated changes across 7 layers (schema, routes, helpers, modals, tabs, services, integration)
+- File arrays need special handling for individual deletion (can't just replace entire array)
+- Frontend needs separate state for new files (`reportFiles[]`) and removal tracking (`removeFileIndices[]`)
+- Backend needs to process `removeFileIndices` as JSON string from FormData
+- Table display pattern: Show count + modal viewer (instead of direct link)
 
 ---
 

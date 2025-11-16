@@ -66,6 +66,8 @@ import './components/modals/BETModal.js';
 import './components/modals/ConductivityModal.js';
 import './components/modals/TEMModal.js';
 import './components/modals/ParticleSizeModal.js';
+import './components/modals/XRDModal.js';
+import './components/modals/XPSModal.js';
 import './components/modals/ShipmentModal.js';
 import './components/modals/GrapheneModal.js';
 
@@ -75,6 +77,8 @@ import './components/tabs/TestResultsConductivityTab.js';
 import './components/tabs/TestResultsRAMANTab.js';
 import './components/tabs/TestResultsTEMTab.js';
 import './components/tabs/TestResultsParticleSizeTab.js';
+import './components/tabs/TestResultsXRDTab.js';
+import './components/tabs/TestResultsXPSTab.js';
 import './components/tabs/SEMReportsTab.js';
 import './components/tabs/UpdateReportsTab.js';
 import './components/tabs/AnalysisTab.js';
@@ -349,6 +353,8 @@ window.grapheneApp = function() {
     ramanRecords: [],
     temRecords: [],
     particleSizeRecords: [],
+    xrdRecords: [],
+    xpsRecords: [],
     updateReports: [],
     semReports: [],
     compoundBatches: [],
@@ -380,6 +386,8 @@ window.grapheneApp = function() {
     ramanSearch: '',
     temSearch: '',
     particleSizeSearch: '',
+    xrdSearch: '',
+    xpsSearch: '',
     updateReportSearch: '',
     semReportSearch: '',
     compoundBatchSearch: '',
@@ -406,6 +414,8 @@ window.grapheneApp = function() {
     showAddRaman: false,
     showAddTem: false,
     showAddParticleSize: false,
+    showAddXRD: false,
+    showAddXPS: false,
     showAddMicronization: false,
     showCombineModal: false,
     showCompoundBatchModal: false,
@@ -419,6 +429,12 @@ window.grapheneApp = function() {
     currentTemPdf: null,
     showParticleSizeModal: false,
     currentParticleSizePdf: null,
+    showXRDReports: false,
+    currentXRDReports: [],
+    currentXRDSample: '',
+    showXPSReports: false,
+    currentXPSReports: [],
+    currentXPSSample: '',
     showAddUpdateReport: false,
     showAddSemReport: false,
     showUpdateReportModal: false,
@@ -436,6 +452,8 @@ window.grapheneApp = function() {
     editingRaman: null,
     editingTem: null,
     editingParticleSize: null,
+    editingXRD: null,
+    editingXPS: null,
     editingUpdateReport: null,
     editingSemReport: null,
     editingCompoundBatch: null,
@@ -452,6 +470,8 @@ window.grapheneApp = function() {
     ramanForm: { ...DEFAULT_FORMS.raman },
     temForm: { ...DEFAULT_FORMS.tem },
     particleSizeForm: { ...DEFAULT_FORMS.particleSize },
+    xrdForm: { ...DEFAULT_FORMS.xrd },
+    xpsForm: { ...DEFAULT_FORMS.xps },
     combineForm: { ...DEFAULT_FORMS.combine },
     updateReportForm: { ...DEFAULT_FORMS.updateReport },
     semReportForm: { ...DEFAULT_FORMS.semReport },
@@ -956,8 +976,8 @@ window.grapheneApp = function() {
     validateApplicationState() {
       const requiredStateProperties = [
         'biocharRecords', 'grapheneRecords', 'betRecords', 'conductivityRecords',
-        'ramanRecords', 'temRecords', 'updateReports', 'semReports',
-        'compoundBatches', 'shipments', 'micronizations'
+        'ramanRecords', 'temRecords', 'particleSizeRecords', 'xrdRecords', 'xpsRecords',
+        'updateReports', 'semReports', 'compoundBatches', 'shipments', 'micronizations'
       ];
       
       const errors = [];
@@ -1044,6 +1064,8 @@ window.grapheneApp = function() {
         this.loadRamanRecords(),
         this.loadTemRecords(),
         this.loadParticleSizeRecords(),
+        this.loadXRDRecords(),
+        this.loadXPSRecords(),
         this.loadUpdateReports(),
         this.loadSemReports(),
         this.loadCompoundBatches(),
@@ -1163,6 +1185,24 @@ window.grapheneApp = function() {
       } catch (error) {
         console.error('Failed to load Particle Size records:', error);
         this.particleSizeRecords = [];
+      }
+    },
+
+    async loadXRDRecords() {
+      try {
+        this.xrdRecords = await API.xrd.getAll(this.xrdSearch);
+      } catch (error) {
+        console.error('Failed to load XRD records:', error);
+        this.xrdRecords = [];
+      }
+    },
+
+    async loadXPSRecords() {
+      try {
+        this.xpsRecords = await API.xps.getAll(this.xpsSearch);
+      } catch (error) {
+        console.error('Failed to load XPS records:', error);
+        this.xpsRecords = [];
       }
     },
 
@@ -1823,6 +1863,32 @@ window.grapheneApp = function() {
       CRUDService.closeParticleSizeForm(this);
     },
 
+    // XRD CRUD operations - Delegated to CRUDService
+    editXRD(record) {
+      CRUDService.editXRD(record, this);
+    },
+
+    async saveXRD() {
+      await CRUDService.saveXRD(this);
+    },
+
+    async deleteXRD(id) {
+      await CRUDService.deleteXRD(id, this);
+    },
+
+    // XPS CRUD operations - Delegated to CRUDService
+    editXPS(record) {
+      CRUDService.editXPS(record, this);
+    },
+
+    async saveXPS() {
+      await CRUDService.saveXPS(this);
+    },
+
+    async deleteXPS(id) {
+      await CRUDService.deleteXPS(id, this);
+    },
+
     // Update Report CRUD operations - Delegated to CRUDService
     editUpdateReport(record) {
       CRUDService.editUpdateReport(record, this);
@@ -2042,6 +2108,12 @@ window.grapheneApp = function() {
         API.raman.exportCSV();
       } else if (type === 'tem' || type === 'test-tem') {
         API.tem.exportCSV();
+      } else if (type === 'particle-size' || type === 'test-particle-size') {
+        API.particleSize.exportCSV();
+      } else if (type === 'xrd' || type === 'test-xrd') {
+        API.xrd.exportCSV();
+      } else if (type === 'xps' || type === 'test-xps') {
+        API.xps.exportCSV();
       } else if (type === 'compound-batches') {
         API.compoundBatch.exportCSV();
       } else if (type === 'shipments') {
@@ -2562,6 +2634,14 @@ window.grapheneApp = function() {
       this.showAddParticleSize = true;
     },
 
+    initXRDForm() {
+      CRUDService.initXRDForm(this);
+    },
+
+    initXPSForm() {
+      CRUDService.initXPSForm(this);
+    },
+
     // Date field HTML generation using helpers
     getDateFieldHtml(config) {
       return dateFieldHelpers.createDateFieldWithUnknown(config);
@@ -2580,6 +2660,11 @@ window.grapheneApp = function() {
     // File upload field HTML generation using helpers
     getFileFieldHtml(config) {
       return fileFieldHelpers.createFileUploadField(config);
+    },
+
+    // Multi-file upload field HTML generation using helpers
+    getMultiFileFieldHtml(config) {
+      return fileFieldHelpers.createMultiFileUploadField(config);
     },
 
     // Test results section HTML generation using helpers

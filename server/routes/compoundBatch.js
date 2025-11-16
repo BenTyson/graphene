@@ -124,6 +124,18 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     orderBy: { createdAt: 'desc' }
   });
 
+  // Get XRD tests for this compound batch
+  const xrdTests = await prisma.xRDTest.findMany({
+    where: { compoundBatchNumber: compoundBatch.batchNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Get XPS tests for this compound batch
+  const xpsTests = await prisma.xPSTest.findMany({
+    where: { compoundBatchNumber: compoundBatch.batchNumber },
+    orderBy: { createdAt: 'desc' }
+  });
+
   // Get shipments for this compound batch
   const shipments = await prisma.materialShipment.findMany({
     where: { compoundBatchNumber: compoundBatch.batchNumber },
@@ -155,6 +167,43 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     spanValue: record.spanValue ? Number(record.spanValue) : null
   }));
 
+  const processedXRDTests = xrdTests.map(record => ({
+    ...record,
+    peak1_position: record.peak1_position ? Number(record.peak1_position) : null,
+    peak2_position: record.peak2_position ? Number(record.peak2_position) : null,
+    crystallite_size: record.crystallite_size ? Number(record.crystallite_size) : null
+  }));
+
+  const processedXPSTests = xpsTests.map(record => ({
+    ...record,
+    c1s_percent: record.c1s_percent ? Number(record.c1s_percent) : null,
+    c1s_percent_error: record.c1s_percent_error ? Number(record.c1s_percent_error) : null,
+    cl2p_percent: record.cl2p_percent ? Number(record.cl2p_percent) : null,
+    cl2p_percent_error: record.cl2p_percent_error ? Number(record.cl2p_percent_error) : null,
+    mo3d_percent: record.mo3d_percent ? Number(record.mo3d_percent) : null,
+    mo3d_percent_error: record.mo3d_percent_error ? Number(record.mo3d_percent_error) : null,
+    n1s_percent: record.n1s_percent ? Number(record.n1s_percent) : null,
+    n1s_percent_error: record.n1s_percent_error ? Number(record.n1s_percent_error) : null,
+    o1s_percent: record.o1s_percent ? Number(record.o1s_percent) : null,
+    o1s_percent_error: record.o1s_percent_error ? Number(record.o1s_percent_error) : null,
+    s2p_percent: record.s2p_percent ? Number(record.s2p_percent) : null,
+    s2p_percent_error: record.s2p_percent_error ? Number(record.s2p_percent_error) : null,
+    si2p_percent: record.si2p_percent ? Number(record.si2p_percent) : null,
+    si2p_percent_error: record.si2p_percent_error ? Number(record.si2p_percent_error) : null,
+    c1s_cc_percent: record.c1s_cc_percent ? Number(record.c1s_cc_percent) : null,
+    c1s_cc_error: record.c1s_cc_error ? Number(record.c1s_cc_error) : null,
+    c1s_co_percent: record.c1s_co_percent ? Number(record.c1s_co_percent) : null,
+    c1s_co_error: record.c1s_co_error ? Number(record.c1s_co_error) : null,
+    c1s_ceo_percent: record.c1s_ceo_percent ? Number(record.c1s_ceo_percent) : null,
+    c1s_ceo_error: record.c1s_ceo_error ? Number(record.c1s_ceo_error) : null,
+    c1s_co3_percent: record.c1s_co3_percent ? Number(record.c1s_co3_percent) : null,
+    c1s_co3_error: record.c1s_co3_error ? Number(record.c1s_co3_error) : null,
+    c1s_oceo_percent: record.c1s_oceo_percent ? Number(record.c1s_oceo_percent) : null,
+    c1s_oceo_error: record.c1s_oceo_error ? Number(record.c1s_oceo_error) : null,
+    c1s_sp2_percent: record.c1s_sp2_percent ? Number(record.c1s_sp2_percent) : null,
+    c1s_sp2_error: record.c1s_sp2_error ? Number(record.c1s_sp2_error) : null
+  }));
+
   // Process SEM reports for frontend display
   const processedSemReports = compoundBatch.semReports?.map(sr => ({
     ...sr.semReport,
@@ -172,6 +221,8 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     conductivityTests: processedConductivityTests,
     temTests,
     particleSizeTests: processedParticleSizeTests,
+    xrdTests: processedXRDTests,
+    xpsTests: processedXPSTests,
     shipments,
     semReports: processedSemReports
   });
@@ -202,7 +253,9 @@ router.get('/:id', asyncHandler(async (req, res) => {
       conductivityTests: true,
       ramanTests: true,
       temTests: true,
-      particleSizeTests: true
+      particleSizeTests: true,
+      xrdTests: true,
+      xpsTests: true
     }
   });
   

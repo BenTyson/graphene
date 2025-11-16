@@ -99,6 +99,12 @@ async function getGrapheneData(experimentNumber) {
       particleSizeTests: {
         orderBy: { testDate: 'desc' }
       },
+      xrdTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      xpsTests: {
+        orderBy: { testDate: 'desc' }
+      },
       compoundBatches: {
         include: {
           compoundBatch: true
@@ -172,6 +178,12 @@ async function getCompoundBatchData(batchNumber) {
         orderBy: { testDate: 'desc' }
       },
       particleSizeTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      xrdTests: {
+        orderBy: { testDate: 'desc' }
+      },
+      xpsTests: {
         orderBy: { testDate: 'desc' }
       },
       semReports: {

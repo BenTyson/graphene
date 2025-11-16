@@ -1368,6 +1368,209 @@ class CRUDService {
     appContext.editingMCB = null;
     appContext.mcbForm = { ...DEFAULT_FORMS.mcb };
   }
+
+  // ==================== XRD Methods ====================
+
+  initXRDForm(appContext) {
+    appContext.xrdForm = { ...DEFAULT_FORMS.xrd };
+    appContext.showAddXRD = true;
+    appContext.editingXRD = null;
+  }
+
+  editXRD(record, appContext) {
+    appContext.editingXRD = record;
+
+    // Determine materialType based on which sample field is populated
+    let materialType = 'graphene';
+    if (record.mcbNumber) materialType = 'mcb';
+    else if (record.micronizationSku) materialType = 'micronization';
+    else if (record.compoundBatchNumber) materialType = 'compound';
+
+    appContext.xrdForm = {
+      testDate: record.testDate ? record.testDate.split('T')[0] : '',
+      dateUnknown: !record.testDate,
+      grapheneSample: record.grapheneSample || '',
+      compoundBatchNumber: record.compoundBatchNumber || '',
+      micronizationSku: record.micronizationSku || '',
+      mcbNumber: record.mcbNumber || '',
+      materialType: materialType,
+      peak1_position: record.peak1_position || '',
+      peak1_assignment: record.peak1_assignment || '',
+      peak2_position: record.peak2_position || '',
+      peak2_assignment: record.peak2_assignment || '',
+      crystallite_size: record.crystallite_size || '',
+      testingLab: record.testingLab || '',
+      xrdReportFiles: [],
+      removeFileIndices: [],
+      comments: record.comments || ''
+    };
+    appContext.showAddXRD = true;
+  }
+
+  async saveXRD(appContext) {
+    try {
+      // Extract files before processing
+      const files = appContext.xrdForm.xrdReportFiles || [];
+
+      // Create clean data object
+      const data = { ...appContext.xrdForm };
+
+      // Remove file and UI fields
+      delete data.xrdReportFiles;
+
+      // Handle date unknown
+      if (data.dateUnknown) {
+        data.testDate = null;
+      }
+      delete data.dateUnknown;
+
+      // Handle material type selection
+      if (data.materialType !== 'graphene') data.grapheneSample = null;
+      if (data.materialType !== 'compound') data.compoundBatchNumber = null;
+      if (data.materialType !== 'micronization') data.micronizationSku = null;
+      if (data.materialType !== 'mcb') data.mcbNumber = null;
+      delete data.materialType;
+
+      let result;
+      if (appContext.editingXRD) {
+        result = await API.xrd.update(appContext.editingXRD.id, data, files);
+      } else {
+        result = await API.xrd.create(data, files);
+      }
+
+      appContext.showAddXRD = false;
+      appContext.editingXRD = null;
+      await appContext.loadXRDRecords();
+    } catch (error) {
+      console.error('Failed to save XRD:', error);
+      alert(`Failed to save XRD record: ${error.message}`);
+    }
+  }
+
+  async deleteXRD(id, appContext) {
+    if (!confirm('Are you sure you want to delete this XRD record? All associated files will be removed.')) {
+      return;
+    }
+    try {
+      await API.xrd.delete(id);
+      await appContext.loadXRDRecords();
+    } catch (error) {
+      console.error('Failed to delete XRD:', error);
+      alert('Failed to delete XRD record');
+    }
+  }
+
+  // ==================== XPS Methods ====================
+
+  initXPSForm(appContext) {
+    appContext.xpsForm = { ...DEFAULT_FORMS.xps };
+    appContext.showAddXPS = true;
+    appContext.editingXPS = null;
+  }
+
+  editXPS(record, appContext) {
+    appContext.editingXPS = record;
+
+    // Determine materialType based on which sample field is populated
+    let materialType = 'graphene';
+    if (record.mcbNumber) materialType = 'mcb';
+    else if (record.micronizationSku) materialType = 'micronization';
+    else if (record.compoundBatchNumber) materialType = 'compound';
+
+    appContext.xpsForm = {
+      testDate: record.testDate ? record.testDate.split('T')[0] : '',
+      dateUnknown: !record.testDate,
+      grapheneSample: record.grapheneSample || '',
+      compoundBatchNumber: record.compoundBatchNumber || '',
+      micronizationSku: record.micronizationSku || '',
+      mcbNumber: record.mcbNumber || '',
+      materialType: materialType,
+      c1s_percent: record.c1s_percent || '',
+      c1s_percent_error: record.c1s_percent_error || '',
+      cl2p_percent: record.cl2p_percent || '',
+      cl2p_percent_error: record.cl2p_percent_error || '',
+      mo3d_percent: record.mo3d_percent || '',
+      mo3d_percent_error: record.mo3d_percent_error || '',
+      n1s_percent: record.n1s_percent || '',
+      n1s_percent_error: record.n1s_percent_error || '',
+      o1s_percent: record.o1s_percent || '',
+      o1s_percent_error: record.o1s_percent_error || '',
+      s2p_percent: record.s2p_percent || '',
+      s2p_percent_error: record.s2p_percent_error || '',
+      si2p_percent: record.si2p_percent || '',
+      si2p_percent_error: record.si2p_percent_error || '',
+      c1s_cc_percent: record.c1s_cc_percent || '',
+      c1s_cc_error: record.c1s_cc_error || '',
+      c1s_co_percent: record.c1s_co_percent || '',
+      c1s_co_error: record.c1s_co_error || '',
+      c1s_ceo_percent: record.c1s_ceo_percent || '',
+      c1s_ceo_error: record.c1s_ceo_error || '',
+      c1s_co3_percent: record.c1s_co3_percent || '',
+      c1s_co3_error: record.c1s_co3_error || '',
+      c1s_oceo_percent: record.c1s_oceo_percent || '',
+      c1s_oceo_error: record.c1s_oceo_error || '',
+      c1s_sp2_percent: record.c1s_sp2_percent || '',
+      c1s_sp2_error: record.c1s_sp2_error || '',
+      testingLab: record.testingLab || '',
+      xpsReportFiles: [],
+      removeFileIndices: [],
+      comments: record.comments || ''
+    };
+    appContext.showAddXPS = true;
+  }
+
+  async saveXPS(appContext) {
+    try {
+      // Extract files before processing
+      const files = appContext.xpsForm.xpsReportFiles || [];
+
+      // Create clean data object
+      const data = { ...appContext.xpsForm };
+
+      // Remove file and UI fields
+      delete data.xpsReportFiles;
+
+      // Handle date unknown
+      if (data.dateUnknown) {
+        data.testDate = null;
+      }
+      delete data.dateUnknown;
+
+      // Handle material type selection
+      if (data.materialType !== 'graphene') data.grapheneSample = null;
+      if (data.materialType !== 'compound') data.compoundBatchNumber = null;
+      if (data.materialType !== 'micronization') data.micronizationSku = null;
+      if (data.materialType !== 'mcb') data.mcbNumber = null;
+      delete data.materialType;
+
+      let result;
+      if (appContext.editingXPS) {
+        result = await API.xps.update(appContext.editingXPS.id, data, files);
+      } else {
+        result = await API.xps.create(data, files);
+      }
+
+      appContext.showAddXPS = false;
+      appContext.editingXPS = null;
+      await appContext.loadXPSRecords();
+    } catch (error) {
+      console.error('Failed to save XPS:', error);
+      alert(`Failed to save XPS record: ${error.message}`);
+    }
+  }
+
+  async deleteXPS(id, appContext) {
+    if (!confirm('Are you sure you want to delete this XPS record? All associated files will be removed.')) {
+      return;
+    }
+    try {
+      await API.xps.delete(id);
+      await appContext.loadXPSRecords();
+    } catch (error) {
+      console.error('Failed to delete XPS:', error);
+      alert('Failed to delete XPS record');
+    }
+  }
 }
 
 // Create singleton instance

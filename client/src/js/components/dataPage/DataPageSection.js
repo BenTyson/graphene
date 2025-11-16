@@ -344,7 +344,7 @@ function createSourceSection(data, type) {
  * @returns {string} Tests section HTML
  */
 function createTestsSection(data, type) {
-  const testTypes = ['betTests', 'conductivityTests', 'ramanTests', 'temTests', 'particleSizeTests'];
+  const testTypes = ['betTests', 'conductivityTests', 'ramanTests', 'temTests', 'particleSizeTests', 'xrdTests', 'xpsTests'];
   const semReports = data.semReports || [];
   const hasTests = testTypes.some(testType => data[testType] && data[testType].length > 0);
   const hasAnything = hasTests || semReports.length > 0;
@@ -438,6 +438,10 @@ function createTestTypeSection(label, tests, testType) {
       return createDetailedTemSection(label, tests);
     case 'particleSizeTests':
       return createDetailedParticleSizeSection(label, tests);
+    case 'xrdTests':
+      return createDetailedXRDSection(label, tests);
+    case 'xpsTests':
+      return createDetailedXPSSection(label, tests);
     default:
       return createGenericTestSection(label, tests, testType);
   }
@@ -872,6 +876,172 @@ function createDetailedParticleSizeSection(label, tests) {
                       View Report
                     </button>
                   `}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedXRDSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No XRD tests found for this sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">XRD Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                ${test.peak1_position !== null && test.peak1_position !== undefined ? `
+                  <div><span class="text-gray-600">Peak 1 (2θ):</span> <span class="font-medium">${test.peak1_position}°</span>${test.peak1_assignment ? ` <span class="text-gray-500">(${test.peak1_assignment})</span>` : ''}</div>
+                ` : ''}
+                ${test.peak2_position !== null && test.peak2_position !== undefined ? `
+                  <div><span class="text-gray-600">Peak 2 (2θ):</span> <span class="font-medium">${test.peak2_position}°</span>${test.peak2_assignment ? ` <span class="text-gray-500">(${test.peak2_assignment})</span>` : ''}</div>
+                ` : ''}
+                ${test.crystallite_size !== null && test.crystallite_size !== undefined ? `
+                  <div><span class="text-gray-600">Crystallite Size:</span> <span class="font-medium">${test.crystallite_size} nm</span></div>
+                ` : ''}
+                ${test.testingLab ? `
+                  <div><span class="text-gray-600">Lab:</span> <span class="font-medium">${test.testingLab}</span></div>
+                ` : ''}
+              </div>
+              ${test.comments ? `
+                <div class="mt-2 text-xs text-gray-600">${test.comments}</div>
+              ` : ''}
+              ${test.xrdReportPaths && test.xrdReportPaths.length > 0 ? `
+                <div class="mt-2 pt-2 border-t">
+                  <div class="text-xs font-medium text-gray-700 mb-1">XRD Reports (${test.xrdReportPaths.length} file${test.xrdReportPaths.length > 1 ? 's' : ''}):</div>
+                  <div class="flex flex-wrap gap-2">
+                    ${test.xrdReportPaths.map((filePath, index) => `
+                      <a href="${filePath.startsWith('https://') ? filePath : '/uploads/' + filePath}"
+                         target="_blank" rel="noopener noreferrer"
+                         class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Report ${index + 1}
+                      </a>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function createDetailedXPSSection(label, tests) {
+  return `
+    <div class="bg-gray-50 rounded-lg p-4">
+      <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        ${label}
+      </h4>
+      ${tests.length === 0 ? `
+        <div class="text-center py-4 text-gray-500 text-sm">
+          No XPS tests found for this sample
+        </div>
+      ` : `
+        <div class="space-y-3">
+          ${tests.map(test => `
+            <div class="bg-white rounded border p-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-medium text-sm">XPS Test</span>
+                <span class="text-sm text-gray-600">${test.testDate ? window.formatDateSafe(test.testDate) : 'N/A'}</span>
+              </div>
+              <div class="mb-2">
+                <div class="text-xs font-semibold mb-1">Elemental Composition:</div>
+                <div class="grid grid-cols-2 gap-1 text-xs">
+                  ${test.c1s_percent !== null && test.c1s_percent !== undefined ? `
+                    <div><span class="text-gray-600">C-1s:</span> <span class="font-medium font-mono">${test.c1s_percent.toFixed(2)}%</span>${test.c1s_percent_error !== null ? ` <span class="text-gray-500">± ${test.c1s_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.o1s_percent !== null && test.o1s_percent !== undefined ? `
+                    <div><span class="text-gray-600">O-1s:</span> <span class="font-medium font-mono">${test.o1s_percent.toFixed(2)}%</span>${test.o1s_percent_error !== null ? ` <span class="text-gray-500">± ${test.o1s_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.n1s_percent !== null && test.n1s_percent !== undefined ? `
+                    <div><span class="text-gray-600">N-1s:</span> <span class="font-medium font-mono">${test.n1s_percent.toFixed(2)}%</span>${test.n1s_percent_error !== null ? ` <span class="text-gray-500">± ${test.n1s_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.cl2p_percent !== null && test.cl2p_percent !== undefined ? `
+                    <div><span class="text-gray-600">Cl-2p:</span> <span class="font-medium font-mono">${test.cl2p_percent.toFixed(2)}%</span>${test.cl2p_percent_error !== null ? ` <span class="text-gray-500">± ${test.cl2p_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.mo3d_percent !== null && test.mo3d_percent !== undefined ? `
+                    <div><span class="text-gray-600">Mo-3d:</span> <span class="font-medium font-mono">${test.mo3d_percent.toFixed(2)}%</span>${test.mo3d_percent_error !== null ? ` <span class="text-gray-500">± ${test.mo3d_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.s2p_percent !== null && test.s2p_percent !== undefined ? `
+                    <div><span class="text-gray-600">S-2p:</span> <span class="font-medium font-mono">${test.s2p_percent.toFixed(2)}%</span>${test.s2p_percent_error !== null ? ` <span class="text-gray-500">± ${test.s2p_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                  ${test.si2p_percent !== null && test.si2p_percent !== undefined ? `
+                    <div><span class="text-gray-600">Si-2p:</span> <span class="font-medium font-mono">${test.si2p_percent.toFixed(2)}%</span>${test.si2p_percent_error !== null ? ` <span class="text-gray-500">± ${test.si2p_percent_error.toFixed(2)}</span>` : ''}</div>
+                  ` : ''}
+                </div>
+              </div>
+              ${test.c1s_cc_percent !== null || test.c1s_co_percent !== null ? `
+                <div class="mb-2">
+                  <div class="text-xs font-semibold mb-1">C-1s Decomposition:</div>
+                  <div class="grid grid-cols-2 gap-1 text-xs">
+                    ${test.c1s_cc_percent !== null && test.c1s_cc_percent !== undefined ? `
+                      <div><span class="text-gray-600">C-C:</span> <span class="font-medium font-mono">${test.c1s_cc_percent.toFixed(2)}%</span>${test.c1s_cc_error !== null ? ` <span class="text-gray-500">± ${test.c1s_cc_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                    ${test.c1s_co_percent !== null && test.c1s_co_percent !== undefined ? `
+                      <div><span class="text-gray-600">C-O:</span> <span class="font-medium font-mono">${test.c1s_co_percent.toFixed(2)}%</span>${test.c1s_co_error !== null ? ` <span class="text-gray-500">± ${test.c1s_co_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                    ${test.c1s_ceo_percent !== null && test.c1s_ceo_percent !== undefined ? `
+                      <div><span class="text-gray-600">C=O:</span> <span class="font-medium font-mono">${test.c1s_ceo_percent.toFixed(2)}%</span>${test.c1s_ceo_error !== null ? ` <span class="text-gray-500">± ${test.c1s_ceo_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                    ${test.c1s_co3_percent !== null && test.c1s_co3_percent !== undefined ? `
+                      <div><span class="text-gray-600">CO₃:</span> <span class="font-medium font-mono">${test.c1s_co3_percent.toFixed(2)}%</span>${test.c1s_co3_error !== null ? ` <span class="text-gray-500">± ${test.c1s_co3_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                    ${test.c1s_oceo_percent !== null && test.c1s_oceo_percent !== undefined ? `
+                      <div><span class="text-gray-600">O-C=O:</span> <span class="font-medium font-mono">${test.c1s_oceo_percent.toFixed(2)}%</span>${test.c1s_oceo_error !== null ? ` <span class="text-gray-500">± ${test.c1s_oceo_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                    ${test.c1s_sp2_percent !== null && test.c1s_sp2_percent !== undefined ? `
+                      <div><span class="text-gray-600">sp²:</span> <span class="font-medium font-mono">${test.c1s_sp2_percent.toFixed(2)}%</span>${test.c1s_sp2_error !== null ? ` <span class="text-gray-500">± ${test.c1s_sp2_error.toFixed(2)}</span>` : ''}</div>
+                    ` : ''}
+                  </div>
+                </div>
+              ` : ''}
+              ${test.testingLab ? `
+                <div class="text-xs mb-2"><span class="text-gray-600">Lab:</span> <span class="font-medium">${test.testingLab}</span></div>
+              ` : ''}
+              ${test.comments ? `
+                <div class="mt-2 text-xs text-gray-600">${test.comments}</div>
+              ` : ''}
+              ${test.xpsReportPaths && test.xpsReportPaths.length > 0 ? `
+                <div class="mt-2 pt-2 border-t">
+                  <div class="text-xs font-medium text-gray-700 mb-1">XPS Reports (${test.xpsReportPaths.length} file${test.xpsReportPaths.length > 1 ? 's' : ''}):</div>
+                  <div class="flex flex-wrap gap-2">
+                    ${test.xpsReportPaths.map((filePath, index) => `
+                      <a href="${filePath.startsWith('https://') ? filePath : '/uploads/' + filePath}"
+                         target="_blank" rel="noopener noreferrer"
+                         class="text-blue-600 hover:text-blue-800 text-xs flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Report ${index + 1}
+                      </a>
+                    `).join('')}
+                  </div>
                 </div>
               ` : ''}
             </div>
@@ -1352,7 +1522,9 @@ function getTestTypeLabel(testType) {
     conductivityTests: 'Conductivity Tests',
     ramanTests: 'RAMAN Tests',
     temTests: 'TEM Tests',
-    particleSizeTests: 'Particle Size Tests'
+    particleSizeTests: 'Particle Size Tests',
+    xrdTests: 'XRD Tests',
+    xpsTests: 'XPS Tests'
   };
   return labels[testType] || testType;
 }

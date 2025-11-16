@@ -22,6 +22,10 @@ export function createTestResultsSection(config) {
       return createTemTestSection(dataPath);
     case 'particleSize':
       return createParticleSizeTestSection(dataPath);
+    case 'xrd':
+      return createXRDTestSection(dataPath);
+    case 'xps':
+      return createXPSTestSection(dataPath);
     default:
       return '';
   }
@@ -331,6 +335,207 @@ function createParticleSizeTestSection(dataPath) {
       <template x-if="!${dataPath} || ${dataPath}.length === 0">
         <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
           No particle size analysis found for this sample
+        </div>
+      </template>
+    </div>
+  `;
+}
+
+function createXRDTestSection(dataPath) {
+  return `
+    <!-- XRD Test Results -->
+    <div>
+      <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        XRD Analysis
+      </h4>
+      <template x-if="${dataPath} && ${dataPath}.length > 0">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div class="space-y-2">
+            <template x-for="xrd in ${dataPath}">
+              <div class="bg-white rounded p-2 text-xs border">
+                <div class="flex justify-between mb-1">
+                  <span class="font-medium">XRD Test</span>
+                  <span x-text="window.formatDateSafe(xrd.testDate)"></span>
+                </div>
+                <table class="w-full text-xs">
+                  <tr>
+                    <td class="font-medium">Peak 1 (2θ):</td>
+                    <td>
+                      <span x-text="xrd.peak1_position ? xrd.peak1_position + '°' : 'N/A'"></span>
+                      <span x-show="xrd.peak1_assignment" class="text-gray-500" x-text="xrd.peak1_assignment ? ' (' + xrd.peak1_assignment + ')' : ''"></span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="font-medium">Peak 2 (2θ):</td>
+                    <td>
+                      <span x-text="xrd.peak2_position ? xrd.peak2_position + '°' : 'N/A'"></span>
+                      <span x-show="xrd.peak2_assignment" class="text-gray-500" x-text="xrd.peak2_assignment ? ' (' + xrd.peak2_assignment + ')' : ''"></span>
+                    </td>
+                  </tr>
+                  <tr><td class="font-medium">Crystallite Size:</td><td x-text="xrd.crystallite_size ? xrd.crystallite_size + ' nm' : 'N/A'"></td></tr>
+                  <tr x-show="xrd.testingLab"><td class="font-medium">Testing Lab:</td><td x-text="xrd.testingLab || 'N/A'"></td></tr>
+                </table>
+                <template x-if="xrd.comments">
+                  <p class="text-gray-600 mt-1" x-text="xrd.comments"></p>
+                </template>
+                <template x-if="xrd.xrdReportPaths && xrd.xrdReportPaths.length > 0">
+                  <div class="mt-2 pt-2 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-medium text-gray-700">XRD Reports (<span x-text="xrd.xrdReportPaths.length"></span> file<span x-text="xrd.xrdReportPaths.length > 1 ? 's' : ''"></span>):</span>
+                      <div class="flex flex-col space-y-1">
+                        <template x-for="(filePath, index) in xrd.xrdReportPaths" :key="index">
+                          <button @click="window.open(filePath.startsWith('https://') ? filePath : '/uploads/' + filePath, '_blank')"
+                                  class="text-link text-link-hover text-xs font-medium flex items-center">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Report <span x-text="index + 1"></span>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!${dataPath} || ${dataPath}.length === 0">
+        <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+          No XRD analysis found for this sample
+        </div>
+      </template>
+    </div>
+  `;
+}
+
+function createXPSTestSection(dataPath) {
+  return `
+    <!-- XPS Test Results -->
+    <div>
+      <h4 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        XPS Analysis
+      </h4>
+      <template x-if="${dataPath} && ${dataPath}.length > 0">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div class="space-y-2">
+            <template x-for="xps in ${dataPath}">
+              <div class="bg-white rounded p-2 text-xs border">
+                <div class="flex justify-between mb-1">
+                  <span class="font-medium">XPS Test</span>
+                  <span x-text="window.formatDateSafe(xps.testDate)"></span>
+                </div>
+                <div class="mb-2">
+                  <div class="text-xs font-semibold mb-1">Elemental Composition:</div>
+                  <table class="w-full text-xs border border-gray-200">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-1 py-1 text-left border-r border-gray-200">Element</th>
+                        <th class="px-1 py-1 text-center">Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">C-1s</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.c1s_percent !== null ? xps.c1s_percent.toFixed(2) + '%' + (xps.c1s_percent_error !== null ? ' ± ' + xps.c1s_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">O-1s</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.o1s_percent !== null ? xps.o1s_percent.toFixed(2) + '%' + (xps.o1s_percent_error !== null ? ' ± ' + xps.o1s_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">N-1s</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.n1s_percent !== null ? xps.n1s_percent.toFixed(2) + '%' + (xps.n1s_percent_error !== null ? ' ± ' + xps.n1s_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr x-show="xps.cl2p_percent !== null" class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">Cl-2p</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.cl2p_percent !== null ? xps.cl2p_percent.toFixed(2) + '%' + (xps.cl2p_percent_error !== null ? ' ± ' + xps.cl2p_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr x-show="xps.mo3d_percent !== null" class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">Mo-3d</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.mo3d_percent !== null ? xps.mo3d_percent.toFixed(2) + '%' + (xps.mo3d_percent_error !== null ? ' ± ' + xps.mo3d_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr x-show="xps.s2p_percent !== null" class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">S-2p</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.s2p_percent !== null ? xps.s2p_percent.toFixed(2) + '%' + (xps.s2p_percent_error !== null ? ' ± ' + xps.s2p_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                      <tr x-show="xps.si2p_percent !== null" class="border-t border-gray-200">
+                        <td class="px-1 py-1 font-medium border-r border-gray-200">Si-2p</td>
+                        <td class="px-1 py-1 text-center font-mono" x-text="xps.si2p_percent !== null ? xps.si2p_percent.toFixed(2) + '%' + (xps.si2p_percent_error !== null ? ' ± ' + xps.si2p_percent_error.toFixed(2) : '') : 'N/A'"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div x-show="xps.c1s_cc_percent !== null || xps.c1s_co_percent !== null" class="mb-2">
+                  <div class="text-xs font-semibold mb-1">C-1s Decomposition:</div>
+                  <div class="grid grid-cols-2 gap-1 text-xs">
+                    <div x-show="xps.c1s_cc_percent !== null">
+                      <span class="font-medium">C-C:</span>
+                      <span class="font-mono" x-text="xps.c1s_cc_percent !== null ? xps.c1s_cc_percent.toFixed(2) + '%' + (xps.c1s_cc_error !== null ? ' ± ' + xps.c1s_cc_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                    <div x-show="xps.c1s_co_percent !== null">
+                      <span class="font-medium">C-O:</span>
+                      <span class="font-mono" x-text="xps.c1s_co_percent !== null ? xps.c1s_co_percent.toFixed(2) + '%' + (xps.c1s_co_error !== null ? ' ± ' + xps.c1s_co_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                    <div x-show="xps.c1s_ceo_percent !== null">
+                      <span class="font-medium">C=O:</span>
+                      <span class="font-mono" x-text="xps.c1s_ceo_percent !== null ? xps.c1s_ceo_percent.toFixed(2) + '%' + (xps.c1s_ceo_error !== null ? ' ± ' + xps.c1s_ceo_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                    <div x-show="xps.c1s_co3_percent !== null">
+                      <span class="font-medium">CO₃:</span>
+                      <span class="font-mono" x-text="xps.c1s_co3_percent !== null ? xps.c1s_co3_percent.toFixed(2) + '%' + (xps.c1s_co3_error !== null ? ' ± ' + xps.c1s_co3_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                    <div x-show="xps.c1s_oceo_percent !== null">
+                      <span class="font-medium">O-C=O:</span>
+                      <span class="font-mono" x-text="xps.c1s_oceo_percent !== null ? xps.c1s_oceo_percent.toFixed(2) + '%' + (xps.c1s_oceo_error !== null ? ' ± ' + xps.c1s_oceo_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                    <div x-show="xps.c1s_sp2_percent !== null">
+                      <span class="font-medium">sp²:</span>
+                      <span class="font-mono" x-text="xps.c1s_sp2_percent !== null ? xps.c1s_sp2_percent.toFixed(2) + '%' + (xps.c1s_sp2_error !== null ? ' ± ' + xps.c1s_sp2_error.toFixed(2) : '') : ''"></span>
+                    </div>
+                  </div>
+                </div>
+                <table class="w-full text-xs">
+                  <tr x-show="xps.testingLab"><td class="font-medium">Testing Lab:</td><td x-text="xps.testingLab || 'N/A'"></td></tr>
+                </table>
+                <template x-if="xps.comments">
+                  <p class="text-gray-600 mt-1" x-text="xps.comments"></p>
+                </template>
+                <template x-if="xps.xpsReportPaths && xps.xpsReportPaths.length > 0">
+                  <div class="mt-2 pt-2 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-medium text-gray-700">XPS Reports (<span x-text="xps.xpsReportPaths.length"></span> file<span x-text="xps.xpsReportPaths.length > 1 ? 's' : ''"></span>):</span>
+                      <div class="flex flex-col space-y-1">
+                        <template x-for="(filePath, index) in xps.xpsReportPaths" :key="index">
+                          <button @click="window.open(filePath.startsWith('https://') ? filePath : '/uploads/' + filePath, '_blank')"
+                                  class="text-link text-link-hover text-xs font-medium flex items-center">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Report <span x-text="index + 1"></span>
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!${dataPath} || ${dataPath}.length === 0">
+        <div class="bg-gray-100 border border-gray-200 rounded-lg p-3 text-center text-gray-500 text-sm">
+          No XPS analysis found for this sample
         </div>
       </template>
     </div>
