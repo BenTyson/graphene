@@ -20,12 +20,12 @@ function getBiocharTabHtml() {
           <button @click="exportData('biochar')" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 touch-target">
             Export CSV
           </button>
-          <button @click="showCombineModal = true" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 touch-target"
+          <button x-show="canEdit()" @click="showCombineModal = true" class="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 touch-target"
                   :class="{'opacity-50 cursor-not-allowed': biocharRecords.length === 0}"
                   :disabled="biocharRecords.length === 0">
             Combine into Lot
           </button>
-          <button @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800 touch-target">
+          <button x-show="canEdit()" @click="biocharForm = {experimentNumber: '', testOrder: '', experimentDate: '', dateUnknown: false, researchTeam: 'Curia - Germany', reactor: '', rawMaterial: '', startingAmount: '', acidAmount: '', acidConcentration: '', acidMolarity: '', acidType: '', temperature: '', time: '', pressureInitial: '', pressureFinal: '', washAmount: '', washMedium: '', output: '', dryingTemp: '', kftPercentage: '', comments: ''}; editingBiochar = null; showAddBiochar = true" class="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800 touch-target">
             Add Record
           </button>
         </div>
@@ -190,12 +190,12 @@ function getBiocharTabHtml() {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                       </svg>
                     </button>
-                    <button @click="editBiochar(record)" class="text-link hover:text-link-hover" title="Edit">
+                    <button x-show="canEdit()" @click="editBiochar(record)" class="text-link hover:text-link-hover" title="Edit">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     </button>
-                    <button @click="deleteBiochar(record.id)" class="text-red-400 hover:text-red-600" title="Delete">
+                    <button x-show="canEdit()" @click="deleteBiochar(record.id)" class="text-red-400 hover:text-red-600" title="Delete">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                       </svg>
@@ -420,8 +420,8 @@ function getBiocharTabHtml() {
               </div>
               <div class="flex space-x-1">
                 <button @click="copyBiochar(record)" class="px-3 py-2 text-xs text-link hover:text-link-hover bg-gray-50 rounded touch-target">Copy</button>
-                <button @click="editBiochar(record)" class="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 bg-gray-50 rounded touch-target">Edit</button>
-                <button @click="deleteBiochar(record.id)" class="px-3 py-2 text-xs text-red-600 hover:text-red-900 bg-red-50 rounded touch-target">Delete</button>
+                <button x-show="canEdit()" @click="editBiochar(record)" class="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 bg-gray-50 rounded touch-target">Edit</button>
+                <button x-show="canEdit()" @click="deleteBiochar(record.id)" class="px-3 py-2 text-xs text-red-600 hover:text-red-900 bg-red-50 rounded touch-target">Delete</button>
               </div>
             </div>
             

@@ -80,6 +80,7 @@ enum UserRole {
   EXECUTIVE_TEAM
   INVESTOR
   TEAM_MEMBER
+  THIRD_PARTY    // View-only access (December 2025)
 }
 
 // ============================================================================
@@ -843,7 +844,9 @@ enum ProcessingStatus {
 ### Authentication
 
 **User** - User accounts with role-based access control
-- **Key Fields**: username, email, passwordHash, role (TEAM_MEMBER, SUPER_ADMIN)
+- **Key Fields**: username, email, passwordHash, role
+- **Roles**: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
+- **THIRD_PARTY Role**: View-only access - cannot edit data, restricted from Dashboard/News/Insights/Shipments
 - **Security**: bcrypt password hashing, JWT token-based sessions
 - **Features**: Login tracking, account activation/deactivation
 

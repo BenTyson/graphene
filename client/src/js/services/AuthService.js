@@ -189,6 +189,16 @@ class AuthService {
   isTeamMember() {
     return this.hasRole('TEAM_MEMBER') || this.isSuperAdmin();
   }
+
+  // Check if user is third party (view-only access)
+  isThirdParty() {
+    return this.hasRole('THIRD_PARTY');
+  }
+
+  // Check if user can edit data (not third party)
+  canEdit() {
+    return this.isAuthenticated() && !this.isThirdParty();
+  }
 }
 
 // Create singleton instance

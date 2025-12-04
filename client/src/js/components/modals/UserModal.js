@@ -107,6 +107,7 @@ function getUserModalHtml() {
                     <option value="EXECUTIVE_TEAM">Executive Team</option>
                     <option value="INVESTOR">Investor</option>
                     <option value="TEAM_MEMBER">Team Member</option>
+                    <option value="THIRD_PARTY">Third Party (View Only)</option>
                   </select>
                 </div>
                 <div>

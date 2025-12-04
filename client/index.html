@@ -134,8 +134,8 @@
       <!-- Mobile dropdown menu -->
       <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg">
         <div class="py-2">
-          <!-- Dashboard -->
-          <button @click="console.log('[Navigation] Mobile dashboard button clicked'); switchTab('dashboard'); mobileMenuOpen = false"
+          <!-- Dashboard (hidden for Third Party) -->
+          <button x-show="!isThirdParty()" @click="console.log('[Navigation] Mobile dashboard button clicked'); switchTab('dashboard'); mobileMenuOpen = false"
                   :class="activeTab === 'dashboard' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                   class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
             Dashboard
@@ -180,7 +180,7 @@
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Micronization
                 </button>
-                <button @click="activeTab = 'shipments'; mobileMenuOpen = false"
+                <button x-show="!isThirdParty()" @click="activeTab = 'shipments'; mobileMenuOpen = false"
                         :class="activeTab === 'shipments' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Shipments
@@ -189,7 +189,7 @@
             </div>
           </div>
 
-          <!-- Analytics Category -->
+          <!-- Analytics Category (hidden for Third Party) -->
           <div class="border-t border-gray-100">
             <button @click="mobileAnalyticsOpen = !mobileAnalyticsOpen"
                     :class="['analysis', 'ai-insights'].includes(activeTab) || activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
@@ -213,7 +213,7 @@
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Analysis
                 </button>
-                <button @click="switchTab('ai-insights'); mobileMenuOpen = false"
+                <button x-show="!isThirdParty()" @click="switchTab('ai-insights'); mobileMenuOpen = false"
                         :class="activeTab === 'ai-insights' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
                         class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
                   Insights
@@ -227,8 +227,8 @@
             </div>
           </div>
 
-          <!-- News Feed -->
-          <div class="border-t border-gray-100">
+          <!-- News Feed (hidden for Third Party) -->
+          <div class="border-t border-gray-100" x-show="!isThirdParty()">
             <button @click="switchTab('news'); mobileMenuOpen = false; initializeNewsTab()"
                     :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                     class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
@@ -250,8 +250,9 @@
       <!-- Desktop navigation -->
       <div class="border-b border-gray-200 hidden md:block">
         <nav class="-mb-px flex space-x-8">
-          <!-- Dashboard -->
+          <!-- Dashboard (hidden for Third Party) -->
           <button
+            x-show="!isThirdParty()"
             @click="console.log('[Navigation] Desktop dashboard button clicked'); switchTab('dashboard')"
             :class="activeTab === 'dashboard' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
@@ -287,7 +288,7 @@
                 <button @click="switchTab('biochar'); productionOpen = false" :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Biochar</button>
                 <button @click="switchTab('compound-batches'); productionOpen = false" :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Compound Batches</button>
                 <button @click="switchTab('micronization'); productionOpen = false" :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Micronization</button>
-                <button @click="switchTab('shipments'); productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
+                <button x-show="!isThirdParty()" @click="switchTab('shipments'); productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
               </div>
             </div>
           </div>
@@ -317,14 +318,15 @@
             >
               <div class="py-1">
                 <button @click="switchTab('analysis'); analyticsOpen = false" :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Analysis</button>
-                <button @click="switchTab('ai-insights'); analyticsOpen = false" :class="activeTab === 'ai-insights' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Insights</button>
+                <button x-show="!isThirdParty()" @click="switchTab('ai-insights'); analyticsOpen = false" :class="activeTab === 'ai-insights' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Insights</button>
                 <button @click="switchTab(activeTab.startsWith('test-') ? activeTab : 'test-bet'); analyticsOpen = false" :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Test Results</button>
               </div>
             </div>
           </div>
 
-          <!-- News Feed -->
+          <!-- News Feed (hidden for Third Party) -->
           <button
+            x-show="!isThirdParty()"
             @click="switchTab('news'); initializeNewsTab()"
             :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"

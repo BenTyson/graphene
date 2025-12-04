@@ -28,10 +28,10 @@ function getAuthWrapperHtml() {
               </div>
               <div class="flex items-center space-x-4">
                 <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
-                <div class="flex items-center space-x-2 text-sm text-gray-600" x-data="authWrapper()">
-                  <span x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></span>
-                  <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
-                  <button @click="logout()" 
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                  <span x-text="(currentUser?.firstName || '') + ' ' + (currentUser?.lastName || '')"></span>
+                  <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="formatRoleName(currentUser?.role)"></span>
+                  <button @click="window.dispatchEvent(new CustomEvent('auth:logout'))"
                           class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded hover:bg-gray-100 transition-colors">
                     Logout
                   </button>
@@ -63,7 +63,22 @@ function authWrapper() {
     loginLoading: false,
     showPassword: false,
 
+    // Format role name for display
+    formatRoleName(role) {
+      const roleNames = {
+        'SUPER_ADMIN': 'Super Admin',
+        'SCIENCE_TEAM': 'Science Team',
+        'EXECUTIVE_TEAM': 'Executive',
+        'INVESTOR': 'Investor',
+        'TEAM_MEMBER': 'Team Member',
+        'THIRD_PARTY': 'Third Party'
+      };
+      return roleNames[role] || role || '';
+    },
+
     async init() {
+      // Listen for logout event from child components
+      window.addEventListener('auth:logout', () => this.logout());
       try {
         // Check if user is already authenticated
         if (window.authService.isLoggedIn()) {
@@ -91,13 +106,16 @@ function authWrapper() {
         const response = await window.authService.login(this.loginForm);
         this.currentUser = response.user;
         this.isAuthenticated = true;
-        
+
         // Clear form
         this.loginForm = {
           username: '',
           password: '',
           rememberMe: false
         };
+
+        // Dispatch event to notify main app that user has logged in
+        window.dispatchEvent(new CustomEvent('auth:login', { detail: { user: response.user } }));
       } catch (error) {
         console.error('Login failed:', error);
         this.loginError = error.message || 'Login failed. Please try again.';

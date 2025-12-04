@@ -898,10 +898,19 @@ window.grapheneApp = function() {
     },
 
     getDataPageActions(type, data) {
+      const identifier = data.experimentNumber || data.batchNumber || data.shipmentNumber;
+
+      // Third Party users get no edit/duplicate actions
+      if (this.isThirdParty()) {
+        return {
+          export: `exportDataRecord('${type}', '${identifier}')`
+        };
+      }
+
       return {
-        edit: `editDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`,
-        export: `exportDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`,
-        duplicate: `duplicateDataRecord('${type}', '${data.experimentNumber || data.batchNumber || data.shipmentNumber}')`
+        edit: `editDataRecord('${type}', '${identifier}')`,
+        export: `exportDataRecord('${type}', '${identifier}')`,
+        duplicate: `duplicateDataRecord('${type}', '${identifier}')`
       };
     },
 
@@ -1047,12 +1056,22 @@ window.grapheneApp = function() {
     async init() {
       // Setup testing infrastructure first
       this.setupTestingInfrastructure();
-      
+
       // Setup data page routing
       this.setupDataPageRouting();
-      
-      // Load dashboard data first if dashboard is active
-      if (this.activeTab === 'dashboard') {
+
+      // Listen for auth:login event to update currentUser
+      window.addEventListener('auth:login', (event) => {
+        console.log('[Auth] Login event received, updating currentUser');
+        this.currentUser = event.detail.user;
+        this.enforceThirdPartyRestrictions();
+      });
+
+      // Initialize currentUser from authService
+      this.updateCurrentUser();
+
+      // Load dashboard data first if dashboard is active (and user can see it)
+      if (this.activeTab === 'dashboard' && !this.isThirdParty()) {
         await this.loadDashboardData();
       }
 
@@ -4770,6 +4789,8 @@ window.grapheneApp = function() {
 
           if (this.currentUser) {
             // User found - Alpine should automatically update the UI
+            // Redirect Third Party users away from restricted tabs
+            this.enforceThirdPartyRestrictions();
             return;
           }
 
@@ -4780,12 +4801,49 @@ window.grapheneApp = function() {
 
         // Start checking
         setTimeout(checkForUser, checkInterval);
+      } else if (this.currentUser) {
+        // User already loaded - enforce restrictions
+        this.enforceThirdPartyRestrictions();
+      }
+    },
+
+    // Redirect Third Party users away from restricted tabs
+    enforceThirdPartyRestrictions() {
+      if (this.isThirdParty()) {
+        const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management'];
+        if (restrictedTabs.includes(this.activeTab)) {
+          console.log('[Navigation] Third Party user redirected from restricted tab:', this.activeTab);
+          this.activeTab = 'graphene'; // Default to graphene for Third Party users
+        }
       }
     },
 
     // Check if current user is super admin
     isSuperAdmin() {
       return this.currentUser?.role === 'SUPER_ADMIN';
+    },
+
+    // Check if current user is third party (view-only)
+    isThirdParty() {
+      return this.currentUser?.role === 'THIRD_PARTY';
+    },
+
+    // Format role name for display
+    formatRoleName(role) {
+      const roleNames = {
+        'SUPER_ADMIN': 'Super Admin',
+        'SCIENCE_TEAM': 'Science Team',
+        'EXECUTIVE_TEAM': 'Executive',
+        'INVESTOR': 'Investor',
+        'TEAM_MEMBER': 'Team Member',
+        'THIRD_PARTY': 'Third Party'
+      };
+      return roleNames[role] || role || '';
+    },
+
+    // Check if current user can edit (not third party)
+    canEdit() {
+      return this.currentUser && !this.isThirdParty();
     }
   };
 };

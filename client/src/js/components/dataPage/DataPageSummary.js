@@ -352,7 +352,8 @@ function getSummaryDescription(type, data) {
  */
 function getQuickActions(type, data) {
   const actions = [];
-  
+  const canEdit = window.authService?.canEdit() ?? true;
+
   // Common actions
   actions.push({
     label: 'View in Table',
@@ -360,26 +361,28 @@ function getQuickActions(type, data) {
     icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h14a2 2 0 012 2v2M3 7h18M9 15h6"></path>',
     variant: 'secondary'
   });
-  
-  // Type-specific actions
-  if (type === 'graphene' || type === 'biochar') {
-    actions.push({
-      label: 'Run Tests',
-      onclick: `openTestModal('${data.experimentNumber}')`,
-      icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-      variant: 'primary'
-    });
+
+  // Type-specific actions (only for users who can edit)
+  if (canEdit) {
+    if (type === 'graphene' || type === 'biochar') {
+      actions.push({
+        label: 'Run Tests',
+        onclick: `openTestModal('${data.experimentNumber}')`,
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        variant: 'primary'
+      });
+    }
+
+    if (type === 'compound-batch') {
+      actions.push({
+        label: 'Create Shipment',
+        onclick: `createShipmentFromBatch('${data.batchNumber}')`,
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>',
+        variant: 'success'
+      });
+    }
   }
-  
-  if (type === 'compound-batch') {
-    actions.push({
-      label: 'Create Shipment',
-      onclick: `createShipmentFromBatch('${data.batchNumber}')`,
-      icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>',
-      variant: 'success'
-    });
-  }
-  
+
   return actions;
 }
 

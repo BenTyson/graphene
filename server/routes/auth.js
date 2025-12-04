@@ -203,4 +203,17 @@ export function requireSuperAdmin(req, res, next) {
   next();
 }
 
+/**
+ * Middleware to check if user can edit (not THIRD_PARTY)
+ */
+export function requireEditAccess(req, res, next) {
+  if (req.user.role === 'THIRD_PARTY') {
+    return res.status(403).json({
+      success: false,
+      error: 'View-only access. Editing is not permitted for your account.'
+    });
+  }
+  next();
+}
+
 export default router;

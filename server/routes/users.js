@@ -75,7 +75,7 @@ router.post('/', authenticateToken, requireSuperAdmin, async (req, res) => {
     }
 
     // Validate role
-    const validRoles = ['SUPER_ADMIN', 'SCIENCE_TEAM', 'EXECUTIVE_TEAM', 'INVESTOR', 'TEAM_MEMBER'];
+    const validRoles = ['SUPER_ADMIN', 'SCIENCE_TEAM', 'EXECUTIVE_TEAM', 'INVESTOR', 'TEAM_MEMBER', 'THIRD_PARTY'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -155,7 +155,7 @@ router.put('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
 
     // Validate user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     if (!existingUser) {
@@ -167,7 +167,7 @@ router.put('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
 
     // Validate role if provided
     if (role) {
-      const validRoles = ['SUPER_ADMIN', 'SCIENCE_TEAM', 'EXECUTIVE_TEAM', 'INVESTOR', 'TEAM_MEMBER'];
+      const validRoles = ['SUPER_ADMIN', 'SCIENCE_TEAM', 'EXECUTIVE_TEAM', 'INVESTOR', 'TEAM_MEMBER', 'THIRD_PARTY'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           success: false,
@@ -181,7 +181,7 @@ router.put('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
       const emailExists = await prisma.user.findFirst({
         where: {
           email: email.toLowerCase(),
-          id: { not: parseInt(id) }
+          id: { not: id }
         }
       });
 
@@ -209,7 +209,7 @@ router.put('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
 
     // Update user
     const updatedUser = await prisma.user.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -246,10 +246,9 @@ router.put('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
 router.delete('/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = parseInt(id);
 
     // Prevent user from deleting themselves
-    if (userId === req.user.userId) {
+    if (id === req.user.userId) {
       return res.status(400).json({
         success: false,
         error: 'Cannot delete your own account'
@@ -258,7 +257,7 @@ router.delete('/:id', authenticateToken, requireSuperAdmin, async (req, res) => 
 
     // Validate user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id }
     });
 
     if (!existingUser) {
@@ -270,7 +269,7 @@ router.delete('/:id', authenticateToken, requireSuperAdmin, async (req, res) => 
 
     // Delete user
     await prisma.user.delete({
-      where: { id: userId }
+      where: { id }
     });
 
     res.json({
@@ -294,10 +293,9 @@ router.delete('/:id', authenticateToken, requireSuperAdmin, async (req, res) => 
 router.post('/:id/toggle-status', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = parseInt(id);
 
     // Prevent user from deactivating themselves
-    if (userId === req.user.userId) {
+    if (id === req.user.userId) {
       return res.status(400).json({
         success: false,
         error: 'Cannot deactivate your own account'
@@ -306,7 +304,7 @@ router.post('/:id/toggle-status', authenticateToken, requireSuperAdmin, async (r
 
     // Get current user
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id }
     });
 
     if (!user) {
@@ -318,7 +316,7 @@ router.post('/:id/toggle-status', authenticateToken, requireSuperAdmin, async (r
 
     // Toggle status
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id },
       data: { isActive: !user.isActive },
       select: {
         id: true,

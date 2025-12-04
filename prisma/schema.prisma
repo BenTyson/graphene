@@ -848,6 +848,7 @@ enum UserRole {
   EXECUTIVE_TEAM
   INVESTOR
   TEAM_MEMBER
+  THIRD_PARTY
 }
 
 model User {

@@ -26,7 +26,7 @@ import analysisRoutes from './routes/analysis.js';
 import aiInsightsRoutes from './routes/ai-insights.js';
 import newsRoutes from './routes/news.js';
 import knowledgeBaseRoutes from './routes/knowledge-base.js';
-import authRoutes from './routes/auth.js';
+import authRoutes, { authenticateToken, requireEditAccess } from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import dataImportRoutes from './routes/data-import.js';
 import seedStagingRoutes from './routes/seed-staging.js';
@@ -141,6 +141,29 @@ app.use('/news-images', (req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 }, express.static(path.join(process.cwd(), 'public', 'news-images')));
+
+// Global middleware to restrict THIRD_PARTY users from mutating data
+// This applies to POST, PUT, DELETE requests on /api/* routes (except auth and users)
+app.use('/api', (req, res, next) => {
+  // Skip routes that handle their own authentication
+  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health') {
+    return next();
+  }
+
+  // Skip GET requests - Third Party users can read data
+  if (req.method === 'GET') {
+    return next();
+  }
+
+  // For mutating requests (POST, PUT, DELETE), check authentication and role
+  authenticateToken(req, res, (err) => {
+    if (err) {
+      return next(err);
+    }
+    // Check if user can edit (not THIRD_PARTY)
+    requireEditAccess(req, res, next);
+  });
+});
 
 // Routes
 app.use('/api/biochar', biocharRoutes);

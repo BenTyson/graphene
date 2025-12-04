@@ -103,7 +103,23 @@ JWT-based authentication with:
 - **Frontend**: `AuthService.js` (token management, session validation)
 - **UI**: Clean login page with Remember Me functionality
 - **Security**: Rate limiting (5 attempts/15min), bcrypt hashing
-- **Roles**: TEAM_MEMBER, SUPER_ADMIN
+- **Roles**: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
+
+#### Role-Based Access Control (December 2025)
+
+| Role | Access Level |
+|------|--------------|
+| SUPER_ADMIN | Full access + User Management |
+| SCIENCE_TEAM | Full data access |
+| EXECUTIVE_TEAM | Full data access |
+| INVESTOR | Full data access |
+| TEAM_MEMBER | Full data access |
+| THIRD_PARTY | **View-only** - No editing, no Dashboard/News/Insights/Shipments |
+
+**Third Party Restrictions:**
+- Hidden tabs: Dashboard, News Feed, Insights, Shipments, User Management
+- All POST/PUT/DELETE requests blocked at API level with `requireEditAccess` middleware
+- UI edit/delete buttons hidden via `canEdit()` helper
 
 ### File Storage (Cloudinary CDN)
 

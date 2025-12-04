@@ -109,7 +109,9 @@ Biochar → Graphene → CompoundBatch/Micronization → MCB (optional) → Test
 - **KnowledgeDocument**: Research papers, patents with AI processing
 
 #### Users & References
-- **User**: Authentication (roles: SUPER_ADMIN, SCIENCE_TEAM, etc.)
+- **User**: Authentication with role-based access control
+  - Roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
+  - THIRD_PARTY: View-only access (no editing, restricted tabs)
 - **CharacterizationReference**: External benchmarks (Dr. Li, ISO, ASTM, GEIC)
 
 ---
@@ -260,5 +262,5 @@ Before starting work:
 
 ---
 
-**Last Updated:** January 2025 (MCB feature added)
+**Last Updated:** December 2025 (THIRD_PARTY role added)
 **For Questions:** Check [README.md](../README.md) for full documentation map
