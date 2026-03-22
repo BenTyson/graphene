@@ -37,6 +37,9 @@ import { getUserModalHtml } from './components/modals/UserModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
 import { getMCBModalHtml } from './components/modals/MCBModal.js';
 import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
+import { getTasksTabHtml } from './components/tabs/TasksTab.js';
+import { getTaskModalHtml } from './components/modals/TaskModal.js';
+import { getTaskDetailPanelHtml } from './components/modals/TaskDetailPanel.js';
 
 // Import new components for simplified cards and modals
 import './components/cards/SimplifiedGrapheneCard.js';
@@ -180,7 +183,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -192,7 +195,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -368,6 +371,21 @@ window.grapheneApp = function() {
     availableGrapheneSamples: [],
     availableCompoundBatches: [],
     users: [],
+
+    // Task management
+    tasks: [],
+    taskAssignees: [],
+    taskViewMode: 'kanban',
+    taskSearch: '',
+    taskFilters: { status: '', priority: '', assigneeId: '', overdue: false },
+    showAddTask: false,
+    showTaskDetail: false,
+    selectedTask: null,
+    editingTask: null,
+    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeId: '', parentId: null, tags: [] },
+    taskCommentForm: { content: '' },
+    taskLoading: false,
+    taskTagInput: '',
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -4196,6 +4214,11 @@ window.grapheneApp = function() {
             // Loading AI insights data - reduced logging
             await this.loadAIInsightsDashboard();
           }
+        } else if (tab === 'tasks') {
+          if (!this.tasks.length) {
+            await this.loadTasks();
+            await this.loadTaskAssignees();
+          }
         } else if (tab === 'news') {
           console.log(`[Navigation] Initializing news tab: ${tab}`);
           await this.initializeNewsTab();
@@ -4807,10 +4830,283 @@ window.grapheneApp = function() {
       }
     },
 
+    // ===== TASK MANAGEMENT METHODS =====
+
+    async loadTasks() {
+      this.taskLoading = true;
+      try {
+        const params = {};
+        if (this.taskFilters.status) params.status = this.taskFilters.status;
+        if (this.taskFilters.priority) params.priority = this.taskFilters.priority;
+        if (this.taskFilters.assigneeId) params.assigneeId = this.taskFilters.assigneeId;
+        if (this.taskFilters.overdue) params.overdue = true;
+        if (this.taskSearch) params.search = this.taskSearch;
+        this.tasks = await API.tasks.getAll(params);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+        this.tasks = [];
+      } finally {
+        this.taskLoading = false;
+      }
+    },
+
+    async loadTaskAssignees() {
+      try {
+        this.taskAssignees = await API.tasks.getAssignees();
+      } catch (error) {
+        console.error('Failed to load assignees:', error);
+        this.taskAssignees = [];
+      }
+    },
+
+    getTasksByStatus(status) {
+      return this.tasks.filter(t => t.status === status);
+    },
+
+    getFilteredTasks() {
+      let filtered = [...this.tasks];
+      if (this.taskSearch) {
+        const q = this.taskSearch.toLowerCase();
+        filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+      }
+      return filtered;
+    },
+
+    openTaskForm(parentId = null) {
+      this.editingTask = null;
+      this.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeId: '', parentId, tags: [] };
+      this.taskTagInput = '';
+      this.showAddTask = true;
+    },
+
+    openEditTaskForm(task) {
+      this.editingTask = task;
+      this.taskForm = {
+        title: task.title,
+        description: task.description || '',
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate || '',
+        assigneeId: task.assigneeId || '',
+        parentId: task.parentId || null,
+        tags: [...(task.tags || [])]
+      };
+      this.taskTagInput = '';
+      this.showAddTask = true;
+    },
+
+    closeTaskForm() {
+      this.showAddTask = false;
+      this.editingTask = null;
+    },
+
+    async saveTask() {
+      try {
+        if (this.editingTask) {
+          await API.tasks.update(this.editingTask.id, this.taskForm);
+        } else {
+          await API.tasks.create(this.taskForm);
+        }
+        this.closeTaskForm();
+        await this.loadTasks();
+        if (this.selectedTask) {
+          this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+        }
+      } catch (error) {
+        console.error('Failed to save task:', error);
+        alert('Failed to save task: ' + error.message);
+      }
+    },
+
+    async deleteTask(taskId) {
+      if (!confirm('Delete this task? This will also delete all subtasks.')) return;
+      try {
+        await API.tasks.delete(taskId);
+        if (this.selectedTask?.id === taskId) {
+          this.closeTaskDetail();
+        }
+        await this.loadTasks();
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        alert('Failed to delete task: ' + error.message);
+      }
+    },
+
+    async updateTaskStatus(taskId, newStatus) {
+      try {
+        await API.tasks.updateStatus(taskId, newStatus);
+        await this.loadTasks();
+        if (this.selectedTask?.id === taskId) {
+          this.selectedTask = await API.tasks.getById(taskId);
+        }
+      } catch (error) {
+        console.error('Failed to update task status:', error);
+      }
+    },
+
+    async openTaskDetail(taskId) {
+      try {
+        this.selectedTask = await API.tasks.getById(taskId);
+        this.showTaskDetail = true;
+      } catch (error) {
+        console.error('Failed to load task detail:', error);
+      }
+    },
+
+    closeTaskDetail() {
+      this.showTaskDetail = false;
+      this.selectedTask = null;
+      this.taskCommentForm.content = '';
+    },
+
+    async addTaskComment() {
+      if (!this.taskCommentForm.content.trim() || !this.selectedTask) return;
+      try {
+        await API.tasks.addComment(this.selectedTask.id, this.taskCommentForm.content);
+        this.taskCommentForm.content = '';
+        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+      } catch (error) {
+        console.error('Failed to add comment:', error);
+      }
+    },
+
+    async deleteTaskComment(commentId) {
+      if (!this.selectedTask) return;
+      try {
+        await API.tasks.deleteComment(this.selectedTask.id, commentId);
+        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+      } catch (error) {
+        console.error('Failed to delete comment:', error);
+      }
+    },
+
+    async updateTaskInline(taskId, field, value) {
+      try {
+        await API.tasks.update(taskId, { [field]: value });
+        await this.loadTasks();
+        if (this.selectedTask?.id === taskId) {
+          this.selectedTask = await API.tasks.getById(taskId);
+        }
+      } catch (error) {
+        console.error('Failed to update task:', error);
+      }
+    },
+
+    async addSubtask(parentId) {
+      const title = prompt('Subtask title:');
+      if (!title?.trim()) return;
+      try {
+        await API.tasks.create({ title: title.trim(), parentId, status: 'TODO', priority: 'MEDIUM' });
+        if (this.selectedTask?.id === parentId) {
+          this.selectedTask = await API.tasks.getById(parentId);
+        }
+        await this.loadTasks();
+      } catch (error) {
+        console.error('Failed to add subtask:', error);
+      }
+    },
+
+    async toggleSubtaskDone(subtask) {
+      const newStatus = subtask.status === 'DONE' ? 'TODO' : 'DONE';
+      try {
+        await API.tasks.updateStatus(subtask.id, newStatus);
+        if (this.selectedTask) {
+          this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+        }
+        await this.loadTasks();
+      } catch (error) {
+        console.error('Failed to toggle subtask:', error);
+      }
+    },
+
+    addTaskTag() {
+      const tag = this.taskTagInput.trim();
+      if (tag && !this.taskForm.tags.includes(tag)) {
+        this.taskForm.tags.push(tag);
+      }
+      this.taskTagInput = '';
+    },
+
+    removeTaskTag(tag) {
+      this.taskForm.tags = this.taskForm.tags.filter(t => t !== tag);
+    },
+
+    getTaskDueLabel(dueDate) {
+      if (!dueDate) return '';
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const due = new Date(dueDate + 'T00:00:00');
+      const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      if (diff < 0) return `${Math.abs(diff)}d overdue`;
+      if (diff === 0) return 'Due today';
+      if (diff === 1) return 'Due tomorrow';
+      if (diff <= 7) return `Due in ${diff}d`;
+      return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+
+    getTaskDueClass(dueDate, status) {
+      if (!dueDate || status === 'DONE' || status === 'ARCHIVED') return 'text-gray-400';
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const due = new Date(dueDate + 'T00:00:00');
+      const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      if (diff < 0) return 'text-red-600 font-medium';
+      if (diff === 0) return 'text-amber-600 font-medium';
+      return 'text-gray-500';
+    },
+
+    getAssigneeName(task) {
+      if (!task.assignee) return 'Unassigned';
+      return [task.assignee.firstName, task.assignee.lastName].filter(Boolean).join(' ') || task.assignee.username;
+    },
+
+    getAssigneeInitials(task) {
+      if (!task.assignee) return '?';
+      const f = task.assignee.firstName?.[0] || '';
+      const l = task.assignee.lastName?.[0] || '';
+      return (f + l).toUpperCase() || task.assignee.username[0].toUpperCase();
+    },
+
+    getSubtaskProgress(task) {
+      if (!task.subtasks?.length) return null;
+      const done = task.subtasks.filter(s => s.status === 'DONE').length;
+      return { done, total: task.subtasks.length, percent: Math.round((done / task.subtasks.length) * 100) };
+    },
+
+    getPriorityBadgeClass(priority) {
+      const classes = {
+        LOW: 'bg-gray-100 text-gray-600',
+        MEDIUM: 'bg-blue-100 text-blue-700',
+        HIGH: 'bg-orange-100 text-orange-700',
+        URGENT: 'bg-red-100 text-red-700'
+      };
+      return classes[priority] || classes.MEDIUM;
+    },
+
+    getStatusBadgeClass(status) {
+      const classes = {
+        TODO: 'bg-gray-100 text-gray-700',
+        IN_PROGRESS: 'bg-blue-100 text-blue-700',
+        IN_REVIEW: 'bg-amber-100 text-amber-700',
+        DONE: 'bg-green-100 text-green-700',
+        ARCHIVED: 'bg-gray-100 text-gray-400'
+      };
+      return classes[status] || classes.TODO;
+    },
+
+    formatStatusLabel(status) {
+      const labels = { TODO: 'To Do', IN_PROGRESS: 'In Progress', IN_REVIEW: 'In Review', DONE: 'Done', ARCHIVED: 'Archived' };
+      return labels[status] || status;
+    },
+
+    getTasksTabHtml() { return getTasksTabHtml(); },
+    getTaskModalHtml() { return getTaskModalHtml(); },
+    getTaskDetailPanelHtml() { return getTaskDetailPanelHtml(); },
+
     // Redirect Third Party users away from restricted tabs
     enforceThirdPartyRestrictions() {
       if (this.isThirdParty()) {
-        const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management'];
+        const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management', 'tasks'];
         if (restrictedTabs.includes(this.activeTab)) {
           console.log('[Navigation] Third Party user redirected from restricted tab:', this.activeTab);
           this.activeTab = 'graphene'; // Default to graphene for Third Party users

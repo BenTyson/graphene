@@ -39,8 +39,36 @@ function getDashboardTabHtml() {
           <!-- Test Results Widget -->
           <div x-html="getTestResultsWidget()"></div>
           
-          <!-- Recent Activity Widget - Hidden for now but saved for later -->
-          <!-- <div x-html="getActivityWidget()"></div> -->
+          <!-- My Tasks Widget -->
+          <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-gray-900">My Tasks</h3>
+              <button @click="switchTab('tasks')" class="text-xs text-gray-500 hover:text-gray-700">View all</button>
+            </div>
+            <div x-init="$watch('activeTab', async (tab) => { if (tab === 'dashboard') { try { $el._myTasks = await (await fetch('/api/tasks?' + new URLSearchParams({ assigneeId: currentUser?.id || '', sortBy: 'dueDate', order: 'asc', limit: '5' }), { headers: window.authService?.getAuthHeader() })).json(); } catch(e) { $el._myTasks = []; } } })"
+              x-effect="if (activeTab === 'dashboard' && currentUser?.id) { fetch('/api/tasks?' + new URLSearchParams({ assigneeId: currentUser.id, sortBy: 'dueDate', order: 'asc', limit: '5' }), { headers: window.authService?.getAuthHeader() }).then(r => r.json()).then(d => $el._myTasks = d.filter(t => t.status !== 'DONE' && t.status !== 'ARCHIVED')).catch(() => $el._myTasks = []) }">
+              <template x-if="$el._myTasks && $el._myTasks.length > 0">
+                <div class="space-y-2">
+                  <template x-for="task in $el._myTasks" :key="task.id">
+                    <div @click="switchTab('tasks'); setTimeout(() => openTaskDetail(task.id), 300)"
+                      class="flex items-center justify-between py-2 px-2 rounded hover:bg-gray-50 cursor-pointer group">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span :class="getPriorityBadgeClass(task.priority)"
+                          class="w-1.5 h-1.5 rounded-full shrink-0"></span>
+                        <span class="text-sm text-gray-700 truncate" x-text="task.title"></span>
+                      </div>
+                      <span v-if="task.dueDate" :class="getTaskDueClass(task.dueDate, task.status)"
+                        class="text-[11px] shrink-0 ml-2"
+                        x-text="getTaskDueLabel(task.dueDate)"></span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template x-if="!$el._myTasks || $el._myTasks.length === 0">
+                <p class="text-sm text-gray-400 py-4 text-center">No active tasks assigned to you</p>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
 

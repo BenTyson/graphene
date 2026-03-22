@@ -1161,6 +1161,76 @@ export const usersAPI = {
   }
 };
 
+// Tasks API endpoints
+export const tasksAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.append('status', params.status);
+    if (params.priority) query.append('priority', params.priority);
+    if (params.assigneeId) query.append('assigneeId', params.assigneeId);
+    if (params.search) query.append('search', params.search);
+    if (params.parentId !== undefined) query.append('parentId', params.parentId);
+    if (params.overdue) query.append('overdue', 'true');
+    if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.order) query.append('order', params.order);
+    if (params.limit) query.append('limit', params.limit);
+    const qs = query.toString();
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
+  },
+
+  getById: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${id}`, { headers }).then(handleResponse);
+  },
+
+  create: (data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  update: (id, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  delete: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${id}`, { method: 'DELETE', headers }).then(handleResponse);
+  },
+
+  updateStatus: (id, status, position) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${id}/status`, {
+      method: 'PATCH', headers, body: JSON.stringify({ status, position })
+    }).then(handleResponse);
+  },
+
+  addComment: (taskId, content) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/comments`, {
+      method: 'POST', headers, body: JSON.stringify({ content })
+    }).then(handleResponse);
+  },
+
+  deleteComment: (taskId, commentId) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/comments/${commentId}`, {
+      method: 'DELETE', headers
+    }).then(handleResponse);
+  },
+
+  getAssignees: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/assignees`, { headers }).then(handleResponse);
+  },
+
+  getStats: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/stats`, { headers }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -1178,5 +1248,6 @@ export default {
   micronization: micronizationAPI,
   mcb: mcbAPI,
   shipment: shipmentAPI,
-  users: usersAPI
+  users: usersAPI,
+  tasks: tasksAPI
 };

@@ -864,6 +864,11 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  createdTasks   Task[]         @relation("TaskCreator")
+  assignedTasks  Task[]         @relation("TaskAssignee")
+  taskComments   TaskComment[]  @relation("TaskCommentAuthor")
+  taskActivities TaskActivity[] @relation("TaskActivityUser")
+
   @@index([username])
   @@index([email])
   @@index([role])
@@ -892,4 +897,85 @@ model CharacterizationReference {
   @@index([testType])
   @@index([sourceType])
   @@map("characterization_references")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  ARCHIVED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?    @map("due_date")
+  position    Int          @default(0)
+  tags        String[]     @default([])
+
+  creatorId  String  @map("creator_id")
+  assigneeId String? @map("assignee_id")
+  creator    User    @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  parentId String? @map("parent_id")
+  parent   Task?   @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Task[]  @relation("TaskSubtasks")
+
+  comments   TaskComment[]
+  activities TaskActivity[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([priority])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([parentId])
+  @@index([dueDate])
+  @@index([status, position])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id       String @id @default(cuid())
+  content  String
+  taskId   String @map("task_id")
+  authorId String @map("author_id")
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author   User   @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([taskId, createdAt])
+  @@map("task_comments")
+}
+
+model TaskActivity {
+  id        String  @id @default(cuid())
+  taskId    String  @map("task_id")
+  userId    String  @map("user_id")
+  action    String
+  fromValue String? @map("from_value")
+  toValue   String? @map("to_value")
+  task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User    @relation("TaskActivityUser", fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@map("task_activities")
 }

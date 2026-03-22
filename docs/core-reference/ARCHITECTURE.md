@@ -85,15 +85,13 @@ Main application delegates to specialized services:
 
 ### Component System (Complete)
 
-30+ modular UI components across 4 phases:
+40+ modular UI components:
 
 - **Form Fields**: Date, select, numeric, file upload components
-- **Modals**: 9 entity modals (Biochar, Graphene, BET, etc.)
-- **Tabs**: 7 tab components (BET, Conductivity, RAMAN, etc.)
+- **Modals**: 21 modal files (entity forms, task detail panel, PDF viewer, etc.)
+- **Tabs**: 21 tab files (production, tests, analysis, news, tasks, user management)
 - **Cards**: Intelligent card factory with type detection
 - **Dropdowns**: Expandable row sections
-
-**Impact**: index.html reduced from 4,788 to 1,153 lines (76% reduction)
 
 ### Authentication System (September 2025)
 
@@ -105,21 +103,26 @@ JWT-based authentication with:
 - **Security**: Rate limiting (5 attempts/15min), bcrypt hashing
 - **Roles**: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
 
-#### Role-Based Access Control (December 2025)
+#### Role-Based Access Control
 
 | Role | Access Level |
 |------|--------------|
 | SUPER_ADMIN | Full access + User Management |
-| SCIENCE_TEAM | Full data access |
-| EXECUTIVE_TEAM | Full data access |
-| INVESTOR | Full data access |
-| TEAM_MEMBER | Full data access |
-| THIRD_PARTY | **View-only** - No editing, no Dashboard/News/Insights/Shipments |
+| SCIENCE_TEAM | Full data access + Tasks |
+| EXECUTIVE_TEAM | Full data access + Tasks |
+| TEAM_MEMBER | Full data access + Tasks |
+| INVESTOR | Full data access, no Tasks tab |
+| THIRD_PARTY | View-only - No editing, restricted tabs |
 
 **Third Party Restrictions:**
-- Hidden tabs: Dashboard, News Feed, Insights, Shipments, User Management
+- Hidden tabs: Dashboard, News Feed, Insights, Shipments, Tasks, User Management
 - All POST/PUT/DELETE requests blocked at API level with `requireEditAccess` middleware
 - UI edit/delete buttons hidden via `canEdit()` helper
+
+**Task Management Access:**
+- Tasks route uses `requireInternalAccess` middleware (blocks THIRD_PARTY + INVESTOR)
+- Task editing: creator + SUPER_ADMIN can edit/delete any task
+- Tab hidden for INVESTOR and THIRD_PARTY roles
 
 ### File Storage (Cloudinary CDN)
 
@@ -173,7 +176,9 @@ Graphene (production)
   ↓
 CompoundBatch (grouping) / Micronization (processing)
   ↓
-Tests (BET, Conductivity, RAMAN, TEM)
+MCB (optional grouping of micronizations)
+  ↓
+Tests (BET, Conductivity, RAMAN, TEM, ParticleSize, XRD, XPS)
   ↓
 MaterialShipment (distribution)
 ```
@@ -182,18 +187,19 @@ MaterialShipment (distribution)
 
 - **Soft References**: Tests use string identifiers, not foreign keys
 - **Dual Architecture**: Tests reference either Graphene OR CompoundBatch
-- **Triple Shipments**: Shipments reference Graphene, CompoundBatch, OR Micronization
+- **Quad Shipments**: Shipments reference Graphene, CompoundBatch, Micronization, OR MCB
 - **Full Traceability**: Complete audit trail from raw materials to shipment
 - **Timestamps**: All records have createdAt and updatedAt
 
-### Core Models (14 primary tables)
+### Core Models
 
-**Production**: Biochar, BiocharLot, Graphene, CompoundBatch, Micronization
-**Testing**: BET, ConductivityTest, RamanTest, TEMTest
+**Production**: Biochar, BiocharLot, Graphene, CompoundBatch, Micronization, MicronizedCompoundBatch (MCB)
+**Testing**: BET, ConductivityTest, RamanTest, TEMTest, ParticleSizeTest, XRDTest, XPSTest
 **Reports**: UpdateReport, SemReport (with junction tables)
 **Shipments**: MaterialShipment
+**Task Management**: Task (with self-referencing subtasks), TaskComment, TaskActivity
 **News/AI**: NewsSource, NewsArticle, KnowledgeDocument
-**Auth**: User
+**Auth**: User (6 roles)
 **References**: CharacterizationReference
 
 **Full Schema**: See [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md)
@@ -205,11 +211,13 @@ MaterialShipment (distribution)
 ### RESTful Endpoints
 
 - **Authentication**: `/api/auth/*` (login, logout, user info)
-- **Core Entities**: `/api/biochar`, `/api/graphene`, `/api/compound-batches`, `/api/micronization`
-- **Tests**: `/api/bet`, `/api/conductivity`, `/api/raman`, `/api/tem`
+- **Core Entities**: `/api/biochar`, `/api/graphene`, `/api/compound-batches`, `/api/micronization`, `/api/mcb`
+- **Tests**: `/api/bet`, `/api/conductivity`, `/api/raman`, `/api/tem`, `/api/particle-size`, `/api/xrd`, `/api/xps`
 - **Reports**: `/api/update-reports`, `/api/sem-reports`
 - **Shipments**: `/api/shipments`
+- **Tasks**: `/api/tasks` (CRUD + comments + status changes, internal roles only)
 - **Dashboard**: `/api/dashboard/*` (metrics, inventory, best results)
+- **AI/News**: `/api/ai-insights`, `/api/news`, `/api/knowledge-base`
 
 ### Common Patterns
 
@@ -408,6 +416,6 @@ npm run build
 
 ---
 
-**Last Updated**: November 2025
-**Architecture Version**: 2.0 (Post-optimization)
+**Last Updated**: March 2026
+**Architecture Version**: 3.0 (Task management, XRD/XPS/ParticleSize tests, MCB)
 **For Detailed Implementation**: See referenced documentation above

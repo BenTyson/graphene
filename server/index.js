@@ -30,6 +30,7 @@ import authRoutes, { authenticateToken, requireEditAccess } from './routes/auth.
 import usersRoutes from './routes/users.js';
 import dataImportRoutes from './routes/data-import.js';
 import seedStagingRoutes from './routes/seed-staging.js';
+import taskRoutes from './routes/tasks.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -191,6 +192,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/data-import', dataImportRoutes);
 app.use('/api/seed-staging', seedStagingRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Catch-all route - serve index.html for client-side routing
 // This MUST come after all other routes and static file serving

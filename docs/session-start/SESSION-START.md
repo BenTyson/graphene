@@ -1,266 +1,176 @@
 # Session Start Guide
 
-**Quick Context Loading for AI Agents** - Read this first for rapid codebase understanding.
+Quick context for AI agents. Read this first, then drill into core-reference/ only if needed.
+
+Last Updated: March 2026
 
 ---
 
-## 🎯 System Overview
+## System Overview
 
-**Graphene Production Control System** - Full-stack web app tracking the complete material journey from biochar → graphene → compound batch/micronization → testing → shipment.
+**Graphene Production Control System** - Internal admin dashboard tracking the full material pipeline:
+Biochar -> Graphene -> CompoundBatch / Micronization -> MCB (optional) -> Tests -> Shipments
 
-**Tech Stack:**
-- Backend: Node.js + Express + Prisma ORM
-- Database: PostgreSQL
-- Frontend: Alpine.js + Tailwind CSS + Chart.js
-- Build: Vite (Frontend: 5174, Backend: 3000)
+**Stack:** Node.js + Express + Prisma (PostgreSQL) | Alpine.js + Tailwind CSS | Vite | Railway
 
-**Key Features:**
-- **Species Classification**: Experiments categorized as Species 1 (KOH only) or Species 2 (KOH + NaOH)
-- **Smart Filtering**: Toggle-based filters for Species and Test types (BET, Conductivity, RAMAN)
-- **NaOH Tracking**: Automatic calculation of NaOH percentage in base composition
-- **Visual Appearance**: Separate tracking of material visual characteristics vs. chemical species
-- **Test Association**: Efficient filtering by which tests have been performed on experiments
+**Ports:** Vite dev: 5174, Express: 3001 (dev) / 3000 (prod). Local dev: use `localhost:5174` (NOT 3001 -- Express serves raw files without Tailwind processing).
 
 ---
 
-## 🚨 CRITICAL: Deployment Workflow
+## Deployment
 
-**ALWAYS DEPLOY TO STAGING FIRST!**
+| Environment | URL | Branch | Database |
+|---|---|---|---|
+| Local | localhost:5174 | any | Local PostgreSQL |
+| Staging | Railway staging | staging | Separate Railway PG |
+| Production | admin.hgraphene.com | main | Production Railway PG |
 
-### Environments
-1. **Local**: `localhost:5174` (PostgreSQL local)
-2. **Staging**: Railway staging environment (Test here first!)
-3. **Production**: `admin.hgraphene.com` (Railway main branch)
-
-### Branch Strategy
-- **`staging`** ← Work here! Test all changes in staging first
-- **`main`** ← Production only (merge from staging after testing)
-
-### Standard Workflow
-```bash
-# 1. Work on staging branch
-git checkout staging
-# ... make changes ...
-
-# 2. Push to staging for testing
-git push origin staging
-
-# 3. After testing passes, merge to production
-git checkout main && git merge staging && git push origin main
-```
-
-**⚠️ Never deploy directly to main without staging testing!**
-
----
-
-## 📊 Database Schema (Core Models)
-
-Full schema: [/prisma/schema.prisma](/prisma/schema.prisma) or [DATABASE-SCHEMA.md](../core-reference/DATABASE-SCHEMA.md)
-
-### Material Production Pipeline
-```
-Biochar → Graphene → CompoundBatch/Micronization → MCB (optional) → Tests → Shipments
-```
-**Note:** MCB (Micronized Compound Batch) allows combining multiple micronizations into a single logical batch for shipment.
-
-#### Core Tables
-
-**Biochar** (biochar experiments)
-- `experimentNumber` (unique) - Primary identifier
-- Links to: `BiocharLot`, `Graphene` (one-to-many)
-- Key fields: reactor, rawMaterial, temperature, time, acid details
-
-**Graphene** (graphene production)
-- `experimentNumber` (unique) - Primary identifier
-- Links to: `Biochar` (source), `CompoundBatch`, tests, shipments
-- Key fields: oven, baseType, temperature, grindingMethod, output
-
-**CompoundBatch** (compound batches)
-- `batchNumber` (unique) - Primary identifier
-- Links to: `Graphene` (many-to-many), tests, shipments, micronization
-- Key fields: batchName, totalOutput, createdDate
-
-**Micronization** (micronization processes)
-- `micronizationNumber` (unique), `sku` (unique)
-- Links to: `Graphene`, `CompoundBatch`, `MaterialShipment`, `MicronizationMCB` (optional)
-- Key fields: dx50, grindPressure, recoveredAmount, micronizationLocation
-
-**MicronizedCompoundBatch** (MCB - combined micronizations)
-- `mcbNumber` (unique - serves as both identifier and SKU)
-- Links to: Multiple `Micronization` (via `MicronizationMCB` junction), `MaterialShipment`
-- Key fields: totalRecoveredAmount (auto-calculated), mcbLocation, combinedDate
-- Purpose: Logical grouping of micronizations for shipment tracking
-- **Date Tracking**: combinedDate tracks when micronizations were physically combined
-- **Important**: Micronizations in an MCB are excluded from individual inventory counts to prevent double-counting
-
-#### Testing Models
-- **BET**: Surface area testing (multipointBetArea, langmuirSurfaceArea)
-- **ConductivityTest**: Conductivity at 1kN, 8kN, 12kN, 20kN
-- **RamanTest**: Raman spectroscopy (D, G, 2D peak analysis)
-- **TEMTest**: TEM microscopy analysis
-
-#### Reports & Shipments
-- **UpdateReport**: Weekly update reports (many-to-many with Graphene/CompoundBatch)
-- **SemReport**: SEM imaging reports (many-to-many with Graphene/CompoundBatch)
-- **MaterialShipment**: Shipment tracking with locations, dates, status
-
-#### News & AI Systems
-- **NewsArticle**: RSS aggregation with GPT-4 summarization
-- **KnowledgeDocument**: Research papers, patents with AI processing
-
-#### Users & References
-- **User**: Authentication with role-based access control
-  - Roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
-  - THIRD_PARTY: View-only access (no editing, restricted tabs)
-- **CharacterizationReference**: External benchmarks (Dr. Li, ISO, ASTM, GEIC)
-
----
-
-## 📁 Key File Locations
-
-### Backend
-- **Server Entry**: `server/index.js`
-- **Routes**: `server/routes/*.js` (biochar, graphene, bet, conductivity, etc.)
-- **Database Schema**: `prisma/schema.prisma`
-
-### Frontend
-- **Main App**: `client/src/js/app-refactored.js` (4,050 lines)
-- **Services** (Service-oriented architecture):
-  - `client/src/js/services/api.js` - API client
-  - `client/src/js/services/AuthService.js` - Authentication
-  - `client/src/js/services/CRUDService.js` - All CRUD operations
-  - `client/src/js/services/NewsService.js` - News system
-  - `client/src/js/services/DashboardService.js` - Dashboard data
-- **Components**: `client/src/js/components/` (30+ modular UI components)
-- **Modals**: `client/src/js/components/modals/` (GrapheneModal, BiocharModal, MicronizationModal, MCBModal, etc.)
-
-### Configuration
-- **Railway**: `railway.json`, `nixpacks.toml`
-- **Startup**: `scripts/railway-startup.sh`
-- **Cloudinary**: `.env.cloudinary` (production credentials)
-
----
-
-## 🔧 Common Commands
-
-### Development
-```bash
-npm run dev              # Start local dev server
-npm run build            # Build for production
-```
-
-### Database
-```bash
-npx prisma migrate dev   # Run migrations (dev)
-npx prisma studio        # Open Prisma Studio
-npm run backup:create    # Create database backup
-```
-
-### Git
-```bash
-git status                              # Check working tree
-git log --oneline --graph --all         # View branch history
-git log --oneline staging ^main         # Check staging commits not in main
-git checkout staging && git merge main  # Sync staging with main
-```
-
-### Railway
-```bash
-railway logs             # View deployment logs
-railway run bash         # SSH into service
-```
-
----
-
-## 🛠️ Quick Troubleshooting
-
-**Before starting any work:**
-1. ✅ Verify branch: `git status` (should be on `staging`)
-2. ✅ Create backup: `npm run backup:create`
-3. ✅ Check sync: `git log --oneline --graph --all`
-
-**Common Issues:**
-- File uploads not working → Check Cloudinary configuration
-- Database errors → Check `DATABASE_URL` in environment
-- Deployment fails → Check Railway logs and environment variables
-- Tests failing → Run `npm run test` locally first
-
-**Full troubleshooting guide:** [/workflows/TROUBLESHOOTING.md](../workflows/TROUBLESHOOTING.md)
-
----
-
-## 📚 Deep Documentation Links
-
-### For Development Work
-- **[GIT-WORKFLOW.md](GIT-WORKFLOW.md)** - Complete branch strategy and recovery commands
-- **[DEVELOPMENT.md](../workflows/DEVELOPMENT.md)** - Local dev setup and workflows
-- **[DEPLOYMENT.md](../workflows/DEPLOYMENT.md)** - Full staging/production deployment guide
-
-### For Technical Reference
-- **[ARCHITECTURE.md](../core-reference/ARCHITECTURE.md)** - System architecture overview
-- **[DATABASE-SCHEMA.md](../core-reference/DATABASE-SCHEMA.md)** - Complete Prisma schema
-- **[API-REFERENCE.md](../core-reference/API-REFERENCE.md)** - All REST endpoints
-- **[COMPONENT-SYSTEM.md](../core-reference/COMPONENT-SYSTEM.md)** - UI component library
-
-### For Features
-- **[GRAPHENE-FILTERING.md](../features/GRAPHENE-FILTERING.md)** - Species and test type filtering
-- **[AI-INSIGHTS.md](../features/AI-INSIGHTS.md)** - GPT-4 integration and knowledge base
-- **[NEWS-SYSTEM.md](../features/NEWS-SYSTEM.md)** - RSS aggregation and summarization
-- **[CHARACTERIZATION-ANALYSIS.md](../features/CHARACTERIZATION-ANALYSIS.md)** - Comparison charts
-
----
-
-## 💾 Backup Before Major Changes
-
-**ALWAYS create backups before:**
-- Database schema changes
-- Major refactors
-- Deployment to production
+**Workflow:** staging -> test -> merge to main -> auto-deploys to prod. Never push directly to main.
 
 ```bash
-npm run backup:create "Description of what you're about to do"
+npm run dev              # Start both servers (Vite + Express)
+npm run build            # Production build
+npx prisma db push       # Apply schema changes
+npx prisma studio        # Database GUI
+npm run backup:create    # Backup before major changes
 ```
 
-Backups saved to: `/backups/graphene_backup_YYYY-MM-DDTHH-MM-SS.sql`
+---
+
+## Database Models
+
+**Source:** `prisma/schema.prisma`
+
+### Production Pipeline
+- **Biochar** -> **Graphene** -> **CompoundBatch** (many-to-many via GrapheneCompoundBatch)
+- **Micronization** (references Graphene + CompoundBatch)
+- **MicronizedCompoundBatch (MCB)** (groups multiple Micronizations via MicronizationMCB junction)
+- **MaterialShipment** (references Graphene, CompoundBatch, Micronization, or MCB)
+
+### Test Types (7 total)
+All reference Graphene and/or CompoundBatch by experiment/batch number string.
+- **BET** - Surface area (multipointBetArea, langmuirSurfaceArea)
+- **ConductivityTest** - Conductivity at 1kN/8kN/12kN/20kN
+- **RamanTest** - D, G, 2D peak analysis
+- **TEMTest** - TEM microscopy
+- **ParticleSizeTest** - d10, d50, d90, span (also references Micronization, MCB)
+- **XRDTest** - X-ray diffraction (also references Micronization, MCB)
+- **XPSTest** - X-ray photoelectron spectroscopy, extensive elemental composition (also references Micronization, MCB)
+
+### Reports
+- **UpdateReport**, **SemReport** - many-to-many with Graphene and CompoundBatch via junction tables
+
+### Task Management
+- **Task** - title, description, status (TODO/IN_PROGRESS/IN_REVIEW/DONE/ARCHIVED), priority (LOW/MEDIUM/HIGH/URGENT), dueDate, tags[], position. Self-referencing parentId for subtasks. Links to User (creator, assignee).
+- **TaskComment** - content, linked to Task and User (author)
+- **TaskActivity** - audit log (action, fromValue, toValue) for all task changes
+
+### Users & Auth
+- **User** - JWT auth with bcrypt. Roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
+- THIRD_PARTY: view-only (all mutations blocked server-side via `requireEditAccess` middleware)
+- INVESTOR: excluded from Tasks tab
+- **CharacterizationReference** - external benchmarks
+
+### News/AI
+- **NewsArticle**, **NewsSource**, **KnowledgeDocument** - RSS aggregation + GPT-4 summarization
 
 ---
 
-## 🌐 Cloudinary Structure
+## Architecture
+
+### Frontend Pattern
+Alpine.js tab-based SPA. Each tab is an HTML template string function:
 
 ```
-cloudinary.com/your-account/
-├── graphene-uploads/         # Production files
-├── graphene-uploads-staging/ # Staging files
-└── graphene-uploads-dev/     # Development files
+client/src/js/components/tabs/GrapheneTab.js    -> getGrapheneTabHtml()
+client/src/js/components/modals/TaskModal.js    -> getTaskModalHtml()
+client/src/js/services/api.js                   -> API.tasks.create(), API.graphene.getAll(), etc.
 ```
 
-**Important:** Each environment has separate folders - never mix!
+State lives in `app-refactored.js` (~5000 lines) as Alpine.js data. Methods on the same object delegate to API service functions.
+
+**Navigation:** `client/index.html` has desktop nav (border-bottom tabs) and mobile nav (hamburger with collapsible sections). Tabs registered in `switchTab()` method.
+
+### Backend Pattern
+Express routes in `server/routes/*.js`. Each route file exports an express Router. Prisma accessed via `req.app.locals.prisma`.
+
+Auth middleware exported from `auth.js`: `authenticateToken`, `requireEditAccess`, `requireSuperAdmin`. Tasks route adds its own `requireInternalAccess` (blocks THIRD_PARTY + INVESTOR).
+
+### Styling
+Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Responsive: tables on desktop, card layout on mobile.
 
 ---
 
-## 🔐 Environment Variables
+## Key Files
 
-Critical variables (set in Railway for staging/production):
-- `DATABASE_URL` - PostgreSQL connection string
-- `NODE_ENV` - "staging" or "production"
-- `JWT_SECRET` - Authentication secret
-- `OPENAI_API_KEY` - GPT-4 API access
-- `CLOUDINARY_*` - Cloudinary credentials
-- `USE_CLOUDINARY=true` - Enable cloud storage
-
----
-
-## ✅ Session Start Checklist
-
-Before starting work:
-- [ ] Read this document (SESSION-START.md)
-- [ ] Check current branch: `git status`
-- [ ] Verify on staging branch (or switch: `git checkout staging`)
-- [ ] Review database schema if working with data
-- [ ] Create backup if making major changes
-- [ ] Read relevant feature docs in `/features/`
+| Purpose | Path |
+|---|---|
+| Server entry | `server/index.js` |
+| All API routes | `server/routes/*.js` (26 files) |
+| Auth middleware | `server/routes/auth.js` (authenticateToken, requireEditAccess) |
+| Database schema | `prisma/schema.prisma` |
+| Main app state | `client/src/js/app-refactored.js` |
+| HTML shell + nav | `client/index.html` |
+| API client | `client/src/js/services/api.js` |
+| Tab components | `client/src/js/components/tabs/*.js` (21 files) |
+| Modal components | `client/src/js/components/modals/*.js` (21 files) |
+| CSS entry | `client/src/styles/main.css` |
 
 ---
 
-**Last Updated:** December 2025 (THIRD_PARTY role added)
-**For Questions:** Check [README.md](../README.md) for full documentation map
+## API Routes Summary
+
+| Base Path | Entity | Auth |
+|---|---|---|
+| /api/auth | Login/logout/me | Public (login), JWT (me) |
+| /api/users | User CRUD | SUPER_ADMIN only |
+| /api/biochar | Biochar CRUD + lots | Global middleware |
+| /api/graphene | Graphene CRUD + filters | Global middleware |
+| /api/compound-batches | CompoundBatch CRUD + related | Global middleware |
+| /api/micronization | Micronization CRUD | Global middleware |
+| /api/mcb | MCB CRUD | Global middleware |
+| /api/shipments | Shipment CRUD + locations | Global middleware |
+| /api/bet | BET test CRUD | Global middleware |
+| /api/conductivity | Conductivity test CRUD | Global middleware |
+| /api/raman | Raman test CRUD | Global middleware |
+| /api/tem | TEM test CRUD | Global middleware |
+| /api/particle-size | Particle size test CRUD | Global middleware |
+| /api/xrd | XRD test CRUD (multi-file) | Global middleware |
+| /api/xps | XPS test CRUD (multi-file) | Global middleware |
+| /api/update-reports | Update report CRUD | Global middleware |
+| /api/sem-reports | SEM report CRUD | Global middleware |
+| /api/tasks | Task CRUD + comments + status | JWT + internal roles only |
+| /api/dashboard | Production metrics, inventory | Global middleware |
+| /api/analysis | Competitive metrics, charts | Global middleware |
+| /api/ai-insights | GPT-4 analysis | Global middleware |
+| /api/news | RSS articles, bookmarks | Global middleware |
+| /api/knowledge-base | Document upload + processing | Global middleware |
+| /api/data | Generic data page lookup | Global middleware |
+
+Global middleware: THIRD_PARTY blocked on POST/PUT/DELETE. GET open to all authenticated users.
+
+---
+
+## Environment Variables
+
+| Var | Purpose |
+|---|---|
+| DATABASE_URL | PostgreSQL connection |
+| PORT | Server port (default 3000) |
+| NODE_ENV | development/staging/production |
+| JWT_SECRET | Token signing key |
+| OPENAI_API_KEY | GPT-4 for insights/news |
+| USE_CLOUDINARY | Enable cloud file storage |
+| CLOUDINARY_* | Cloudinary credentials |
+
+---
+
+## Gotchas
+
+- Local dev: always use `localhost:5174` (Vite), not `:3001` (Express). Express serves raw unprocessed files in dev mode.
+- `prisma migrate dev` fails due to old shadow DB issues. Use `prisma db push` instead.
+- Biochar time is in HOURS, Graphene time is in MINUTES.
+- Test models use string references (experimentNumber/batchNumber), not foreign keys.
+- XRD and XPS support multi-file upload (array of report URLs).
+- MCB micronizations are excluded from individual inventory counts to prevent double-counting.
+- app-refactored.js is ~5000 lines. State + methods for all tabs live here. New features add state properties + methods to this file.

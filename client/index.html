@@ -236,6 +236,15 @@
             </button>
           </div>
 
+          <!-- Tasks (Internal team only) -->
+          <div class="border-t border-gray-100" x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'">
+            <button @click="switchTab('tasks'); mobileMenuOpen = false"
+                    :class="activeTab === 'tasks' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
+                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
+              Tasks
+            </button>
+          </div>
+
           <!-- User Management (Super Admin Only) -->
           <div class="border-t border-gray-100" x-show="isSuperAdmin()">
             <button @click="switchTab('user-management'); mobileMenuOpen = false; initializeUserManagementTab()"
@@ -332,6 +341,16 @@
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             News Feed
+          </button>
+
+          <!-- Tasks (Internal team only) -->
+          <button
+            x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'"
+            @click="switchTab('tasks')"
+            :class="activeTab === 'tasks' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+          >
+            Tasks
           </button>
 
           <!-- User Management (Super Admin Only) -->
@@ -525,6 +544,8 @@
       <!-- User Management Tab -->
       <div x-html="getUserManagementTabHtml()"></div>
 
+      <!-- Tasks Tab -->
+      <div x-html="getTasksTabHtml()"></div>
 
       <!-- BET Tab Component -->
       <div x-html="getBETTabHtml()"></div>
@@ -584,7 +605,13 @@
 
     <!-- User Add/Edit Modal -->
     <div x-html="getUserModalHtml()"></div>
-    
+
+    <!-- Task Add/Edit Modal -->
+    <div x-html="getTaskModalHtml()"></div>
+
+    <!-- Task Detail Panel -->
+    <div x-html="getTaskDetailPanelHtml()"></div>
+
     <!-- Add New Material Modal -->
     <div x-show="showAddMaterial" x-cloak
          @click.away="showAddMaterial = false; newMaterial = ''"

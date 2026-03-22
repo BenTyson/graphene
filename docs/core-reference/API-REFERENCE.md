@@ -1060,6 +1060,66 @@ const response = await fetch('/api/bet', {
 
 ---
 
-**Last Updated:** November 2025
-**API Version:** 1.0
+## Task Management APIs
+
+Route file: `server/routes/tasks.js`
+Auth: All endpoints require JWT + internal role (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). THIRD_PARTY and INVESTOR blocked.
+
+### Endpoints
+
+```
+GET    /api/tasks/assignees           - List assignable users (id, name, role)
+GET    /api/tasks/stats               - Counts by status + myTasks + overdue
+GET    /api/tasks                     - List root tasks (filters: status, priority, assigneeId, search, overdue, sortBy, order, limit, offset)
+GET    /api/tasks/:id                 - Detail with subtasks, comments, activity
+POST   /api/tasks                     - Create task (title required; description, status, priority, dueDate, assigneeId, parentId, tags optional)
+PUT    /api/tasks/:id                 - Update task (creator + SUPER_ADMIN only)
+DELETE /api/tasks/:id                 - Delete task + subtasks (creator + SUPER_ADMIN only)
+PATCH  /api/tasks/:id/status          - Quick status change (status, position)
+PATCH  /api/tasks/:id/position        - Reorder within column
+POST   /api/tasks/:id/comments        - Add comment (content required)
+DELETE /api/tasks/:id/comments/:cid   - Delete comment (author + SUPER_ADMIN only)
+```
+
+### Task Status Flow
+`TODO` -> `IN_PROGRESS` -> `IN_REVIEW` -> `DONE` (also `ARCHIVED`)
+
+### Activity Logging
+All status, priority, assignment, and due date changes auto-log to TaskActivity.
+
+## Additional Test Type APIs (added post-initial docs)
+
+### Particle Size Tests
+```
+GET/POST/PUT/DELETE /api/particle-size[/:id]
+GET /api/particle-size/export/csv
+```
+Fields: d10, d50, d90, span. References Graphene, CompoundBatch, Micronization, MCB.
+
+### XRD Tests
+```
+GET/POST/PUT/DELETE /api/xrd[/:id]
+GET /api/xrd/export/csv
+```
+Multi-file report upload. References Graphene, CompoundBatch, Micronization, MCB.
+
+### XPS Tests
+```
+GET/POST/PUT/DELETE /api/xps[/:id]
+GET /api/xps/export/csv
+```
+Multi-file report upload. Extensive elemental composition data. References Graphene, CompoundBatch, Micronization, MCB.
+
+### MCB (Micronized Compound Batch)
+```
+GET/POST/PUT/DELETE /api/mcb[/:id]
+GET /api/mcb/available/micronizations
+GET /api/mcb/export/csv
+```
+Groups multiple Micronization records. totalRecoveredAmount auto-calculated.
+
+---
+
+**Last Updated:** March 2026
+**API Version:** 2.0
 **For Database Schema:** See [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md)
