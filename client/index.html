@@ -23,570 +23,541 @@
     </div>
 
     <!-- Main Application -->
-    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init(); updateCurrentUser()">
-      <!-- Header with logout -->
-      <header class="border-b border-gray-200 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <!-- Desktop Header -->
-          <div class="hidden md:flex justify-between items-center h-16">
-            <div class="flex items-center">
-              <img class="h-8 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
-            </div>
-            <div class="flex items-center space-x-4">
-              <span class="text-sm text-gray-500" x-text="new Date().toLocaleDateString()"></span>
-              <div class="flex items-center space-x-2 text-sm text-gray-600">
-                <span x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></span>
-                <span class="px-2 py-1 bg-gray-100 rounded text-xs" x-text="currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
-                <button @click="window.authService?.logout().then(() => location.reload())" 
-                        class="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded hover:bg-gray-100 transition-colors">
-                  Logout
-                </button>
-              </div>
-            </div>
+    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init(); updateCurrentUser()" class="flex h-screen overflow-hidden">
+
+      <!-- Mobile Sidebar Backdrop -->
+      <div x-show="sidebarOpen" x-cloak
+           @click="sidebarOpen = false"
+           x-transition:enter="transition ease-out duration-300"
+           x-transition:enter-start="opacity-0"
+           x-transition:enter-end="opacity-100"
+           x-transition:leave="transition ease-in duration-200"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"
+           class="fixed inset-0 bg-black/40 z-40 lg:hidden"></div>
+
+      <!-- Sidebar -->
+      <aside :class="[
+               sidebarExpanded ? 'w-60' : 'w-16',
+               sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+             ]"
+             class="fixed lg:relative inset-y-0 left-0 z-40 flex flex-col bg-gray-950 text-white transition-all duration-200 ease-in-out w-72 lg:w-auto shrink-0">
+
+        <!-- Logo -->
+        <div class="h-14 shrink-0 flex items-center px-4 border-b border-gray-800/60">
+          <img class="h-7 w-auto shrink-0" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
+          <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-2.5 text-sm font-semibold text-white tracking-tight hidden lg:inline">HGraphene</span>
+          <span class="ml-2.5 text-sm font-semibold text-white tracking-tight lg:hidden">HGraphene</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto sidebar-scroll py-4 px-2 space-y-1">
+
+          <!-- Dashboard -->
+          <div x-show="!isThirdParty()" class="group relative">
+            <button @click="sidebarNavigate('dashboard')"
+                    :class="activeTab === 'dashboard' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                    class="sidebar-nav-item">
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+              </svg>
+              <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Dashboard</span>
+              <span class="ml-3 lg:hidden">Dashboard</span>
+            </button>
+            <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Dashboard</span>
           </div>
 
-          <!-- Mobile Header -->
-          <div class="md:hidden" x-data="{ showUserMenu: false }">
-            <div class="flex justify-between items-center h-16">
-              <!-- Logo -->
-              <div class="flex items-center">
-                <img class="h-7 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
-              </div>
-              
-              <!-- User Menu Button -->
-              <button @click="showUserMenu = !showUserMenu" 
-                      class="flex items-center space-x-2 p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
-                <div class="flex items-center space-x-2">
-                  <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span class="text-xs font-medium text-gray-600" x-text="currentUser?.firstName?.charAt(0) + currentUser?.lastName?.charAt(0)"></span>
-                  </div>
-                  <svg class="w-4 h-4 transition-transform" :class="showUserMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          <!-- PRODUCTION Section -->
+          <div class="pt-4">
+            <button @click="sidebarProductionOpen = !sidebarProductionOpen"
+                    x-show="sidebarExpanded"
+                    class="sidebar-section-label hidden lg:flex">
+              <span>Production</span>
+              <svg :class="sidebarProductionOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="sidebar-section-label lg:hidden" @click="sidebarProductionOpen = !sidebarProductionOpen">
+              <span>Production</span>
+              <svg :class="sidebarProductionOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+
+            <div x-show="sidebarExpanded ? sidebarProductionOpen : true" x-collapse class="space-y-0.5">
+              <!-- Graphene -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('graphene')"
+                        :class="activeTab === 'graphene' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/>
                   </svg>
-                </div>
-              </button>
-            </div>
-
-            <!-- Mobile User Dropdown -->
-            <div x-show="showUserMenu" x-cloak 
-                 x-transition:enter="transition ease-out duration-100"
-                 x-transition:enter-start="transform opacity-0 scale-95"
-                 x-transition:enter-end="transform opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-75"
-                 x-transition:leave-start="transform opacity-100 scale-100"
-                 x-transition:leave-end="transform opacity-0 scale-95"
-                 @click.away="showUserMenu = false"
-                 class="absolute right-4 top-16 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-              
-              <!-- User Info -->
-              <div class="px-4 py-3 border-b border-gray-100">
-                <div class="text-sm font-medium text-gray-900" x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></div>
-                <div class="text-xs text-gray-500" x-text="currentUser?.email"></div>
-                <div class="mt-1">
-                  <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600"
-                        x-text="currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Team Member'"></span>
-                </div>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Graphene</span>
+                  <span class="ml-3 lg:hidden">Graphene</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Graphene</span>
               </div>
 
-              <!-- Date -->
-              <div class="px-4 py-2 text-xs text-gray-500 border-b border-gray-100" x-text="new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })"></div>
+              <!-- Biochar -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('biochar')"
+                        :class="activeTab === 'biochar' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Biochar</span>
+                  <span class="ml-3 lg:hidden">Biochar</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Biochar</span>
+              </div>
 
-              <!-- Logout -->
-              <button @click="window.authService?.logout().then(() => location.reload())" 
-                      class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              <!-- Compound Batches -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('compound-batches')"
+                        :class="activeTab === 'compound-batches' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Compound Batches</span>
+                  <span class="ml-3 lg:hidden">Compound Batches</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Compound Batches</span>
+              </div>
+
+              <!-- Micronization -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('micronization')"
+                        :class="activeTab === 'micronization' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205L12 12m0 0l4.5-7.795M12 12l4.5 7.794M12 12L7.5 19.795"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Micronization</span>
+                  <span class="ml-3 lg:hidden">Micronization</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Micronization</span>
+              </div>
+
+              <!-- Shipments -->
+              <div x-show="!isThirdParty()" class="group relative">
+                <button @click="sidebarNavigate('shipments')"
+                        :class="activeTab === 'shipments' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25h3.75V7.5h7.5v6.75h3.75m-15 0V7.5A1.125 1.125 0 014.5 6.375h6.75A1.125 1.125 0 0112.375 7.5v6.75m2.25 0h1.5m-1.5 0h-1.5m1.5 0v-6.75A1.125 1.125 0 0115.75 6.375H18a1.125 1.125 0 011.125 1.125v6.75"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Shipments</span>
+                  <span class="ml-3 lg:hidden">Shipments</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Shipments</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ANALYTICS Section -->
+          <div class="pt-4">
+            <button @click="sidebarAnalyticsOpen = !sidebarAnalyticsOpen"
+                    x-show="sidebarExpanded"
+                    class="sidebar-section-label hidden lg:flex">
+              <span>Analytics</span>
+              <svg :class="sidebarAnalyticsOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="sidebar-section-label lg:hidden" @click="sidebarAnalyticsOpen = !sidebarAnalyticsOpen">
+              <span>Analytics</span>
+              <svg :class="sidebarAnalyticsOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+
+            <div x-show="sidebarExpanded ? sidebarAnalyticsOpen : true" x-collapse class="space-y-0.5">
+              <!-- Analysis -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('analysis')"
+                        :class="activeTab === 'analysis' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Analysis</span>
+                  <span class="ml-3 lg:hidden">Analysis</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Analysis</span>
+              </div>
+
+              <!-- Insights -->
+              <div x-show="!isThirdParty()" class="group relative">
+                <button @click="sidebarNavigate('ai-insights')"
+                        :class="activeTab === 'ai-insights' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Insights</span>
+                  <span class="ml-3 lg:hidden">Insights</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Insights</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TEST RESULTS Section -->
+          <div class="pt-4">
+            <button @click="sidebarTestResultsOpen = !sidebarTestResultsOpen"
+                    x-show="sidebarExpanded"
+                    class="sidebar-section-label hidden lg:flex">
+              <span>Test Results</span>
+              <svg :class="sidebarTestResultsOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="sidebar-section-label lg:hidden" @click="sidebarTestResultsOpen = !sidebarTestResultsOpen">
+              <span>Test Results</span>
+              <svg :class="sidebarTestResultsOpen ? 'rotate-180' : ''" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+
+            <div x-show="sidebarExpanded ? sidebarTestResultsOpen : true" x-collapse class="space-y-0.5">
+              <!-- BET -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-bet')"
+                        :class="activeTab === 'test-bet' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">BET</span>
+                  <span class="ml-3 lg:hidden">BET</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">BET</span>
+              </div>
+
+              <!-- Conductivity -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-conductivity')"
+                        :class="activeTab === 'test-conductivity' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Conductivity</span>
+                  <span class="ml-3 lg:hidden">Conductivity</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Conductivity</span>
+              </div>
+
+              <!-- RAMAN -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-raman')"
+                        :class="activeTab === 'test-raman' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">RAMAN</span>
+                  <span class="ml-3 lg:hidden">RAMAN</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">RAMAN</span>
+              </div>
+
+              <!-- TEM -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-tem')"
+                        :class="activeTab === 'test-tem' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">TEM</span>
+                  <span class="ml-3 lg:hidden">TEM</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">TEM</span>
+              </div>
+
+              <!-- Particle Size -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-particle-size')"
+                        :class="activeTab === 'test-particle-size' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Particle Size</span>
+                  <span class="ml-3 lg:hidden">Particle Size</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Particle Size</span>
+              </div>
+
+              <!-- XRD -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-xrd')"
+                        :class="activeTab === 'test-xrd' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">XRD</span>
+                  <span class="ml-3 lg:hidden">XRD</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">XRD</span>
+              </div>
+
+              <!-- XPS -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-xps')"
+                        :class="activeTab === 'test-xps' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">XPS</span>
+                  <span class="ml-3 lg:hidden">XPS</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">XPS</span>
+              </div>
+
+              <!-- SEM Reports -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-sem')"
+                        :class="activeTab === 'test-sem' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">SEM Reports</span>
+                  <span class="ml-3 lg:hidden">SEM Reports</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">SEM Reports</span>
+              </div>
+
+              <!-- Curia Updates -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-updates')"
+                        :class="activeTab === 'test-updates' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Curia Updates</span>
+                  <span class="ml-3 lg:hidden">Curia Updates</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Curia Updates</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tasks -->
+          <div class="pt-4">
+            <div x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'" class="group relative">
+              <button @click="sidebarNavigate('tasks')"
+                      :class="activeTab === 'tasks' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                      class="sidebar-nav-item">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                Logout
+                <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Tasks</span>
+                <span class="ml-3 lg:hidden">Tasks</span>
               </button>
+              <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Tasks</span>
+            </div>
+
+            <!-- User Management -->
+            <div x-show="isSuperAdmin()" class="group relative mt-0.5">
+              <button @click="sidebarNavigate('user-management')"
+                      :class="activeTab === 'user-management' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                      class="sidebar-nav-item">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+                </svg>
+                <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Users</span>
+                <span class="ml-3 lg:hidden">Users</span>
+              </button>
+              <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">User Management</span>
             </div>
           </div>
-        </div>
-      </header>
 
-    <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-      <!-- Mobile menu button -->
-      <div class="flex md:hidden items-center justify-between mb-4">
-        <button @click="mobileMenuOpen = !mobileMenuOpen" class="p-2 rounded-md text-gray-700 hover:bg-gray-100 touch-target">
-          <svg x-show="!mobileMenuOpen" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-          <svg x-show="mobileMenuOpen" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-        <span class="text-sm font-medium text-gray-700" x-text="
-          activeTab === 'dashboard' ? 'Dashboard' :
-          activeTab === 'news' ? 'News Feed' :
-          activeTab === 'analysis' ? 'Analysis' :
-          activeTab === 'ai-insights' ? 'Insights' :
-          activeTab.startsWith('test-') ? 'Test Results' :
-          activeTab === 'graphene' ? 'Production → Graphene' :
-          activeTab === 'biochar' ? 'Production → Biochar' :
-          activeTab === 'compound-batches' ? 'Production → Compound Batches' :
-          activeTab === 'micronization' ? 'Production → Micronization' :
-          activeTab === 'shipments' ? 'Production → Shipments' :
-          activeTab === 'user-management' ? 'User Management' : ''
-        "></span>
-      </div>
-      
-      <!-- Mobile dropdown menu -->
-      <div x-show="mobileMenuOpen" x-cloak class="md:hidden mb-4 border border-gray-200 rounded-lg bg-white shadow-lg">
-        <div class="py-2">
-          <!-- Dashboard (hidden for Third Party) -->
-          <button x-show="!isThirdParty()" @click="console.log('[Navigation] Mobile dashboard button clicked'); switchTab('dashboard'); mobileMenuOpen = false"
-                  :class="activeTab === 'dashboard' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                  class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-            Dashboard
-          </button>
+        </nav>
 
-          <!-- Production Category -->
-          <div class="border-t border-gray-100">
-            <button @click="console.log('[Navigation] Mobile production dropdown toggled:', !mobileProductionOpen); mobileProductionOpen = !mobileProductionOpen"
-                    :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target flex items-center justify-between">
-              <span>Production</span>
-              <svg class="w-5 h-5 transition-transform" :class="mobileProductionOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </button>
-            <div x-show="mobileProductionOpen" x-cloak 
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 max-h-0"
-                 x-transition:enter-end="opacity-100 max-h-96"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 max-h-96"
-                 x-transition:leave-end="opacity-0 max-h-0"
-                 class="overflow-hidden">
-              <div class="bg-gray-50">
-                <button @click="activeTab = 'graphene'; mobileMenuOpen = false"
-                        :class="activeTab === 'graphene' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Graphene
-                </button>
-                <button @click="activeTab = 'biochar'; mobileMenuOpen = false"
-                        :class="activeTab === 'biochar' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Biochar
-                </button>
-                <button @click="activeTab = 'compound-batches'; mobileMenuOpen = false"
-                        :class="activeTab === 'compound-batches' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Compound Batches
-                </button>
-                <button @click="activeTab = 'micronization'; mobileMenuOpen = false"
-                        :class="activeTab === 'micronization' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Micronization
-                </button>
-                <button x-show="!isThirdParty()" @click="activeTab = 'shipments'; mobileMenuOpen = false"
-                        :class="activeTab === 'shipments' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Shipments
-                </button>
+        <!-- Sidebar Footer: User Info + Collapse Toggle -->
+        <div class="shrink-0 border-t border-gray-800/60">
+          <!-- User Info -->
+          <div class="px-3 py-3">
+            <div class="flex items-center" :class="sidebarExpanded ? '' : 'justify-center'">
+              <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center shrink-0">
+                <span class="text-xs font-medium text-gray-300" x-text="currentUser?.firstName?.charAt(0) + currentUser?.lastName?.charAt(0)"></span>
+              </div>
+              <div x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-2.5 min-w-0 hidden lg:block">
+                <div class="text-xs font-medium text-gray-200 truncate" x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></div>
+                <div class="text-[10px] text-gray-500 truncate" x-text="formatRoleName(currentUser?.role)"></div>
+              </div>
+              <div class="ml-2.5 min-w-0 lg:hidden">
+                <div class="text-xs font-medium text-gray-200 truncate" x-text="currentUser?.firstName + ' ' + currentUser?.lastName"></div>
+                <div class="text-[10px] text-gray-500 truncate" x-text="formatRoleName(currentUser?.role)"></div>
               </div>
             </div>
           </div>
 
-          <!-- Analytics Category (hidden for Third Party) -->
-          <div class="border-t border-gray-100">
-            <button @click="mobileAnalyticsOpen = !mobileAnalyticsOpen"
-                    :class="['analysis', 'ai-insights'].includes(activeTab) || activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target flex items-center justify-between">
-              <span>Analytics</span>
-              <svg class="w-5 h-5 transition-transform" :class="mobileAnalyticsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          <!-- Logout + Collapse -->
+          <div class="flex items-center border-t border-gray-800/60 px-2 py-2">
+            <button @click="window.authService?.logout().then(() => location.reload())"
+                    class="flex-1 flex items-center justify-center rounded-lg p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800/50 transition-colors"
+                    :title="sidebarExpanded ? '' : 'Logout'">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
               </svg>
+              <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-1.5 text-xs hidden lg:inline">Logout</span>
+              <span class="ml-1.5 text-xs lg:hidden">Logout</span>
             </button>
-            <div x-show="mobileAnalyticsOpen" x-cloak 
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 max-h-0"
-                 x-transition:enter-end="opacity-100 max-h-96"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 max-h-96"
-                 x-transition:leave-end="opacity-0 max-h-0"
-                 class="overflow-hidden">
-              <div class="bg-gray-50">
-                <button @click="switchTab('analysis'); mobileMenuOpen = false"
-                        :class="activeTab === 'analysis' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Analysis
-                </button>
-                <button x-show="!isThirdParty()" @click="switchTab('ai-insights'); mobileMenuOpen = false"
-                        :class="activeTab === 'ai-insights' ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Insights
-                </button>
-                <button @click="switchTab(activeTab.startsWith('test-') ? activeTab : 'test-bet'); mobileMenuOpen = false"
-                        :class="activeTab.startsWith('test-') ? 'bg-gray-200 text-gray-900 font-semibold' : 'text-gray-700'"
-                        class="w-full text-left px-8 py-2 text-sm hover:bg-gray-100 touch-target">
-                  Test Results
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- News Feed (temporarily hidden) -->
-          <div class="border-t border-gray-100" x-show="false">
-            <button @click="switchTab('news'); mobileMenuOpen = false; initializeNewsTab()"
-                    :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-              News Feed
-            </button>
-          </div>
-
-          <!-- Tasks (Internal team only) -->
-          <div class="border-t border-gray-100" x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'">
-            <button @click="switchTab('tasks'); mobileMenuOpen = false"
-                    :class="activeTab === 'tasks' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-              Tasks
-            </button>
-          </div>
-
-          <!-- User Management (Super Admin Only) -->
-          <div class="border-t border-gray-100" x-show="isSuperAdmin()">
-            <button @click="switchTab('user-management'); mobileMenuOpen = false; initializeUserManagementTab()"
-                    :class="activeTab === 'user-management' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
-                    class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
-              User Management
+            <button @click="toggleSidebar()"
+                    class="hidden lg:flex items-center justify-center rounded-lg p-1.5 text-gray-500 hover:text-white hover:bg-gray-800/50 transition-colors ml-1">
+              <svg :class="sidebarExpanded ? '' : 'rotate-180'" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"/>
+              </svg>
             </button>
           </div>
         </div>
-      </div>
-      
-      <!-- Desktop navigation -->
-      <div class="border-b border-gray-200 hidden md:block">
-        <nav class="-mb-px flex space-x-8">
-          <!-- Dashboard (hidden for Third Party) -->
-          <button
-            x-show="!isThirdParty()"
-            @click="console.log('[Navigation] Desktop dashboard button clicked'); switchTab('dashboard')"
-            :class="activeTab === 'dashboard' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Dashboard
-          </button>
+      </aside>
 
-          <!-- Production Dropdown -->
-          <div class="relative" @click.away="productionOpen = false">
-            <button
-              @click="console.log('[Navigation] Desktop production dropdown toggled:', !productionOpen); productionOpen = !productionOpen"
-              :class="['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(activeTab) ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-              class="py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-1"
-            >
-              <span>Production</span>
-              <svg class="w-4 h-4 transition-transform" :class="productionOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      <!-- Content Area -->
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+        <!-- Top Header Bar -->
+        <header class="h-12 shrink-0 border-b border-gray-200 bg-white flex items-center justify-between px-4 lg:px-6">
+          <div class="flex items-center">
+            <!-- Mobile hamburger -->
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1.5 -ml-1.5 mr-3 rounded-md text-gray-600 hover:bg-gray-100 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
             </button>
-            <div
-              x-show="productionOpen"
-              x-cloak
-              x-transition:enter="transition ease-out duration-200"
-              x-transition:enter-start="opacity-0 translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-              x-transition:leave="transition ease-in duration-150"
-              x-transition:leave-start="opacity-100 translate-y-0"
-              x-transition:leave-end="opacity-0 translate-y-1"
-              class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
-            >
-              <div class="py-1">
-                <button @click="switchTab('graphene'); productionOpen = false" :class="activeTab === 'graphene' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Graphene</button>
-                <button @click="switchTab('biochar'); productionOpen = false" :class="activeTab === 'biochar' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Biochar</button>
-                <button @click="switchTab('compound-batches'); productionOpen = false" :class="activeTab === 'compound-batches' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Compound Batches</button>
-                <button @click="switchTab('micronization'); productionOpen = false" :class="activeTab === 'micronization' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Micronization</button>
-                <button x-show="!isThirdParty()" @click="switchTab('shipments'); productionOpen = false" :class="activeTab === 'shipments' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Shipments</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Analytics Dropdown -->
-          <div class="relative" @click.away="analyticsOpen = false">
-            <button
-              @click="analyticsOpen = !analyticsOpen"
-              :class="['analysis', 'ai-insights'].includes(activeTab) || activeTab.startsWith('test-') ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-              class="py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-1"
-            >
-              <span>Analytics</span>
-              <svg class="w-4 h-4 transition-transform" :class="analyticsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            <!-- Breadcrumb -->
+            <div class="flex items-center text-sm">
+              <span x-show="getPageSection()" class="text-gray-400" x-text="getPageSection()"></span>
+              <svg x-show="getPageSection()" class="w-3.5 h-3.5 text-gray-300 mx-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
-            </button>
-            <div
-              x-show="analyticsOpen"
-              x-cloak
-              x-transition:enter="transition ease-out duration-200"
-              x-transition:enter-start="opacity-0 translate-y-1"
-              x-transition:enter-end="opacity-100 translate-y-0"
-              x-transition:leave="transition ease-in duration-150"
-              x-transition:leave-start="opacity-100 translate-y-0"
-              x-transition:leave-end="opacity-0 translate-y-1"
-              class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
-            >
-              <div class="py-1">
-                <button @click="switchTab('analysis'); analyticsOpen = false" :class="activeTab === 'analysis' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Analysis</button>
-                <button x-show="!isThirdParty()" @click="switchTab('ai-insights'); analyticsOpen = false" :class="activeTab === 'ai-insights' ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Insights</button>
-                <button @click="switchTab(activeTab.startsWith('test-') ? activeTab : 'test-bet'); analyticsOpen = false" :class="activeTab.startsWith('test-') ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'" class="w-full text-left px-4 py-2 text-sm transition-colors">Test Results</button>
-              </div>
+              <span class="font-medium text-gray-900" x-text="getPageTitle()"></span>
             </div>
           </div>
+          <div class="flex items-center">
+            <span class="hidden sm:block text-xs text-gray-400" x-text="new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })"></span>
+          </div>
+        </header>
 
-          <!-- News Feed (temporarily hidden) -->
-          <button
-            x-show="false"
-            @click="switchTab('news'); initializeNewsTab()"
-            :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            News Feed
-          </button>
-
-          <!-- Tasks (Internal team only) -->
-          <button
-            x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'"
-            @click="switchTab('tasks')"
-            :class="activeTab === 'tasks' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            Tasks
-          </button>
-
-          <!-- User Management (Super Admin Only) -->
-          <button
-            x-show="isSuperAdmin()"
-            @click="switchTab('user-management'); initializeUserManagementTab()"
-            :class="activeTab === 'user-management' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-            class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-          >
-            User Management
-          </button>
-        </nav>
-      </div>
-    </div>
-    
-    <!-- Sub-navigation for Tests -->
-    <div x-show="activeTab.startsWith('test-')" x-cloak class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="border-b border-gray-100 bg-gray-50">
-        <!-- Desktop: Horizontal Layout -->
-        <nav class="hidden md:flex space-x-6 px-2 py-3">
-          <button
-            @click="switchTab('test-bet')"
-            :class="activeTab === 'test-bet' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            BET
-          </button>
-          <button
-            @click="switchTab('test-conductivity')"
-            :class="activeTab === 'test-conductivity' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            Conductivity
-          </button>
-          <button
-            @click="activeTab = 'test-raman'"
-            :class="activeTab === 'test-raman' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            RAMAN
-          </button>
-          <button
-            @click="activeTab = 'test-tem'"
-            :class="activeTab === 'test-tem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            TEM
-          </button>
-          <button
-            @click="activeTab = 'test-particle-size'"
-            :class="activeTab === 'test-particle-size' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            Particle Size
-          </button>
-          <button
-            @click="activeTab = 'test-xrd'"
-            :class="activeTab === 'test-xrd' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            XRD
-          </button>
-          <button
-            @click="activeTab = 'test-xps'"
-            :class="activeTab === 'test-xps' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            XPS
-          </button>
-          <button
-            @click="activeTab = 'test-sem'"
-            :class="activeTab === 'test-sem' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            SEM Reports
-          </button>
-          <button
-            @click="activeTab = 'test-updates'"
-            :class="activeTab === 'test-updates' ? 'text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'"
-            class="text-sm transition-colors"
-          >
-            Curia Updates
-          </button>
-        </nav>
-
-        <!-- Mobile: Grid Layout -->
-        <nav class="md:hidden grid grid-cols-2 gap-2 p-3">
-          <button
-            @click="activeTab = 'test-bet'"
-            :class="activeTab === 'test-bet' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            BET
-          </button>
-          <button
-            @click="activeTab = 'test-conductivity'"
-            :class="activeTab === 'test-conductivity' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            Conductivity
-          </button>
-          <button
-            @click="activeTab = 'test-raman'"
-            :class="activeTab === 'test-raman' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            RAMAN
-          </button>
-          <button
-            @click="activeTab = 'test-tem'"
-            :class="activeTab === 'test-tem' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            TEM
-          </button>
-          <button
-            @click="activeTab = 'test-particle-size'"
-            :class="activeTab === 'test-particle-size' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            Particle Size
-          </button>
-          <button
-            @click="activeTab = 'test-xrd'"
-            :class="activeTab === 'test-xrd' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            XRD
-          </button>
-          <button
-            @click="activeTab = 'test-xps'"
-            :class="activeTab === 'test-xps' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            XPS
-          </button>
-          <button
-            @click="activeTab = 'test-sem'"
-            :class="activeTab === 'test-sem' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            SEM Reports
-          </button>
-          <button
-            @click="activeTab = 'test-updates'"
-            :class="activeTab === 'test-updates' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
-            class="px-3 py-2 text-sm transition-colors rounded border border-gray-200 touch-target"
-          >
-            Curia Updates
-          </button>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
-      <!-- Data Page Container -->
-      <div x-show="showDataPage" x-cloak x-html="getDataPageHtml()"></div>
-      
-      <!-- Standard Tab Content (hidden when data page is shown) -->
-      <div x-show="!showDataPage">
-        
-        <!-- Compound Batches Tab -->
-      <div x-html="getCompoundBatchesTabHtml()"></div>
-
-      <!-- Shipments Tab -->
-      <div x-html="getShipmentsTabHtml()"></div>
-
-      <!-- Micronization Tab -->
-      <div x-html="getMicronizationTabHtml()"></div>
-
-       <!-- Dashboard Tab -->
-      <div x-html="getDashboardTabHtml()"></div>
-
-      <!-- Analysis Tab -->
-      <div x-html="getAnalysisTabHtml()"></div>
-
-      <!-- AI Insights Tab -->
-      <div x-html="getAIInsightsTabHtml()"></div>
-
-      <!-- News Tab -->
-      <div x-html="getNewsTabHtml()"></div>
-
-      <!-- Biochar Tab -->
-      <div x-html="getBiocharTabHtml()"></div>
-
-      <!-- Graphene Tab -->
-      <div x-html="getGrapheneTabHtml()"></div>
-
-      <!-- User Management Tab -->
-      <div x-html="getUserManagementTabHtml()"></div>
-
-      <!-- Tasks Tab -->
-      <div x-html="getTasksTabHtml()"></div>
-
-      <!-- BET Tab Component -->
-      <div x-html="getBETTabHtml()"></div>
-
-      <!-- Conductivity Tab Component -->
-      <div x-html="getConductivityTabHtml()"></div>
-
-      <!-- RAMAN Tab Component -->
-      <div x-html="getRAMANTabHtml()"></div>
-
-      <!-- TEM Tab Component -->
-      <div x-html="getTEMTabHtml()"></div>
-
-      <!-- Particle Size Tab Component -->
-      <div x-html="getParticleSizeTabHtml()"></div>
-
-      <!-- XRD Tab Component -->
-      <div x-html="getXRDTabHtml()"></div>
-
-      <!-- XPS Tab Component -->
-      <div x-html="getXPSTabHtml()"></div>
-
-      <!-- SEM Reports Tab Component -->
-      <div x-html="getSEMReportsTabHtml()"></div>
-
-      <!-- Update Reports Tab Component -->
-      <div x-html="getUpdateReportsTabHtml()"></div>
-      
-      </div> <!-- End Standard Tab Content -->
-    </main>
-
-    <!-- Footer -->
-    <footer class="mt-16 border-t border-gray-200 bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="text-center">
-          <p class="text-sm text-gray-500">
-            Copyright HGraphene <span x-text="new Date().getFullYear()"></span>
-          </p>
+        <!-- Test Results Sub-navigation -->
+        <div x-show="activeTab.startsWith('test-')" x-cloak class="shrink-0 border-b border-gray-100 bg-gray-50/80">
+          <!-- Desktop: horizontal scrollable pills -->
+          <nav class="hidden lg:flex items-center space-x-1 px-6 py-2 overflow-x-auto">
+            <button @click="switchTab('test-bet')"
+                    :class="activeTab === 'test-bet' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">BET</button>
+            <button @click="switchTab('test-conductivity')"
+                    :class="activeTab === 'test-conductivity' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">Conductivity</button>
+            <button @click="switchTab('test-raman')"
+                    :class="activeTab === 'test-raman' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">RAMAN</button>
+            <button @click="switchTab('test-tem')"
+                    :class="activeTab === 'test-tem' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">TEM</button>
+            <button @click="switchTab('test-particle-size')"
+                    :class="activeTab === 'test-particle-size' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">Particle Size</button>
+            <button @click="switchTab('test-xrd')"
+                    :class="activeTab === 'test-xrd' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">XRD</button>
+            <button @click="switchTab('test-xps')"
+                    :class="activeTab === 'test-xps' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">XPS</button>
+            <button @click="switchTab('test-sem')"
+                    :class="activeTab === 'test-sem' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">SEM Reports</button>
+            <button @click="switchTab('test-updates')"
+                    :class="activeTab === 'test-updates' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">Curia Updates</button>
+          </nav>
+          <!-- Mobile: grid layout -->
+          <nav class="lg:hidden grid grid-cols-3 gap-1.5 p-3">
+            <button @click="switchTab('test-bet')"
+                    :class="activeTab === 'test-bet' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">BET</button>
+            <button @click="switchTab('test-conductivity')"
+                    :class="activeTab === 'test-conductivity' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">Conductivity</button>
+            <button @click="switchTab('test-raman')"
+                    :class="activeTab === 'test-raman' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">RAMAN</button>
+            <button @click="switchTab('test-tem')"
+                    :class="activeTab === 'test-tem' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">TEM</button>
+            <button @click="switchTab('test-particle-size')"
+                    :class="activeTab === 'test-particle-size' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">Particle Size</button>
+            <button @click="switchTab('test-xrd')"
+                    :class="activeTab === 'test-xrd' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">XRD</button>
+            <button @click="switchTab('test-xps')"
+                    :class="activeTab === 'test-xps' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">XPS</button>
+            <button @click="switchTab('test-sem')"
+                    :class="activeTab === 'test-sem' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">SEM Reports</button>
+            <button @click="switchTab('test-updates')"
+                    :class="activeTab === 'test-updates' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">Curia Updates</button>
+          </nav>
         </div>
-      </div>
-    </footer>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto">
+          <main class="px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- Data Page Container -->
+            <div x-show="showDataPage" x-cloak x-html="getDataPageHtml()"></div>
+
+            <!-- Standard Tab Content -->
+            <div x-show="!showDataPage">
+              <div x-html="getCompoundBatchesTabHtml()"></div>
+              <div x-html="getShipmentsTabHtml()"></div>
+              <div x-html="getMicronizationTabHtml()"></div>
+              <div x-html="getDashboardTabHtml()"></div>
+              <div x-html="getAnalysisTabHtml()"></div>
+              <div x-html="getAIInsightsTabHtml()"></div>
+              <div x-html="getNewsTabHtml()"></div>
+              <div x-html="getBiocharTabHtml()"></div>
+              <div x-html="getGrapheneTabHtml()"></div>
+              <div x-html="getUserManagementTabHtml()"></div>
+              <div x-html="getTasksTabHtml()"></div>
+              <div x-html="getBETTabHtml()"></div>
+              <div x-html="getConductivityTabHtml()"></div>
+              <div x-html="getRAMANTabHtml()"></div>
+              <div x-html="getTEMTabHtml()"></div>
+              <div x-html="getParticleSizeTabHtml()"></div>
+              <div x-html="getXRDTabHtml()"></div>
+              <div x-html="getXPSTabHtml()"></div>
+              <div x-html="getSEMReportsTabHtml()"></div>
+              <div x-html="getUpdateReportsTabHtml()"></div>
+            </div>
+
+          </main>
+
+          <!-- Footer -->
+          <footer class="border-t border-gray-100 bg-white">
+            <div class="px-4 sm:px-6 lg:px-8 py-4">
+              <p class="text-center text-xs text-gray-400">
+                Copyright HGraphene <span x-text="new Date().getFullYear()"></span>
+              </p>
+            </div>
+          </footer>
+        </div>
+
+      </div> <!-- End Content Area -->
 
     <!-- Biochar Add/Edit Modal -->
     <div x-html="getBiocharModalHtml()"></div>
@@ -1271,6 +1242,9 @@
   <!-- Main App Entry Point - Load modules first -->
   <script type="module" src="/src/js/app-refactored.js"></script>
   
+  <!-- Alpine.js Collapse plugin for sidebar groups -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+
   <!-- Alpine.js Intersect plugin -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   

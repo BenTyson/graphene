@@ -243,17 +243,23 @@ MaterialShipment (distribution)
 - **Link Color**: Bronze (#B87333) with hover states
 - **Table Cells**: Standardized classes for consistency
 
-### Navigation Architecture (September 2025)
+### Navigation Architecture (March 2026)
 
-**Dual-Routing System**:
+**Layout**: Collapsible left sidebar (`bg-gray-950`) + flex content area.
+- **Sidebar expanded**: 240px (`w-60`) with icon + label
+- **Sidebar collapsed**: 64px (`w-16`) icon-only with tooltips, state persisted in localStorage
+- **Mobile** (below `lg`/1024px): Overlay drawer with backdrop, opened via hamburger in top header
+- **Groups**: Production (5 items), Analytics (2 items), Test Results (9 items) -- collapsible via `x-collapse`
+- **Top header**: 48px bar with breadcrumb (`getPageSection()` / `getPageTitle()`)
+- **User info**: Sidebar footer zone (avatar, name, role, logout)
+- **Test subtabs**: Horizontal pill bar in content area when `activeTab.startsWith('test-')`
+
+**State variables**: `sidebarExpanded`, `sidebarOpen`, `sidebarProductionOpen`, `sidebarAnalyticsOpen`, `sidebarTestResultsOpen`
+
+**Routing (unchanged)**:
 - **Path-based**: `/graphene`, `/biochar`, `/analysis` (normal tabs)
 - **Hash-based**: `/#/data/graphene/MB2967A` (data pages)
-
-**Features**:
-- Clean URL patterns
-- Seamless tab ↔ data page transitions
-- Malformed URL protection
-- Authentication guards
+- Clean URL patterns, seamless tab/data page transitions, auth guards
 
 ### Modal Stacking (January 2025)
 

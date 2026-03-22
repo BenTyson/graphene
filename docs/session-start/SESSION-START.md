@@ -91,7 +91,7 @@ client/src/js/services/api.js                   -> API.tasks.create(), API.graph
 
 State lives in `app-refactored.js` (~5000 lines) as Alpine.js data. Methods on the same object delegate to API service functions.
 
-**Navigation:** `client/index.html` has desktop nav (border-bottom tabs) and mobile nav (hamburger with collapsible sections). Tabs registered in `switchTab()` method.
+**Navigation:** `client/index.html` uses a collapsible left sidebar (`bg-gray-950`, 240px/64px) with grouped sections (Production, Analytics, Test Results). Mobile: overlay drawer below `lg` breakpoint. Thin top header bar with breadcrumb. User info in sidebar footer. Test subtabs as horizontal pills in content area. Tabs registered in `switchTab()` method; sidebar helpers: `sidebarNavigate()`, `autoExpandParentGroup()`.
 
 ### Backend Pattern
 Express routes in `server/routes/*.js`. Each route file exports an express Router. Prisma accessed via `req.app.locals.prisma`.

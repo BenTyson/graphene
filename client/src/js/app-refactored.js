@@ -150,17 +150,18 @@ window.grapheneApp = function() {
     // Tab management
     activeTab: 'dashboard',
     
-    // Mobile navigation state
-    mobileMenuOpen: false,
-    mobileProductionOpen: false,
-    mobileAnalyticsOpen: false,
-    productionOpen: false,
-    analyticsOpen: false,
+    // Sidebar state
+    sidebarExpanded: true,
+    sidebarOpen: false,
+    sidebarProductionOpen: true,
+    sidebarAnalyticsOpen: true,
+    sidebarTestResultsOpen: true,
     
     // Initialize app and handle initial route
     init() {
-      // Handle initial URL hash on page load
+      this.initSidebarState();
       this.handleInitialRoute();
+      this.autoExpandParentGroup(this.activeTab);
     },
     
     // Handle initial route from URL path and hash
@@ -183,19 +184,19 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
-        
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
-          this.activeTab = tabName; // Set directly without triggering switchTab to avoid URL change
+          this.activeTab = tabName;
           return;
         }
       }
-      
+
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -4163,7 +4164,7 @@ window.grapheneApp = function() {
       
       try {
         this.activeTab = tab;
-        // activeTab updated - reduced logging
+        this.autoExpandParentGroup(tab);
         
         // Reset data page visibility for normal tab navigation
         if (previousTab === 'data-page' || this.showDataPage) {
@@ -5260,6 +5261,67 @@ window.grapheneApp = function() {
     // Check if current user can edit (not third party)
     canEdit() {
       return this.currentUser && !this.isThirdParty();
+    },
+
+    // Sidebar helpers
+    toggleSidebar() {
+      this.sidebarExpanded = !this.sidebarExpanded;
+      localStorage.setItem('sidebarExpanded', this.sidebarExpanded);
+    },
+
+    initSidebarState() {
+      const saved = localStorage.getItem('sidebarExpanded');
+      if (saved !== null) this.sidebarExpanded = saved === 'true';
+    },
+
+    sidebarNavigate(tab) {
+      this.switchTab(tab);
+      if (window.innerWidth < 1024) this.sidebarOpen = false;
+    },
+
+    isProductionTab() {
+      return ['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(this.activeTab);
+    },
+
+    isAnalyticsTab() {
+      return ['analysis', 'ai-insights'].includes(this.activeTab);
+    },
+
+    isTestResultsTab() {
+      return this.activeTab.startsWith('test-');
+    },
+
+    getPageTitle() {
+      const titles = {
+        'dashboard': 'Dashboard',
+        'graphene': 'Graphene', 'biochar': 'Biochar',
+        'compound-batches': 'Compound Batches', 'micronization': 'Micronization',
+        'shipments': 'Shipments', 'analysis': 'Analysis',
+        'ai-insights': 'Insights', 'tasks': 'Tasks',
+        'user-management': 'User Management',
+        'test-bet': 'BET', 'test-conductivity': 'Conductivity',
+        'test-raman': 'RAMAN', 'test-tem': 'TEM',
+        'test-particle-size': 'Particle Size', 'test-xrd': 'XRD',
+        'test-xps': 'XPS', 'test-sem': 'SEM Reports',
+        'test-updates': 'Curia Updates',
+      };
+      return titles[this.activeTab] || 'Dashboard';
+    },
+
+    getPageSection() {
+      if (this.isProductionTab()) return 'Production';
+      if (this.isAnalyticsTab()) return 'Analytics';
+      if (this.isTestResultsTab()) return 'Test Results';
+      return '';
+    },
+
+    autoExpandParentGroup(tab) {
+      if (['graphene', 'biochar', 'compound-batches', 'micronization', 'shipments'].includes(tab))
+        this.sidebarProductionOpen = true;
+      else if (['analysis', 'ai-insights'].includes(tab))
+        this.sidebarAnalyticsOpen = true;
+      else if (tab.startsWith('test-'))
+        this.sidebarTestResultsOpen = true;
     }
   };
 };

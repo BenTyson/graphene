@@ -19,7 +19,7 @@ This is a tab-based SPA. Each tab returns an HTML template string (e.g., `getGra
 - `server/routes/*.js` - 26 API route files
 - `server/routes/auth.js` - JWT auth middleware (authenticateToken, requireEditAccess, requireSuperAdmin)
 - `prisma/schema.prisma` - All database models
-- `client/index.html` - HTML shell, navigation (desktop + mobile), tab/modal containers
+- `client/index.html` - HTML shell, left sidebar nav, top header bar, tab/modal containers
 - `client/src/js/app-refactored.js` - Main Alpine.js app (~5000 lines): all state + methods
 - `client/src/js/services/api.js` - All API client functions
 - `client/src/js/components/tabs/*.js` - 21 tab components
@@ -47,7 +47,7 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 2. Create `server/routes/newThing.js`, register in `server/index.js`
 3. Add API functions to `client/src/js/services/api.js`
 4. Add state + methods to `client/src/js/app-refactored.js`
-5. Add nav button to `client/index.html` (desktop + mobile sections)
+5. Add nav item to sidebar in `client/index.html` (with icon, role visibility, active state)
 6. Create `client/src/js/components/tabs/NewThingTab.js` -> `getNewThingTabHtml()`
 7. Create modal in `client/src/js/components/modals/NewThingModal.js`
 8. Add `<div x-html="getNewThingTabHtml()"></div>` + modal div to `index.html`
@@ -59,12 +59,21 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 - INVESTOR: no Tasks tab access.
 - SUPER_ADMIN: full access + user management.
 
+### Layout & Navigation
+- **Sidebar:** Dark (`bg-gray-950`) collapsible left sidebar (240px expanded, 64px collapsed). Grouped sections: Production, Analytics, Test Results. Collapse state persisted in localStorage.
+- **Mobile:** Sidebar becomes overlay drawer (slide from left) below `lg` (1024px) breakpoint.
+- **Header:** Thin 48px top bar with breadcrumb. User info lives in sidebar footer.
+- **Test subtabs:** Horizontal pill bar in content area when on `test-*` tabs.
+- **Content:** Flex layout, content fills `100% - sidebar width`. No `max-w-7xl` on outer container.
+- Sidebar state vars: `sidebarExpanded`, `sidebarOpen`, `sidebarProductionOpen`, `sidebarAnalyticsOpen`, `sidebarTestResultsOpen`.
+- Navigation helpers: `sidebarNavigate()`, `getPageTitle()`, `getPageSection()`, `autoExpandParentGroup()`.
+
 ### Frontend conventions
 - Black primary buttons, Bronze (#B87333) link accent
 - No UI component library -- custom Tailwind throughout
 - Tables on desktop, card layout on mobile
 - Modals: centered for forms, slide-over panel for task detail
-- Alpine.js directives: `x-show`, `x-cloak`, `x-html`, `x-model`, `@click`, etc.
+- Alpine.js directives: `x-show`, `x-cloak`, `x-html`, `x-model`, `@click`, `x-collapse`, etc.
 
 ## Gotchas
 - `prisma migrate dev` fails (old shadow DB issues). Use `prisma db push` instead.
@@ -75,6 +84,7 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 - app-refactored.js is large (~5000 lines). Every new feature adds state + methods here.
 - News Feed tab is hidden (`x-show="false"`), code preserved for later.
 - Tasks use SortableJS (CDN) for Kanban drag-and-drop. Position persisted via `PATCH /api/tasks/reorder`.
+- Alpine.js Collapse plugin (`@alpinejs/collapse`) loaded via CDN for sidebar group animations.
 
 ## Deeper Docs
 For detailed reference: `docs/session-start/SESSION-START.md` (full project brief)

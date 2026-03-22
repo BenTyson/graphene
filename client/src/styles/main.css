@@ -6,6 +6,54 @@
   display: none !important;
 }
 
+/* Sidebar navigation */
+.sidebar-nav-item {
+  @apply w-full flex items-center rounded-lg px-3 py-2 text-sm transition-colors duration-150;
+}
+
+.sidebar-nav-active {
+  @apply bg-gray-800 text-white;
+}
+
+.sidebar-nav-inactive {
+  @apply text-gray-400 hover:text-white hover:bg-gray-800/50;
+}
+
+.sidebar-section-label {
+  @apply flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500 select-none cursor-pointer;
+}
+
+.sidebar-section-label:hover {
+  @apply text-gray-400;
+}
+
+/* Tooltip for collapsed sidebar */
+.sidebar-tooltip {
+  @apply invisible absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap z-50 opacity-0 transition-opacity duration-150;
+}
+
+.group:hover .sidebar-tooltip {
+  @apply visible opacity-100;
+}
+
+/* Sidebar thin scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Custom scrollbar for tables */
 .overflow-x-auto::-webkit-scrollbar {
   height: 8px;
