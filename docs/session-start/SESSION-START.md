@@ -96,7 +96,7 @@ client/src/js/components/modals/TaskModal.js    -> getTaskModalHtml()
 client/src/js/services/api.js                   -> API.tasks.create(), API.graphene.getAll(), etc.
 ```
 
-State lives in `app-refactored.js` (~5000 lines) as Alpine.js data. Methods on the same object delegate to API service functions.
+State lives in `app-refactored.js` (~5300 lines) as Alpine.js data. Methods are one-liner delegates to domain service files (`TaskService.js`, `PipelineService.js`, `CRUDService.js`, etc.) that receive the Alpine instance as `appContext`. Shared drag-and-drop logic lives in `KanbanService.js`. Shared display helpers (date labels, user names, initials) live in `utils/formatters.js`.
 
 **Navigation:** `client/index.html` uses a collapsible left sidebar (`bg-gray-950`, 240px/64px) with grouped sections (Production, Analytics, Test Results). Mobile: overlay drawer below `lg` breakpoint. Thin top header bar with breadcrumb. User info in sidebar footer. Test subtabs as horizontal pills in content area. Tabs registered in `switchTab()` method; sidebar helpers: `sidebarNavigate()`, `autoExpandParentGroup()`. Pipeline tab hidden from THIRD_PARTY and INVESTOR (same as Tasks).
 
@@ -115,13 +115,14 @@ Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Respon
 | Purpose | Path |
 |---|---|
 | Server entry | `server/index.js` |
-| All API routes | `server/routes/*.js` (26 files) |
+| All API routes | `server/routes/*.js` (27 files) |
 | Auth middleware | `server/routes/auth.js` (authenticateToken, requireEditAccess) |
 | Database schema | `prisma/schema.prisma` |
 | Main app state | `client/src/js/app-refactored.js` |
 | HTML shell + nav | `client/index.html` |
 | API client | `client/src/js/services/api.js` |
-| Tab components | `client/src/js/components/tabs/*.js` (22 files) |
+| Domain services | `client/src/js/services/TaskService.js`, `PipelineService.js`, `KanbanService.js`, `CRUDService.js` |
+| Tab components | `client/src/js/components/tabs/*.js` (23 files) |
 | Modal components | `client/src/js/components/modals/*.js` (25 files) |
 | CSS entry | `client/src/styles/main.css` |
 
@@ -183,4 +184,4 @@ Global middleware: THIRD_PARTY blocked on POST/PUT/DELETE. GET open to all authe
 - Test models use string references (experimentNumber/batchNumber), not foreign keys.
 - XRD and XPS support multi-file upload (array of report URLs).
 - MCB micronizations are excluded from individual inventory counts to prevent double-counting.
-- app-refactored.js is ~5000 lines. State + methods for all tabs live here. New features add state properties + methods to this file.
+- app-refactored.js is ~5300 lines. State properties live here; methods are one-liner delegates to service files. New features should create a dedicated `*Service.js` file.

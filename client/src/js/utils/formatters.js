@@ -241,6 +241,77 @@ export const formatFileSize = (bytes) => {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 };
 
+/**
+ * Get a human-readable relative date label (e.g., "Due today", "3d overdue")
+ * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+ * @param {Object} [options] - Label customization
+ * @param {string} [options.overduePrefix] - Template for overdue: receives days count (default: "${d}d overdue")
+ * @param {string} [options.todayLabel] - Label for today (default: "Due today")
+ * @param {string} [options.tomorrowLabel] - Label for tomorrow (default: "Due tomorrow")
+ * @param {Function} [options.withinWeekFmt] - Formatter for 2-7 days out (default: d => `Due in ${d}d`)
+ * @returns {string} Relative date label or formatted date
+ */
+export const getRelativeDateLabel = (dateStr, options = {}) => {
+  if (!dateStr) return '';
+  const {
+    todayLabel = 'Due today',
+    tomorrowLabel = 'Due tomorrow',
+    withinWeekFmt = (d) => `Due in ${d}d`,
+  } = options;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + 'T00:00:00');
+  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return `${Math.abs(diff)}d overdue`;
+  if (diff === 0) return todayLabel;
+  if (diff === 1) return tomorrowLabel;
+  if (diff <= 7) return withinWeekFmt(diff);
+  return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+/**
+ * Get CSS class for a relative date (red if overdue, amber if today, gray otherwise)
+ * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+ * @param {string[]} [completedStatuses] - Statuses that should show gray (e.g., ['DONE', 'ARCHIVED'])
+ * @param {string} [status] - Current item status
+ * @returns {string} Tailwind CSS classes
+ */
+export const getRelativeDateClass = (dateStr, completedStatuses = [], status) => {
+  if (!dateStr) return 'text-gray-400';
+  if (completedStatuses.length && completedStatuses.includes(status)) return 'text-gray-400';
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + 'T00:00:00');
+  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return 'text-red-600 font-medium';
+  if (diff === 0) return 'text-amber-600 font-medium';
+  return 'text-gray-500';
+};
+
+/**
+ * Get display name from a user object
+ * @param {Object} user - User object with firstName, lastName, username
+ * @param {string} [fallback] - Fallback if user is null (default: "Unassigned")
+ * @returns {string} Display name
+ */
+export const getUserDisplayName = (user, fallback = 'Unassigned') => {
+  if (!user) return fallback;
+  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username;
+};
+
+/**
+ * Get initials from a user object
+ * @param {Object} user - User object with firstName, lastName, username
+ * @param {string} [fallback] - Fallback if user is null (default: "?")
+ * @returns {string} Uppercase initials (1-2 chars)
+ */
+export const getUserInitials = (user, fallback = '?') => {
+  if (!user) return fallback;
+  const f = user.firstName?.[0] || '';
+  const l = user.lastName?.[0] || '';
+  return (f + l).toUpperCase() || user.username[0].toUpperCase();
+};
+
 // Default export with all formatters
 export default {
   formatDate,
@@ -255,5 +326,9 @@ export default {
   formatTime,
   formatWash,
   formatHomogeneous,
-  formatFileSize
+  formatFileSize,
+  getRelativeDateLabel,
+  getRelativeDateClass,
+  getUserDisplayName,
+  getUserInitials
 };

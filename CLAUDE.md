@@ -16,14 +16,18 @@ This is a tab-based SPA. Each tab returns an HTML template string (e.g., `getGra
 
 ## Key Files
 - `server/index.js` - Express entry, route registration, global middleware
-- `server/routes/*.js` - 26 API route files
+- `server/routes/*.js` - 27 API route files
 - `server/routes/auth.js` - JWT auth middleware (authenticateToken, requireEditAccess, requireSuperAdmin)
 - `prisma/schema.prisma` - All database models
 - `client/index.html` - HTML shell, left sidebar nav, top header bar, tab/modal containers
-- `client/src/js/app-refactored.js` - Main Alpine.js app (~5000 lines): all state + methods
+- `client/src/js/app-refactored.js` - Main Alpine.js app (~5300 lines): state + delegate methods
 - `client/src/js/services/api.js` - All API client functions
-- `client/src/js/components/tabs/*.js` - 21 tab components
-- `client/src/js/components/modals/*.js` - 21 modal components
+- `client/src/js/services/TaskService.js` - Task CRUD, comments, attachments, subtasks logic
+- `client/src/js/services/PipelineService.js` - Contact/Deal CRUD, activities, stage constants
+- `client/src/js/services/KanbanService.js` - Shared SortableJS wrapper (Tasks + Pipeline)
+- `client/src/js/services/CRUDService.js` - Biochar/Graphene/CompoundBatch/etc. CRUD logic
+- `client/src/js/components/tabs/*.js` - 23 tab components
+- `client/src/js/components/modals/*.js` - 25 modal components
 - `client/src/styles/main.css` - Tailwind entry + custom CSS
 
 ## Development
@@ -46,12 +50,22 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 1. Add Prisma model to `prisma/schema.prisma`, run `npx prisma db push`
 2. Create `server/routes/newThing.js`, register in `server/index.js`
 3. Add API functions to `client/src/js/services/api.js`
-4. Add state + methods to `client/src/js/app-refactored.js`
-5. Add nav item to sidebar in `client/index.html` (with icon, role visibility, active state)
-6. Create `client/src/js/components/tabs/NewThingTab.js` -> `getNewThingTabHtml()`
-7. Create modal in `client/src/js/components/modals/NewThingModal.js`
-8. Add `<div x-html="getNewThingTabHtml()"></div>` + modal div to `index.html`
-9. Import in `app-refactored.js`, expose via method, add to `switchTab()` and `validTabs`
+4. Create service file `client/src/js/services/NewThingService.js` (follows CRUDService pattern: methods receive `appContext`)
+5. Add state properties to `client/src/js/app-refactored.js`, add one-liner delegate methods that call the service
+6. Add nav item to sidebar in `client/index.html` (with icon, role visibility, active state)
+7. Create `client/src/js/components/tabs/NewThingTab.js` -> `getNewThingTabHtml()`
+8. Create modal in `client/src/js/components/modals/NewThingModal.js`
+9. Add `<div x-html="getNewThingTabHtml()"></div>` + modal div to `index.html`
+10. Import service + components in `app-refactored.js`, expose via method, add to `switchTab()` and `validTabs`
+
+### Service Layer Pattern
+Domain logic lives in `client/src/js/services/*Service.js`. Each service is a class whose methods receive `appContext` (the Alpine.js instance) and mutate it directly. `app-refactored.js` methods are one-liner delegates:
+```js
+// In app-refactored.js
+async loadTasks() { await taskService.loadTasks(this); },
+async saveTask() { await taskService.saveTask(this); },
+```
+Services can access `appContext.$nextTick()` and all Alpine state. Shared utilities (date labels, user name formatting) live in `client/src/js/utils/formatters.js`.
 
 ### Auth & Roles
 6 roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
@@ -81,9 +95,9 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 - Test models use string references (experimentNumber), not foreign keys.
 - XRD, XPS, and Task attachments support multi-file upload (Cloudinary in prod, local in dev).
 - MCB micronizations excluded from individual inventory counts (double-counting prevention).
-- app-refactored.js is large (~5000 lines). Every new feature adds state + methods here.
+- app-refactored.js is ~5300 lines. State lives here; logic delegates to service files. New features should create a dedicated service.
 - News Feed tab is hidden (`x-show="false"`), code preserved for later.
-- Tasks use SortableJS (CDN) for Kanban drag-and-drop. Position persisted via `PATCH /api/tasks/reorder`.
+- Tasks and Pipeline both use KanbanService (shared SortableJS wrapper) for drag-and-drop.
 - Alpine.js Collapse plugin (`@alpinejs/collapse`) loaded via CDN for sidebar group animations.
 
 ## Deeper Docs

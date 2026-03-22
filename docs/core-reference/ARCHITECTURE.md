@@ -46,16 +46,16 @@ High-level architecture guide for the Graphene Production Control System.
 /graphene
 ├── server/              # Backend (Node.js + Express)
 │   ├── index.js         # Server entry point
-│   ├── routes/          # API routes (27 files: biochar, graphene, pipeline, tests, etc.)
+│   ├── routes/          # API routes (27 files)
 │   ├── middleware/      # Error handling, authentication
 │   └── utils/           # Cloudinary config, file uploads
 ├── client/              # Frontend (Alpine.js + Tailwind)
 │   ├── index.html       # Main UI (1,153 lines after componentization)
 │   └── src/
 │       ├── js/
-│       │   ├── app-refactored.js  # Main Alpine.js app (~5,500 lines)
-│       │   ├── services/          # Service-oriented architecture
-│       │   ├── components/        # 30+ reusable UI components
+│       │   ├── app-refactored.js  # Main Alpine.js app (~5,300 lines): state + delegate methods
+│       │   ├── services/          # Domain services (TaskService, PipelineService, KanbanService, CRUDService, etc.)
+│       │   ├── components/        # 48 UI components (23 tabs + 25 modals)
 │       │   └── utils/             # Formatters, validators, helpers
 │       └── styles/
 ├── prisma/
@@ -71,25 +71,44 @@ High-level architecture guide for the Graphene Production Control System.
 
 ## Architecture Highlights
 
-### Service-Oriented Architecture (September 2025)
+### Service Layer Architecture
 
-Main application delegates to specialized services:
+`app-refactored.js` holds Alpine.js state; methods are one-liner delegates to domain service files. Each service class receives `appContext` (the Alpine instance) and mutates it directly.
 
-- **FilterService** (347 lines) - Filtering and search
-- **NewsService** (526 lines) - News system management
-- **CRUDService** (1,169 lines) - All CRUD operations
-- **DashboardService** (121 lines) - Dashboard data
-- **CardService** - Card data fetching with caching
+**Domain Services** (`client/src/js/services/`):
+- **TaskService.js** (239 lines) - Task CRUD, comments, attachments, subtasks
+- **PipelineService.js** (416 lines) - Contact/Deal CRUD, activities, stage constants, view switching
+- **KanbanService.js** (117 lines) - Shared SortableJS wrapper for Tasks + Pipeline drag-and-drop
+- **CRUDService.js** - Biochar, Graphene, CompoundBatch, Micronization, MCB, Shipment CRUD
+- **DashboardService.js** - Dashboard metrics
+- **FilterService.js** - Filtering and search
+- **CardService.js** - Card data fetching with caching
+- **NewsService.js** - News system management
+- **AuthService.js** - Token management, session validation
+- **RouterService.js** - Route management
+- **LoggingService.js** - Audit/logging
 
-**Impact**: 37.4% file size reduction, ~33% faster agent parsing
+**Shared Utilities** (`client/src/js/utils/`):
+- **formatters.js** - Date formatting, relative date labels (`getRelativeDateLabel`), user name/initials (`getUserDisplayName`, `getUserInitials`), file size, scientific notation
+- **validators.js** - Form validation
+- **dataHelpers.js** - Data extraction/transformation
+- **constants.js** - Default forms, enums
 
-### Component System (Complete)
+**Service pattern example:**
+```js
+// In TaskService.js
+async loadTasks(ctx) { ctx.tasks = await API.tasks.getAll(params); }
+// In app-refactored.js
+async loadTasks() { await taskService.loadTasks(this); }
+```
 
-40+ modular UI components:
+### Component System
+
+48 modular UI components:
 
 - **Form Fields**: Date, select, numeric, file upload components
-- **Modals**: 23 modal files (entity forms, task detail panel, contact/deal modals and detail panels, PDF viewer, etc.)
-- **Tabs**: 22 tab files (production, tests, analysis, news, tasks, pipeline, user management)
+- **Modals**: 25 modal files (entity forms, task detail panel, contact/deal modals and detail panels, PDF viewer, etc.)
+- **Tabs**: 23 tab files (production, tests, analysis, tasks, pipeline, user management)
 - **Cards**: Intelligent card factory with type detection
 - **Dropdowns**: Expandable row sections
 
@@ -390,12 +409,10 @@ npm run build
 
 ## Performance Optimizations
 
-### September 2025 Optimization
+### Service Extraction History
 
-- **Main File Reduction**: 4,651 → 2,913 lines (37.4%)
-- **Service Extraction**: 2,163 lines into 4 services
-- **Agent Parsing**: ~33% faster
-- **Component System**: 30+ reusable components
+- **September 2025**: Initial extraction — CRUDService, FilterService, NewsService, DashboardService, CardService. Main file 4,651 → 2,913 lines.
+- **March 2026**: Task + Pipeline extraction — TaskService, PipelineService, KanbanService. Shared formatters for date/user helpers. Main file 6,073 → 5,316 lines (-757). Eliminated duplicated Kanban init/drag logic between Tasks and Pipeline.
 
 ### Caching Strategy
 
@@ -449,5 +466,5 @@ npm run build
 ---
 
 **Last Updated**: March 2026
-**Architecture Version**: 4.0 (Pipeline/CRM, Task management, XRD/XPS/ParticleSize tests, MCB)
+**Architecture Version**: 4.1 (Service extraction for Tasks/Pipeline/Kanban, shared formatters)
 **For Detailed Implementation**: See referenced documentation above

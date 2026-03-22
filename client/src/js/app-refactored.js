@@ -2,7 +2,10 @@
 // Uses modular components for better maintainability
 
 import API from './services/api.js';
-import formatters from './utils/formatters.js';
+import kanbanService from './services/KanbanService.js';
+import taskService from './services/TaskService.js';
+import pipelineService, { PIPELINE_STAGES } from './services/PipelineService.js';
+import formatters, { getRelativeDateLabel, getRelativeDateClass, getUserDisplayName, getUserInitials } from './utils/formatters.js';
 import validators from './utils/validators.js';
 import dataHelpers from './utils/dataHelpers.js';
 import objectiveParser from './utils/objectiveParser.js';
@@ -393,7 +396,6 @@ window.grapheneApp = function() {
     taskLoading: false,
     taskTagInput: '',
     showArchivedTasks: false,
-    sortableInstances: [],
     taskAttachmentUploading: false,
 
     // Pipeline / CRM
@@ -419,7 +421,6 @@ window.grapheneApp = function() {
     pipelineLoading: false,
     pipelineStats: null,
     pipelineTagInput: '',
-    pipelineSortableInstances: [],
     contactAttachmentUploading: false,
 
     // Current authenticated user (reactive)
@@ -4877,42 +4878,11 @@ window.grapheneApp = function() {
       }
     },
 
-    // ===== TASK MANAGEMENT METHODS =====
+    // ===== TASK MANAGEMENT METHODS (delegated to TaskService) =====
 
-    async loadTasks() {
-      this.taskLoading = true;
-      try {
-        const params = {};
-        if (this.taskFilters.status) params.status = this.taskFilters.status;
-        if (this.taskFilters.priority) params.priority = this.taskFilters.priority;
-        if (this.taskFilters.assigneeId) params.assigneeId = this.taskFilters.assigneeId;
-        if (this.taskFilters.overdue) params.overdue = true;
-        if (this.taskSearch) params.search = this.taskSearch;
-        this.tasks = await API.tasks.getAll(params);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-        this.tasks = [];
-      } finally {
-        this.taskLoading = false;
-        this.$nextTick(() => {
-          if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
-        });
-      }
-    },
-
-    async loadTaskAssignees() {
-      try {
-        this.taskAssignees = await API.tasks.getAssignees();
-      } catch (error) {
-        console.error('Failed to load assignees:', error);
-        this.taskAssignees = [];
-      }
-    },
-
-    getTasksByStatus(status) {
-      return this.tasks.filter(t => t.status === status);
-    },
-
+    async loadTasks() { await taskService.loadTasks(this); },
+    async loadTaskAssignees() { await taskService.loadTaskAssignees(this); },
+    getTasksByStatus(status) { return this.tasks.filter(t => t.status === status); },
     getFilteredTasks() {
       let filtered = this.tasks.filter(t => this.showArchivedTasks || t.status !== 'ARCHIVED');
       if (this.taskSearch) {
@@ -4921,343 +4891,69 @@ window.grapheneApp = function() {
       }
       return filtered;
     },
-
-    openTaskForm(parentId = null) {
-      this.editingTask = null;
-      this.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeId: '', parentId, tags: [] };
-      this.taskTagInput = '';
-      this.showAddTask = true;
-    },
-
-    openEditTaskForm(task) {
-      this.editingTask = task;
-      this.taskForm = {
-        title: task.title,
-        description: task.description || '',
-        status: task.status,
-        priority: task.priority,
-        dueDate: task.dueDate || '',
-        assigneeId: task.assigneeId || '',
-        parentId: task.parentId || null,
-        tags: [...(task.tags || [])]
-      };
-      this.taskTagInput = '';
-      this.showAddTask = true;
-    },
-
-    closeTaskForm() {
-      this.showAddTask = false;
-      this.editingTask = null;
-    },
-
-    async saveTask() {
-      try {
-        if (this.editingTask) {
-          await API.tasks.update(this.editingTask.id, this.taskForm);
-        } else {
-          await API.tasks.create(this.taskForm);
-        }
-        this.closeTaskForm();
-        await this.loadTasks();
-        if (this.selectedTask) {
-          this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-        }
-      } catch (error) {
-        console.error('Failed to save task:', error);
-        alert('Failed to save task: ' + error.message);
-      }
-    },
-
-    async deleteTask(taskId) {
-      if (!confirm('Delete this task? This will also delete all subtasks.')) return;
-      try {
-        await API.tasks.delete(taskId);
-        if (this.selectedTask?.id === taskId) {
-          this.closeTaskDetail();
-        }
-        await this.loadTasks();
-      } catch (error) {
-        console.error('Failed to delete task:', error);
-        alert('Failed to delete task: ' + error.message);
-      }
-    },
-
-    async updateTaskStatus(taskId, newStatus) {
-      try {
-        await API.tasks.updateStatus(taskId, newStatus);
-        await this.loadTasks();
-        if (this.selectedTask?.id === taskId) {
-          this.selectedTask = await API.tasks.getById(taskId);
-        }
-      } catch (error) {
-        console.error('Failed to update task status:', error);
-      }
-    },
-
-    async openTaskDetail(taskId) {
-      try {
-        this.selectedTask = await API.tasks.getById(taskId);
-        this.showTaskDetail = true;
-      } catch (error) {
-        console.error('Failed to load task detail:', error);
-      }
-    },
-
-    closeTaskDetail() {
-      this.showTaskDetail = false;
-      this.selectedTask = null;
-      this.taskCommentForm.content = '';
-    },
-
-    async addTaskComment() {
-      if (!this.taskCommentForm.content.trim() || !this.selectedTask) return;
-      try {
-        await API.tasks.addComment(this.selectedTask.id, this.taskCommentForm.content);
-        this.taskCommentForm.content = '';
-        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-      } catch (error) {
-        console.error('Failed to add comment:', error);
-      }
-    },
-
-    async deleteTaskComment(commentId) {
-      if (!this.selectedTask) return;
-      try {
-        await API.tasks.deleteComment(this.selectedTask.id, commentId);
-        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-      } catch (error) {
-        console.error('Failed to delete comment:', error);
-      }
-    },
-
-    async uploadTaskAttachments(files) {
-      if (!files?.length || !this.selectedTask) return;
-      this.taskAttachmentUploading = true;
-      try {
-        await API.tasks.uploadAttachments(this.selectedTask.id, Array.from(files));
-        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-      } catch (error) {
-        console.error('Failed to upload attachments:', error);
-        alert('Failed to upload: ' + error.message);
-      } finally {
-        this.taskAttachmentUploading = false;
-      }
-    },
-
-    async deleteTaskAttachment(attachmentId, fileName) {
-      if (!this.selectedTask) return;
-      if (!confirm('Delete "' + fileName + '"?')) return;
-      try {
-        await API.tasks.deleteAttachment(this.selectedTask.id, attachmentId);
-        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-      } catch (error) {
-        console.error('Failed to delete attachment:', error);
-      }
-    },
-
-    async updateTaskInline(taskId, field, value) {
-      try {
-        await API.tasks.update(taskId, { [field]: value });
-        await this.loadTasks();
-        if (this.selectedTask?.id === taskId) {
-          this.selectedTask = await API.tasks.getById(taskId);
-        }
-      } catch (error) {
-        console.error('Failed to update task:', error);
-      }
-    },
-
-    async addSubtask(parentId) {
-      const title = prompt('Subtask title:');
-      if (!title?.trim()) return;
-      try {
-        await API.tasks.create({ title: title.trim(), parentId, status: 'TODO', priority: 'MEDIUM' });
-        if (this.selectedTask?.id === parentId) {
-          this.selectedTask = await API.tasks.getById(parentId);
-        }
-        await this.loadTasks();
-      } catch (error) {
-        console.error('Failed to add subtask:', error);
-      }
-    },
-
-    async toggleSubtaskDone(subtask) {
-      const newStatus = subtask.status === 'DONE' ? 'TODO' : 'DONE';
-      try {
-        await API.tasks.updateStatus(subtask.id, newStatus);
-        if (this.selectedTask) {
-          this.selectedTask = await API.tasks.getById(this.selectedTask.id);
-        }
-        await this.loadTasks();
-      } catch (error) {
-        console.error('Failed to toggle subtask:', error);
-      }
-    },
-
+    openTaskForm(parentId = null) { taskService.openTaskForm(this, parentId); },
+    openEditTaskForm(task) { taskService.openEditTaskForm(this, task); },
+    closeTaskForm() { taskService.closeTaskForm(this); },
+    async saveTask() { await taskService.saveTask(this); },
+    async deleteTask(taskId) { await taskService.deleteTask(this, taskId); },
+    async updateTaskStatus(taskId, newStatus) { await taskService.updateTaskStatus(this, taskId, newStatus); },
+    async openTaskDetail(taskId) { await taskService.openTaskDetail(this, taskId); },
+    closeTaskDetail() { taskService.closeTaskDetail(this); },
+    async addTaskComment() { await taskService.addTaskComment(this); },
+    async deleteTaskComment(commentId) { await taskService.deleteTaskComment(this, commentId); },
+    async uploadTaskAttachments(files) { await taskService.uploadTaskAttachments(this, files); },
+    async deleteTaskAttachment(attachmentId, fileName) { await taskService.deleteTaskAttachment(this, attachmentId, fileName); },
+    async updateTaskInline(taskId, field, value) { await taskService.updateTaskInline(this, taskId, field, value); },
+    async addSubtask(parentId) { await taskService.addSubtask(this, parentId); },
+    async toggleSubtaskDone(subtask) { await taskService.toggleSubtaskDone(this, subtask); },
     addTaskTag() {
       const tag = this.taskTagInput.trim();
-      if (tag && !this.taskForm.tags.includes(tag)) {
-        this.taskForm.tags.push(tag);
-      }
+      if (tag && !this.taskForm.tags.includes(tag)) { this.taskForm.tags.push(tag); }
       this.taskTagInput = '';
     },
-
-    removeTaskTag(tag) {
-      this.taskForm.tags = this.taskForm.tags.filter(t => t !== tag);
-    },
-
-    getTaskDueLabel(dueDate) {
-      if (!dueDate) return '';
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const due = new Date(dueDate + 'T00:00:00');
-      const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return `${Math.abs(diff)}d overdue`;
-      if (diff === 0) return 'Due today';
-      if (diff === 1) return 'Due tomorrow';
-      if (diff <= 7) return `Due in ${diff}d`;
-      return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    },
-
-    getTaskDueClass(dueDate, status) {
-      if (!dueDate || status === 'DONE' || status === 'ARCHIVED') return 'text-gray-400';
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const due = new Date(dueDate + 'T00:00:00');
-      const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return 'text-red-600 font-medium';
-      if (diff === 0) return 'text-amber-600 font-medium';
-      return 'text-gray-500';
-    },
-
-    getAssigneeName(task) {
-      if (!task.assignee) return 'Unassigned';
-      return [task.assignee.firstName, task.assignee.lastName].filter(Boolean).join(' ') || task.assignee.username;
-    },
-
-    getAssigneeInitials(task) {
-      if (!task.assignee) return '?';
-      const f = task.assignee.firstName?.[0] || '';
-      const l = task.assignee.lastName?.[0] || '';
-      return (f + l).toUpperCase() || task.assignee.username[0].toUpperCase();
-    },
-
+    removeTaskTag(tag) { this.taskForm.tags = this.taskForm.tags.filter(t => t !== tag); },
+    getTaskDueLabel(dueDate) { return getRelativeDateLabel(dueDate); },
+    getTaskDueClass(dueDate, status) { return getRelativeDateClass(dueDate, ['DONE', 'ARCHIVED'], status); },
+    getAssigneeName(task) { return getUserDisplayName(task.assignee); },
+    getAssigneeInitials(task) { return getUserInitials(task.assignee); },
     getSubtaskProgress(task) {
       if (!task.subtasks?.length) return null;
       const done = task.subtasks.filter(s => s.status === 'DONE').length;
       return { done, total: task.subtasks.length, percent: Math.round((done / task.subtasks.length) * 100) };
     },
-
     getPriorityBadgeClass(priority) {
-      const classes = {
-        LOW: 'bg-gray-100 text-gray-600',
-        MEDIUM: 'bg-blue-100 text-blue-700',
-        HIGH: 'bg-orange-100 text-orange-700',
-        URGENT: 'bg-red-100 text-red-700'
-      };
+      const classes = { LOW: 'bg-gray-100 text-gray-600', MEDIUM: 'bg-blue-100 text-blue-700', HIGH: 'bg-orange-100 text-orange-700', URGENT: 'bg-red-100 text-red-700' };
       return classes[priority] || classes.MEDIUM;
     },
-
     getStatusBadgeClass(status) {
-      const classes = {
-        TODO: 'bg-gray-100 text-gray-700',
-        IN_PROGRESS: 'bg-blue-100 text-blue-700',
-        IN_REVIEW: 'bg-amber-100 text-amber-700',
-        DONE: 'bg-green-100 text-green-700',
-        ARCHIVED: 'bg-gray-100 text-gray-400'
-      };
+      const classes = { TODO: 'bg-gray-100 text-gray-700', IN_PROGRESS: 'bg-blue-100 text-blue-700', IN_REVIEW: 'bg-amber-100 text-amber-700', DONE: 'bg-green-100 text-green-700', ARCHIVED: 'bg-gray-100 text-gray-400' };
       return classes[status] || classes.TODO;
     },
-
     formatStatusLabel(status) {
       const labels = { TODO: 'To Do', IN_PROGRESS: 'In Progress', IN_REVIEW: 'In Review', DONE: 'Done', ARCHIVED: 'Archived' };
       return labels[status] || status;
     },
-
-    openTaskFormWithStatus(status) {
-      this.openTaskForm();
-      this.taskForm.status = status;
-    },
-
-    async archiveTask(taskId) {
-      try {
-        await API.tasks.updateStatus(taskId, 'ARCHIVED');
-        await this.loadTasks();
-        if (this.selectedTask?.id === taskId) {
-          this.selectedTask = await API.tasks.getById(taskId);
-        }
-      } catch (error) {
-        console.error('Failed to archive task:', error);
-      }
-    },
-
-    async unarchiveTask(taskId) {
-      try {
-        await API.tasks.updateStatus(taskId, 'TODO');
-        await this.loadTasks();
-        if (this.selectedTask?.id === taskId) {
-          this.selectedTask = await API.tasks.getById(taskId);
-        }
-      } catch (error) {
-        console.error('Failed to unarchive task:', error);
-      }
-    },
-
+    openTaskFormWithStatus(status) { this.openTaskForm(); this.taskForm.status = status; },
+    async archiveTask(taskId) { await taskService.archiveTask(this, taskId); },
+    async unarchiveTask(taskId) { await taskService.unarchiveTask(this, taskId); },
     initKanbanDragDrop() {
-      if (typeof Sortable === 'undefined') return;
-
-      this.sortableInstances.forEach(s => s.destroy());
-      this.sortableInstances = [];
-
-      const statuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
-
-      statuses.forEach(status => {
-        const el = document.getElementById(`kanban-col-${status}`);
-        if (!el) return;
-
-        const sortable = new Sortable(el, {
-          group: 'kanban',
-          animation: 150,
-          ghostClass: 'opacity-30',
-          dragClass: 'shadow-lg',
-          filter: 'select',
-          preventOnFilter: false,
-          onEnd: (evt) => {
-            this.handleDragEnd(evt);
+      kanbanService.invalidate('kanban');
+      kanbanService.init({
+        group: 'kanban',
+        columnIds: ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map(s => `kanban-col-${s}`),
+        itemIdAttr: 'data-task-id',
+        statusAttr: 'data-status',
+        onReorder: async (taskId, newStatus, oldStatus, positions) => {
+          try {
+            await API.tasks.reorder(taskId, newStatus !== oldStatus ? newStatus : null, positions);
+            await this.loadTasks();
+          } catch (error) {
+            console.error('Failed to reorder:', error);
+            await this.loadTasks();
           }
-        });
-
-        this.sortableInstances.push(sortable);
+        },
+        sortableOptions: { filter: 'select', preventOnFilter: false }
       });
-    },
-
-    async handleDragEnd(evt) {
-      const taskId = evt.item.getAttribute('data-task-id');
-      if (!taskId) return;
-
-      const newStatus = evt.to.getAttribute('data-status');
-      const oldStatus = evt.from.getAttribute('data-status');
-
-      const toChildren = [...evt.to.children].filter(c => c.hasAttribute('data-task-id'));
-      const positions = toChildren.map((child, index) => ({
-        id: child.getAttribute('data-task-id'),
-        position: index
-      }));
-
-      if (oldStatus !== newStatus) {
-        const fromChildren = [...evt.from.children].filter(c => c.hasAttribute('data-task-id'));
-        fromChildren.forEach((child, index) => {
-          positions.push({ id: child.getAttribute('data-task-id'), position: index });
-        });
-      }
-
-      try {
-        await API.tasks.reorder(taskId, newStatus !== oldStatus ? newStatus : null, positions);
-        await this.loadTasks();
-      } catch (error) {
-        console.error('Failed to reorder:', error);
-        await this.loadTasks();
-      }
     },
 
     getTasksTabHtml() { return getTasksTabHtml(); },
@@ -5271,168 +4967,33 @@ window.grapheneApp = function() {
     getContactDetailPanelHtml() { return getContactDetailPanelHtml(); },
     getDealDetailPanelHtml() { return getDealDetailPanelHtml(); },
 
-    PIPELINE_STAGES: {
-      CLIENT: [
-        { key: 'LEAD', label: 'Lead', color: 'gray' },
-        { key: 'QUALIFIED', label: 'Qualified', color: 'blue' },
-        { key: 'SAMPLE_SENT', label: 'Sample Sent', color: 'indigo' },
-        { key: 'EVALUATION', label: 'Evaluation', color: 'amber' },
-        { key: 'NEGOTIATION', label: 'Negotiation', color: 'orange' },
-        { key: 'WON', label: 'Won', color: 'green' },
-        { key: 'LOST', label: 'Lost', color: 'red' },
-      ],
-      INVESTOR: [
-        { key: 'IDENTIFIED', label: 'Identified', color: 'gray' },
-        { key: 'OUTREACH', label: 'Outreach', color: 'blue' },
-        { key: 'MEETING', label: 'Meeting', color: 'indigo' },
-        { key: 'DUE_DILIGENCE', label: 'Due Diligence', color: 'amber' },
-        { key: 'TERM_SHEET', label: 'Term Sheet', color: 'orange' },
-        { key: 'COMMITTED', label: 'Committed', color: 'green' },
-        { key: 'PASSED', label: 'Passed', color: 'red' },
-      ],
-      PARTNER: [
-        { key: 'IDENTIFIED', label: 'Identified', color: 'gray' },
-        { key: 'INITIAL_CONTACT', label: 'Initial Contact', color: 'blue' },
-        { key: 'EXPLORING', label: 'Exploring', color: 'indigo' },
-        { key: 'PROPOSAL', label: 'Proposal', color: 'amber' },
-        { key: 'ACTIVE', label: 'Active', color: 'green' },
-        { key: 'INACTIVE', label: 'Inactive', color: 'red' },
-      ],
-    },
+    // ===== PIPELINE / CRM METHODS (delegated to PipelineService) =====
 
-    getPipelineStages() {
-      return this.PIPELINE_STAGES[this.pipelineType] || this.PIPELINE_STAGES.CLIENT;
-    },
-
-    getStageLabel(stageKey) {
-      const allStages = [...this.PIPELINE_STAGES.CLIENT, ...this.PIPELINE_STAGES.INVESTOR, ...this.PIPELINE_STAGES.PARTNER];
-      const found = allStages.find(s => s.key === stageKey);
-      return found ? found.label : stageKey;
-    },
-
-    getStageBadgeClass(stageKey) {
-      const allStages = [...this.PIPELINE_STAGES.CLIENT, ...this.PIPELINE_STAGES.INVESTOR, ...this.PIPELINE_STAGES.PARTNER];
-      const found = allStages.find(s => s.key === stageKey);
-      const colorMap = {
-        gray: 'bg-gray-100 text-gray-700',
-        blue: 'bg-blue-100 text-blue-700',
-        indigo: 'bg-indigo-100 text-indigo-700',
-        amber: 'bg-amber-100 text-amber-700',
-        orange: 'bg-orange-100 text-orange-700',
-        green: 'bg-green-100 text-green-700',
-        red: 'bg-red-100 text-red-700',
-      };
-      return found ? (colorMap[found.color] || colorMap.gray) : colorMap.gray;
-    },
-
+    PIPELINE_STAGES,
+    getPipelineStages() { return pipelineService.getPipelineStages(this.pipelineType); },
+    getStageLabel(stageKey) { return pipelineService.getStageLabel(stageKey); },
+    getStageBadgeClass(stageKey) { return pipelineService.getStageBadgeClass(stageKey); },
     getContactTypeBadgeClass(type) {
       const classes = { CLIENT: 'bg-blue-100 text-blue-700', INVESTOR: 'bg-purple-100 text-purple-700', PARTNER: 'bg-teal-100 text-teal-700' };
       return classes[type] || classes.CLIENT;
     },
-
     getContactTypeLabel(type) {
       const labels = { CLIENT: 'Client', INVESTOR: 'Investor', PARTNER: 'Partner' };
       return labels[type] || type;
     },
-
-    getDealsByStage(stage) {
-      return this.pipelineDeals.filter(d => d.stage === stage);
-    },
-
-    getFollowUpLabel(date) {
-      if (!date) return '';
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const target = new Date(date + 'T00:00:00');
-      const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return `${Math.abs(diff)}d overdue`;
-      if (diff === 0) return 'Today';
-      if (diff === 1) return 'Tomorrow';
-      if (diff <= 7) return `In ${diff}d`;
-      return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    },
-
-    getFollowUpClass(date) {
-      if (!date) return 'text-gray-400';
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const target = new Date(date + 'T00:00:00');
-      const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return 'text-red-600 font-medium';
-      if (diff === 0) return 'text-amber-600 font-medium';
-      return 'text-gray-500';
-    },
-
-    getOwnerName(entity) {
-      if (!entity?.owner) return 'Unassigned';
-      return [entity.owner.firstName, entity.owner.lastName].filter(Boolean).join(' ') || entity.owner.username;
-    },
-
-    getOwnerInitials(entity) {
-      if (!entity?.owner) return '?';
-      const f = entity.owner.firstName?.[0] || '';
-      const l = entity.owner.lastName?.[0] || '';
-      return (f + l).toUpperCase() || entity.owner.username[0].toUpperCase();
-    },
-
-    async loadPipelineContacts() {
-      try {
-        const params = {};
-        if (this.pipelineSearch) params.search = this.pipelineSearch;
-        if (this.pipelineFilters.ownerId) params.ownerId = this.pipelineFilters.ownerId;
-        this.pipelineContacts = await API.pipeline.getContacts(params);
-      } catch (error) {
-        console.error('Failed to load contacts:', error);
-        this.pipelineContacts = [];
-      }
-    },
-
-    async loadPipelineDeals() {
-      this.pipelineLoading = true;
-      try {
-        const params = { contactType: this.pipelineType };
-        if (this.pipelineSearch) params.search = this.pipelineSearch;
-        if (this.pipelineFilters.stage) params.stage = this.pipelineFilters.stage;
-        if (this.pipelineFilters.ownerId) params.ownerId = this.pipelineFilters.ownerId;
-        this.pipelineDeals = await API.pipeline.getDeals(params);
-      } catch (error) {
-        console.error('Failed to load deals:', error);
-        this.pipelineDeals = [];
-      } finally {
-        this.pipelineLoading = false;
-        this.$nextTick(() => {
-          if (this.pipelineViewMode === 'kanban') this.initPipelineKanban();
-        });
-      }
-    },
-
-    async loadPipelineOwners() {
-      try {
-        this.pipelineOwners = await API.pipeline.getOwners();
-      } catch (error) {
-        console.error('Failed to load pipeline owners:', error);
-        this.pipelineOwners = [];
-      }
-    },
-
-    getCompanyContacts() {
-      return this.pipelineContacts.filter(c => c.contactKind === 'COMPANY');
-    },
-
-    getPersonContacts() {
-      return this.pipelineContacts.filter(c => c.contactKind === 'PERSON');
-    },
-
+    getDealsByStage(stage) { return this.pipelineDeals.filter(d => d.stage === stage); },
+    getFollowUpLabel(date) { return getRelativeDateLabel(date, { todayLabel: 'Today', tomorrowLabel: 'Tomorrow', withinWeekFmt: d => `In ${d}d` }); },
+    getFollowUpClass(date) { return getRelativeDateClass(date); },
+    getOwnerName(entity) { return getUserDisplayName(entity?.owner); },
+    getOwnerInitials(entity) { return getUserInitials(entity?.owner); },
+    getCompanyContacts() { return this.pipelineContacts.filter(c => c.contactKind === 'COMPANY'); },
+    getPersonContacts() { return this.pipelineContacts.filter(c => c.contactKind === 'PERSON'); },
     getContactCompanyName(contact) {
       if (contact.contactKind === 'COMPANY') return null;
       return contact.companyContact?.name || null;
     },
-
     getFilteredContacts() {
       let filtered = this.pipelineContacts;
-      if (this.pipelineType && this.pipelineViewMode === 'contacts') {
-        // In contacts view, optionally filter by type via the type pills
-      }
       if (this.pipelineSearch) {
         const q = this.pipelineSearch.toLowerCase();
         filtered = filtered.filter(c =>
@@ -5448,264 +5009,35 @@ window.grapheneApp = function() {
     },
 
     // Contact CRUD
-    openContactForm(type, kind) {
-      this.editingContact = null;
-      this.contactForm = { name: '', contactKind: kind || 'PERSON', email: '', phone: '', role: '', contactType: type || this.pipelineType || 'INVESTOR', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' };
-      this.pipelineTagInput = '';
-      this.showAddContact = true;
-    },
-
-    openPersonForm(type) {
-      this.openContactForm(type, 'PERSON');
-    },
-
-    openCompanyForm(type) {
-      this.openContactForm(type, 'COMPANY');
-    },
-
-    openEditContactForm(contact) {
-      this.editingContact = contact;
-      this.contactForm = {
-        name: contact.name,
-        contactKind: contact.contactKind || 'PERSON',
-        email: contact.email || '',
-        phone: contact.phone || '',
-        role: contact.role || '',
-        contactType: contact.contactType,
-        source: contact.source || '',
-        tags: [...(contact.tags || [])],
-        notes: contact.notes || '',
-        linkedInUrl: contact.linkedInUrl || '',
-        website: contact.website || '',
-        companyId: contact.companyId || '',
-        linkPersonId: '',
-        ownerId: contact.ownerId || '',
-        nextFollowUpAt: contact.nextFollowUpAt || ''
-      };
-      this.pipelineTagInput = '';
-      this.showAddContact = true;
-    },
-
-    closeContactForm() {
-      this.showAddContact = false;
-      this.editingContact = null;
-    },
-
-    async saveContact() {
-      try {
-        const formData = { ...this.contactForm };
-        const linkPersonId = formData.linkPersonId;
-        const isNew = !this.editingContact;
-        delete formData.linkPersonId;
-
-        let savedContact;
-        if (this.editingContact) {
-          savedContact = await API.pipeline.updateContact(this.editingContact.id, formData);
-        } else {
-          savedContact = await API.pipeline.createContact(formData);
-        }
-
-        // If creating a Company and a person was selected, link that person to this company
-        if (linkPersonId && savedContact?.id && formData.contactKind === 'COMPANY') {
-          await API.pipeline.updateContact(linkPersonId, { companyId: savedContact.id });
-        }
-
-        this.closeContactForm();
-        await this.loadPipelineContacts();
-        if (this.selectedContact) {
-          this.selectedContact = await API.pipeline.getContact(this.selectedContact.id);
-        }
-
-        // After creating a new contact, offer to add them to the pipeline
-        if (isNew && savedContact?.id) {
-          this.openDealForm(savedContact.id);
-        }
-      } catch (error) {
-        console.error('Failed to save contact:', error);
-        alert('Failed to save contact: ' + error.message);
-      }
-    },
-
-    async deleteContact(contactId) {
-      if (!confirm('Delete this contact and all associated deals?')) return;
-      try {
-        await API.pipeline.deleteContact(contactId);
-        if (this.selectedContact?.id === contactId) this.closeContactDetail();
-        await this.loadPipelineContacts();
-        await this.loadPipelineDeals();
-      } catch (error) {
-        console.error('Failed to delete contact:', error);
-        alert('Failed to delete contact: ' + error.message);
-      }
-    },
-
-    async openContactDetail(contactId) {
-      try {
-        this.selectedContact = await API.pipeline.getContact(contactId);
-        this.showContactDetail = true;
-        this.showDealDetail = false;
-      } catch (error) {
-        console.error('Failed to load contact detail:', error);
-      }
-    },
-
-    closeContactDetail() {
-      this.showContactDetail = false;
-      this.selectedContact = null;
-      this.contactActivityForm = { action: 'note_added', content: '' };
-    },
-
-    async updateContactInline(contactId, field, value) {
-      try {
-        await API.pipeline.updateContact(contactId, { [field]: value });
-        await this.loadPipelineContacts();
-        if (this.selectedContact?.id === contactId) {
-          this.selectedContact = await API.pipeline.getContact(contactId);
-        }
-      } catch (error) {
-        console.error('Failed to update contact:', error);
-      }
-    },
-
-    async addContactActivity() {
-      if (!this.contactActivityForm.content?.trim() || !this.selectedContact) return;
-      try {
-        await API.pipeline.addContactActivity(this.selectedContact.id, this.contactActivityForm);
-        this.contactActivityForm = { action: 'note_added', content: '' };
-        this.selectedContact = await API.pipeline.getContact(this.selectedContact.id);
-      } catch (error) {
-        console.error('Failed to add activity:', error);
-      }
-    },
-
-    async uploadContactAttachments(files) {
-      if (!files?.length || !this.selectedContact) return;
-      this.contactAttachmentUploading = true;
-      try {
-        await API.pipeline.uploadContactAttachments(this.selectedContact.id, Array.from(files));
-        this.selectedContact = await API.pipeline.getContact(this.selectedContact.id);
-      } catch (error) {
-        console.error('Failed to upload attachments:', error);
-        alert('Failed to upload: ' + error.message);
-      } finally {
-        this.contactAttachmentUploading = false;
-      }
-    },
-
-    async deleteContactAttachment(attachmentId, fileName) {
-      if (!this.selectedContact) return;
-      if (!confirm('Delete "' + fileName + '"?')) return;
-      try {
-        await API.pipeline.deleteContactAttachment(this.selectedContact.id, attachmentId);
-        this.selectedContact = await API.pipeline.getContact(this.selectedContact.id);
-      } catch (error) {
-        console.error('Failed to delete attachment:', error);
-      }
-    },
+    async loadPipelineContacts() { await pipelineService.loadPipelineContacts(this); },
+    async loadPipelineDeals() { await pipelineService.loadPipelineDeals(this); },
+    async loadPipelineOwners() { await pipelineService.loadPipelineOwners(this); },
+    openContactForm(type, kind) { pipelineService.openContactForm(this, type, kind); },
+    openPersonForm(type) { this.openContactForm(type, 'PERSON'); },
+    openCompanyForm(type) { this.openContactForm(type, 'COMPANY'); },
+    openEditContactForm(contact) { pipelineService.openEditContactForm(this, contact); },
+    closeContactForm() { pipelineService.closeContactForm(this); },
+    async saveContact() { await pipelineService.saveContact(this); },
+    async deleteContact(contactId) { await pipelineService.deleteContact(this, contactId); },
+    async openContactDetail(contactId) { await pipelineService.openContactDetail(this, contactId); },
+    closeContactDetail() { pipelineService.closeContactDetail(this); },
+    async updateContactInline(contactId, field, value) { await pipelineService.updateContactInline(this, contactId, field, value); },
+    async addContactActivity() { await pipelineService.addContactActivity(this); },
+    async uploadContactAttachments(files) { await pipelineService.uploadContactAttachments(this, files); },
+    async deleteContactAttachment(attachmentId, fileName) { await pipelineService.deleteContactAttachment(this, attachmentId, fileName); },
 
     // Deal CRUD
-    openDealForm(contactId, stage) {
-      this.editingDeal = null;
-      const defaultStages = { CLIENT: 'LEAD', INVESTOR: 'IDENTIFIED', PARTNER: 'IDENTIFIED' };
-      this.dealForm = {
-        title: '', contactId: contactId || '', stage: stage || defaultStages[this.pipelineType] || 'LEAD',
-        description: '', tags: [], ownerId: ''
-      };
-      this.pipelineTagInput = '';
-      this.showAddDeal = true;
-    },
-
-    openEditDealForm(deal) {
-      this.editingDeal = deal;
-      this.dealForm = {
-        title: deal.title,
-        contactId: deal.contactId,
-        stage: deal.stage,
-        description: deal.description || '',
-        tags: [...(deal.tags || [])],
-        ownerId: deal.ownerId || ''
-      };
-      this.pipelineTagInput = '';
-      this.showAddDeal = true;
-    },
-
-    closeDealForm() {
-      this.showAddDeal = false;
-      this.editingDeal = null;
-    },
-
-    async saveDeal() {
-      try {
-        if (this.editingDeal) {
-          await API.pipeline.updateDeal(this.editingDeal.id, this.dealForm);
-        } else {
-          await API.pipeline.createDeal(this.dealForm);
-        }
-        this.closeDealForm();
-        await this.loadPipelineDeals();
-        if (this.selectedDeal) {
-          this.selectedDeal = await API.pipeline.getDeal(this.selectedDeal.id);
-        }
-      } catch (error) {
-        console.error('Failed to save lead:', error);
-        alert('Failed to save lead: ' + error.message);
-      }
-    },
-
-    async deleteDeal(dealId) {
-      if (!confirm('Delete this lead?')) return;
-      try {
-        await API.pipeline.deleteDeal(dealId);
-        if (this.selectedDeal?.id === dealId) this.closeDealDetail();
-        await this.loadPipelineDeals();
-      } catch (error) {
-        console.error('Failed to delete lead:', error);
-        alert('Failed to delete lead: ' + error.message);
-      }
-    },
-
-    async openDealDetail(dealId) {
-      try {
-        this.selectedDeal = await API.pipeline.getDeal(dealId);
-        this.showDealDetail = true;
-        this.showContactDetail = false;
-      } catch (error) {
-        console.error('Failed to load deal detail:', error);
-      }
-    },
-
-    closeDealDetail() {
-      this.showDealDetail = false;
-      this.selectedDeal = null;
-      this.dealActivityForm = { action: 'note_added', content: '' };
-    },
-
-    async updateDealInline(dealId, field, value) {
-      try {
-        await API.pipeline.updateDeal(dealId, { [field]: value });
-        await this.loadPipelineDeals();
-        if (this.selectedDeal?.id === dealId) {
-          this.selectedDeal = await API.pipeline.getDeal(dealId);
-        }
-      } catch (error) {
-        console.error('Failed to update deal:', error);
-      }
-    },
-
-    async addDealActivity() {
-      if (!this.dealActivityForm.content?.trim() || !this.selectedDeal) return;
-      try {
-        await API.pipeline.addDealActivity(this.selectedDeal.id, this.dealActivityForm);
-        this.dealActivityForm = { action: 'note_added', content: '' };
-        this.selectedDeal = await API.pipeline.getDeal(this.selectedDeal.id);
-      } catch (error) {
-        console.error('Failed to add deal activity:', error);
-      }
-    },
-
+    openDealForm(contactId, stage) { pipelineService.openDealForm(this, contactId, stage); },
+    openEditDealForm(deal) { pipelineService.openEditDealForm(this, deal); },
+    closeDealForm() { pipelineService.closeDealForm(this); },
+    async saveDeal() { await pipelineService.saveDeal(this); },
+    async deleteDeal(dealId) { await pipelineService.deleteDeal(this, dealId); },
+    async openDealDetail(dealId) { await pipelineService.openDealDetail(this, dealId); },
+    closeDealDetail() { pipelineService.closeDealDetail(this); },
+    async updateDealInline(dealId, field, value) { await pipelineService.updateDealInline(this, dealId, field, value); },
+    async addDealActivity() { await pipelineService.addDealActivity(this); },
     addPipelineTag() {
       const tag = this.pipelineTagInput.trim();
-      // Check which form is active
       if (this.showAddContact && tag && !this.contactForm.tags.includes(tag)) {
         this.contactForm.tags.push(tag);
       } else if (this.showAddDeal && tag && !this.dealForm.tags.includes(tag)) {
@@ -5713,7 +5045,6 @@ window.grapheneApp = function() {
       }
       this.pipelineTagInput = '';
     },
-
     removePipelineTag(tag) {
       if (this.showAddContact) {
         this.contactForm.tags = this.contactForm.tags.filter(t => t !== tag);
@@ -5721,120 +5052,32 @@ window.grapheneApp = function() {
         this.dealForm.tags = this.dealForm.tags.filter(t => t !== tag);
       }
     },
+    openDealFromContact(contactId) { this.closeContactDetail(); this.openDealForm(contactId); },
 
-    // Open deal form from contact detail ("Add to Pipeline")
-    openDealFromContact(contactId) {
-      this.closeContactDetail();
-      this.openDealForm(contactId);
-    },
-
-    // Pipeline Kanban drag-and-drop
+    // Pipeline Kanban & view switching
     initPipelineKanban() {
-      if (typeof Sortable === 'undefined') return;
-
-      this.pipelineSortableInstances.forEach(s => s.destroy());
-      this.pipelineSortableInstances = [];
-
-      const stages = this.getPipelineStages();
-
-      stages.forEach(stage => {
-        const el = document.getElementById(`pipeline-col-${stage.key}`);
-        if (!el) return;
-
-        const sortable = new Sortable(el, {
-          group: 'pipeline-kanban',
-          animation: 150,
-          ghostClass: 'opacity-30',
-          dragClass: 'shadow-lg',
-          onEnd: (evt) => {
-            this.handlePipelineDragEnd(evt);
+      kanbanService.invalidate('pipeline-kanban');
+      kanbanService.init({
+        group: 'pipeline-kanban',
+        columnIds: this.getPipelineStages().map(s => `pipeline-col-${s.key}`),
+        itemIdAttr: 'data-deal-id',
+        statusAttr: 'data-stage',
+        onReorder: async (dealId, newStage, oldStage, positions) => {
+          try {
+            await API.pipeline.reorderDeals(dealId, newStage !== oldStage ? newStage : null, positions);
+            await this.loadPipelineDeals();
+          } catch (error) {
+            console.error('Failed to reorder deals:', error);
+            await this.loadPipelineDeals();
           }
-        });
-
-        this.pipelineSortableInstances.push(sortable);
-      });
-    },
-
-    async handlePipelineDragEnd(evt) {
-      const dealId = evt.item.getAttribute('data-deal-id');
-      if (!dealId) return;
-
-      const newStage = evt.to.getAttribute('data-stage');
-      const oldStage = evt.from.getAttribute('data-stage');
-
-      const toChildren = [...evt.to.children].filter(c => c.hasAttribute('data-deal-id'));
-      const positions = toChildren.map((child, index) => ({
-        id: child.getAttribute('data-deal-id'),
-        position: index
-      }));
-
-      if (oldStage !== newStage) {
-        const fromChildren = [...evt.from.children].filter(c => c.hasAttribute('data-deal-id'));
-        fromChildren.forEach((child, index) => {
-          positions.push({ id: child.getAttribute('data-deal-id'), position: index });
-        });
-      }
-
-      try {
-        await API.pipeline.reorderDeals(dealId, newStage !== oldStage ? newStage : null, positions);
-        await this.loadPipelineDeals();
-      } catch (error) {
-        console.error('Failed to reorder deals:', error);
-        await this.loadPipelineDeals();
-      }
-    },
-
-    async switchPipelineType(type) {
-      this.pipelineType = type;
-      this.pipelineFilters.stage = '';
-      await this.loadPipelineDeals();
-      this.$nextTick(() => {
-        if (this.pipelineViewMode === 'kanban') this.initPipelineKanban();
-      });
-    },
-
-    async switchPipelineView(mode) {
-      this.pipelineViewMode = mode;
-      if (mode === 'kanban') {
-        await this.loadPipelineDeals();
-        this.$nextTick(() => this.initPipelineKanban());
-      } else if (mode === 'contacts') {
-        await this.loadPipelineContacts();
-      }
-    },
-
-    async pipelineSearchDebounced() {
-      if (this._pipelineSearchTimer) clearTimeout(this._pipelineSearchTimer);
-      this._pipelineSearchTimer = setTimeout(async () => {
-        if (this.pipelineViewMode === 'contacts') {
-          await this.loadPipelineContacts();
-        } else {
-          await this.loadPipelineDeals();
         }
-      }, 300);
+      });
     },
-
-    formatActivityAction(action) {
-      const labels = {
-        created: 'Created', note_added: 'Note', call_logged: 'Call',
-        email_sent: 'Email', meeting: 'Meeting', stage_changed: 'Stage changed',
-        type_changed: 'Type changed', owner_changed: 'Owner changed',
-        attachment_added: 'File added', attachment_removed: 'File removed'
-      };
-      return labels[action] || action;
-    },
-
-    getActivityIcon(action) {
-      const icons = {
-        note_added: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-        call_logged: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
-        email_sent: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-        meeting: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-        stage_changed: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
-        created: 'M12 4v16m8-8H4',
-      };
-      return icons[action] || icons.note_added;
-    },
+    async switchPipelineType(type) { await pipelineService.switchPipelineType(this, type); },
+    async switchPipelineView(mode) { await pipelineService.switchPipelineView(this, mode); },
+    async pipelineSearchDebounced() { pipelineService.pipelineSearchDebounced(this); },
+    formatActivityAction(action) { return pipelineService.formatActivityAction(action); },
+    getActivityIcon(action) { return pipelineService.getActivityIcon(action); },
 
     // Redirect Third Party users away from restricted tabs
     enforceThirdPartyRestrictions() {

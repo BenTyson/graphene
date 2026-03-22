@@ -5,11 +5,10 @@ export function getPipelineTabHtml() {
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <h2 class="text-lg font-semibold text-gray-900">Pipeline</h2>
-        <p class="text-sm text-gray-500">Manage contacts, leads, and relationships</p>
       </div>
       <div class="flex items-center gap-2">
         <button @click="openPersonForm()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-6-1a4 4 0 100-8 4 4 0 000 8zm-1 4h2a7 7 0 017-7z"/></svg>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="19" y1="8" x2="19" y2="14" stroke-linecap="round" stroke-linejoin="round"/><line x1="22" y1="11" x2="16" y2="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
           New Person
         </button>
         <button @click="openCompanyForm()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
