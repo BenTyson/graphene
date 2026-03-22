@@ -63,7 +63,8 @@ All reference Graphene and/or CompoundBatch by experiment/batch number string.
 ### Task Management
 - **Task** - title, description, status (TODO/IN_PROGRESS/IN_REVIEW/DONE/ARCHIVED), priority (LOW/MEDIUM/HIGH/URGENT), dueDate, tags[], position. Self-referencing parentId for subtasks. Links to User (creator, assignee).
 - **TaskComment** - content, linked to Task and User (author)
-- **TaskActivity** - audit log (action, fromValue, toValue) for all task changes
+- **TaskActivity** - audit log (action, fromValue, toValue) for all task changes. Tracks: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed.
+- **TaskAttachment** - fileName, filePath, fileSize, mimeType. Linked to Task (cascade delete) and User (uploader). Supports PDF, images, Word, Excel, CSV, TXT (15MB limit). Stored via Cloudinary (prod) or local uploads (dev).
 
 ### Users & Auth
 - **User** - JWT auth with bcrypt. Roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
@@ -73,6 +74,7 @@ All reference Graphene and/or CompoundBatch by experiment/batch number string.
 
 ### News/AI
 - **NewsArticle**, **NewsSource**, **KnowledgeDocument** - RSS aggregation + GPT-4 summarization
+- **Note:** News Feed tab is currently hidden (`x-show="false"`) but code is preserved for later reuse
 
 ---
 

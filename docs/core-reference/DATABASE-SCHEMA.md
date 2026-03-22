@@ -34,6 +34,7 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 - **Testing**: BET, ConductivityTest, RamanTest, TEMTest, ParticleSizeTest, XRDTest, XPSTest
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
+- **Task Management**: Task, TaskComment, TaskActivity, TaskAttachment
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument
 - **References**: CharacterizationReference
 
@@ -1084,6 +1085,6 @@ psql $DATABASE_URL < backups/backup_file.sql
 
 ---
 
-**Last Updated:** January 2025 (MCB simplified - removed name/SKU fields, added combinedDate)
-**Schema Version:** Current (January 2025)
+**Last Updated:** March 2026 (Tasks v2: drag-and-drop, archive, attachments)
+**Schema Version:** Current (March 2026)
 **For API Usage:** See [API-REFERENCE.md](API-REFERENCE.md)

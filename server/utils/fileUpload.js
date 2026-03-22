@@ -276,10 +276,10 @@ export async function deleteFileFromStorage(filePath) {
       
       // Get everything after version (v123456789/)
       const pathAfterVersion = urlParts.slice(uploadIndex + 2).join('/');
-      const publicId = pathAfterVersion.replace(/\.(pdf|xlsx?|xlsm|docx)(\.(pdf))?$/, '');
-      
+      const publicId = pathAfterVersion.replace(/\.(pdf|xlsx?|xlsm|docx?|csv|txt)(\.(pdf))?$/, '');
+
       // Determine resource type
-      const isRaw = /\.(xlsx?|xlsm|docx)$/.test(filePath);
+      const isRaw = /\.(xlsx?|xlsm|docx?|csv|txt)$/.test(filePath);
       const resourceType = isRaw ? 'raw' : 'image';
       
       return await deleteFromCloudinary(publicId, resourceType);

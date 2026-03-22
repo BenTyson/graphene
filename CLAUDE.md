@@ -70,9 +70,11 @@ Local dev: use `localhost:5174` (Vite). Do NOT use `:3001` -- Express serves raw
 - `prisma migrate dev` fails (old shadow DB issues). Use `prisma db push` instead.
 - Biochar time = HOURS. Graphene time = MINUTES.
 - Test models use string references (experimentNumber), not foreign keys.
-- XRD and XPS support multi-file upload (array of report URLs).
+- XRD, XPS, and Task attachments support multi-file upload (Cloudinary in prod, local in dev).
 - MCB micronizations excluded from individual inventory counts (double-counting prevention).
 - app-refactored.js is large (~5000 lines). Every new feature adds state + methods here.
+- News Feed tab is hidden (`x-show="false"`), code preserved for later.
+- Tasks use SortableJS (CDN) for Kanban drag-and-drop. Position persisted via `PATCH /api/tasks/reorder`.
 
 ## Deeper Docs
 For detailed reference: `docs/session-start/SESSION-START.md` (full project brief)

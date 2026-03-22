@@ -1174,6 +1174,7 @@ export const tasksAPI = {
     if (params.sortBy) query.append('sortBy', params.sortBy);
     if (params.order) query.append('order', params.order);
     if (params.limit) query.append('limit', params.limit);
+    if (params.offset) query.append('offset', params.offset);
     const qs = query.toString();
     const headers = { ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/tasks${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
@@ -1199,6 +1200,14 @@ export const tasksAPI = {
     return fetch(`${API_BASE}/tasks/${id}`, { method: 'DELETE', headers }).then(handleResponse);
   },
 
+  reorder: (taskId, newStatus, positions) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/reorder`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ taskId, newStatus, positions })
+    }).then(handleResponse);
+  },
+
   updateStatus: (id, status, position) => {
     const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/tasks/${id}/status`, {
@@ -1216,6 +1225,22 @@ export const tasksAPI = {
   deleteComment: (taskId, commentId) => {
     const headers = { ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/tasks/${taskId}/comments/${commentId}`, {
+      method: 'DELETE', headers
+    }).then(handleResponse);
+  },
+
+  uploadAttachments: (taskId, files) => {
+    const formData = new FormData();
+    for (const file of files) formData.append('attachments', file);
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/attachments`, {
+      method: 'POST', headers, body: formData
+    }).then(handleResponse);
+  },
+
+  deleteAttachment: (taskId, attachmentId) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/attachments/${attachmentId}`, {
       method: 'DELETE', headers
     }).then(handleResponse);
   },

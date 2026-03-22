@@ -7,6 +7,7 @@ export function getTaskModalHtml() {
       x-transition:leave="transition ease-in duration-150"
       x-transition:leave-start="opacity-100"
       x-transition:leave-end="opacity-0"
+      @keydown.escape.window="showAddTask && closeTaskForm()"
       class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black opacity-50" @click="closeTaskForm()"></div>
@@ -49,6 +50,7 @@ export function getTaskModalHtml() {
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="IN_REVIEW">In Review</option>
                   <option value="DONE">Done</option>
+                  <option value="ARCHIVED">Archived</option>
                 </select>
               </div>
               <div>

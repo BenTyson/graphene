@@ -1,6 +1,7 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
 import { authenticateToken } from './auth.js';
+import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
 
 const router = express.Router();
 
@@ -12,6 +13,18 @@ function requireInternalAccess(req, res, next) {
   }
   next();
 }
+
+const attachmentUpload = createFileUploadMiddleware('task-attachments', {
+  allowedTypes: [
+    'application/pdf', 'image/jpeg', 'image/png', 'image/gif',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel', 'application/msword', 'text/plain', 'text/csv'
+  ],
+  allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.docx', '.xlsx', '.xls', '.doc', '.txt', '.csv'],
+  maxSize: 15 * 1024 * 1024,
+  validateContent: false
+});
 
 async function logActivity(prisma, { taskId, userId, action, fromValue, toValue }) {
   await prisma.taskActivity.create({
@@ -99,7 +112,15 @@ router.get('/', asyncHandler(async (req, res) => {
 
   if (overdue === 'true') {
     where.dueDate = { lt: new Date() };
-    where.status = { notIn: ['DONE', 'ARCHIVED'] };
+    if (where.status) {
+      // Merge with existing status filter -- exclude DONE/ARCHIVED from the requested statuses
+      const excluded = ['DONE', 'ARCHIVED'];
+      const requested = Array.isArray(where.status?.in) ? where.status.in : [where.status];
+      const filtered = requested.filter(s => !excluded.includes(s));
+      where.status = filtered.length === 1 ? filtered[0] : { in: filtered };
+    } else {
+      where.status = { notIn: ['DONE', 'ARCHIVED'] };
+    }
   }
 
   if (search) {
@@ -120,7 +141,7 @@ router.get('/', asyncHandler(async (req, res) => {
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
-      _count: { select: { subtasks: true, comments: true } },
+      _count: { select: { subtasks: true, comments: true, attachments: true } },
       subtasks: {
         select: { id: true, status: true },
         orderBy: { position: 'asc' }
@@ -141,6 +162,39 @@ router.get('/', asyncHandler(async (req, res) => {
   }));
 
   res.json(result);
+}));
+
+// PATCH /api/tasks/reorder - batch update positions (drag-and-drop)
+router.patch('/reorder', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { taskId, newStatus, positions } = req.body;
+
+  if (!taskId || !positions || !Array.isArray(positions)) {
+    return res.status(400).json({ error: 'taskId and positions array are required' });
+  }
+
+  const existing = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!existing) return res.status(404).json({ error: 'Task not found' });
+
+  await prisma.$transaction(async (tx) => {
+    if (newStatus && newStatus !== existing.status) {
+      await tx.task.update({ where: { id: taskId }, data: { status: newStatus } });
+      await logActivity(prisma, {
+        taskId, userId, action: 'status_changed',
+        fromValue: existing.status, toValue: newStatus
+      });
+    }
+
+    for (const item of positions) {
+      await tx.task.update({
+        where: { id: item.id },
+        data: { position: item.position }
+      });
+    }
+  });
+
+  res.json({ success: true });
 }));
 
 // GET /api/tasks/:id - single task with full details
@@ -165,6 +219,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
         },
         orderBy: { createdAt: 'asc' }
       },
+      attachments: {
+        include: {
+          uploadedBy: { select: { id: true, firstName: true, lastName: true, username: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      },
       activities: {
         include: {
           user: { select: { id: true, firstName: true, lastName: true, username: true } }
@@ -172,7 +232,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
         orderBy: { createdAt: 'desc' },
         take: 50
       },
-      _count: { select: { subtasks: true, comments: true } }
+      _count: { select: { subtasks: true, comments: true, attachments: true } }
     }
   });
 
@@ -363,6 +423,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     return res.status(403).json({ error: 'Only the task creator or admin can delete this task' });
   }
 
+  // Clean up attachment files before cascade delete
+  const attachments = await prisma.taskAttachment.findMany({
+    where: { taskId: id },
+    select: { filePath: true }
+  });
+  for (const att of attachments) {
+    await deleteFileFromStorage(att.filePath);
+  }
+
   await prisma.task.delete({ where: { id } });
   res.json({ success: true });
 }));
@@ -411,6 +480,80 @@ router.delete('/:id/comments/:commentId', asyncHandler(async (req, res) => {
   }
 
   await prisma.taskComment.delete({ where: { id: commentId } });
+  res.json({ success: true });
+}));
+
+// POST /api/tasks/:id/attachments - upload files
+router.post('/:id/attachments', attachmentUpload.array('attachments', 5), asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { id } = req.params;
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No files provided' });
+  }
+
+  const attachments = [];
+  for (const file of req.files) {
+    const result = await uploadFile(file, 'task-attachments');
+    if (result.success) {
+      const attachment = await prisma.taskAttachment.create({
+        data: {
+          taskId: id,
+          uploadedById: userId,
+          fileName: file.originalname,
+          filePath: result.path,
+          fileSize: file.size,
+          mimeType: file.mimetype
+        },
+        include: {
+          uploadedBy: { select: { id: true, firstName: true, lastName: true, username: true } }
+        }
+      });
+      attachments.push(attachment);
+
+      await logActivity(prisma, {
+        taskId: id, userId, action: 'attachment_added',
+        toValue: file.originalname
+      });
+    }
+  }
+
+  res.status(201).json(attachments);
+}));
+
+// DELETE /api/tasks/:id/attachments/:attachmentId
+router.delete('/:id/attachments/:attachmentId', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { id, attachmentId } = req.params;
+
+  const attachment = await prisma.taskAttachment.findUnique({
+    where: { id: attachmentId },
+    include: { task: { select: { creatorId: true } } }
+  });
+
+  if (!attachment) return res.status(404).json({ error: 'Attachment not found' });
+
+  const canDelete = attachment.uploadedById === userId
+    || attachment.task.creatorId === userId
+    || req.user.role === 'SUPER_ADMIN';
+
+  if (!canDelete) {
+    return res.status(403).json({ error: 'Only the uploader, task creator, or admin can delete this attachment' });
+  }
+
+  await deleteFileFromStorage(attachment.filePath);
+  await prisma.taskAttachment.delete({ where: { id: attachmentId } });
+
+  await logActivity(prisma, {
+    taskId: id, userId, action: 'attachment_removed',
+    fromValue: attachment.fileName
+  });
+
   res.json({ success: true });
 }));
 

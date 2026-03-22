@@ -280,8 +280,18 @@ Competitive benchmarking dashboard with:
 - **Industry Benchmarks**: Comparison zones (activated carbon, carbon black, synthetic graphite)
 - **Real Data**: Live results from actual test data
 
-### News System
+### Task Management (v2)
 
+- **Kanban Board**: 4-column board (TODO, IN_PROGRESS, IN_REVIEW, DONE) with SortableJS drag-and-drop
+- **Drag-and-Drop**: Cards draggable between columns and reorderable within columns. Position persisted via `PATCH /api/tasks/reorder` (atomic batch update)
+- **Archive**: Tasks can be archived (hidden from board by default). "Show archived" toggle in filters. Archive/unarchive buttons in detail panel.
+- **Attachments**: Multi-file upload (PDF, images, Word, Excel, CSV, TXT) via detail panel. Stored in Cloudinary (prod) or local uploads (dev). `TaskAttachment` model tracks uploader, filename, size, mime type.
+- **Detail Panel**: Right-side slide-over with inline editing, subtasks, attachments, comments, activity log
+- **Access**: Internal roles only (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). INVESTOR and THIRD_PARTY excluded.
+
+### News System (currently hidden)
+
+- **Status**: Tab hidden via `x-show="false"` in both desktop and mobile nav. Code preserved for later reuse.
 - **RSS Aggregation**: Automated news fetching
 - **GPT-4 Summarization**: AI-generated summaries
 - **Filtering**: Category and keyword-based filtering

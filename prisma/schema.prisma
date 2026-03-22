@@ -867,7 +867,8 @@ model User {
   createdTasks   Task[]         @relation("TaskCreator")
   assignedTasks  Task[]         @relation("TaskAssignee")
   taskComments   TaskComment[]  @relation("TaskCommentAuthor")
-  taskActivities TaskActivity[] @relation("TaskActivityUser")
+  taskActivities  TaskActivity[]  @relation("TaskActivityUser")
+  taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
 
   @@index([username])
   @@index([email])
@@ -933,8 +934,9 @@ model Task {
   parent   Task?   @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   subtasks Task[]  @relation("TaskSubtasks")
 
-  comments   TaskComment[]
-  activities TaskActivity[]
+  comments    TaskComment[]
+  activities  TaskActivity[]
+  attachments TaskAttachment[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -978,4 +980,20 @@ model TaskActivity {
 
   @@index([taskId, createdAt])
   @@map("task_activities")
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  taskId       String   @map("task_id")
+  uploadedById String   @map("uploaded_by_id")
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String?  @map("mime_type")
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("TaskAttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@map("task_attachments")
 }

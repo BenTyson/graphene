@@ -227,8 +227,8 @@
             </div>
           </div>
 
-          <!-- News Feed (hidden for Third Party) -->
-          <div class="border-t border-gray-100" x-show="!isThirdParty()">
+          <!-- News Feed (temporarily hidden) -->
+          <div class="border-t border-gray-100" x-show="false">
             <button @click="switchTab('news'); mobileMenuOpen = false; initializeNewsTab()"
                     :class="activeTab === 'news' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700'"
                     class="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 touch-target">
@@ -333,9 +333,9 @@
             </div>
           </div>
 
-          <!-- News Feed (hidden for Third Party) -->
+          <!-- News Feed (temporarily hidden) -->
           <button
-            x-show="!isThirdParty()"
+            x-show="false"
             @click="switchTab('news'); initializeNewsTab()"
             :class="activeTab === 'news' ? 'border-black text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
@@ -1261,6 +1261,9 @@
   
   <!-- Marked.js for markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+
+  <!-- SortableJS for Kanban drag-and-drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   
   <!-- LoggingService - Load first to be available globally -->
   <script type="module" src="/src/js/services/LoggingService.js"></script>

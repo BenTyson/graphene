@@ -386,6 +386,9 @@ window.grapheneApp = function() {
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
+    showArchivedTasks: false,
+    sortableInstances: [],
+    taskAttachmentUploading: false,
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -4219,6 +4222,9 @@ window.grapheneApp = function() {
             await this.loadTasks();
             await this.loadTaskAssignees();
           }
+          this.$nextTick(() => {
+            if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
+          });
         } else if (tab === 'news') {
           console.log(`[Navigation] Initializing news tab: ${tab}`);
           await this.initializeNewsTab();
@@ -4847,6 +4853,9 @@ window.grapheneApp = function() {
         this.tasks = [];
       } finally {
         this.taskLoading = false;
+        this.$nextTick(() => {
+          if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
+        });
       }
     },
 
@@ -4864,7 +4873,7 @@ window.grapheneApp = function() {
     },
 
     getFilteredTasks() {
-      let filtered = [...this.tasks];
+      let filtered = this.tasks.filter(t => this.showArchivedTasks || t.status !== 'ARCHIVED');
       if (this.taskSearch) {
         const q = this.taskSearch.toLowerCase();
         filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
@@ -4977,6 +4986,31 @@ window.grapheneApp = function() {
         this.selectedTask = await API.tasks.getById(this.selectedTask.id);
       } catch (error) {
         console.error('Failed to delete comment:', error);
+      }
+    },
+
+    async uploadTaskAttachments(files) {
+      if (!files?.length || !this.selectedTask) return;
+      this.taskAttachmentUploading = true;
+      try {
+        await API.tasks.uploadAttachments(this.selectedTask.id, Array.from(files));
+        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+      } catch (error) {
+        console.error('Failed to upload attachments:', error);
+        alert('Failed to upload: ' + error.message);
+      } finally {
+        this.taskAttachmentUploading = false;
+      }
+    },
+
+    async deleteTaskAttachment(attachmentId, fileName) {
+      if (!this.selectedTask) return;
+      if (!confirm('Delete "' + fileName + '"?')) return;
+      try {
+        await API.tasks.deleteAttachment(this.selectedTask.id, attachmentId);
+        this.selectedTask = await API.tasks.getById(this.selectedTask.id);
+      } catch (error) {
+        console.error('Failed to delete attachment:', error);
       }
     },
 
@@ -5097,6 +5131,92 @@ window.grapheneApp = function() {
     formatStatusLabel(status) {
       const labels = { TODO: 'To Do', IN_PROGRESS: 'In Progress', IN_REVIEW: 'In Review', DONE: 'Done', ARCHIVED: 'Archived' };
       return labels[status] || status;
+    },
+
+    openTaskFormWithStatus(status) {
+      this.openTaskForm();
+      this.taskForm.status = status;
+    },
+
+    async archiveTask(taskId) {
+      try {
+        await API.tasks.updateStatus(taskId, 'ARCHIVED');
+        await this.loadTasks();
+        if (this.selectedTask?.id === taskId) {
+          this.selectedTask = await API.tasks.getById(taskId);
+        }
+      } catch (error) {
+        console.error('Failed to archive task:', error);
+      }
+    },
+
+    async unarchiveTask(taskId) {
+      try {
+        await API.tasks.updateStatus(taskId, 'TODO');
+        await this.loadTasks();
+        if (this.selectedTask?.id === taskId) {
+          this.selectedTask = await API.tasks.getById(taskId);
+        }
+      } catch (error) {
+        console.error('Failed to unarchive task:', error);
+      }
+    },
+
+    initKanbanDragDrop() {
+      if (typeof Sortable === 'undefined') return;
+
+      this.sortableInstances.forEach(s => s.destroy());
+      this.sortableInstances = [];
+
+      const statuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+
+      statuses.forEach(status => {
+        const el = document.getElementById(`kanban-col-${status}`);
+        if (!el) return;
+
+        const sortable = new Sortable(el, {
+          group: 'kanban',
+          animation: 150,
+          ghostClass: 'opacity-30',
+          dragClass: 'shadow-lg',
+          filter: 'select',
+          preventOnFilter: false,
+          onEnd: (evt) => {
+            this.handleDragEnd(evt);
+          }
+        });
+
+        this.sortableInstances.push(sortable);
+      });
+    },
+
+    async handleDragEnd(evt) {
+      const taskId = evt.item.getAttribute('data-task-id');
+      if (!taskId) return;
+
+      const newStatus = evt.to.getAttribute('data-status');
+      const oldStatus = evt.from.getAttribute('data-status');
+
+      const toChildren = [...evt.to.children].filter(c => c.hasAttribute('data-task-id'));
+      const positions = toChildren.map((child, index) => ({
+        id: child.getAttribute('data-task-id'),
+        position: index
+      }));
+
+      if (oldStatus !== newStatus) {
+        const fromChildren = [...evt.from.children].filter(c => c.hasAttribute('data-task-id'));
+        fromChildren.forEach((child, index) => {
+          positions.push({ id: child.getAttribute('data-task-id'), position: index });
+        });
+      }
+
+      try {
+        await API.tasks.reorder(taskId, newStatus !== oldStatus ? newStatus : null, positions);
+        await this.loadTasks();
+      } catch (error) {
+        console.error('Failed to reorder:', error);
+        await this.loadTasks();
+      }
     },
 
     getTasksTabHtml() { return getTasksTabHtml(); },

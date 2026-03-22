@@ -1068,24 +1068,35 @@ Auth: All endpoints require JWT + internal role (SUPER_ADMIN, SCIENCE_TEAM, EXEC
 ### Endpoints
 
 ```
-GET    /api/tasks/assignees           - List assignable users (id, name, role)
-GET    /api/tasks/stats               - Counts by status + myTasks + overdue
-GET    /api/tasks                     - List root tasks (filters: status, priority, assigneeId, search, overdue, sortBy, order, limit, offset)
-GET    /api/tasks/:id                 - Detail with subtasks, comments, activity
-POST   /api/tasks                     - Create task (title required; description, status, priority, dueDate, assigneeId, parentId, tags optional)
-PUT    /api/tasks/:id                 - Update task (creator + SUPER_ADMIN only)
-DELETE /api/tasks/:id                 - Delete task + subtasks (creator + SUPER_ADMIN only)
-PATCH  /api/tasks/:id/status          - Quick status change (status, position)
-PATCH  /api/tasks/:id/position        - Reorder within column
-POST   /api/tasks/:id/comments        - Add comment (content required)
-DELETE /api/tasks/:id/comments/:cid   - Delete comment (author + SUPER_ADMIN only)
+GET    /api/tasks/assignees                    - List assignable users (id, name, role)
+GET    /api/tasks/stats                        - Counts by status + myTasks + overdue
+GET    /api/tasks                              - List root tasks (filters: status, priority, assigneeId, search, overdue, sortBy, order, limit, offset)
+GET    /api/tasks/:id                          - Detail with subtasks, comments, attachments, activity
+POST   /api/tasks                              - Create task (title required; description, status, priority, dueDate, assigneeId, parentId, tags optional)
+PUT    /api/tasks/:id                          - Update task (creator + SUPER_ADMIN only)
+DELETE /api/tasks/:id                          - Delete task + subtasks + attachment files (creator + SUPER_ADMIN only)
+PATCH  /api/tasks/:id/status                   - Quick status change (status, position)
+PATCH  /api/tasks/:id/position                 - Reorder within column
+PATCH  /api/tasks/reorder                      - Batch position update for drag-and-drop (taskId, newStatus, positions[])
+POST   /api/tasks/:id/comments                 - Add comment (content required)
+DELETE /api/tasks/:id/comments/:cid            - Delete comment (author + SUPER_ADMIN only)
+POST   /api/tasks/:id/attachments              - Upload files (multipart, field: 'attachments', max 5 files, 15MB each)
+DELETE /api/tasks/:id/attachments/:attachmentId - Delete attachment (uploader, task creator, or SUPER_ADMIN)
 ```
 
 ### Task Status Flow
 `TODO` -> `IN_PROGRESS` -> `IN_REVIEW` -> `DONE` (also `ARCHIVED`)
 
+Kanban board shows 4 active columns (TODO, IN_PROGRESS, IN_REVIEW, DONE). ARCHIVED tasks are hidden by default, toggled via "Show archived" filter.
+
+### Drag-and-Drop
+`PATCH /api/tasks/reorder` accepts `{ taskId, newStatus, positions: [{ id, position }] }`. Atomically updates the dragged task's status (if column changed) and all affected positions in a Prisma transaction.
+
+### Attachments
+Upload via `POST /:id/attachments` with multipart form data (field name: `attachments`). Accepted types: PDF, JPG, PNG, GIF, DOCX, XLSX, XLS, DOC, TXT, CSV. Files stored via Cloudinary (production) or local `uploads/task-attachments/` (dev). Task deletion auto-cleans attachment files from storage.
+
 ### Activity Logging
-All status, priority, assignment, and due date changes auto-log to TaskActivity.
+All changes auto-log to TaskActivity: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed.
 
 ## Additional Test Type APIs (added post-initial docs)
 

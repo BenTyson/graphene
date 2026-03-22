@@ -47,7 +47,7 @@ export function localPathToCloudinaryUrl(localPath) {
   const ext = localPath.match(/\.[^.]+$/)?.[0] || '';
   
   // Determine resource type based on extension
-  const isRaw = ['.xlsm', '.xlsx', '.docx'].includes(ext.toLowerCase());
+  const isRaw = ['.xlsm', '.xlsx', '.xls', '.docx', '.doc', '.csv', '.txt'].includes(ext.toLowerCase());
   const resourceType = isRaw ? 'raw' : 'image';
   
   // Use environment-specific folder

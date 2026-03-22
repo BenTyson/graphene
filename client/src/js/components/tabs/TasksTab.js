@@ -8,7 +8,7 @@ export function getTasksTabHtml() {
           <div class="flex items-center gap-2">
             <!-- View Toggle -->
             <div class="flex rounded-md border border-gray-300 overflow-hidden">
-              <button @click="taskViewMode = 'kanban'"
+              <button @click="taskViewMode = 'kanban'; $nextTick(() => initKanbanDragDrop())"
                 :class="taskViewMode === 'kanban' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
                 class="px-3 py-1.5 text-xs font-medium transition-colors">
                 Board
@@ -49,8 +49,13 @@ export function getTasksTabHtml() {
               class="rounded border-gray-300 text-black focus:ring-black">
             Overdue only
           </label>
-          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue">
-            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false }; loadTasks()"
+          <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" x-model="showArchivedTasks"
+              class="rounded border-gray-300 text-black focus:ring-black">
+            Show archived
+          </label>
+          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || showArchivedTasks">
+            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false }; showArchivedTasks = false; loadTasks()"
               class="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline">
               Clear filters
             </button>
@@ -68,9 +73,9 @@ export function getTasksTabHtml() {
       <!-- Kanban Board View -->
       <template x-if="!taskLoading || tasks.length">
         <div>
-          <div x-show="taskViewMode === 'kanban'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div x-show="taskViewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 xl:grid-cols-4 snap-x snap-mandatory md:snap-none">
             ${['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map(status => `
-              <div class="flex flex-col min-h-[200px]">
+              <div class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
                 <!-- Column Header -->
                 <div class="flex items-center justify-between mb-3 px-1">
                   <div class="flex items-center gap-2">
@@ -84,18 +89,21 @@ export function getTasksTabHtml() {
                       status === 'IN_PROGRESS' ? 'In Progress' :
                       status === 'IN_REVIEW' ? 'In Review' : 'Done'
                     }</h3>
-                    <span class="text-xs text-gray-400 font-medium" x-text="getTasksByStatus('${status}').length"></span>
+                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600"
+                      x-text="getTasksByStatus('${status}').length"></span>
                   </div>
                 </div>
 
-                <!-- Column Body -->
-                <div class="flex-1 space-y-2 p-2 rounded-lg ${
+                <!-- Column Body (SortableJS container) -->
+                <div id="kanban-col-${status}" data-status="${status}"
+                  class="flex-1 space-y-2 p-2 rounded-lg min-h-[100px] ${
                   status === 'TODO' ? 'bg-gray-50' :
                   status === 'IN_PROGRESS' ? 'bg-blue-50/50' :
                   status === 'IN_REVIEW' ? 'bg-amber-50/50' : 'bg-green-50/50'
                 }">
                   <template x-for="task in getTasksByStatus('${status}')" :key="task.id">
                     <div @click="openTaskDetail(task.id)"
+                      :data-task-id="task.id"
                       class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
                       <!-- Priority + Title -->
                       <div class="flex items-start gap-2 mb-2">
@@ -125,6 +133,15 @@ export function getTasksTabHtml() {
                             <span class="text-[11px] text-gray-400"
                               x-text="getSubtaskProgress(task).done + '/' + getSubtaskProgress(task).total"></span>
                           </template>
+                          <template x-if="task._count?.attachments">
+                            <span class="flex items-center gap-0.5 text-[11px] text-gray-400" :title="task._count.attachments + ' attachment(s)'">
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                              </svg>
+                              <span x-text="task._count.attachments"></span>
+                            </span>
+                          </template>
                         </div>
                         <template x-if="task.assignee">
                           <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
@@ -144,6 +161,7 @@ export function getTasksTabHtml() {
                           <option value="IN_PROGRESS">In Progress</option>
                           <option value="IN_REVIEW">In Review</option>
                           <option value="DONE">Done</option>
+                          <option value="ARCHIVED">Archived</option>
                         </select>
                       </div>
                     </div>
@@ -154,6 +172,12 @@ export function getTasksTabHtml() {
                     <div class="text-center py-8 text-gray-400 text-xs">No tasks</div>
                   </template>
                 </div>
+
+                <!-- Quick-add button -->
+                <button @click="openTaskFormWithStatus('${status}')"
+                  class="mt-2 w-full py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-white rounded border border-dashed border-gray-200 hover:border-gray-300 transition-colors">
+                  + Add task
+                </button>
               </div>
             `).join('')}
           </div>
