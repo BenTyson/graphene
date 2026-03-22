@@ -46,14 +46,14 @@ High-level architecture guide for the Graphene Production Control System.
 /graphene
 ├── server/              # Backend (Node.js + Express)
 │   ├── index.js         # Server entry point
-│   ├── routes/          # API routes (biochar, graphene, tests, etc.)
+│   ├── routes/          # API routes (27 files: biochar, graphene, pipeline, tests, etc.)
 │   ├── middleware/      # Error handling, authentication
 │   └── utils/           # Cloudinary config, file uploads
 ├── client/              # Frontend (Alpine.js + Tailwind)
 │   ├── index.html       # Main UI (1,153 lines after componentization)
 │   └── src/
 │       ├── js/
-│       │   ├── app-refactored.js  # Main Alpine.js app (2,913 lines)
+│       │   ├── app-refactored.js  # Main Alpine.js app (~5,500 lines)
 │       │   ├── services/          # Service-oriented architecture
 │       │   ├── components/        # 30+ reusable UI components
 │       │   └── utils/             # Formatters, validators, helpers
@@ -88,8 +88,8 @@ Main application delegates to specialized services:
 40+ modular UI components:
 
 - **Form Fields**: Date, select, numeric, file upload components
-- **Modals**: 21 modal files (entity forms, task detail panel, PDF viewer, etc.)
-- **Tabs**: 21 tab files (production, tests, analysis, news, tasks, user management)
+- **Modals**: 23 modal files (entity forms, task detail panel, contact/deal modals and detail panels, PDF viewer, etc.)
+- **Tabs**: 22 tab files (production, tests, analysis, news, tasks, pipeline, user management)
 - **Cards**: Intelligent card factory with type detection
 - **Dropdowns**: Expandable row sections
 
@@ -111,17 +111,21 @@ JWT-based authentication with:
 | SCIENCE_TEAM | Full data access + Tasks |
 | EXECUTIVE_TEAM | Full data access + Tasks |
 | TEAM_MEMBER | Full data access + Tasks |
-| INVESTOR | Full data access, no Tasks tab |
+| INVESTOR | Full data access, no Tasks or Pipeline tabs |
 | THIRD_PARTY | View-only - No editing, restricted tabs |
 
 **Third Party Restrictions:**
-- Hidden tabs: Dashboard, News Feed, Insights, Shipments, Tasks, User Management
+- Hidden tabs: Dashboard, News Feed, Insights, Shipments, Tasks, Pipeline, User Management
 - All POST/PUT/DELETE requests blocked at API level with `requireEditAccess` middleware
 - UI edit/delete buttons hidden via `canEdit()` helper
 
 **Task Management Access:**
 - Tasks route uses `requireInternalAccess` middleware (blocks THIRD_PARTY + INVESTOR)
 - Task editing: creator + SUPER_ADMIN can edit/delete any task
+- Tab hidden for INVESTOR and THIRD_PARTY roles
+
+**Pipeline/CRM Access:**
+- Pipeline route uses `requireInternalAccess` middleware (blocks THIRD_PARTY + INVESTOR)
 - Tab hidden for INVESTOR and THIRD_PARTY roles
 
 ### File Storage (Cloudinary CDN)
@@ -198,6 +202,7 @@ MaterialShipment (distribution)
 **Reports**: UpdateReport, SemReport (with junction tables)
 **Shipments**: MaterialShipment
 **Task Management**: Task (with self-referencing subtasks), TaskComment, TaskActivity
+**Pipeline/CRM**: Contact, Deal, ContactActivity, DealActivity, ContactAttachment
 **News/AI**: NewsSource, NewsArticle, KnowledgeDocument
 **Auth**: User (6 roles)
 **References**: CharacterizationReference
@@ -216,6 +221,7 @@ MaterialShipment (distribution)
 - **Reports**: `/api/update-reports`, `/api/sem-reports`
 - **Shipments**: `/api/shipments`
 - **Tasks**: `/api/tasks` (CRUD + comments + status changes, internal roles only)
+- **Pipeline**: `/api/pipeline` (contacts, deals, activities, attachments, internal roles only)
 - **Dashboard**: `/api/dashboard/*` (metrics, inventory, best results)
 - **AI/News**: `/api/ai-insights`, `/api/news`, `/api/knowledge-base`
 
@@ -294,6 +300,16 @@ Competitive benchmarking dashboard with:
 - **Attachments**: Multi-file upload (PDF, images, Word, Excel, CSV, TXT) via detail panel. Stored in Cloudinary (prod) or local uploads (dev). `TaskAttachment` model tracks uploader, filename, size, mime type.
 - **Detail Panel**: Right-side slide-over with inline editing, subtasks, attachments, comments, activity log
 - **Access**: Internal roles only (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). INVESTOR and THIRD_PARTY excluded.
+
+### Pipeline / CRM (March 2026)
+
+- **Contact Management**: Person and Company contacts with full detail tracking
+- **Lead Tracking**: Kanban board with SortableJS drag-and-drop (same pattern as Tasks)
+- **Deal Stages**: Type-specific stage progressions (Client, Investor, Partner)
+- **Activity Logging**: Timestamped activity feed on contacts and deals
+- **File Attachments**: Multi-file upload on contacts via Cloudinary (prod) or local (dev)
+- **Access**: Internal roles only (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). INVESTOR and THIRD_PARTY excluded.
+- **Replaces**: Pipedrive CRM
 
 ### News System (currently hidden)
 
@@ -433,5 +449,5 @@ npm run build
 ---
 
 **Last Updated**: March 2026
-**Architecture Version**: 3.0 (Task management, XRD/XPS/ParticleSize tests, MCB)
+**Architecture Version**: 4.0 (Pipeline/CRM, Task management, XRD/XPS/ParticleSize tests, MCB)
 **For Detailed Implementation**: See referenced documentation above

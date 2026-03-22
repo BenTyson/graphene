@@ -35,6 +35,7 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
 - **Task Management**: Task, TaskComment, TaskActivity, TaskAttachment
+- **Pipeline / CRM**: Contact, Deal, ContactActivity, DealActivity, ContactAttachment
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument
 - **References**: CharacterizationReference
 
@@ -68,6 +69,12 @@ model User {
   lastLogin    DateTime? @map("last_login")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  ownedContacts        Contact[]            @relation("ContactOwner")
+  ownedDeals           Deal[]               @relation("DealOwner")
+  contactActivities    ContactActivity[]    @relation("ContactActivityUser")
+  dealActivities       DealActivity[]       @relation("DealActivityUser")
+  contactAttachments   ContactAttachment[]  @relation("ContactAttachmentUploader")
 
   @@index([username])
   @@index([email])
@@ -742,6 +749,118 @@ model CharacterizationReference {
   @@map("characterization_references")
 }
 
+// ── Pipeline / CRM ──────────────────────────────────────────────────────
+
+enum ContactType {
+  CLIENT
+  INVESTOR
+  PARTNER
+}
+
+enum ContactKind {
+  PERSON
+  COMPANY
+}
+
+model Contact {
+  id              String      @id @default(cuid())
+  name            String
+  contactKind     ContactKind @default(PERSON) @map("contact_kind")
+  email           String?
+  phone           String?
+  role            String?
+  contactType     ContactType @map("contact_type")
+  source          String?
+  tags            String[]    @default([])
+  notes           String?     @db.Text
+  linkedInUrl     String?     @map("linkedin_url")
+  website         String?
+  companyId       String?     @map("company_id")
+  companyContact  Contact?    @relation("CompanyPeople", fields: [companyId], references: [id])
+  people          Contact[]   @relation("CompanyPeople")
+  ownerId         String?     @map("owner_id")
+  owner           User?       @relation("ContactOwner", fields: [ownerId], references: [id])
+  lastContactedAt DateTime?   @map("last_contacted_at")
+  nextFollowUpAt  DateTime?   @map("next_follow_up_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  deals           Deal[]
+  activities      ContactActivity[]
+  attachments     ContactAttachment[]
+  @@index([contactKind])
+  @@index([contactType])
+  @@index([companyId])
+  @@index([ownerId])
+  @@map("contacts")
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  title       String
+  contactId   String   @map("contact_id")
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  stage       String
+  position    Int      @default(0)
+  description String?  @db.Text
+  lostReason  String?  @map("lost_reason")
+  tags        String[] @default([])
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation("DealOwner", fields: [ownerId], references: [id])
+  closedAt    DateTime? @map("closed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  activities  DealActivity[]
+  @@index([contactId])
+  @@index([stage])
+  @@index([stage, position])
+  @@map("deals")
+}
+
+model ContactActivity {
+  id        String   @id @default(cuid())
+  contactId String   @map("contact_id")
+  userId    String   @map("user_id")
+  action    String
+  content   String?  @db.Text
+  fromValue String?  @map("from_value")
+  toValue   String?  @map("to_value")
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user      User     @relation("ContactActivityUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([contactId, createdAt])
+  @@map("contact_activities")
+}
+
+model DealActivity {
+  id        String   @id @default(cuid())
+  dealId    String   @map("deal_id")
+  userId    String   @map("user_id")
+  action    String
+  content   String?  @db.Text
+  fromValue String?  @map("from_value")
+  toValue   String?  @map("to_value")
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user      User     @relation("DealActivityUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([dealId, createdAt])
+  @@map("deal_activities")
+}
+
+model ContactAttachment {
+  id           String   @id @default(cuid())
+  contactId    String   @map("contact_id")
+  uploadedById String   @map("uploaded_by_id")
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String?  @map("mime_type")
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("ContactAttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+  @@index([contactId, createdAt])
+  @@map("contact_attachments")
+}
+
 // ============================================================================
 // ENUMS
 // ============================================================================
@@ -1085,6 +1204,6 @@ psql $DATABASE_URL < backups/backup_file.sql
 
 ---
 
-**Last Updated:** March 2026 (Tasks v2: drag-and-drop, archive, attachments)
+**Last Updated:** March 2026 (Pipeline/CRM: Contact, Deal, activities, attachments)
 **Schema Version:** Current (March 2026)
 **For API Usage:** See [API-REFERENCE.md](API-REFERENCE.md)

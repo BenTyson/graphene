@@ -66,10 +66,17 @@ All reference Graphene and/or CompoundBatch by experiment/batch number string.
 - **TaskActivity** - audit log (action, fromValue, toValue) for all task changes. Tracks: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed.
 - **TaskAttachment** - fileName, filePath, fileSize, mimeType. Linked to Task (cascade delete) and User (uploader). Supports PDF, images, Word, Excel, CSV, TXT (15MB limit). Stored via Cloudinary (prod) or local uploads (dev).
 
+### Pipeline / CRM
+- **Contact** - name, contactKind (PERSON/COMPANY), contactType (CLIENT/INVESTOR/PARTNER), email, phone, role, source, tags[], notes, linkedInUrl, website. Self-referential companyId: a Person can link to a Company contact; a Company has many people. Links to User (owner). Tracks lastContactedAt, nextFollowUpAt.
+- **Deal** (displayed as "Lead" in UI) - title, stage (string, varies by contactType), position (Kanban ordering), description, lostReason, tags[]. Links to Contact and User (owner). Stages by type: CLIENT (LEAD→QUALIFIED→SAMPLE_SENT→EVALUATION→NEGOTIATION→WON/LOST), INVESTOR (IDENTIFIED→OUTREACH→MEETING→DUE_DILIGENCE→TERM_SHEET→COMMITTED/PASSED), PARTNER (IDENTIFIED→INITIAL_CONTACT→EXPLORING→PROPOSAL→ACTIVE/INACTIVE). Terminal stages auto-set closedAt.
+- **ContactActivity** - action (note_added/call_logged/email_sent/meeting/stage_changed/etc.), content, fromValue, toValue. Interaction actions auto-update Contact.lastContactedAt.
+- **DealActivity** - same structure for deal stage changes and notes.
+- **ContactAttachment** - fileName, filePath, fileSize, mimeType. Same pattern as TaskAttachment.
+
 ### Users & Auth
 - **User** - JWT auth with bcrypt. Roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
 - THIRD_PARTY: view-only (all mutations blocked server-side via `requireEditAccess` middleware)
-- INVESTOR: excluded from Tasks tab
+- INVESTOR: excluded from Tasks and Pipeline tabs
 - **CharacterizationReference** - external benchmarks
 
 ### News/AI
@@ -91,7 +98,7 @@ client/src/js/services/api.js                   -> API.tasks.create(), API.graph
 
 State lives in `app-refactored.js` (~5000 lines) as Alpine.js data. Methods on the same object delegate to API service functions.
 
-**Navigation:** `client/index.html` uses a collapsible left sidebar (`bg-gray-950`, 240px/64px) with grouped sections (Production, Analytics, Test Results). Mobile: overlay drawer below `lg` breakpoint. Thin top header bar with breadcrumb. User info in sidebar footer. Test subtabs as horizontal pills in content area. Tabs registered in `switchTab()` method; sidebar helpers: `sidebarNavigate()`, `autoExpandParentGroup()`.
+**Navigation:** `client/index.html` uses a collapsible left sidebar (`bg-gray-950`, 240px/64px) with grouped sections (Production, Analytics, Test Results). Mobile: overlay drawer below `lg` breakpoint. Thin top header bar with breadcrumb. User info in sidebar footer. Test subtabs as horizontal pills in content area. Tabs registered in `switchTab()` method; sidebar helpers: `sidebarNavigate()`, `autoExpandParentGroup()`. Pipeline tab hidden from THIRD_PARTY and INVESTOR (same as Tasks).
 
 ### Backend Pattern
 Express routes in `server/routes/*.js`. Each route file exports an express Router. Prisma accessed via `req.app.locals.prisma`.
@@ -114,8 +121,8 @@ Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Respon
 | Main app state | `client/src/js/app-refactored.js` |
 | HTML shell + nav | `client/index.html` |
 | API client | `client/src/js/services/api.js` |
-| Tab components | `client/src/js/components/tabs/*.js` (21 files) |
-| Modal components | `client/src/js/components/modals/*.js` (21 files) |
+| Tab components | `client/src/js/components/tabs/*.js` (22 files) |
+| Modal components | `client/src/js/components/modals/*.js` (25 files) |
 | CSS entry | `client/src/styles/main.css` |
 
 ---
@@ -142,6 +149,7 @@ Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Respon
 | /api/update-reports | Update report CRUD | Global middleware |
 | /api/sem-reports | SEM report CRUD | Global middleware |
 | /api/tasks | Task CRUD + comments + status | JWT + internal roles only |
+| /api/pipeline | Contacts + Deals (Leads) CRUD, activities, attachments, reorder | JWT + internal roles only |
 | /api/dashboard | Production metrics, inventory | Global middleware |
 | /api/analysis | Competitive metrics, charts | Global middleware |
 | /api/ai-insights | GPT-4 analysis | Global middleware |

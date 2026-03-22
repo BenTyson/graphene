@@ -870,6 +870,12 @@ model User {
   taskActivities  TaskActivity[]  @relation("TaskActivityUser")
   taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
 
+  ownedContacts        Contact[]            @relation("ContactOwner")
+  ownedDeals           Deal[]               @relation("DealOwner")
+  contactActivities    ContactActivity[]    @relation("ContactActivityUser")
+  dealActivities       DealActivity[]       @relation("DealActivityUser")
+  contactAttachments   ContactAttachment[]  @relation("ContactAttachmentUploader")
+
   @@index([username])
   @@index([email])
   @@index([role])
@@ -996,4 +1002,136 @@ model TaskAttachment {
 
   @@index([taskId, createdAt])
   @@map("task_attachments")
+}
+
+// ── Pipeline / CRM ──────────────────────────────────────────────────────
+
+enum ContactType {
+  CLIENT
+  INVESTOR
+  PARTNER
+}
+
+enum ContactKind {
+  PERSON
+  COMPANY
+}
+
+model Contact {
+  id              String      @id @default(cuid())
+  name            String
+  contactKind     ContactKind @default(PERSON) @map("contact_kind")
+  email           String?
+  phone           String?
+  role            String?
+  contactType     ContactType @map("contact_type")
+  source          String?
+  tags            String[]    @default([])
+  notes           String?     @db.Text
+  linkedInUrl     String?     @map("linkedin_url")
+  website         String?
+
+  // Self-referential: a Person can belong to a Company
+  companyId       String?     @map("company_id")
+  companyContact  Contact?    @relation("CompanyPeople", fields: [companyId], references: [id])
+  people          Contact[]   @relation("CompanyPeople")
+
+  ownerId         String?     @map("owner_id")
+  owner           User?       @relation("ContactOwner", fields: [ownerId], references: [id])
+
+  lastContactedAt DateTime?   @map("last_contacted_at")
+  nextFollowUpAt  DateTime?   @map("next_follow_up_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  deals           Deal[]
+  activities      ContactActivity[]
+  attachments     ContactAttachment[]
+
+  @@index([contactKind])
+  @@index([contactType])
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([nextFollowUpAt])
+  @@index([lastContactedAt])
+  @@index([createdAt])
+  @@map("contacts")
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  title       String
+  contactId   String   @map("contact_id")
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  stage       String
+  position    Int      @default(0)
+  description String?  @db.Text
+  lostReason  String?  @map("lost_reason")
+  tags        String[] @default([])
+
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation("DealOwner", fields: [ownerId], references: [id])
+
+  closedAt    DateTime? @map("closed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  activities  DealActivity[]
+
+  @@index([contactId])
+  @@index([stage])
+  @@index([ownerId])
+  @@index([stage, position])
+  @@index([createdAt])
+  @@map("deals")
+}
+
+model ContactActivity {
+  id        String   @id @default(cuid())
+  contactId String   @map("contact_id")
+  userId    String   @map("user_id")
+  action    String
+  content   String?  @db.Text
+  fromValue String?  @map("from_value")
+  toValue   String?  @map("to_value")
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user      User     @relation("ContactActivityUser", fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([contactId, createdAt])
+  @@map("contact_activities")
+}
+
+model DealActivity {
+  id        String   @id @default(cuid())
+  dealId    String   @map("deal_id")
+  userId    String   @map("user_id")
+  action    String
+  content   String?  @db.Text
+  fromValue String?  @map("from_value")
+  toValue   String?  @map("to_value")
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user      User     @relation("DealActivityUser", fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([dealId, createdAt])
+  @@map("deal_activities")
+}
+
+model ContactAttachment {
+  id           String   @id @default(cuid())
+  contactId    String   @map("contact_id")
+  uploadedById String   @map("uploaded_by_id")
+  fileName     String   @map("file_name")
+  filePath     String   @map("file_path")
+  fileSize     Int      @map("file_size")
+  mimeType     String?  @map("mime_type")
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("ContactAttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([contactId, createdAt])
+  @@map("contact_attachments")
 }

@@ -1256,6 +1256,126 @@ export const tasksAPI = {
   }
 };
 
+// Pipeline/CRM API endpoints
+export const pipelineAPI = {
+  // Contacts
+  getContacts: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.contactType) query.append('contactType', params.contactType);
+    if (params.ownerId) query.append('ownerId', params.ownerId);
+    if (params.search) query.append('search', params.search);
+    if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.order) query.append('order', params.order);
+    const qs = query.toString();
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
+  },
+
+  getContact: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${id}`, { headers }).then(handleResponse);
+  },
+
+  createContact: (data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  updateContact: (id, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  deleteContact: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${id}`, { method: 'DELETE', headers }).then(handleResponse);
+  },
+
+  addContactActivity: (contactId, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${contactId}/activities`, {
+      method: 'POST', headers, body: JSON.stringify(data)
+    }).then(handleResponse);
+  },
+
+  uploadContactAttachments: (contactId, files) => {
+    const formData = new FormData();
+    for (const file of files) formData.append('attachments', file);
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${contactId}/attachments`, {
+      method: 'POST', headers, body: formData
+    }).then(handleResponse);
+  },
+
+  deleteContactAttachment: (contactId, attachmentId) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/${contactId}/attachments/${attachmentId}`, {
+      method: 'DELETE', headers
+    }).then(handleResponse);
+  },
+
+  // Deals
+  getDeals: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.contactType) query.append('contactType', params.contactType);
+    if (params.stage) query.append('stage', params.stage);
+    if (params.ownerId) query.append('ownerId', params.ownerId);
+    if (params.contactId) query.append('contactId', params.contactId);
+    if (params.search) query.append('search', params.search);
+    if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.order) query.append('order', params.order);
+    const qs = query.toString();
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
+  },
+
+  getDeal: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals/${id}`, { headers }).then(handleResponse);
+  },
+
+  createDeal: (data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  updateDeal: (id, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  deleteDeal: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals/${id}`, { method: 'DELETE', headers }).then(handleResponse);
+  },
+
+  reorderDeals: (dealId, newStage, positions) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals/reorder`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ dealId, newStage, positions })
+    }).then(handleResponse);
+  },
+
+  addDealActivity: (dealId, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/deals/${dealId}/activities`, {
+      method: 'POST', headers, body: JSON.stringify(data)
+    }).then(handleResponse);
+  },
+
+  // Meta
+  getOwners: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/owners`, { headers }).then(handleResponse);
+  },
+
+  getStats: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/stats`, { headers }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -1274,5 +1394,6 @@ export default {
   mcb: mcbAPI,
   shipment: shipmentAPI,
   users: usersAPI,
-  tasks: tasksAPI
+  tasks: tasksAPI,
+  pipeline: pipelineAPI
 };
