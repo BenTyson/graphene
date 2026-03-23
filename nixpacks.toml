@@ -3,7 +3,7 @@
 
 [phases.build]
     cmds = [
-        "npm install",
+        "npm install --include=dev",
         "npm run build",
         "npx prisma generate"
     ]
