@@ -4265,6 +4265,8 @@ window.grapheneApp = function() {
           this.$nextTick(() => {
             if (this.pipelineViewMode === 'kanban') this.initPipelineKanban();
           });
+        } else if (tab === 'user-management') {
+          await this.loadUsers();
         } else if (tab === 'news') {
           console.log(`[Navigation] Initializing news tab: ${tab}`);
           await this.initializeNewsTab();
