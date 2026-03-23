@@ -1024,7 +1024,7 @@ model Contact {
   email           String?
   phone           String?
   role            String?
-  contactType     ContactType @map("contact_type")
+  contactType     ContactType? @map("contact_type")
   source          String?
   tags            String[]    @default([])
   notes           String?     @db.Text
@@ -1039,6 +1039,13 @@ model Contact {
   ownerId         String?     @map("owner_id")
   owner           User?       @relation("ContactOwner", fields: [ownerId], references: [id])
 
+  // Pipeline fields (null stage = not on any pipeline board)
+  pipelineTitle   String?     @map("pipeline_title")
+  stage           String?
+  position        Int         @default(0)
+  closedAt        DateTime?   @map("closed_at")
+  lostReason      String?     @map("lost_reason")
+
   lastContactedAt DateTime?   @map("last_contacted_at")
   nextFollowUpAt  DateTime?   @map("next_follow_up_at")
   createdAt       DateTime    @default(now()) @map("created_at")
@@ -1052,6 +1059,8 @@ model Contact {
   @@index([contactType])
   @@index([companyId])
   @@index([ownerId])
+  @@index([stage])
+  @@index([stage, position])
   @@index([nextFollowUpAt])
   @@index([lastContactedAt])
   @@index([createdAt])

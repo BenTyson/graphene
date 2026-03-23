@@ -24,7 +24,8 @@ export function getContactDetailPanelHtml() {
                 <h3 class="text-lg font-semibold text-gray-900 truncate" x-text="selectedContact.name"></h3>
                 <div class="flex items-center gap-2 mt-1">
                   <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600" x-text="selectedContact.contactKind === 'COMPANY' ? 'Company' : 'Person'"></span>
-                  <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(selectedContact.contactType)" x-text="getContactTypeLabel(selectedContact.contactType)"></span>
+                  <span x-show="selectedContact.contactType" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(selectedContact.contactType)" x-text="getContactTypeLabel(selectedContact.contactType)"></span>
+                  <span x-show="selectedContact.stage" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getStageBadgeClass(selectedContact.stage)" x-text="getStageLabel(selectedContact.stage)"></span>
                 </div>
               </div>
               <div class="flex items-center gap-1 ml-3">
@@ -141,23 +142,42 @@ export function getContactDetailPanelHtml() {
               </div>
             </div>
 
-            <!-- Leads -->
+            <!-- Pipeline Status -->
             <div>
               <div class="flex items-center justify-between mb-2">
-                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Leads</h4>
-                <button @click="openDealFromContact(selectedContact.id)" class="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Lead</button>
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pipeline</h4>
               </div>
-              <div class="space-y-2">
-                <template x-for="deal in (selectedContact.deals || [])" :key="deal.id">
-                  <div @click="openDealDetail(deal.id)" class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                    <div>
-                      <div class="text-sm font-medium text-gray-900" x-text="deal.title"></div>
-                      <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStageBadgeClass(deal.stage)" x-text="getStageLabel(deal.stage)"></span>
-                    </div>
-                    <div x-show="deal.owner" class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-medium text-gray-600" x-text="getOwnerInitials(deal)"></div>
+              <!-- On pipeline -->
+              <div x-show="selectedContact.stage" class="space-y-3">
+                <div>
+                  <span class="text-gray-400 text-xs">Card Title</span>
+                  <input type="text" :value="selectedContact.pipelineTitle || ''" @keydown.enter="$event.target.blur()" @blur="if ($event.target.value !== (selectedContact.pipelineTitle || '')) updateContactInline(selectedContact.id, 'pipelineTitle', $event.target.value)" class="w-full mt-0.5 text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-gray-900">
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span class="text-gray-400 text-xs">Stage</span>
+                    <select @change="updateContactInline(selectedContact.id, 'stage', $event.target.value)" class="w-full mt-0.5 text-sm border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-gray-900">
+                      <template x-for="stage in getPipelineStages(selectedContact.contactType)" :key="stage.key">
+                        <option :value="stage.key" :selected="stage.key === selectedContact.stage" x-text="stage.label"></option>
+                      </template>
+                    </select>
                   </div>
-                </template>
-                <div x-show="!selectedContact.deals?.length" class="text-sm text-gray-400 py-2">No leads yet</div>
+                  <div>
+                    <span class="text-gray-400 text-xs">Board</span>
+                    <div class="mt-0.5 text-sm text-gray-900" x-text="getContactTypeLabel(selectedContact.contactType)"></div>
+                  </div>
+                </div>
+                <div x-show="selectedContact.closedAt" class="text-xs text-gray-500">
+                  Closed: <span x-text="new Date(selectedContact.closedAt).toLocaleDateString()"></span>
+                </div>
+                <button @click="removeFromPipeline(selectedContact.id)" class="text-xs text-red-600 hover:text-red-700 font-medium">Remove from Pipeline</button>
+              </div>
+              <!-- Not on pipeline -->
+              <div x-show="!selectedContact.stage">
+                <button @click="openAddToPipelineForContact(selectedContact.id)" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                  Add to Pipeline
+                </button>
               </div>
             </div>
 

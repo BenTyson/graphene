@@ -51,7 +51,8 @@ const ACTIVITY_LABELS = {
   created: 'Created', note_added: 'Note', call_logged: 'Call',
   email_sent: 'Email', meeting: 'Meeting', stage_changed: 'Stage changed',
   type_changed: 'Type changed', owner_changed: 'Owner changed',
-  attachment_added: 'File added', attachment_removed: 'File removed'
+  attachment_added: 'File added', attachment_removed: 'File removed',
+  added_to_pipeline: 'Added to pipeline', removed_from_pipeline: 'Removed from pipeline'
 };
 
 const ACTIVITY_ICONS = {
@@ -103,17 +104,16 @@ class PipelineService {
     }
   }
 
-  async loadPipelineDeals(ctx) {
+  async loadPipelineBoard(ctx) {
     ctx.pipelineLoading = true;
     try {
-      const params = { contactType: ctx.pipelineType };
+      const params = { contactType: ctx.pipelineType, onPipeline: true, sortBy: 'position', order: 'asc' };
       if (ctx.pipelineSearch) params.search = ctx.pipelineSearch;
-      if (ctx.pipelineFilters.stage) params.stage = ctx.pipelineFilters.stage;
       if (ctx.pipelineFilters.ownerId) params.ownerId = ctx.pipelineFilters.ownerId;
-      ctx.pipelineDeals = await API.pipeline.getDeals(params);
+      ctx.pipelineBoardContacts = await API.pipeline.getContacts(params);
     } catch (error) {
-      console.error('Failed to load deals:', error);
-      ctx.pipelineDeals = [];
+      console.error('Failed to load pipeline board:', error);
+      ctx.pipelineBoardContacts = [];
     } finally {
       ctx.pipelineLoading = false;
       ctx.$nextTick(() => {
@@ -135,7 +135,7 @@ class PipelineService {
 
   openContactForm(ctx, type, kind) {
     ctx.editingContact = null;
-    ctx.contactForm = { name: '', contactKind: kind || 'PERSON', email: '', phone: '', role: '', contactType: type || ctx.pipelineType || 'INVESTOR', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' };
+    ctx.contactForm = { name: '', contactKind: kind || 'PERSON', email: '', phone: '', role: '', contactType: type || '', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' };
     ctx.pipelineTagInput = '';
     ctx.showAddContact = true;
   }
@@ -148,7 +148,7 @@ class PipelineService {
       email: contact.email || '',
       phone: contact.phone || '',
       role: contact.role || '',
-      contactType: contact.contactType,
+      contactType: contact.contactType || '',
       source: contact.source || '',
       tags: [...(contact.tags || [])],
       notes: contact.notes || '',
@@ -172,7 +172,6 @@ class PipelineService {
     try {
       const formData = { ...ctx.contactForm };
       const linkPersonId = formData.linkPersonId;
-      const isNew = !ctx.editingContact;
       delete formData.linkPersonId;
 
       let savedContact;
@@ -191,10 +190,6 @@ class PipelineService {
       if (ctx.selectedContact) {
         ctx.selectedContact = await API.pipeline.getContact(ctx.selectedContact.id);
       }
-
-      if (isNew && savedContact?.id) {
-        ctx.openDealForm(savedContact.id);
-      }
     } catch (error) {
       console.error('Failed to save contact:', error);
       alert('Failed to save contact: ' + error.message);
@@ -202,12 +197,12 @@ class PipelineService {
   }
 
   async deleteContact(ctx, contactId) {
-    if (!confirm('Delete this contact and all associated deals?')) return;
+    if (!confirm('Delete this contact and all associated data?')) return;
     try {
       await API.pipeline.deleteContact(contactId);
       if (ctx.selectedContact?.id === contactId) this.closeContactDetail(ctx);
       await this.loadPipelineContacts(ctx);
-      await this.loadPipelineDeals(ctx);
+      await this.loadPipelineBoard(ctx);
     } catch (error) {
       console.error('Failed to delete contact:', error);
       alert('Failed to delete contact: ' + error.message);
@@ -218,7 +213,6 @@ class PipelineService {
     try {
       ctx.selectedContact = await API.pipeline.getContact(contactId);
       ctx.showContactDetail = true;
-      ctx.showDealDetail = false;
     } catch (error) {
       console.error('Failed to load contact detail:', error);
     }
@@ -234,6 +228,9 @@ class PipelineService {
     try {
       await API.pipeline.updateContact(contactId, { [field]: value });
       await this.loadPipelineContacts(ctx);
+      if (field === 'stage' || field === 'ownerId' || field === 'pipelineTitle') {
+        await this.loadPipelineBoard(ctx);
+      }
       if (ctx.selectedContact?.id === contactId) {
         ctx.selectedContact = await API.pipeline.getContact(contactId);
       }
@@ -278,104 +275,51 @@ class PipelineService {
     }
   }
 
-  // Deal CRUD
+  // Pipeline board operations
 
-  openDealForm(ctx, contactId, stage) {
-    ctx.editingDeal = null;
-    const defaultStages = { CLIENT: 'LEAD', INVESTOR: 'IDENTIFIED', PARTNER: 'IDENTIFIED' };
-    ctx.dealForm = {
-      title: '', contactId: contactId || '', stage: stage || defaultStages[ctx.pipelineType] || 'LEAD',
-      description: '', tags: [], ownerId: ''
-    };
-    ctx.pipelineTagInput = '';
-    ctx.showAddDeal = true;
+  openAddToPipeline(ctx, presetStage) {
+    ctx.addToPipelineForm = { contactId: '', pipelineType: ctx.pipelineType || 'INVESTOR', pipelineTitle: '' };
+    ctx.addToPipelineSearch = '';
+    ctx.addToPipelinePresetStage = presetStage || '';
+    ctx.showAddToPipeline = true;
   }
 
-  openEditDealForm(ctx, deal) {
-    ctx.editingDeal = deal;
-    ctx.dealForm = {
-      title: deal.title,
-      contactId: deal.contactId,
-      stage: deal.stage,
-      description: deal.description || '',
-      tags: [...(deal.tags || [])],
-      ownerId: deal.ownerId || ''
-    };
-    ctx.pipelineTagInput = '';
-    ctx.showAddDeal = true;
+  closeAddToPipeline(ctx) {
+    ctx.showAddToPipeline = false;
+    ctx.addToPipelineSearch = '';
   }
 
-  closeDealForm(ctx) {
-    ctx.showAddDeal = false;
-    ctx.editingDeal = null;
-  }
-
-  async saveDeal(ctx) {
+  async addToPipeline(ctx) {
+    if (!ctx.addToPipelineForm.contactId || !ctx.addToPipelineForm.pipelineType) {
+      alert('Please select a contact and pipeline type.');
+      return;
+    }
     try {
-      if (ctx.editingDeal) {
-        await API.pipeline.updateDeal(ctx.editingDeal.id, ctx.dealForm);
-      } else {
-        await API.pipeline.createDeal(ctx.dealForm);
+      await API.pipeline.addToPipeline(ctx.addToPipelineForm.contactId, {
+        contactType: ctx.addToPipelineForm.pipelineType,
+        pipelineTitle: ctx.addToPipelineForm.pipelineTitle || null
+      });
+      this.closeAddToPipeline(ctx);
+      await this.loadPipelineBoard(ctx);
+      await this.loadPipelineContacts(ctx);
+    } catch (error) {
+      console.error('Failed to add to pipeline:', error);
+      alert('Failed to add to pipeline: ' + error.message);
+    }
+  }
+
+  async removeFromPipeline(ctx, contactId) {
+    if (!confirm('Remove this contact from the pipeline?')) return;
+    try {
+      await API.pipeline.removeFromPipeline(contactId);
+      if (ctx.selectedContact?.id === contactId) {
+        ctx.selectedContact = await API.pipeline.getContact(contactId);
       }
-      this.closeDealForm(ctx);
-      await this.loadPipelineDeals(ctx);
-      if (ctx.selectedDeal) {
-        ctx.selectedDeal = await API.pipeline.getDeal(ctx.selectedDeal.id);
-      }
+      await this.loadPipelineBoard(ctx);
+      await this.loadPipelineContacts(ctx);
     } catch (error) {
-      console.error('Failed to save lead:', error);
-      alert('Failed to save lead: ' + error.message);
-    }
-  }
-
-  async deleteDeal(ctx, dealId) {
-    if (!confirm('Delete this lead?')) return;
-    try {
-      await API.pipeline.deleteDeal(dealId);
-      if (ctx.selectedDeal?.id === dealId) this.closeDealDetail(ctx);
-      await this.loadPipelineDeals(ctx);
-    } catch (error) {
-      console.error('Failed to delete lead:', error);
-      alert('Failed to delete lead: ' + error.message);
-    }
-  }
-
-  async openDealDetail(ctx, dealId) {
-    try {
-      ctx.selectedDeal = await API.pipeline.getDeal(dealId);
-      ctx.showDealDetail = true;
-      ctx.showContactDetail = false;
-    } catch (error) {
-      console.error('Failed to load deal detail:', error);
-    }
-  }
-
-  closeDealDetail(ctx) {
-    ctx.showDealDetail = false;
-    ctx.selectedDeal = null;
-    ctx.dealActivityForm = { action: 'note_added', content: '' };
-  }
-
-  async updateDealInline(ctx, dealId, field, value) {
-    try {
-      await API.pipeline.updateDeal(dealId, { [field]: value });
-      await this.loadPipelineDeals(ctx);
-      if (ctx.selectedDeal?.id === dealId) {
-        ctx.selectedDeal = await API.pipeline.getDeal(dealId);
-      }
-    } catch (error) {
-      console.error('Failed to update deal:', error);
-    }
-  }
-
-  async addDealActivity(ctx) {
-    if (!ctx.dealActivityForm.content?.trim() || !ctx.selectedDeal) return;
-    try {
-      await API.pipeline.addDealActivity(ctx.selectedDeal.id, ctx.dealActivityForm);
-      ctx.dealActivityForm = { action: 'note_added', content: '' };
-      ctx.selectedDeal = await API.pipeline.getDeal(ctx.selectedDeal.id);
-    } catch (error) {
-      console.error('Failed to add deal activity:', error);
+      console.error('Failed to remove from pipeline:', error);
+      alert('Failed to remove from pipeline: ' + error.message);
     }
   }
 
@@ -383,8 +327,7 @@ class PipelineService {
 
   async switchPipelineType(ctx, type) {
     ctx.pipelineType = type;
-    ctx.pipelineFilters.stage = '';
-    await this.loadPipelineDeals(ctx);
+    await this.loadPipelineBoard(ctx);
     ctx.$nextTick(() => {
       if (ctx.pipelineViewMode === 'kanban') ctx.initPipelineKanban();
     });
@@ -393,7 +336,7 @@ class PipelineService {
   async switchPipelineView(ctx, mode) {
     ctx.pipelineViewMode = mode;
     if (mode === 'kanban') {
-      await this.loadPipelineDeals(ctx);
+      await this.loadPipelineBoard(ctx);
       ctx.$nextTick(() => ctx.initPipelineKanban());
     } else if (mode === 'contacts') {
       await this.loadPipelineContacts(ctx);
@@ -406,7 +349,7 @@ class PipelineService {
       if (ctx.pipelineViewMode === 'contacts') {
         await this.loadPipelineContacts(ctx);
       } else {
-        await this.loadPipelineDeals(ctx);
+        await this.loadPipelineBoard(ctx);
       }
     }, 300);
   }

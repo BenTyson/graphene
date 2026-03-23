@@ -34,11 +34,8 @@ async function logContactActivity(prisma, { contactId, userId, action, content, 
   });
 }
 
-async function logDealActivity(prisma, { dealId, userId, action, content, fromValue, toValue }) {
-  await prisma.dealActivity.create({
-    data: { dealId, userId, action, content: content || null, fromValue: fromValue || null, toValue: toValue || null }
-  });
-}
+const TERMINAL_STAGES = ['WON', 'LOST', 'COMMITTED', 'PASSED', 'INACTIVE'];
+const DEFAULT_STAGES = { CLIENT: 'LEAD', INVESTOR: 'IDENTIFIED', PARTNER: 'IDENTIFIED' };
 
 // All routes require auth + internal access
 router.use(authenticateToken, requireInternalAccess);
@@ -60,13 +57,13 @@ router.get('/owners', asyncHandler(async (req, res) => {
 router.get('/stats', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
 
-  const [contactsByType, dealsByStage, overdueFollowUps] = await Promise.all([
+  const [contactsByType, pipelineByStage, overdueFollowUps] = await Promise.all([
     prisma.contact.groupBy({ by: ['contactType'], _count: true }),
     prisma.$queryRaw`
-      SELECT d.stage, c.contact_type, COUNT(*)::int as count
-      FROM deals d
-      JOIN contacts c ON d.contact_id = c.id
-      GROUP BY d.stage, c.contact_type
+      SELECT stage, contact_type, COUNT(*)::int as count
+      FROM contacts
+      WHERE stage IS NOT NULL AND contact_type IS NOT NULL
+      GROUP BY stage, contact_type
     `,
     prisma.contact.count({
       where: { nextFollowUpAt: { lt: new Date() } }
@@ -74,27 +71,28 @@ router.get('/stats', asyncHandler(async (req, res) => {
   ]);
 
   const contacts = { CLIENT: 0, INVESTOR: 0, PARTNER: 0 };
-  contactsByType.forEach(c => { contacts[c.contactType] = c._count; });
+  contactsByType.forEach(c => { if (c.contactType) contacts[c.contactType] = c._count; });
 
-  const deals = {};
-  dealsByStage.forEach(d => {
-    if (!deals[d.contact_type]) deals[d.contact_type] = {};
-    deals[d.contact_type][d.stage] = d.count;
+  const pipeline = {};
+  pipelineByStage.forEach(d => {
+    if (!pipeline[d.contact_type]) pipeline[d.contact_type] = {};
+    pipeline[d.contact_type][d.stage] = d.count;
   });
 
-  res.json({ contacts, deals, overdueFollowUps });
+  res.json({ contacts, pipeline, overdueFollowUps });
 }));
 
 // ── Contacts CRUD ──────────────────────────────────────────────────────
 
 router.get('/contacts', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  const { contactType, contactKind, ownerId, search, sortBy = 'createdAt', order = 'desc', limit, offset } = req.query;
+  const { contactType, contactKind, ownerId, search, onPipeline, sortBy = 'createdAt', order = 'desc', limit, offset } = req.query;
 
   const where = {};
   if (contactType) where.contactType = contactType;
   if (contactKind) where.contactKind = contactKind;
   if (ownerId) where.ownerId = ownerId;
+  if (onPipeline === 'true') where.stage = { not: null };
 
   if (search) {
     where.OR = [
@@ -106,6 +104,7 @@ router.get('/contacts', asyncHandler(async (req, res) => {
   }
 
   const orderBy = sortBy === 'name' ? { name: order }
+    : sortBy === 'position' ? [{ position: order }, { createdAt: 'desc' }]
     : sortBy === 'nextFollowUpAt' ? { nextFollowUpAt: { sort: order, nulls: 'last' } }
     : sortBy === 'lastContactedAt' ? { lastContactedAt: { sort: order, nulls: 'last' } }
     : { createdAt: order };
@@ -115,7 +114,7 @@ router.get('/contacts', asyncHandler(async (req, res) => {
     include: {
       owner: { select: userSelect },
       companyContact: { select: { id: true, name: true } },
-      _count: { select: { deals: true, attachments: true, people: true } }
+      _count: { select: { attachments: true, people: true } }
     },
     orderBy
   };
@@ -146,12 +145,6 @@ router.get('/contacts/:id', asyncHandler(async (req, res) => {
         select: { id: true, name: true, role: true, email: true, contactType: true },
         orderBy: { name: 'asc' }
       },
-      deals: {
-        include: {
-          owner: { select: userSelect }
-        },
-        orderBy: { createdAt: 'desc' }
-      },
       activities: {
         include: { user: { select: userSelect } },
         orderBy: { createdAt: 'desc' },
@@ -161,7 +154,7 @@ router.get('/contacts/:id', asyncHandler(async (req, res) => {
         include: { uploadedBy: { select: userSelect } },
         orderBy: { createdAt: 'desc' }
       },
-      _count: { select: { deals: true, attachments: true, people: true } }
+      _count: { select: { attachments: true, people: true } }
     }
   });
 
@@ -182,8 +175,8 @@ router.post('/contacts', asyncHandler(async (req, res) => {
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
   }
-  if (!contactType || !['CLIENT', 'INVESTOR', 'PARTNER'].includes(contactType)) {
-    return res.status(400).json({ error: 'Valid contactType is required (CLIENT, INVESTOR, PARTNER)' });
+  if (contactType && !['CLIENT', 'INVESTOR', 'PARTNER'].includes(contactType)) {
+    return res.status(400).json({ error: 'contactType must be CLIENT, INVESTOR, or PARTNER' });
   }
 
   const contact = await prisma.contact.create({
@@ -193,7 +186,7 @@ router.post('/contacts', asyncHandler(async (req, res) => {
       email: email || null,
       phone: phone || null,
       role: role || null,
-      contactType,
+      contactType: contactType || null,
       source: source || null,
       tags: tags || [],
       notes: notes || null,
@@ -206,7 +199,7 @@ router.post('/contacts', asyncHandler(async (req, res) => {
     include: {
       owner: { select: userSelect },
       companyContact: { select: { id: true, name: true } },
-      _count: { select: { deals: true, attachments: true, people: true } }
+      _count: { select: { attachments: true, people: true } }
     }
   });
 
@@ -223,7 +216,7 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { name, contactKind, email, phone, role, contactType, source, tags, notes, linkedInUrl, website, companyId, ownerId, lastContactedAt, nextFollowUpAt } = req.body;
+  const { name, contactKind, email, phone, role, contactType, source, tags, notes, linkedInUrl, website, companyId, ownerId, lastContactedAt, nextFollowUpAt, stage, lostReason, pipelineTitle } = req.body;
 
   const existing = await prisma.contact.findUnique({ where: { id } });
   if (!existing) return res.status(404).json({ error: 'Contact not found' });
@@ -234,7 +227,7 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   if (email !== undefined) data.email = email || null;
   if (phone !== undefined) data.phone = phone || null;
   if (role !== undefined) data.role = role || null;
-  if (contactType !== undefined) data.contactType = contactType;
+  if (contactType !== undefined) data.contactType = contactType || null;
   if (companyId !== undefined) data.companyId = companyId || null;
   if (source !== undefined) data.source = source || null;
   if (tags !== undefined) data.tags = tags;
@@ -244,6 +237,8 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   if (ownerId !== undefined) data.ownerId = ownerId || null;
   if (lastContactedAt !== undefined) data.lastContactedAt = lastContactedAt ? new Date(lastContactedAt) : null;
   if (nextFollowUpAt !== undefined) data.nextFollowUpAt = nextFollowUpAt ? new Date(nextFollowUpAt) : null;
+  if (lostReason !== undefined) data.lostReason = lostReason || null;
+  if (pipelineTitle !== undefined) data.pipelineTitle = pipelineTitle || null;
 
   // Log notable changes
   if (contactType !== undefined && contactType !== existing.contactType) {
@@ -252,6 +247,15 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   if (ownerId !== undefined && ownerId !== existing.ownerId) {
     await logContactActivity(prisma, { contactId: id, userId, action: 'owner_changed', fromValue: existing.ownerId, toValue: ownerId });
   }
+  if (stage !== undefined && stage !== existing.stage) {
+    data.stage = stage;
+    if (TERMINAL_STAGES.includes(stage) && !existing.closedAt) {
+      data.closedAt = new Date();
+    } else if (!TERMINAL_STAGES.includes(stage) && existing.closedAt) {
+      data.closedAt = null;
+    }
+    await logContactActivity(prisma, { contactId: id, userId, action: 'stage_changed', fromValue: existing.stage, toValue: stage });
+  }
 
   const contact = await prisma.contact.update({
     where: { id },
@@ -259,7 +263,7 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
     include: {
       owner: { select: userSelect },
       companyContact: { select: { id: true, name: true } },
-      _count: { select: { deals: true, attachments: true, people: true } }
+      _count: { select: { attachments: true, people: true } }
     }
   });
 
@@ -403,193 +407,126 @@ router.delete('/contacts/:id/attachments/:attachmentId', asyncHandler(async (req
   res.json({ success: true });
 }));
 
-// ── Deals CRUD ─────────────────────────────────────────────────────────
+// ── Pipeline Operations ───────────────────────────────────────────────
 
-router.get('/deals', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  const { contactType, stage, ownerId, contactId, search, sortBy = 'position', order = 'asc' } = req.query;
-
-  const where = {};
-  if (stage) where.stage = stage;
-  if (ownerId) where.ownerId = ownerId;
-  if (contactId) where.contactId = contactId;
-
-  if (contactType) {
-    where.contact = { contactType };
-  }
-
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-      { contact: { name: { contains: search, mode: 'insensitive' } } },
-      { contact: { company: { contains: search, mode: 'insensitive' } } }
-    ];
-  }
-
-  const orderBy = sortBy === 'createdAt' ? { createdAt: order }
-    : sortBy === 'title' ? { title: order }
-    : [{ position: order }, { createdAt: 'desc' }];
-
-  const deals = await prisma.deal.findMany({
-    where,
-    include: {
-      contact: { select: { id: true, name: true, contactKind: true, contactType: true, email: true, companyId: true, companyContact: { select: { id: true, name: true } } } },
-      owner: { select: userSelect },
-      _count: { select: { activities: true } }
-    },
-    orderBy
-  });
-
-  res.json(deals);
-}));
-
-router.get('/deals/:id', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-
-  const deal = await prisma.deal.findUnique({
-    where: { id: req.params.id },
-    include: {
-      contact: {
-        select: { id: true, name: true, contactKind: true, contactType: true, email: true, phone: true, companyId: true, companyContact: { select: { id: true, name: true } } }
-      },
-      owner: { select: userSelect },
-      activities: {
-        include: { user: { select: userSelect } },
-        orderBy: { createdAt: 'desc' },
-        take: 50
-      },
-      _count: { select: { activities: true } }
-    }
-  });
-
-  if (!deal) return res.status(404).json({ error: 'Deal not found' });
-  res.json(deal);
-}));
-
-router.post('/deals', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  const userId = req.user.userId;
-  const { title, contactId, stage, description, tags, ownerId } = req.body;
-
-  if (!title || !title.trim()) {
-    return res.status(400).json({ error: 'Title is required' });
-  }
-  if (!contactId) {
-    return res.status(400).json({ error: 'Contact is required' });
-  }
-
-  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
-  if (!contact) return res.status(404).json({ error: 'Contact not found' });
-
-  // Default to first stage for the contact's type
-  const defaultStages = { CLIENT: 'LEAD', INVESTOR: 'IDENTIFIED', PARTNER: 'IDENTIFIED' };
-  const dealStage = stage || defaultStages[contact.contactType] || 'LEAD';
-
-  // Get max position for the stage column
-  const maxPos = await prisma.deal.aggregate({
-    where: { stage: dealStage, contact: { contactType: contact.contactType } },
-    _max: { position: true }
-  });
-
-  const deal = await prisma.deal.create({
-    data: {
-      title: title.trim(),
-      contactId,
-      stage: dealStage,
-      position: (maxPos._max.position ?? -1) + 1,
-      description: description || null,
-      tags: tags || [],
-      ownerId: ownerId || userId
-    },
-    include: {
-      contact: { select: { id: true, name: true, contactKind: true, contactType: true, email: true, companyId: true, companyContact: { select: { id: true, name: true } } } },
-      owner: { select: userSelect },
-      _count: { select: { activities: true } }
-    }
-  });
-
-  await logDealActivity(prisma, { dealId: deal.id, userId, action: 'created' });
-
-  res.status(201).json(deal);
-}));
-
-router.put('/deals/:id', asyncHandler(async (req, res) => {
+// POST /contacts/:id/add-to-pipeline - Add a contact to a pipeline board
+router.post('/contacts/:id/add-to-pipeline', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { title, stage, description, tags, ownerId, lostReason } = req.body;
+  const { contactType, pipelineTitle } = req.body;
 
-  const existing = await prisma.deal.findUnique({ where: { id } });
-  if (!existing) return res.status(404).json({ error: 'Deal not found' });
-
-  const data = {};
-  if (title !== undefined) data.title = title.trim();
-  if (description !== undefined) data.description = description || null;
-  if (tags !== undefined) data.tags = tags;
-  if (lostReason !== undefined) data.lostReason = lostReason || null;
-  if (ownerId !== undefined) data.ownerId = ownerId || null;
-
-  if (stage !== undefined && stage !== existing.stage) {
-    data.stage = stage;
-    // Set closedAt for terminal stages
-    const terminalStages = ['WON', 'LOST', 'COMMITTED', 'PASSED', 'INACTIVE'];
-    if (terminalStages.includes(stage) && !existing.closedAt) {
-      data.closedAt = new Date();
-    } else if (!terminalStages.includes(stage) && existing.closedAt) {
-      data.closedAt = null;
-    }
-    await logDealActivity(prisma, { dealId: id, userId, action: 'stage_changed', fromValue: existing.stage, toValue: stage });
+  if (!contactType || !['CLIENT', 'INVESTOR', 'PARTNER'].includes(contactType)) {
+    return res.status(400).json({ error: 'Valid contactType is required (CLIENT, INVESTOR, PARTNER)' });
   }
 
-  if (ownerId !== undefined && ownerId !== existing.ownerId) {
-    await logDealActivity(prisma, { dealId: id, userId, action: 'owner_changed', fromValue: existing.ownerId, toValue: ownerId });
+  const existing = await prisma.contact.findUnique({ where: { id } });
+  if (!existing) return res.status(404).json({ error: 'Contact not found' });
+
+  if (existing.stage) {
+    return res.status(400).json({ error: 'Contact is already on a pipeline board' });
   }
 
-  const deal = await prisma.deal.update({
+  const stage = DEFAULT_STAGES[contactType];
+
+  // Get max position for the stage column
+  const maxPos = await prisma.contact.aggregate({
+    where: { stage, contactType },
+    _max: { position: true }
+  });
+
+  const contact = await prisma.contact.update({
     where: { id },
-    data,
+    data: {
+      contactType,
+      pipelineTitle: pipelineTitle || null,
+      stage,
+      position: (maxPos._max.position ?? -1) + 1,
+      closedAt: null,
+      lostReason: null
+    },
     include: {
-      contact: { select: { id: true, name: true, contactKind: true, contactType: true, email: true, companyId: true, companyContact: { select: { id: true, name: true } } } },
       owner: { select: userSelect },
-      _count: { select: { activities: true } }
+      companyContact: { select: { id: true, name: true } },
+      _count: { select: { attachments: true, people: true } }
     }
   });
 
-  res.json(deal);
+  await logContactActivity(prisma, {
+    contactId: id, userId, action: 'added_to_pipeline', toValue: contactType
+  });
+
+  res.json({
+    ...contact,
+    lastContactedAt: contact.lastContactedAt ? contact.lastContactedAt.toISOString() : null,
+    nextFollowUpAt: contact.nextFollowUpAt ? contact.nextFollowUpAt.toISOString().split('T')[0] : null
+  });
 }));
 
-// PATCH /api/pipeline/deals/reorder - drag-and-drop
-router.patch('/deals/reorder', asyncHandler(async (req, res) => {
+// POST /contacts/:id/remove-from-pipeline - Remove a contact from pipeline
+router.post('/contacts/:id/remove-from-pipeline', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { dealId, newStage, positions } = req.body;
+  const { id } = req.params;
 
-  if (!dealId || !positions || !Array.isArray(positions)) {
-    return res.status(400).json({ error: 'dealId and positions array are required' });
+  const existing = await prisma.contact.findUnique({ where: { id } });
+  if (!existing) return res.status(404).json({ error: 'Contact not found' });
+
+  if (!existing.stage) {
+    return res.status(400).json({ error: 'Contact is not on any pipeline board' });
   }
 
-  const existing = await prisma.deal.findUnique({ where: { id: dealId } });
-  if (!existing) return res.status(404).json({ error: 'Deal not found' });
+  const contact = await prisma.contact.update({
+    where: { id },
+    data: { stage: null, position: 0, closedAt: null, lostReason: null, pipelineTitle: null },
+    include: {
+      owner: { select: userSelect },
+      companyContact: { select: { id: true, name: true } },
+      _count: { select: { attachments: true, people: true } }
+    }
+  });
+
+  await logContactActivity(prisma, {
+    contactId: id, userId, action: 'removed_from_pipeline', fromValue: existing.stage
+  });
+
+  res.json({
+    ...contact,
+    lastContactedAt: contact.lastContactedAt ? contact.lastContactedAt.toISOString() : null,
+    nextFollowUpAt: contact.nextFollowUpAt ? contact.nextFollowUpAt.toISOString().split('T')[0] : null
+  });
+}));
+
+// PATCH /contacts/reorder - drag-and-drop
+router.patch('/contacts/reorder', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { contactId, newStage, positions } = req.body;
+
+  if (!contactId || !positions || !Array.isArray(positions)) {
+    return res.status(400).json({ error: 'contactId and positions array are required' });
+  }
+
+  const existing = await prisma.contact.findUnique({ where: { id: contactId } });
+  if (!existing) return res.status(404).json({ error: 'Contact not found' });
 
   await prisma.$transaction(async (tx) => {
     if (newStage && newStage !== existing.stage) {
       const data = { stage: newStage };
-      const terminalStages = ['WON', 'LOST', 'COMMITTED', 'PASSED', 'INACTIVE'];
-      if (terminalStages.includes(newStage) && !existing.closedAt) {
+      if (TERMINAL_STAGES.includes(newStage) && !existing.closedAt) {
         data.closedAt = new Date();
-      } else if (!terminalStages.includes(newStage) && existing.closedAt) {
+      } else if (!TERMINAL_STAGES.includes(newStage) && existing.closedAt) {
         data.closedAt = null;
       }
-      await tx.deal.update({ where: { id: dealId }, data });
-      await logDealActivity(prisma, {
-        dealId, userId, action: 'stage_changed',
+      await tx.contact.update({ where: { id: contactId }, data });
+      await logContactActivity(prisma, {
+        contactId, userId, action: 'stage_changed',
         fromValue: existing.stage, toValue: newStage
       });
     }
 
     for (const item of positions) {
-      await tx.deal.update({
+      await tx.contact.update({
         where: { id: item.id },
         data: { position: item.position }
       });
@@ -597,50 +534,6 @@ router.patch('/deals/reorder', asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true });
-}));
-
-router.delete('/deals/:id', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  const userId = req.user.userId;
-  const { id } = req.params;
-
-  const deal = await prisma.deal.findUnique({ where: { id } });
-  if (!deal) return res.status(404).json({ error: 'Deal not found' });
-
-  if (deal.ownerId !== userId && req.user.role !== 'SUPER_ADMIN') {
-    return res.status(403).json({ error: 'Only the deal owner or admin can delete this deal' });
-  }
-
-  await prisma.deal.delete({ where: { id } });
-  res.json({ success: true });
-}));
-
-// ── Deal Activities ────────────────────────────────────────────────────
-
-router.post('/deals/:id/activities', asyncHandler(async (req, res) => {
-  const { prisma } = req.app.locals;
-  const userId = req.user.userId;
-  const { id } = req.params;
-  const { action, content } = req.body;
-
-  if (!action) {
-    return res.status(400).json({ error: 'Action type is required' });
-  }
-
-  const deal = await prisma.deal.findUnique({ where: { id } });
-  if (!deal) return res.status(404).json({ error: 'Deal not found' });
-
-  const activity = await prisma.dealActivity.create({
-    data: {
-      dealId: id,
-      userId,
-      action,
-      content: content ? content.trim() : null
-    },
-    include: { user: { select: userSelect } }
-  });
-
-  res.status(201).json(activity);
 }));
 
 export default router;

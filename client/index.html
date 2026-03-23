@@ -44,10 +44,8 @@
              class="fixed lg:relative inset-y-0 left-0 z-40 flex flex-col bg-gray-950 text-white transition-all duration-200 ease-in-out w-72 lg:w-auto shrink-0">
 
         <!-- Logo -->
-        <div class="h-14 shrink-0 flex items-center px-4 border-b border-gray-800/60">
-          <img class="h-7 w-auto shrink-0" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
-          <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-2.5 text-sm font-semibold text-white tracking-tight hidden lg:inline">HGraphene</span>
-          <span class="ml-2.5 text-sm font-semibold text-white tracking-tight lg:hidden">HGraphene</span>
+        <div class="h-12 shrink-0 flex items-center justify-center border-b border-gray-200 bg-white">
+          <img class="h-7 w-auto" src="/src/assets/images/HGraphene_Logo_Iso.png" alt="HGraphene">
         </div>
 
         <!-- Navigation -->
@@ -600,9 +598,8 @@
 
     <!-- Pipeline/CRM Modals & Panels -->
     <div x-html="getContactModalHtml()"></div>
-    <div x-html="getDealModalHtml()"></div>
+    <div x-html="getAddToPipelineModalHtml()"></div>
     <div x-html="getContactDetailPanelHtml()"></div>
-    <div x-html="getDealDetailPanelHtml()"></div>
 
     <!-- Add New Material Modal -->
     <div x-show="showAddMaterial" x-cloak

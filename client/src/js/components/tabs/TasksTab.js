@@ -2,10 +2,8 @@ export function getTasksTabHtml() {
   return `
     <div x-show="activeTab === 'tasks'" x-cloak>
       <!-- Header -->
-      <div class="mb-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">Tasks</h2>
-          <div class="flex items-center gap-2">
+      <div class="mb-3">
+        <div class="flex items-center justify-end gap-2 mb-2">
             <!-- View Toggle -->
             <div class="flex rounded-md border border-gray-300 overflow-hidden">
               <button @click="taskViewMode = 'kanban'; $nextTick(() => initKanbanDragDrop())"
@@ -22,7 +20,6 @@ export function getTasksTabHtml() {
             <button @click="openTaskForm()" class="px-4 py-1.5 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors">
               + New Task
             </button>
-          </div>
         </div>
 
         <!-- Filters -->

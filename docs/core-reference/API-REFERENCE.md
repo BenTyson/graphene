@@ -1108,29 +1108,27 @@ Auth: All endpoints require JWT + internal role (SUPER_ADMIN, SCIENCE_TEAM, EXEC
 
 ```
 GET    /api/pipeline/owners                                  - List assignable users (id, name, role)
-GET    /api/pipeline/stats                                   - Contact counts by type, deal counts by stage, overdue follow-ups
-GET    /api/pipeline/contacts                                - List contacts (filters: contactType, contactKind, ownerId, search, sortBy, order, limit, offset)
-GET    /api/pipeline/contacts/:id                            - Detail with company/people, deals, activities, attachments
-POST   /api/pipeline/contacts                                - Create contact (name + contactType required; contactKind, email, phone, role, source, tags, companyId, etc.)
-PUT    /api/pipeline/contacts/:id                            - Update contact
-DELETE /api/pipeline/contacts/:id                            - Delete contact + cascade deals, activities, attachments (owner + SUPER_ADMIN only)
+GET    /api/pipeline/stats                                   - Contact counts by type, pipeline counts by stage, overdue follow-ups
+GET    /api/pipeline/contacts                                - List contacts (filters: contactType, contactKind, ownerId, search, onPipeline, sortBy, order, limit, offset)
+GET    /api/pipeline/contacts/:id                            - Detail with company/people, activities, attachments
+POST   /api/pipeline/contacts                                - Create contact (name required; contactType optional, contactKind, email, phone, role, source, tags, companyId, etc.)
+PUT    /api/pipeline/contacts/:id                            - Update contact (stage changes log activity, terminal stages set closedAt)
+DELETE /api/pipeline/contacts/:id                            - Delete contact + cascade activities, attachments (owner + SUPER_ADMIN only)
 POST   /api/pipeline/contacts/:id/activities                 - Log activity (action + content; types: note_added, call_logged, email_sent, meeting)
 POST   /api/pipeline/contacts/:id/attachments                - Upload files (multipart, field: 'attachments', max 5 files, 15MB each)
 DELETE /api/pipeline/contacts/:id/attachments/:attachmentId  - Delete attachment (uploader, contact owner, or SUPER_ADMIN)
-GET    /api/pipeline/deals                                   - List deals/leads (filters: contactType, stage, ownerId, contactId, search, sortBy, order)
-GET    /api/pipeline/deals/:id                               - Detail with contact, activities
-POST   /api/pipeline/deals                                   - Create deal (title + contactId required; stage defaults by contactType)
-PUT    /api/pipeline/deals/:id                               - Update deal (stage change logs activity, terminal stages set closedAt)
-DELETE /api/pipeline/deals/:id                               - Delete deal (owner + SUPER_ADMIN only)
-PATCH  /api/pipeline/deals/reorder                           - Batch position update for drag-and-drop (dealId, newStage, positions[])
-POST   /api/pipeline/deals/:id/activities                    - Log deal activity (action + content)
+POST   /api/pipeline/contacts/:id/add-to-pipeline            - Add contact to pipeline board (sets contactType + first stage + position + optional pipelineTitle)
+POST   /api/pipeline/contacts/:id/remove-from-pipeline       - Remove contact from pipeline (clears stage, position, closedAt)
+PATCH  /api/pipeline/contacts/reorder                        - Batch position update for drag-and-drop (contactId, newStage, positions[])
 ```
 
 ### Contact Model
 Two kinds: PERSON (individual) and COMPANY (organization). A Person can link to a Company via companyId (self-referential). Company contact details flow through linked people; company itself stores only general email and website as backup.
 
+Contacts ARE the pipeline items. Pipeline fields on Contact: `pipelineTitle` (optional card label), `stage` (nullable -- null means not on any board), `position` (int for Kanban ordering), `closedAt`, `lostReason`. `contactType` (CLIENT/INVESTOR/PARTNER) is optional and determines which pipeline board the contact appears on. Removing from pipeline clears all pipeline fields including pipelineTitle.
+
 ### Pipeline Types & Stages
-Each contact has a contactType (CLIENT, INVESTOR, PARTNER). Deals use type-specific stages stored as strings:
+Each contact on the pipeline has a contactType (CLIENT, INVESTOR, PARTNER). Stage is stored directly on the Contact as a string:
 - **CLIENT**: LEAD → QUALIFIED → SAMPLE_SENT → EVALUATION → NEGOTIATION → WON | LOST
 - **INVESTOR**: IDENTIFIED → OUTREACH → MEETING → DUE_DILIGENCE → TERM_SHEET → COMMITTED | PASSED
 - **PARTNER**: IDENTIFIED → INITIAL_CONTACT → EXPLORING → PROPOSAL → ACTIVE | INACTIVE
@@ -1138,10 +1136,10 @@ Each contact has a contactType (CLIENT, INVESTOR, PARTNER). Deals use type-speci
 Terminal stages (WON, LOST, COMMITTED, PASSED, INACTIVE) auto-set `closedAt`. Re-opening clears it.
 
 ### Drag-and-Drop
-`PATCH /api/pipeline/deals/reorder` accepts `{ dealId, newStage, positions: [{ id, position }] }`. Same pattern as task reorder -- atomically updates stage and positions in a transaction.
+`PATCH /api/pipeline/contacts/reorder` accepts `{ contactId, newStage, positions: [{ id, position }] }`. Same pattern as task reorder -- atomically updates stage and positions in a transaction.
 
 ### Activity Logging
-Contact activities auto-update `lastContactedAt` for interaction types (note_added, call_logged, email_sent, meeting). System-generated activities track stage_changed, type_changed, owner_changed, attachment_added, attachment_removed.
+Contact activities auto-update `lastContactedAt` for interaction types (note_added, call_logged, email_sent, meeting). System-generated activities track stage_changed, added_to_pipeline, removed_from_pipeline, type_changed, owner_changed, attachment_added, attachment_removed.
 
 ### Attachments
 Same pattern as tasks. Upload via `POST /contacts/:id/attachments` with multipart form data. Accepted types: PDF, JPG, PNG, GIF, DOCX, XLSX, XLS, DOC, TXT, CSV. 15MB limit per file.

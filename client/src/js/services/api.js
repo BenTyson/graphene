@@ -1266,6 +1266,7 @@ export const pipelineAPI = {
     if (params.search) query.append('search', params.search);
     if (params.sortBy) query.append('sortBy', params.sortBy);
     if (params.order) query.append('order', params.order);
+    if (params.onPipeline) query.append('onPipeline', 'true');
     const qs = query.toString();
     const headers = { ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/pipeline/contacts${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
@@ -1314,53 +1315,26 @@ export const pipelineAPI = {
     }).then(handleResponse);
   },
 
-  // Deals
-  getDeals: (params = {}) => {
-    const query = new URLSearchParams();
-    if (params.contactType) query.append('contactType', params.contactType);
-    if (params.stage) query.append('stage', params.stage);
-    if (params.ownerId) query.append('ownerId', params.ownerId);
-    if (params.contactId) query.append('contactId', params.contactId);
-    if (params.search) query.append('search', params.search);
-    if (params.sortBy) query.append('sortBy', params.sortBy);
-    if (params.order) query.append('order', params.order);
-    const qs = query.toString();
-    const headers = { ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
-  },
-
-  getDeal: (id) => {
-    const headers = { ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals/${id}`, { headers }).then(handleResponse);
-  },
-
-  createDeal: (data) => {
+  // Pipeline operations
+  addToPipeline: (contactId, data) => {
     const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
-  },
-
-  updateDeal: (id, data) => {
-    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
-  },
-
-  deleteDeal: (id) => {
-    const headers = { ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals/${id}`, { method: 'DELETE', headers }).then(handleResponse);
-  },
-
-  reorderDeals: (dealId, newStage, positions) => {
-    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals/reorder`, {
-      method: 'PATCH', headers,
-      body: JSON.stringify({ dealId, newStage, positions })
+    return fetch(`${API_BASE}/pipeline/contacts/${contactId}/add-to-pipeline`, {
+      method: 'POST', headers, body: JSON.stringify(data)
     }).then(handleResponse);
   },
 
-  addDealActivity: (dealId, data) => {
+  removeFromPipeline: (contactId) => {
     const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
-    return fetch(`${API_BASE}/pipeline/deals/${dealId}/activities`, {
-      method: 'POST', headers, body: JSON.stringify(data)
+    return fetch(`${API_BASE}/pipeline/contacts/${contactId}/remove-from-pipeline`, {
+      method: 'POST', headers
+    }).then(handleResponse);
+  },
+
+  reorderContacts: (contactId, newStage, positions) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/pipeline/contacts/reorder`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ contactId, newStage, positions })
     }).then(handleResponse);
   },
 

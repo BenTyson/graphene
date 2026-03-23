@@ -19,13 +19,14 @@ export function getContactModalHtml() {
             <span x-text="contactForm.contactKind === 'COMPANY' ? 'Company Name' : 'Full Name'"></span>
             <span class="text-red-500">*</span>
           </label>
-          <input type="text" x-model="contactForm.name" :placeholder="contactForm.contactKind === 'COMPANY' ? 'Acme Corp' : 'Jane Smith'" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+          <input type="text" x-model="contactForm.name" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
         </div>
 
-        <!-- Pipeline Type -->
+        <!-- Pipeline Type (optional) -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Pipeline Type <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
           <select x-model="contactForm.contactType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <option value="">-- None --</option>
             <option value="INVESTOR">Investor</option>
             <option value="PARTNER">Partner</option>
             <option value="CLIENT">Client</option>
@@ -47,7 +48,7 @@ export function getContactModalHtml() {
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Role / Title</label>
-            <input type="text" x-model="contactForm.role" placeholder="CEO, VP Sales, etc." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="text" x-model="contactForm.role" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
         </div>
 
@@ -55,18 +56,18 @@ export function getContactModalHtml() {
         <div x-show="contactForm.contactKind === 'PERSON'" class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" x-model="contactForm.email" placeholder="email@example.com" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="email" x-model="contactForm.email" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input type="tel" x-model="contactForm.phone" placeholder="+1 (555) 000-0000" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="tel" x-model="contactForm.phone" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
         </div>
 
         <!-- Person: LinkedIn -->
         <div x-show="contactForm.contactKind === 'PERSON'">
           <label class="block text-sm font-medium text-gray-700 mb-1">LinkedIn</label>
-          <input type="url" x-model="contactForm.linkedInUrl" placeholder="https://linkedin.com/in/..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+          <input type="url" x-model="contactForm.linkedInUrl" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
         </div>
 
         <!-- ═══ COMPANY-specific fields ═══ -->
@@ -87,11 +88,11 @@ export function getContactModalHtml() {
         <div x-show="contactForm.contactKind === 'COMPANY'" class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">General Email</label>
-            <input type="email" x-model="contactForm.email" placeholder="info@company.com" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="email" x-model="contactForm.email" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-            <input type="url" x-model="contactForm.website" placeholder="https://..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="url" x-model="contactForm.website"  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
         </div>
 
@@ -100,14 +101,14 @@ export function getContactModalHtml() {
         <!-- Person: Website (less prominent) -->
         <div x-show="contactForm.contactKind === 'PERSON'">
           <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-          <input type="url" x-model="contactForm.website" placeholder="https://..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+          <input type="url" x-model="contactForm.website"  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
         </div>
 
         <!-- Source & Owner -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
-            <input type="text" x-model="contactForm.source" placeholder="Referral, conference, etc." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            <input type="text" x-model="contactForm.source" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
@@ -146,7 +147,7 @@ export function getContactModalHtml() {
         <!-- Notes -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-          <textarea x-model="contactForm.notes" rows="3" placeholder="General notes about this contact..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900"></textarea>
+          <textarea x-model="contactForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900"></textarea>
         </div>
       </div>
 

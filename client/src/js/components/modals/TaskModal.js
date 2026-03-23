@@ -88,7 +88,24 @@ export function getTaskModalHtml() {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
               <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="tag in taskForm.tags" :key="tag">
+                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
+                  <button type="button" @click="taskForm.tags.includes(sysTag) ? removeTaskTag(sysTag) : (taskForm.tags.push(sysTag))"
+                    :class="taskForm.tags.includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
+                </template>
+              </div>
+
+              <label class="block text-sm font-medium text-gray-700 mb-1">Institutions</label>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <template x-for="instTag in ['Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG']" :key="instTag">
+                  <button type="button" @click="taskForm.tags.includes(instTag) ? removeTaskTag(instTag) : (taskForm.tags.push(instTag))"
+                    :class="taskForm.tags.includes(instTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="instTag"></button>
+                </template>
+              </div>
+
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <template x-for="tag in taskForm.tags.filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
                     <span x-text="tag"></span>
                     <button type="button" @click="removeTaskTag(tag)" class="text-gray-400 hover:text-gray-600">
@@ -102,7 +119,7 @@ export function getTaskModalHtml() {
               <div class="flex gap-2">
                 <input type="text" x-model="taskTagInput" @keydown.enter.prevent="addTaskTag()"
                   class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm"
-                  placeholder="Add a tag...">
+                  placeholder="Custom tag...">
                 <button type="button" @click="addTaskTag()"
                   class="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Add</button>
               </div>

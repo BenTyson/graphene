@@ -109,7 +109,7 @@ function getLoginPageHtml() {
 
         <!-- Footer -->
         <div class="text-center text-sm text-gray-500">
-          <p>&copy; HGraphene 2025</p>
+          <p>&copy; HGraphene 2026</p>
         </div>
       </div>
     </div>

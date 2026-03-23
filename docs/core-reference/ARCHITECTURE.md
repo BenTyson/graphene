@@ -77,7 +77,7 @@ High-level architecture guide for the Graphene Production Control System.
 
 **Domain Services** (`client/src/js/services/`):
 - **TaskService.js** (239 lines) - Task CRUD, comments, attachments, subtasks
-- **PipelineService.js** (416 lines) - Contact/Deal CRUD, activities, stage constants, view switching
+- **PipelineService.js** - Contact CRUD, pipeline board operations (add/remove/reorder), activities, stage constants, view switching
 - **KanbanService.js** (117 lines) - Shared SortableJS wrapper for Tasks + Pipeline drag-and-drop
 - **CRUDService.js** - Biochar, Graphene, CompoundBatch, Micronization, MCB, Shipment CRUD
 - **DashboardService.js** - Dashboard metrics
@@ -107,7 +107,7 @@ async loadTasks() { await taskService.loadTasks(this); }
 48 modular UI components:
 
 - **Form Fields**: Date, select, numeric, file upload components
-- **Modals**: 25 modal files (entity forms, task detail panel, contact/deal modals and detail panels, PDF viewer, etc.)
+- **Modals**: 25 modal files (entity forms, task detail panel, contact modal/detail panel, add-to-pipeline modal, PDF viewer, etc.)
 - **Tabs**: 23 tab files (production, tests, analysis, tasks, pipeline, user management)
 - **Cards**: Intelligent card factory with type detection
 - **Dropdowns**: Expandable row sections
@@ -221,7 +221,7 @@ MaterialShipment (distribution)
 **Reports**: UpdateReport, SemReport (with junction tables)
 **Shipments**: MaterialShipment
 **Task Management**: Task (with self-referencing subtasks), TaskComment, TaskActivity
-**Pipeline/CRM**: Contact, Deal, ContactActivity, DealActivity, ContactAttachment
+**Pipeline/CRM**: Contact (with pipeline stage/position fields), ContactActivity, ContactAttachment
 **News/AI**: NewsSource, NewsArticle, KnowledgeDocument
 **Auth**: User (6 roles)
 **References**: CharacterizationReference
@@ -240,7 +240,7 @@ MaterialShipment (distribution)
 - **Reports**: `/api/update-reports`, `/api/sem-reports`
 - **Shipments**: `/api/shipments`
 - **Tasks**: `/api/tasks` (CRUD + comments + status changes, internal roles only)
-- **Pipeline**: `/api/pipeline` (contacts, deals, activities, attachments, internal roles only)
+- **Pipeline**: `/api/pipeline` (contacts, pipeline ops, activities, attachments, internal roles only)
 - **Dashboard**: `/api/dashboard/*` (metrics, inventory, best results)
 - **AI/News**: `/api/ai-insights`, `/api/news`, `/api/knowledge-base`
 
@@ -270,7 +270,7 @@ MaterialShipment (distribution)
 
 ### Navigation Architecture (March 2026)
 
-**Layout**: Collapsible left sidebar (`bg-gray-950`) + flex content area.
+**Layout**: Collapsible left sidebar (`bg-gray-950`) + flex content area. Logo area at top is white background with centered logo (no text), 48px height matching header bar.
 - **Sidebar expanded**: 240px (`w-60`) with icon + label
 - **Sidebar collapsed**: 64px (`w-16`) icon-only with tooltips, state persisted in localStorage
 - **Mobile** (below `lg`/1024px): Overlay drawer with backdrop, opened via hamburger in top header
@@ -317,15 +317,16 @@ Competitive benchmarking dashboard with:
 - **Drag-and-Drop**: Cards draggable between columns and reorderable within columns. Position persisted via `PATCH /api/tasks/reorder` (atomic batch update)
 - **Archive**: Tasks can be archived (hidden from board by default). "Show archived" toggle in filters. Archive/unarchive buttons in detail panel.
 - **Attachments**: Multi-file upload (PDF, images, Word, Excel, CSV, TXT) via detail panel. Stored in Cloudinary (prod) or local uploads (dev). `TaskAttachment` model tracks uploader, filename, size, mime type.
-- **Detail Panel**: Right-side slide-over with inline editing, subtasks, attachments, comments, activity log
+- **Detail Panel**: Right-side slide-over. Order: description, subtasks, tags, attachments, comments, activity log. Tags and subtasks editable inline.
+- **System Tags**: Two toggle-pill rows in task create modal and detail panel: category tags (Fundraising, Shareholders, Patents, Legal, etc.) and institution tags (Curia, NEI, SpectraPower, etc.). Custom tags also supported. All stored in `tags[]`.
 - **Access**: Internal roles only (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). INVESTOR and THIRD_PARTY excluded.
 
 ### Pipeline / CRM (March 2026)
 
-- **Contact Management**: Person and Company contacts with full detail tracking
-- **Lead Tracking**: Kanban board with SortableJS drag-and-drop (same pattern as Tasks)
-- **Deal Stages**: Type-specific stage progressions (Client, Investor, Partner)
-- **Activity Logging**: Timestamped activity feed on contacts and deals
+- **Contact Management**: Person and Company contacts with full detail tracking. Contacts view has All/People/Companies filter pills.
+- **Pipeline Board**: Contacts ARE the pipeline items (no separate Deal/Lead entity). Kanban board with SortableJS drag-and-drop (same shared KanbanService as Tasks). "Add to Pipeline" assigns a contact to a board (Investor/Partner/Client) at the first stage with optional `pipelineTitle` (card label). Contacts with `stage=null` are not on any board. Board type switcher (Investors/Partners/Clients) uses underline tabs; view toggle (Pipeline/Contacts) uses pill toggle -- visually distinct.
+- **Stage Progressions**: Type-specific stages on Contact model: CLIENT (LEAD→WON/LOST), INVESTOR (IDENTIFIED→COMMITTED/PASSED), PARTNER (IDENTIFIED→ACTIVE/INACTIVE). Terminal stages auto-set closedAt.
+- **Activity Logging**: Timestamped activity feed on contacts (includes stage_changed, added_to_pipeline, removed_from_pipeline)
 - **File Attachments**: Multi-file upload on contacts via Cloudinary (prod) or local (dev)
 - **Access**: Internal roles only (SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, TEAM_MEMBER). INVESTOR and THIRD_PARTY excluded.
 - **Replaces**: Pipedrive CRM
@@ -412,7 +413,7 @@ npm run build
 ### Service Extraction History
 
 - **September 2025**: Initial extraction — CRUDService, FilterService, NewsService, DashboardService, CardService. Main file 4,651 → 2,913 lines.
-- **March 2026**: Task + Pipeline extraction — TaskService, PipelineService, KanbanService. Shared formatters for date/user helpers. Main file 6,073 → 5,316 lines (-757). Eliminated duplicated Kanban init/drag logic between Tasks and Pipeline.
+- **March 2026**: Task + Pipeline extraction — TaskService, PipelineService, KanbanService. Shared formatters for date/user helpers. Main file 6,073 → 5,316 lines (-757). Eliminated duplicated Kanban init/drag logic between Tasks and Pipeline. Later simplified pipeline: eliminated Deal/Lead entity, contacts are now pipeline items directly (stage/position on Contact model). Replaced DealModal/DealDetailPanel with AddToPipelineModal. Contacts view gained All/People/Companies filter pills.
 
 ### Caching Strategy
 

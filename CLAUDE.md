@@ -23,7 +23,7 @@ This is a tab-based SPA. Each tab returns an HTML template string (e.g., `getGra
 - `client/src/js/app-refactored.js` - Main Alpine.js app (~5300 lines): state + delegate methods
 - `client/src/js/services/api.js` - All API client functions
 - `client/src/js/services/TaskService.js` - Task CRUD, comments, attachments, subtasks logic
-- `client/src/js/services/PipelineService.js` - Contact/Deal CRUD, activities, stage constants
+- `client/src/js/services/PipelineService.js` - Contact CRUD, pipeline board ops, activities, stage constants
 - `client/src/js/services/KanbanService.js` - Shared SortableJS wrapper (Tasks + Pipeline)
 - `client/src/js/services/CRUDService.js` - Biochar/Graphene/CompoundBatch/etc. CRUD logic
 - `client/src/js/components/tabs/*.js` - 23 tab components
@@ -74,7 +74,7 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 - SUPER_ADMIN: full access + user management.
 
 ### Layout & Navigation
-- **Sidebar:** Dark (`bg-gray-950`) collapsible left sidebar (240px expanded, 64px collapsed). Grouped sections: Production, Analytics, Test Results. Collapse state persisted in localStorage.
+- **Sidebar:** Dark (`bg-gray-950`) collapsible left sidebar (240px expanded, 64px collapsed). White logo area at top (48px, centered logo, no text). Grouped sections: Production, Analytics, Test Results. Collapse state persisted in localStorage.
 - **Mobile:** Sidebar becomes overlay drawer (slide from left) below `lg` (1024px) breakpoint.
 - **Header:** Thin 48px top bar with breadcrumb. User info lives in sidebar footer.
 - **Test subtabs:** Horizontal pill bar in content area when on `test-*` tabs.
@@ -86,7 +86,7 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 - Black primary buttons, Bronze (#B87333) link accent
 - No UI component library -- custom Tailwind throughout
 - Tables on desktop, card layout on mobile
-- Modals: centered for forms, slide-over panel for task detail
+- Modals: centered for forms, slide-over panel for task/contact detail
 - Alpine.js directives: `x-show`, `x-cloak`, `x-html`, `x-model`, `@click`, `x-collapse`, etc.
 
 ## Gotchas
@@ -98,6 +98,9 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 - app-refactored.js is ~5300 lines. State lives here; logic delegates to service files. New features should create a dedicated service.
 - News Feed tab is hidden (`x-show="false"`), code preserved for later.
 - Tasks and Pipeline both use KanbanService (shared SortableJS wrapper) for drag-and-drop.
+- Pipeline has no Deal/Lead entity. Contacts ARE pipeline items (stage/position/pipelineTitle on Contact model). `contactType` is optional. `DealModal.js` and `DealDetailPanel.js` are dead code (not imported).
+- Task tags use two sets of system-defined toggle pills in the create modal and detail panel: category tags (Fundraising, Shareholders, Patents, Legal, etc.) and institution tags (Curia, NEI, SpectraPower, GoEco, etc.). Custom tags also supported. All stored in `tags[]`.
+- Tab headers (h2 titles) removed from Pipeline and Tasks tabs -- breadcrumb bar provides the page title.
 - Alpine.js Collapse plugin (`@alpinejs/collapse`) loaded via CDN for sidebar group animations.
 
 ## Deeper Docs

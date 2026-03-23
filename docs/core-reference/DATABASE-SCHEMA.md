@@ -35,7 +35,7 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
 - **Task Management**: Task, TaskComment, TaskActivity, TaskAttachment
-- **Pipeline / CRM**: Contact, Deal, ContactActivity, DealActivity, ContactAttachment
+- **Pipeline / CRM**: Contact (with pipeline stage/position fields), ContactActivity, ContactAttachment. Deal and DealActivity models exist but are deprecated.
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument
 - **References**: CharacterizationReference
 
@@ -763,64 +763,55 @@ enum ContactKind {
 }
 
 model Contact {
-  id              String      @id @default(cuid())
+  id              String       @id @default(cuid())
   name            String
-  contactKind     ContactKind @default(PERSON) @map("contact_kind")
+  contactKind     ContactKind  @default(PERSON) @map("contact_kind")
   email           String?
   phone           String?
   role            String?
-  contactType     ContactType @map("contact_type")
+  contactType     ContactType? @map("contact_type")  // optional -- set when added to pipeline
   source          String?
-  tags            String[]    @default([])
-  notes           String?     @db.Text
-  linkedInUrl     String?     @map("linkedin_url")
+  tags            String[]     @default([])
+  notes           String?      @db.Text
+  linkedInUrl     String?      @map("linkedin_url")
   website         String?
-  companyId       String?     @map("company_id")
-  companyContact  Contact?    @relation("CompanyPeople", fields: [companyId], references: [id])
-  people          Contact[]   @relation("CompanyPeople")
-  ownerId         String?     @map("owner_id")
-  owner           User?       @relation("ContactOwner", fields: [ownerId], references: [id])
-  lastContactedAt DateTime?   @map("last_contacted_at")
-  nextFollowUpAt  DateTime?   @map("next_follow_up_at")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  deals           Deal[]
+  companyId       String?      @map("company_id")
+  companyContact  Contact?     @relation("CompanyPeople", fields: [companyId], references: [id])
+  people          Contact[]    @relation("CompanyPeople")
+  // Pipeline fields (null stage = not on any pipeline board)
+  pipelineTitle   String?      @map("pipeline_title")  // optional card label shown on Kanban
+  stage           String?
+  position        Int          @default(0)
+  closedAt        DateTime?    @map("closed_at")
+  lostReason      String?      @map("lost_reason")
+  ownerId         String?      @map("owner_id")
+  owner           User?        @relation("ContactOwner", fields: [ownerId], references: [id])
+  lastContactedAt DateTime?    @map("last_contacted_at")
+  nextFollowUpAt  DateTime?    @map("next_follow_up_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
   activities      ContactActivity[]
   attachments     ContactAttachment[]
   @@index([contactKind])
   @@index([contactType])
   @@index([companyId])
   @@index([ownerId])
+  @@index([stage])
+  @@index([stage, position])
   @@map("contacts")
 }
 
-model Deal {
-  id          String   @id @default(cuid())
-  title       String
-  contactId   String   @map("contact_id")
-  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  stage       String
-  position    Int      @default(0)
-  description String?  @db.Text
-  lostReason  String?  @map("lost_reason")
-  tags        String[] @default([])
-  ownerId     String?  @map("owner_id")
-  owner       User?    @relation("DealOwner", fields: [ownerId], references: [id])
-  closedAt    DateTime? @map("closed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  activities  DealActivity[]
-  @@index([contactId])
-  @@index([stage])
-  @@index([stage, position])
-  @@map("deals")
-}
+// NOTE: Deal and DealActivity models are DEPRECATED. They exist in the schema for
+// migration purposes only (scripts/migrate-deals-to-contacts.js). Pipeline stage/position
+// now lives directly on the Contact model. These tables will be dropped after migration.
 
 model ContactActivity {
   id        String   @id @default(cuid())
   contactId String   @map("contact_id")
   userId    String   @map("user_id")
-  action    String
+  action    String   // note_added, call_logged, email_sent, meeting, stage_changed,
+                     // added_to_pipeline, removed_from_pipeline, type_changed, owner_changed,
+                     // attachment_added, attachment_removed
   content   String?  @db.Text
   fromValue String?  @map("from_value")
   toValue   String?  @map("to_value")
@@ -829,21 +820,6 @@ model ContactActivity {
   createdAt DateTime @default(now()) @map("created_at")
   @@index([contactId, createdAt])
   @@map("contact_activities")
-}
-
-model DealActivity {
-  id        String   @id @default(cuid())
-  dealId    String   @map("deal_id")
-  userId    String   @map("user_id")
-  action    String
-  content   String?  @db.Text
-  fromValue String?  @map("from_value")
-  toValue   String?  @map("to_value")
-  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  user      User     @relation("DealActivityUser", fields: [userId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
-  @@index([dealId, createdAt])
-  @@map("deal_activities")
 }
 
 model ContactAttachment {

@@ -45,9 +45,8 @@ import { getTaskModalHtml } from './components/modals/TaskModal.js';
 import { getTaskDetailPanelHtml } from './components/modals/TaskDetailPanel.js';
 import { getPipelineTabHtml } from './components/tabs/PipelineTab.js';
 import { getContactModalHtml } from './components/modals/ContactModal.js';
-import { getDealModalHtml } from './components/modals/DealModal.js';
+import { getAddToPipelineModalHtml } from './components/modals/AddToPipelineModal.js';
 import { getContactDetailPanelHtml } from './components/modals/ContactDetailPanel.js';
-import { getDealDetailPanelHtml } from './components/modals/DealDetailPanel.js';
 
 // Import new components for simplified cards and modals
 import './components/cards/SimplifiedGrapheneCard.js';
@@ -400,24 +399,23 @@ window.grapheneApp = function() {
 
     // Pipeline / CRM
     pipelineContacts: [],
-    pipelineDeals: [],
+    pipelineBoardContacts: [],
     pipelineOwners: [],
     pipelineViewMode: 'kanban',
     pipelineType: 'INVESTOR',
     pipelineSearch: '',
-    pipelineFilters: { stage: '', ownerId: '' },
+    pipelineFilters: { ownerId: '' },
+    pipelineContactKindFilter: '',
     showAddContact: false,
-    showAddDeal: false,
+    showAddToPipeline: false,
     showContactDetail: false,
-    showDealDetail: false,
     selectedContact: null,
-    selectedDeal: null,
     editingContact: null,
-    editingDeal: null,
-    contactForm: { name: '', contactKind: 'PERSON', email: '', phone: '', role: '', contactType: 'INVESTOR', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' },
-    dealForm: { title: '', contactId: '', stage: '', description: '', tags: [], ownerId: '' },
+    contactForm: { name: '', contactKind: 'PERSON', email: '', phone: '', role: '', contactType: '', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' },
+    addToPipelineForm: { contactId: '', pipelineType: 'INVESTOR', pipelineTitle: '' },
+    addToPipelineSearch: '',
+    addToPipelinePresetStage: '',
     contactActivityForm: { action: 'note_added', content: '' },
-    dealActivityForm: { action: 'note_added', content: '' },
     pipelineLoading: false,
     pipelineStats: null,
     pipelineTagInput: '',
@@ -4259,9 +4257,9 @@ window.grapheneApp = function() {
             if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
           });
         } else if (tab === 'pipeline') {
-          if (!this.pipelineContacts.length && !this.pipelineDeals.length) {
+          if (!this.pipelineContacts.length && !this.pipelineBoardContacts.length) {
             await this.loadPipelineContacts();
-            await this.loadPipelineDeals();
+            await this.loadPipelineBoard();
             await this.loadPipelineOwners();
           }
           this.$nextTick(() => {
@@ -4912,6 +4910,13 @@ window.grapheneApp = function() {
       this.taskTagInput = '';
     },
     removeTaskTag(tag) { this.taskForm.tags = this.taskForm.tags.filter(t => t !== tag); },
+    async toggleDetailTaskTag(tag) {
+      if (!this.selectedTask) return;
+      const tags = [...(this.selectedTask.tags || [])];
+      const idx = tags.indexOf(tag);
+      if (idx >= 0) { tags.splice(idx, 1); } else { tags.push(tag); }
+      await taskService.updateTaskInline(this, this.selectedTask.id, 'tags', tags);
+    },
     getTaskDueLabel(dueDate) { return getRelativeDateLabel(dueDate); },
     getTaskDueClass(dueDate, status) { return getRelativeDateClass(dueDate, ['DONE', 'ARCHIVED'], status); },
     getAssigneeName(task) { return getUserDisplayName(task.assignee); },
@@ -4963,14 +4968,13 @@ window.grapheneApp = function() {
     // Pipeline / CRM methods
     getPipelineTabHtml() { return getPipelineTabHtml(); },
     getContactModalHtml() { return getContactModalHtml(); },
-    getDealModalHtml() { return getDealModalHtml(); },
+    getAddToPipelineModalHtml() { return getAddToPipelineModalHtml(); },
     getContactDetailPanelHtml() { return getContactDetailPanelHtml(); },
-    getDealDetailPanelHtml() { return getDealDetailPanelHtml(); },
 
     // ===== PIPELINE / CRM METHODS (delegated to PipelineService) =====
 
     PIPELINE_STAGES,
-    getPipelineStages() { return pipelineService.getPipelineStages(this.pipelineType); },
+    getPipelineStages(type) { return pipelineService.getPipelineStages(type || this.pipelineType); },
     getStageLabel(stageKey) { return pipelineService.getStageLabel(stageKey); },
     getStageBadgeClass(stageKey) { return pipelineService.getStageBadgeClass(stageKey); },
     getContactTypeBadgeClass(type) {
@@ -4981,7 +4985,7 @@ window.grapheneApp = function() {
       const labels = { CLIENT: 'Client', INVESTOR: 'Investor', PARTNER: 'Partner' };
       return labels[type] || type;
     },
-    getDealsByStage(stage) { return this.pipelineDeals.filter(d => d.stage === stage); },
+    getContactsByStage(stage) { return this.pipelineBoardContacts.filter(c => c.stage === stage); },
     getFollowUpLabel(date) { return getRelativeDateLabel(date, { todayLabel: 'Today', tomorrowLabel: 'Tomorrow', withinWeekFmt: d => `In ${d}d` }); },
     getFollowUpClass(date) { return getRelativeDateClass(date); },
     getOwnerName(entity) { return getUserDisplayName(entity?.owner); },
@@ -4994,6 +4998,9 @@ window.grapheneApp = function() {
     },
     getFilteredContacts() {
       let filtered = this.pipelineContacts;
+      if (this.pipelineContactKindFilter) {
+        filtered = filtered.filter(c => c.contactKind === this.pipelineContactKindFilter);
+      }
       if (this.pipelineSearch) {
         const q = this.pipelineSearch.toLowerCase();
         filtered = filtered.filter(c =>
@@ -5007,10 +5014,22 @@ window.grapheneApp = function() {
       }
       return filtered;
     },
+    getAvailableContactsForPipeline() {
+      let contacts = this.pipelineContacts.filter(c => !c.stage);
+      if (this.addToPipelineSearch) {
+        const q = this.addToPipelineSearch.toLowerCase();
+        contacts = contacts.filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          (c.email || '').toLowerCase().includes(q) ||
+          (c.companyContact?.name || '').toLowerCase().includes(q)
+        );
+      }
+      return contacts;
+    },
 
     // Contact CRUD
     async loadPipelineContacts() { await pipelineService.loadPipelineContacts(this); },
-    async loadPipelineDeals() { await pipelineService.loadPipelineDeals(this); },
+    async loadPipelineBoard() { await pipelineService.loadPipelineBoard(this); },
     async loadPipelineOwners() { await pipelineService.loadPipelineOwners(this); },
     openContactForm(type, kind) { pipelineService.openContactForm(this, type, kind); },
     openPersonForm(type) { this.openContactForm(type, 'PERSON'); },
@@ -5026,33 +5045,27 @@ window.grapheneApp = function() {
     async uploadContactAttachments(files) { await pipelineService.uploadContactAttachments(this, files); },
     async deleteContactAttachment(attachmentId, fileName) { await pipelineService.deleteContactAttachment(this, attachmentId, fileName); },
 
-    // Deal CRUD
-    openDealForm(contactId, stage) { pipelineService.openDealForm(this, contactId, stage); },
-    openEditDealForm(deal) { pipelineService.openEditDealForm(this, deal); },
-    closeDealForm() { pipelineService.closeDealForm(this); },
-    async saveDeal() { await pipelineService.saveDeal(this); },
-    async deleteDeal(dealId) { await pipelineService.deleteDeal(this, dealId); },
-    async openDealDetail(dealId) { await pipelineService.openDealDetail(this, dealId); },
-    closeDealDetail() { pipelineService.closeDealDetail(this); },
-    async updateDealInline(dealId, field, value) { await pipelineService.updateDealInline(this, dealId, field, value); },
-    async addDealActivity() { await pipelineService.addDealActivity(this); },
+    // Pipeline operations
+    openAddToPipeline(presetStage) { pipelineService.openAddToPipeline(this, presetStage); },
+    closeAddToPipeline() { pipelineService.closeAddToPipeline(this); },
+    async addToPipeline() { await pipelineService.addToPipeline(this); },
+    async removeFromPipeline(contactId) { await pipelineService.removeFromPipeline(this, contactId); },
+    openAddToPipelineForContact(contactId) {
+      pipelineService.openAddToPipeline(this);
+      this.addToPipelineForm.contactId = contactId;
+    },
     addPipelineTag() {
       const tag = this.pipelineTagInput.trim();
       if (this.showAddContact && tag && !this.contactForm.tags.includes(tag)) {
         this.contactForm.tags.push(tag);
-      } else if (this.showAddDeal && tag && !this.dealForm.tags.includes(tag)) {
-        this.dealForm.tags.push(tag);
       }
       this.pipelineTagInput = '';
     },
     removePipelineTag(tag) {
       if (this.showAddContact) {
         this.contactForm.tags = this.contactForm.tags.filter(t => t !== tag);
-      } else if (this.showAddDeal) {
-        this.dealForm.tags = this.dealForm.tags.filter(t => t !== tag);
       }
     },
-    openDealFromContact(contactId) { this.closeContactDetail(); this.openDealForm(contactId); },
 
     // Pipeline Kanban & view switching
     initPipelineKanban() {
@@ -5060,15 +5073,15 @@ window.grapheneApp = function() {
       kanbanService.init({
         group: 'pipeline-kanban',
         columnIds: this.getPipelineStages().map(s => `pipeline-col-${s.key}`),
-        itemIdAttr: 'data-deal-id',
+        itemIdAttr: 'data-contact-id',
         statusAttr: 'data-stage',
-        onReorder: async (dealId, newStage, oldStage, positions) => {
+        onReorder: async (contactId, newStage, oldStage, positions) => {
           try {
-            await API.pipeline.reorderDeals(dealId, newStage !== oldStage ? newStage : null, positions);
-            await this.loadPipelineDeals();
+            await API.pipeline.reorderContacts(contactId, newStage !== oldStage ? newStage : null, positions);
+            await this.loadPipelineBoard();
           } catch (error) {
-            console.error('Failed to reorder deals:', error);
-            await this.loadPipelineDeals();
+            console.error('Failed to reorder pipeline:', error);
+            await this.loadPipelineBoard();
           }
         }
       });
@@ -5079,13 +5092,17 @@ window.grapheneApp = function() {
     formatActivityAction(action) { return pipelineService.formatActivityAction(action); },
     getActivityIcon(action) { return pipelineService.getActivityIcon(action); },
 
-    // Redirect Third Party users away from restricted tabs
+    // Redirect restricted users away from tabs they can't access
     enforceThirdPartyRestrictions() {
       if (this.isThirdParty()) {
         const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management', 'tasks', 'pipeline'];
         if (restrictedTabs.includes(this.activeTab)) {
-          console.log('[Navigation] Third Party user redirected from restricted tab:', this.activeTab);
-          this.activeTab = 'graphene'; // Default to graphene for Third Party users
+          this.activeTab = 'graphene';
+        }
+      } else if (this.currentUser?.role === 'INVESTOR') {
+        const restrictedTabs = ['tasks', 'pipeline'];
+        if (restrictedTabs.includes(this.activeTab)) {
+          this.activeTab = 'graphene';
         }
       }
     },
