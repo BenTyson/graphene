@@ -163,6 +163,10 @@ export function getTaskDetailPanelHtml() {
                     </button>
                     <span :class="sub.status === 'DONE' ? 'line-through text-gray-400' : 'text-gray-700'"
                       class="text-sm flex-1" x-text="sub.title"></span>
+                    <input type="date" :value="sub.dueDate || ''" @change="updateSubtaskDueDate(sub.id, $event.target.value)"
+                      class="text-[11px] text-gray-400 border border-transparent hover:border-gray-200 focus:border-gray-300 rounded px-1 py-0.5 w-24 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      :class="sub.dueDate ? '!opacity-100' : ''"
+                      title="Due date">
                     <template x-if="sub.assignee">
                       <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span class="text-[8px] font-medium text-gray-500"

@@ -404,8 +404,9 @@ window.grapheneApp = function() {
     pipelineViewMode: 'kanban',
     pipelineType: 'INVESTOR',
     pipelineSearch: '',
-    pipelineFilters: { ownerId: '' },
+    pipelineFilters: { ownerId: '', contactType: '', onPipeline: '' },
     pipelineContactKindFilter: '',
+    pipelineContactSort: { field: 'name', order: 'asc' },
     showAddContact: false,
     showAddToPipeline: false,
     showContactDetail: false,
@@ -4906,6 +4907,7 @@ window.grapheneApp = function() {
     async updateTaskInline(taskId, field, value) { await taskService.updateTaskInline(this, taskId, field, value); },
     async addSubtask(parentId) { await taskService.addSubtask(this, parentId); },
     async toggleSubtaskDone(subtask) { await taskService.toggleSubtaskDone(this, subtask); },
+    async updateSubtaskDueDate(subtaskId, date) { await taskService.updateSubtaskDueDate(this, subtaskId, date); },
     addTaskTag() {
       const tag = this.taskTagInput.trim();
       if (tag && !this.taskForm.tags.includes(tag)) { this.taskForm.tags.push(tag); }
@@ -4927,6 +4929,11 @@ window.grapheneApp = function() {
       if (!task.subtasks?.length) return null;
       const done = task.subtasks.filter(s => s.status === 'DONE').length;
       return { done, total: task.subtasks.length, percent: Math.round((done / task.subtasks.length) * 100) };
+    },
+    getOverdueSubtaskCount(task) {
+      if (!task.subtasks?.length) return 0;
+      const now = new Date().toISOString().split('T')[0];
+      return task.subtasks.filter(s => s.dueDate && s.dueDate < now && s.status !== 'DONE' && s.status !== 'ARCHIVED').length;
     },
     getPriorityBadgeClass(priority) {
       const classes = { LOW: 'bg-gray-100 text-gray-600', MEDIUM: 'bg-blue-100 text-blue-700', HIGH: 'bg-orange-100 text-orange-700', URGENT: 'bg-red-100 text-red-700' };
@@ -4980,11 +4987,11 @@ window.grapheneApp = function() {
     getStageLabel(stageKey) { return pipelineService.getStageLabel(stageKey); },
     getStageBadgeClass(stageKey) { return pipelineService.getStageBadgeClass(stageKey); },
     getContactTypeBadgeClass(type) {
-      const classes = { CLIENT: 'bg-blue-100 text-blue-700', INVESTOR: 'bg-purple-100 text-purple-700', PARTNER: 'bg-teal-100 text-teal-700' };
-      return classes[type] || classes.CLIENT;
+      const classes = { CLIENT: 'bg-blue-100 text-blue-700', INVESTOR: 'bg-purple-100 text-purple-700', PARTNER: 'bg-teal-100 text-teal-700', OTHER: 'bg-gray-100 text-gray-700' };
+      return classes[type] || classes.OTHER;
     },
     getContactTypeLabel(type) {
-      const labels = { CLIENT: 'Client', INVESTOR: 'Investor', PARTNER: 'Partner' };
+      const labels = { CLIENT: 'Client', INVESTOR: 'Investor', PARTNER: 'Partner', OTHER: 'Other' };
       return labels[type] || type;
     },
     getContactsByStage(stage) { return this.pipelineBoardContacts.filter(c => c.stage === stage); },
@@ -5014,7 +5021,37 @@ window.grapheneApp = function() {
       if (this.pipelineFilters.ownerId) {
         filtered = filtered.filter(c => c.ownerId === this.pipelineFilters.ownerId);
       }
+      if (this.pipelineFilters.contactType) {
+        filtered = filtered.filter(c => c.contactType === this.pipelineFilters.contactType);
+      }
+      if (this.pipelineFilters.onPipeline === 'yes') {
+        filtered = filtered.filter(c => c.stage);
+      } else if (this.pipelineFilters.onPipeline === 'no') {
+        filtered = filtered.filter(c => !c.stage);
+      }
+      // Sort
+      const { field, order } = this.pipelineContactSort;
+      filtered = [...filtered].sort((a, b) => {
+        let va, vb;
+        if (field === 'name') { va = a.name?.toLowerCase() || ''; vb = b.name?.toLowerCase() || ''; }
+        else if (field === 'company') { va = (a.contactKind === 'PERSON' ? a.companyContact?.name?.toLowerCase() : a.name?.toLowerCase()) || ''; vb = (b.contactKind === 'PERSON' ? b.companyContact?.name?.toLowerCase() : b.name?.toLowerCase()) || ''; }
+        else if (field === 'type') { va = a.contactType || ''; vb = b.contactType || ''; }
+        else if (field === 'stage') { va = a.stage || ''; vb = b.stage || ''; }
+        else if (field === 'followUp') { va = a.nextFollowUpAt || '9999'; vb = b.nextFollowUpAt || '9999'; }
+        else if (field === 'lastContact') { va = a.lastContactedAt || ''; vb = b.lastContactedAt || ''; }
+        else { va = a.name?.toLowerCase() || ''; vb = b.name?.toLowerCase() || ''; }
+        if (va < vb) return order === 'asc' ? -1 : 1;
+        if (va > vb) return order === 'asc' ? 1 : -1;
+        return 0;
+      });
       return filtered;
+    },
+    toggleContactSort(field) {
+      if (this.pipelineContactSort.field === field) {
+        this.pipelineContactSort.order = this.pipelineContactSort.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.pipelineContactSort = { field, order: 'asc' };
+      }
     },
     getAvailableContactsForPipeline() {
       let contacts = this.pipelineContacts.filter(c => !c.stage);

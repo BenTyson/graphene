@@ -98,8 +98,9 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 - app-refactored.js is ~5300 lines. State lives here; logic delegates to service files. New features should create a dedicated service.
 - News Feed tab is hidden (`x-show="false"`), code preserved for later.
 - Tasks and Pipeline both use KanbanService (shared SortableJS wrapper) for drag-and-drop.
-- Pipeline has no Deal/Lead entity. Contacts ARE pipeline items (stage/position/pipelineTitle on Contact model). `contactType` is optional. `DealModal.js` and `DealDetailPanel.js` are dead code (not imported).
+- Pipeline has no Deal/Lead entity. Contacts ARE pipeline items (stage/position/pipelineTitle on Contact model). `contactType` is optional (CLIENT/INVESTOR/PARTNER/OTHER). `DealModal.js` and `DealDetailPanel.js` are dead code (not imported). Contacts view has sortable columns (click headers) and filters (type, pipeline status, owner).
 - Task tags use two sets of system-defined toggle pills in the create modal and detail panel: category tags (Fundraising, Shareholders, Patents, Legal, etc.) and institution tags (Curia, NEI, SpectraPower, GoEco, etc.). Custom tags also supported. All stored in `tags[]`.
+- Task Kanban: "Show archived" checkbox reveals a 5th ARCHIVED column. Subtasks support due dates with inline date picker; parent cards show red "X overdue" indicator when subtasks are past due.
 - Tab headers (h2 titles) removed from Pipeline and Tasks tabs -- breadcrumb bar provides the page title.
 - Alpine.js Collapse plugin (`@alpinejs/collapse`) loaded via CDN for sidebar group animations.
 

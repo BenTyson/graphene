@@ -143,7 +143,7 @@ router.get('/', asyncHandler(async (req, res) => {
       assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
       _count: { select: { subtasks: true, comments: true, attachments: true } },
       subtasks: {
-        select: { id: true, status: true },
+        select: { id: true, status: true, dueDate: true },
         orderBy: { position: 'asc' }
       }
     },
@@ -281,7 +281,7 @@ router.post('/', asyncHandler(async (req, res) => {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
       _count: { select: { subtasks: true, comments: true } },
-      subtasks: { select: { id: true, status: true } }
+      subtasks: { select: { id: true, status: true, dueDate: true } }
     }
   });
 
@@ -352,7 +352,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
       _count: { select: { subtasks: true, comments: true } },
-      subtasks: { select: { id: true, status: true } }
+      subtasks: { select: { id: true, status: true, dueDate: true } }
     }
   });
 
@@ -386,7 +386,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
       _count: { select: { subtasks: true, comments: true } },
-      subtasks: { select: { id: true, status: true } }
+      subtasks: { select: { id: true, status: true, dueDate: true } }
     }
   });
 

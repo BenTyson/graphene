@@ -313,9 +313,9 @@ Competitive benchmarking dashboard with:
 
 ### Task Management (v2)
 
-- **Kanban Board**: 4-column board (TODO, IN_PROGRESS, IN_REVIEW, DONE) with SortableJS drag-and-drop
+- **Kanban Board**: 4-column board (TODO, IN_PROGRESS, IN_REVIEW, DONE) with SortableJS drag-and-drop. "Show archived" reveals a 5th ARCHIVED column.
 - **Drag-and-Drop**: Cards draggable between columns and reorderable within columns. Position persisted via `PATCH /api/tasks/reorder` (atomic batch update)
-- **Archive**: Tasks can be archived (hidden from board by default). "Show archived" toggle in filters. Archive/unarchive buttons in detail panel.
+- **Subtask Due Dates**: Subtasks have inline date pickers in the detail panel. Parent cards show red "X overdue" indicator when any subtask is past due and not done.
 - **Attachments**: Multi-file upload (PDF, images, Word, Excel, CSV, TXT) via detail panel. Stored in Cloudinary (prod) or local uploads (dev). `TaskAttachment` model tracks uploader, filename, size, mime type.
 - **Detail Panel**: Right-side slide-over. Order: description, subtasks, tags, attachments, comments, activity log. Tags and subtasks editable inline.
 - **System Tags**: Two toggle-pill rows in task create modal and detail panel: category tags (Fundraising, Shareholders, Patents, Legal, etc.) and institution tags (Curia, NEI, SpectraPower, etc.). Custom tags also supported. All stored in `tags[]`.
@@ -323,7 +323,7 @@ Competitive benchmarking dashboard with:
 
 ### Pipeline / CRM (March 2026)
 
-- **Contact Management**: Person and Company contacts with full detail tracking. Contacts view has All/People/Companies filter pills.
+- **Contact Management**: Person and Company contacts with full detail tracking. Contacts view has All/People/Companies underline tabs, sortable column headers (name, company, type, stage, follow-up, last contact), and filters (type, pipeline status, owner). `contactType` includes OTHER for uncategorized contacts.
 - **Pipeline Board**: Contacts ARE the pipeline items (no separate Deal/Lead entity). Kanban board with SortableJS drag-and-drop (same shared KanbanService as Tasks). "Add to Pipeline" assigns a contact to a board (Investor/Partner/Client) at the first stage with optional `pipelineTitle` (card label). Contacts with `stage=null` are not on any board. Board type switcher (Investors/Partners/Clients) uses underline tabs; view toggle (Pipeline/Contacts) uses pill toggle -- visually distinct.
 - **Stage Progressions**: Type-specific stages on Contact model: CLIENT (LEAD→WON/LOST), INVESTOR (IDENTIFIED→COMMITTED/PASSED), PARTNER (IDENTIFIED→ACTIVE/INACTIVE). Terminal stages auto-set closedAt.
 - **Activity Logging**: Timestamped activity feed on contacts (includes stage_changed, added_to_pipeline, removed_from_pipeline)

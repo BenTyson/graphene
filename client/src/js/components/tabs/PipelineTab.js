@@ -126,12 +126,26 @@ export function getPipelineTabHtml() {
           </button>
         </div>
 
-        <select x-model="pipelineFilters.ownerId" @change="loadPipelineContacts()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 mb-2 focus:ring-1 focus:ring-gray-900">
-          <option value="">All owners</option>
-          <template x-for="owner in pipelineOwners" :key="owner.id">
-            <option :value="owner.id" x-text="[owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username"></option>
-          </template>
-        </select>
+        <div class="flex items-center gap-2 mb-2">
+          <select x-model="pipelineFilters.contactType" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-gray-900">
+            <option value="">All types</option>
+            <option value="INVESTOR">Investor</option>
+            <option value="PARTNER">Partner</option>
+            <option value="CLIENT">Client</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <select x-model="pipelineFilters.onPipeline" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-gray-900">
+            <option value="">All contacts</option>
+            <option value="yes">On pipeline</option>
+            <option value="no">Not on pipeline</option>
+          </select>
+          <select x-model="pipelineFilters.ownerId" @change="loadPipelineContacts()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-gray-900">
+            <option value="">All owners</option>
+            <template x-for="owner in pipelineOwners" :key="owner.id">
+              <option :value="owner.id" x-text="[owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.username"></option>
+            </template>
+          </select>
+        </div>
       </div>
 
       <!-- Desktop Table -->
@@ -139,13 +153,25 @@ export function getPipelineTabHtml() {
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-200">
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Company</th>
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Pipeline</th>
+              <th @click="toggleContactSort('name')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Name <span x-show="pipelineContactSort.field === 'name'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
+              <th @click="toggleContactSort('company')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Company <span x-show="pipelineContactSort.field === 'company'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
+              <th @click="toggleContactSort('type')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Type <span x-show="pipelineContactSort.field === 'type'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
+              <th @click="toggleContactSort('stage')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Pipeline <span x-show="pipelineContactSort.field === 'stage'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
               <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Owner</th>
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Follow-up</th>
-              <th class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Last Contact</th>
+              <th @click="toggleContactSort('followUp')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Follow-up <span x-show="pipelineContactSort.field === 'followUp'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
+              <th @click="toggleContactSort('lastContact')" class="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 select-none">
+                Last Contact <span x-show="pipelineContactSort.field === 'lastContact'" x-text="pipelineContactSort.order === 'asc' ? '\u2191' : '\u2193'" class="text-gray-400"></span>
+              </th>
               <th class="text-right py-2 px-3 text-xs font-medium text-gray-500 uppercase"></th>
             </tr>
           </thead>

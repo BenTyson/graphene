@@ -70,7 +70,7 @@ export function getTasksTabHtml() {
       <!-- Kanban Board View -->
       <template x-if="!taskLoading || tasks.length">
         <div>
-          <div x-show="taskViewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 xl:grid-cols-4 snap-x snap-mandatory md:snap-none">
+          <div x-show="taskViewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2" :class="showArchivedTasks ? 'xl:grid-cols-5' : 'xl:grid-cols-4'" x-bind:class="showArchivedTasks ? 'xl:grid-cols-5' : 'xl:grid-cols-4'" style="scroll-snap-type: x mandatory;">
             ${['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map(status => `
               <div class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
                 <!-- Column Header -->
@@ -130,6 +130,10 @@ export function getTasksTabHtml() {
                             <span class="text-[11px] text-gray-400"
                               x-text="getSubtaskProgress(task).done + '/' + getSubtaskProgress(task).total"></span>
                           </template>
+                          <template x-if="getOverdueSubtaskCount(task)">
+                            <span class="text-[11px] text-red-500 font-medium" :title="getOverdueSubtaskCount(task) + ' overdue subtask(s)'"
+                              x-text="getOverdueSubtaskCount(task) + ' overdue'"></span>
+                          </template>
                           <template x-if="task._count?.attachments">
                             <span class="flex items-center gap-0.5 text-[11px] text-gray-400" :title="task._count.attachments + ' attachment(s)'">
                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,6 +181,46 @@ export function getTasksTabHtml() {
                 </button>
               </div>
             `).join('')}
+
+            <!-- Archived Column (conditional) -->
+            <div x-show="showArchivedTasks" class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
+              <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-gray-300"></div>
+                  <h3 class="text-sm font-semibold text-gray-700">Archived</h3>
+                  <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600"
+                    x-text="getTasksByStatus('ARCHIVED').length"></span>
+                </div>
+              </div>
+              <div id="kanban-col-ARCHIVED" data-status="ARCHIVED" class="flex-1 space-y-2 p-2 rounded-lg min-h-[100px] bg-gray-50/50">
+                <template x-for="task in getTasksByStatus('ARCHIVED')" :key="task.id">
+                  <div @click="openTaskDetail(task.id)"
+                    :data-task-id="task.id"
+                    class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group opacity-60">
+                    <div class="flex items-start gap-2 mb-2">
+                      <span :class="getPriorityBadgeClass(task.priority)"
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 mt-0.5"
+                        x-text="task.priority"></span>
+                      <p class="text-sm font-medium text-gray-900 line-clamp-2 leading-snug" x-text="task.title"></p>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+                      <select @change="updateTaskStatus(task.id, $event.target.value); $event.target.value = task.status"
+                        :value="task.status"
+                        class="w-full text-xs py-1 px-2 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-black">
+                        <option value="TODO">To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="IN_REVIEW">In Review</option>
+                        <option value="DONE">Done</option>
+                        <option value="ARCHIVED">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="getTasksByStatus('ARCHIVED').length === 0">
+                  <div class="text-center py-8 text-gray-400 text-xs">No archived tasks</div>
+                </template>
+              </div>
+            </div>
           </div>
 
           <!-- List View -->

@@ -755,6 +755,7 @@ enum ContactType {
   CLIENT
   INVESTOR
   PARTNER
+  OTHER
 }
 
 enum ContactKind {

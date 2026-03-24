@@ -175,8 +175,8 @@ router.post('/contacts', asyncHandler(async (req, res) => {
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
   }
-  if (contactType && !['CLIENT', 'INVESTOR', 'PARTNER'].includes(contactType)) {
-    return res.status(400).json({ error: 'contactType must be CLIENT, INVESTOR, or PARTNER' });
+  if (contactType && !['CLIENT', 'INVESTOR', 'PARTNER', 'OTHER'].includes(contactType)) {
+    return res.status(400).json({ error: 'contactType must be CLIENT, INVESTOR, PARTNER, or OTHER' });
   }
 
   const contact = await prisma.contact.create({

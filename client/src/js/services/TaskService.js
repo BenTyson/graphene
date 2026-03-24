@@ -210,6 +210,17 @@ class TaskService {
     }
   }
 
+  async updateSubtaskDueDate(ctx, subtaskId, date) {
+    try {
+      await API.tasks.update(subtaskId, { dueDate: date || null });
+      if (ctx.selectedTask) {
+        ctx.selectedTask = await API.tasks.getById(ctx.selectedTask.id);
+      }
+    } catch (error) {
+      console.error('Failed to update subtask due date:', error);
+    }
+  }
+
   async archiveTask(ctx, taskId) {
     try {
       await API.tasks.updateStatus(taskId, 'ARCHIVED');

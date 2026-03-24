@@ -30,6 +30,7 @@ export function getContactModalHtml() {
             <option value="INVESTOR">Investor</option>
             <option value="PARTNER">Partner</option>
             <option value="CLIENT">Client</option>
+            <option value="OTHER">Other</option>
           </select>
         </div>
 
