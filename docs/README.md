@@ -42,6 +42,7 @@ Feature-specific implementation documentation:
 - **[AI-INSIGHTS.md](features/AI-INSIGHTS.md)** - GPT-4 integration, knowledge base, document processing
 - **[NEWS-SYSTEM.md](features/NEWS-SYSTEM.md)** - RSS aggregation, summarization, filtering
 - **[NEWS-FILTERING.md](features/NEWS-FILTERING.md)** - Advanced filtering implementation details
+- **[PROFORMA-SYSTEM.md](features/PROFORMA-SYSTEM.md)** - Financial projections: assumptions editor, 7-layer calc engine, P&L outlook, charts
 - **[CHARACTERIZATION-ANALYSIS.md](features/CHARACTERIZATION-ANALYSIS.md)** - Comparison charts and analysis tools
 - **[MATERIAL-TRACKING.md](features/MATERIAL-TRACKING.md)** - Biochar, graphene, and batch tracking
 

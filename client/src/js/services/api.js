@@ -1350,6 +1350,49 @@ export const pipelineAPI = {
   }
 };
 
+// Proforma API endpoints
+export const proformaAPI = {
+  getDefaults: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/defaults`, { headers }).then(handleResponse);
+  },
+
+  getScenarios: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios`, { headers }).then(handleResponse);
+  },
+
+  getScenario: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}`, { headers }).then(handleResponse);
+  },
+
+  create: (data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  update: (id, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+
+  toggleLock: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}/lock`, { method: 'PATCH', headers }).then(handleResponse);
+  },
+
+  delete: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}`, { method: 'DELETE', headers }).then(handleResponse);
+  },
+
+  compute: (assumptions) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/compute`, { method: 'POST', headers, body: JSON.stringify({ assumptions }) }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -1369,5 +1412,6 @@ export default {
   shipment: shipmentAPI,
   users: usersAPI,
   tasks: tasksAPI,
-  pipeline: pipelineAPI
+  pipeline: pipelineAPI,
+  proforma: proformaAPI
 };

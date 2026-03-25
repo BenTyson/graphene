@@ -78,6 +78,9 @@ All reference Graphene and/or CompoundBatch by experiment/batch number string.
 - INVESTOR: excluded from Tasks and Pipeline tabs
 - **CharacterizationReference** - external benchmarks
 
+### Proforma Financial Modeling
+- **ProformaScenario** - name, description, assumptions (JSON), locked, isDefault. Links to User (creator). Assumptions drive a 7-layer calculation engine (`shared/proformaEngine.js`) producing 48-month P&L projections. SUPER_ADMIN only. See `docs/features/PROFORMA-SYSTEM.md` for full details.
+
 ### News/AI
 - **NewsArticle**, **NewsSource**, **KnowledgeDocument** - RSS aggregation + GPT-4 summarization
 - **Note:** News Feed tab is currently hidden (`x-show="false"`) but code is preserved for later reuse
@@ -120,7 +123,7 @@ Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Respon
 | Main app state | `client/src/js/app-refactored.js` |
 | HTML shell + nav | `client/index.html` |
 | API client | `client/src/js/services/api.js` |
-| Domain services | `client/src/js/services/TaskService.js`, `PipelineService.js`, `KanbanService.js`, `CRUDService.js` |
+| Domain services | `client/src/js/services/TaskService.js`, `PipelineService.js`, `KanbanService.js`, `CRUDService.js`, `ProformaService.js` |
 | Tab components | `client/src/js/components/tabs/*.js` (23 files) |
 | Modal components | `client/src/js/components/modals/*.js` (25 files) |
 | CSS entry | `client/src/styles/main.css` |
@@ -155,6 +158,7 @@ Tailwind CSS. Black primary, Bronze (#B87333) link accent. No UI library. Respon
 | /api/ai-insights | GPT-4 analysis | Global middleware |
 | /api/news | RSS articles, bookmarks | Global middleware |
 | /api/knowledge-base | Document upload + processing | Global middleware |
+| /api/proforma | Scenario CRUD, compute, lock toggle | SUPER_ADMIN only |
 | /api/data | Generic data page lookup | Global middleware |
 
 Global middleware: THIRD_PARTY blocked on POST/PUT/DELETE. GET open to all authenticated users.

@@ -876,10 +876,28 @@ model User {
   dealActivities       DealActivity[]       @relation("DealActivityUser")
   contactAttachments   ContactAttachment[]  @relation("ContactAttachmentUploader")
 
+  proformaScenarios    ProformaScenario[]   @relation("ProformaCreator")
+
   @@index([username])
   @@index([email])
   @@index([role])
   @@map("users")
+}
+
+model ProformaScenario {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  assumptions Json
+  isDefault   Boolean  @default(false) @map("is_default")
+  locked      Boolean  @default(false)
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("ProformaCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@map("proforma_scenarios")
 }
 
 model CharacterizationReference {

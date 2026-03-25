@@ -312,6 +312,20 @@ export const getUserInitials = (user, fallback = '?') => {
   return (f + l).toUpperCase() || user.username[0].toUpperCase();
 };
 
+// Currency formatting for proforma
+export const formatCurrency = (value, compact = false) => {
+  if (value == null || isNaN(value)) return '$0';
+  const abs = Math.abs(value);
+  if (compact && abs >= 1000000) return (value < 0 ? '-' : '') + '$' + (abs / 1000000).toFixed(1) + 'M';
+  if (compact && abs >= 1000) return (value < 0 ? '-' : '') + '$' + (abs / 1000).toFixed(0) + 'K';
+  return (value < 0 ? '-$' : '$') + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+};
+
+export const formatPercent = (value) => {
+  if (value == null || isNaN(value)) return '0%';
+  return (value * 100).toFixed(1) + '%';
+};
+
 // Default export with all formatters
 export default {
   formatDate,
@@ -330,5 +344,7 @@ export default {
   getRelativeDateLabel,
   getRelativeDateClass,
   getUserDisplayName,
-  getUserInitials
+  getUserInitials,
+  formatCurrency,
+  formatPercent
 };

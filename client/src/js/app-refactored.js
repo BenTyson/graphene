@@ -47,6 +47,8 @@ import { getPipelineTabHtml } from './components/tabs/PipelineTab.js';
 import { getContactModalHtml } from './components/modals/ContactModal.js';
 import { getAddToPipelineModalHtml } from './components/modals/AddToPipelineModal.js';
 import { getContactDetailPanelHtml } from './components/modals/ContactDetailPanel.js';
+import { getProformaTabHtml } from './components/tabs/ProformaTab.js';
+import proformaService from './services/ProformaService.js';
 
 // Import new components for simplified cards and modals
 import './components/cards/SimplifiedGrapheneCard.js';
@@ -125,6 +127,7 @@ window.getUserModalHtml = getUserModalHtml;
 window.getAIInsightsTabHtml = getAIInsightsTabHtml;
 
 window.getNewsTabHtml = getNewsTabHtml;
+window.getProformaTabHtml = getProformaTabHtml;
 
 // Global safe date formatting function
 window.formatDateSafe = function(dateString) {
@@ -191,7 +194,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
 
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -203,7 +206,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -421,6 +424,20 @@ window.grapheneApp = function() {
     pipelineStats: null,
     pipelineTagInput: '',
     contactAttachmentUploading: false,
+
+    // Proforma
+    proformaScenarios: [],
+    proformaScenario: null,
+    proformaAssumptions: null,
+    proformaComputed: null,
+    proformaView: 'list',
+    proformaEditorTab: 'assumptions',
+    proformaOutlookView: 'monthly',
+    proformaLoading: false,
+    proformaDirty: false,
+    proformaCollapsed: {},
+    proformaSection: 'production',
+    proformaStaffingYear: 'year0',
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -4266,6 +4283,10 @@ window.grapheneApp = function() {
           this.$nextTick(() => {
             if (this.pipelineViewMode === 'kanban') this.initPipelineKanban();
           });
+        } else if (tab === 'proforma') {
+          if (!this.proformaScenarios.length) {
+            await this.loadProformaScenarios();
+          }
         } else if (tab === 'user-management') {
           await this.loadUsers();
         } else if (tab === 'news') {
@@ -5131,10 +5152,35 @@ window.grapheneApp = function() {
     formatActivityAction(action) { return pipelineService.formatActivityAction(action); },
     getActivityIcon(action) { return pipelineService.getActivityIcon(action); },
 
+    // ── Proforma delegates ──
+    async loadProformaScenarios() { await proformaService.loadScenarios(this); },
+    async openProformaScenario(id) { await proformaService.openScenario(this, id); },
+    async createProformaScenario() { await proformaService.createScenario(this); },
+    async toggleProformaLock(id) { await proformaService.toggleLock(this, id); },
+    async deleteProformaScenario(id) { await proformaService.deleteScenario(this, id); },
+    async saveProformaScenario() { await proformaService.saveScenario(this); },
+    proformaRecompute() { proformaService.recompute(this); },
+    proformaBackToList() { proformaService.backToList(this); },
+    proformaMarkDirty() { proformaService.markDirty(this); },
+    addProformaMachine() { proformaService.addMachine(this); },
+    removeProformaMachine(index) { proformaService.removeMachine(this, index); },
+    addProformaRaise() { proformaService.addRaise(this); },
+    removeProformaRaise(index) { proformaService.removeRaise(this, index); },
+    normalizeProformaQDist(arr) { proformaService.normalizeQDist(arr); proformaService.recompute(this); },
+    toggleProformaSalaryMode(yearKey, role) { proformaService.toggleSalaryMode(this, yearKey, role); },
+    addProformaMachinePayment(mi) { proformaService.addMachinePayment(this, mi); },
+    removeProformaMachinePayment(mi, pi) { proformaService.removeMachinePayment(this, mi, pi); },
+    addProformaFteRole() { proformaService.addFteRole(this); },
+    removeProformaFteRole(index) { proformaService.removeFteRole(this, index); },
+    getProformaOutlookRows() { return proformaService.getOutlookRows(this); },
+    getProformaColumns() { return proformaService.getColumnLabels(this); },
+    renderProformaCharts() { proformaService.renderCharts(this); },
+    getProformaTabHtml() { return getProformaTabHtml(); },
+
     // Redirect restricted users away from tabs they can't access
     enforceThirdPartyRestrictions() {
       if (this.isThirdParty()) {
-        const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management', 'tasks', 'pipeline'];
+        const restrictedTabs = ['dashboard', 'news', 'ai-insights', 'shipments', 'user-management', 'tasks', 'pipeline', 'proforma'];
         if (restrictedTabs.includes(this.activeTab)) {
           this.activeTab = 'graphene';
         }
@@ -5208,7 +5254,7 @@ window.grapheneApp = function() {
         'graphene': 'Graphene', 'biochar': 'Biochar',
         'compound-batches': 'Compound Batches', 'micronization': 'Micronization',
         'shipments': 'Shipments', 'analysis': 'Analysis',
-        'ai-insights': 'Insights', 'tasks': 'Tasks', 'pipeline': 'Pipeline',
+        'ai-insights': 'Insights', 'tasks': 'Tasks', 'pipeline': 'Pipeline', 'proforma': 'Proforma',
         'user-management': 'User Management',
         'test-bet': 'BET', 'test-conductivity': 'Conductivity',
         'test-raman': 'RAMAN', 'test-tem': 'TEM',
