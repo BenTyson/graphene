@@ -29,14 +29,11 @@ export function getTaskDetailPanelHtml() {
           <!-- Header -->
           <div class="shrink-0 border-b border-gray-200 px-6 py-4">
             <div class="flex items-start justify-between gap-3">
-              <h2 class="text-lg font-semibold text-gray-900 flex-1" x-text="selectedTask.title"></h2>
+              <input type="text" :value="selectedTask.title"
+                @blur="$event.target.value.trim() && $event.target.value.trim() !== selectedTask.title ? updateTaskInline(selectedTask.id, 'title', $event.target.value.trim()) : ($event.target.value = selectedTask.title)"
+                @keydown.enter.prevent="$event.target.blur()"
+                class="flex-1 text-lg font-semibold text-gray-900 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-black rounded-md px-2 py-1 -mx-2 -my-1">
               <div class="flex items-center gap-1 shrink-0">
-                <button @click="openEditTaskForm(selectedTask)"
-                  class="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100" title="Edit">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </button>
                 <button x-show="selectedTask.status !== 'ARCHIVED'" @click="archiveTask(selectedTask.id)"
                   class="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100" title="Archive">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,12 +117,14 @@ export function getTaskDetailPanelHtml() {
             </div>
 
             <!-- Description -->
-            <template x-if="selectedTask.description">
-              <div class="px-6 py-4 border-b border-gray-100">
-                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Description</h4>
-                <p class="text-sm text-gray-700 whitespace-pre-wrap" x-text="selectedTask.description"></p>
-              </div>
-            </template>
+            <div class="px-6 py-4 border-b border-gray-100">
+              <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Description</h4>
+              <textarea :value="selectedTask.description || ''"
+                @blur="$event.target.value !== (selectedTask.description || '') && updateTaskInline(selectedTask.id, 'description', $event.target.value)"
+                placeholder="Add a description..."
+                rows="3"
+                class="w-full text-sm text-gray-700 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-black rounded-md p-2 resize-y"></textarea>
+            </div>
 
             <!-- Subtasks -->
             <div class="px-6 py-4 border-b border-gray-100">
