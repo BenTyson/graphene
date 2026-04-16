@@ -172,14 +172,21 @@ class TaskService {
   }
 
   async updateTaskInline(ctx, taskId, field, value) {
+    const isSelected = ctx.selectedTask?.id === taskId;
+    const previousValue = isSelected ? ctx.selectedTask[field] : undefined;
+    if (isSelected) ctx.selectedTask[field] = value;
     try {
       await API.tasks.update(taskId, { [field]: value });
-      await this.loadTasks(ctx);
       if (ctx.selectedTask?.id === taskId) {
         ctx.selectedTask = await API.tasks.getById(taskId);
       }
+      await this.loadTasks(ctx);
     } catch (error) {
       console.error('Failed to update task:', error);
+      if (isSelected && ctx.selectedTask?.id === taskId) {
+        ctx.selectedTask[field] = previousValue;
+      }
+      alert('Failed to save change: ' + (error.message || 'Unknown error'));
     }
   }
 

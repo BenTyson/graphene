@@ -104,7 +104,8 @@ export function getTaskDetailPanelHtml() {
                 <div>
                   <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                   <input type="date" :value="selectedTask.dueDate || ''"
-                    @change="updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
+                    @change="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
+                    @input="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
                     class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
                 </div>
               </div>
