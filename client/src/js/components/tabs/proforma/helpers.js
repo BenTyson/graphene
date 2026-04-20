@@ -2,6 +2,8 @@
 // Proforma Shared Helpers
 // ═══════════════════════════════════════════════════════════════
 
+import { isLocked } from '@shared/proformaLockedFields.js';
+
 export const HELP = {
   'production.initialBiocharUseG': 'Grams of biochar per batch loaded into the kiln',
   'production.initialKOHG': 'Grams of KOH (potassium hydroxide) per batch',
@@ -31,17 +33,29 @@ export const HELP = {
   'technical.market.evCagr': 'Year-over-year growth multiplier (e.g., 1.20 = 20% growth)',
 };
 
-// Enhanced number input with optional help text, unit suffix, and computed indicator
+// Enhanced number input with optional help text, unit suffix, and computed indicator.
+// If the field's dotted path is in shared/proformaLockedFields.js, it renders
+// disabled with a red-tinted "locked" style (derived from formula, don't edit).
 export function numInput(label, path, opts = {}) {
   const { step = 1, help, unit, indicator, wide } = opts;
   const widthClass = wide ? 'sm:col-span-2' : '';
+  const locked = isLocked(path);
+  const inputClass = locked
+    ? 'w-full text-sm border rounded-md px-2.5 py-1.5 font-mono bg-red-50 border-red-200 text-red-400 cursor-not-allowed'
+    : 'w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-black focus:border-black font-mono';
+  const inputAttrs = locked
+    ? `disabled title="Locked — derived from formula, edit in the source spreadsheet"`
+    : `@input="${path} = +$event.target.value; proformaRecompute()"`;
+  const lockIcon = locked
+    ? `<svg class="inline w-3 h-3 ml-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>`
+    : '';
   return `
     <div class="${widthClass}">
-      <label class="block text-[11px] font-medium text-gray-500 mb-1">${label}${unit ? ` <span class="text-gray-400 font-normal">(${unit})</span>` : ''}</label>
+      <label class="block text-[11px] font-medium text-gray-500 mb-1">${label}${unit ? ` <span class="text-gray-400 font-normal">(${unit})</span>` : ''}${lockIcon}</label>
       <input type="number" step="${step}"
              :value="${path}"
-             @input="${path} = +$event.target.value; proformaRecompute()"
-             class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-black focus:border-black font-mono">
+             ${inputAttrs}
+             class="${inputClass}">
       ${indicator ? `<span class="block text-[10px] text-gray-400 font-mono mt-0.5" x-text="${indicator}"></span>` : ''}
       ${help ? `<span class="block text-[10px] text-gray-400 italic mt-0.5">${help}</span>` : ''}
     </div>
