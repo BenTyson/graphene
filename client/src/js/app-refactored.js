@@ -426,6 +426,7 @@ window.grapheneApp = function() {
     pipelineLoading: false,
     pipelineStats: null,
     pipelineTagInput: '',
+    contactDetailTagInput: '',
     contactAttachmentUploading: false,
 
     // Proforma
