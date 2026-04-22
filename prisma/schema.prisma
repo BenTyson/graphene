@@ -962,6 +962,9 @@ model Task {
   activities  TaskActivity[]
   attachments TaskAttachment[]
 
+  blockedBy TaskDependency[] @relation("TaskBlockedBy")
+  blocking  TaskDependency[] @relation("TaskBlocking")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -973,6 +976,20 @@ model Task {
   @@index([dueDate])
   @@index([status, position])
   @@map("tasks")
+}
+
+model TaskDependency {
+  id             String   @id @default(cuid())
+  blockingTaskId String   @map("blocking_task_id")
+  blockedTaskId  String   @map("blocked_task_id")
+  blockingTask   Task     @relation("TaskBlocking", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  blockedTask    Task     @relation("TaskBlockedBy", fields: [blockedTaskId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([blockingTaskId, blockedTaskId])
+  @@index([blockedTaskId])
+  @@index([blockingTaskId])
+  @@map("task_dependencies")
 }
 
 model TaskComment {

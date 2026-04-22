@@ -155,10 +155,32 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const tasks = await prisma.task.findMany(queryOptions);
 
-  // Convert dates
+  // Blocker counts for all tasks in a single pair of aggregations
+  const taskIds = tasks.map(t => t.id);
+  const [totalCounts, incompleteCounts] = taskIds.length === 0 ? [[], []] : await Promise.all([
+    prisma.taskDependency.groupBy({
+      by: ['blockedTaskId'],
+      where: { blockedTaskId: { in: taskIds } },
+      _count: true
+    }),
+    prisma.taskDependency.groupBy({
+      by: ['blockedTaskId'],
+      where: {
+        blockedTaskId: { in: taskIds },
+        blockingTask: { status: { notIn: ['DONE', 'ARCHIVED'] } }
+      },
+      _count: true
+    })
+  ]);
+  const totalByTask = Object.fromEntries(totalCounts.map(c => [c.blockedTaskId, c._count]));
+  const incompleteByTask = Object.fromEntries(incompleteCounts.map(c => [c.blockedTaskId, c._count]));
+
+  // Convert dates + attach blocker counts
   const result = tasks.map(t => ({
     ...t,
-    dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null
+    dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null,
+    blockerCount: totalByTask[t.id] || 0,
+    incompleteBlockerCount: incompleteByTask[t.id] || 0
   }));
 
   res.json(result);
@@ -232,11 +254,28 @@ router.get('/:id', asyncHandler(async (req, res) => {
         orderBy: { createdAt: 'desc' },
         take: 50
       },
+      blockedBy: {
+        include: {
+          blockingTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      },
+      blocking: {
+        include: {
+          blockedTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      },
       _count: { select: { subtasks: true, comments: true, attachments: true } }
     }
   });
 
   if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  const blockerCount = task.blockedBy.length;
+  const incompleteBlockerCount = task.blockedBy.filter(
+    d => !['DONE', 'ARCHIVED'].includes(d.blockingTask.status)
+  ).length;
 
   res.json({
     ...task,
@@ -244,7 +283,9 @@ router.get('/:id', asyncHandler(async (req, res) => {
     subtasks: task.subtasks.map(s => ({
       ...s,
       dueDate: s.dueDate ? s.dueDate.toISOString().split('T')[0] : null
-    }))
+    })),
+    blockerCount,
+    incompleteBlockerCount
   });
 }));
 
@@ -552,6 +593,92 @@ router.delete('/:id/attachments/:attachmentId', asyncHandler(async (req, res) =>
   await logActivity(prisma, {
     taskId: id, userId, action: 'attachment_removed',
     fromValue: attachment.fileName
+  });
+
+  res.json({ success: true });
+}));
+
+// POST /api/tasks/:id/dependencies - add "blocked by" link (blockingTaskId blocks :id)
+router.post('/:id/dependencies', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { id } = req.params;
+  const { blockingTaskId } = req.body;
+
+  if (!blockingTaskId) return res.status(400).json({ error: 'blockingTaskId is required' });
+  if (blockingTaskId === id) return res.status(400).json({ error: 'A task cannot block itself' });
+
+  const [blockedTask, blockingTask] = await Promise.all([
+    prisma.task.findUnique({ where: { id }, select: { id: true, title: true } }),
+    prisma.task.findUnique({ where: { id: blockingTaskId }, select: { id: true, title: true } })
+  ]);
+  if (!blockedTask || !blockingTask) return res.status(404).json({ error: 'Task not found' });
+
+  // Cycle check: BFS from :id forward along blocking edges. If we can reach blockingTaskId,
+  // then blockingTaskId already depends (transitively) on :id, and adding this link would cycle.
+  const visited = new Set([id]);
+  let frontier = [id];
+  for (let depth = 0; depth < 200 && frontier.length > 0; depth++) {
+    const edges = await prisma.taskDependency.findMany({
+      where: { blockingTaskId: { in: frontier } },
+      select: { blockedTaskId: true }
+    });
+    const next = [];
+    for (const e of edges) {
+      if (e.blockedTaskId === blockingTaskId) {
+        return res.status(400).json({ error: 'This link would create a circular dependency' });
+      }
+      if (!visited.has(e.blockedTaskId)) {
+        visited.add(e.blockedTaskId);
+        next.push(e.blockedTaskId);
+      }
+    }
+    frontier = next;
+  }
+
+  try {
+    const link = await prisma.taskDependency.create({
+      data: { blockedTaskId: id, blockingTaskId },
+      include: {
+        blockingTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+      }
+    });
+    await logActivity(prisma, {
+      taskId: id, userId, action: 'dependency_added', toValue: blockingTask.title
+    });
+    res.status(201).json(link);
+  } catch (err) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ error: 'This dependency already exists' });
+    }
+    throw err;
+  }
+}));
+
+// DELETE /api/tasks/:id/dependencies/:linkId - remove a dependency link
+router.delete('/:id/dependencies/:linkId', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { id, linkId } = req.params;
+
+  const link = await prisma.taskDependency.findUnique({
+    where: { id: linkId },
+    include: {
+      blockingTask: { select: { title: true } },
+      blockedTask: { select: { title: true } }
+    }
+  });
+  if (!link) return res.status(404).json({ error: 'Dependency link not found' });
+  if (link.blockedTaskId !== id && link.blockingTaskId !== id) {
+    return res.status(400).json({ error: 'Dependency link does not belong to this task' });
+  }
+
+  await prisma.taskDependency.delete({ where: { id: linkId } });
+
+  // Record on whichever side the request came from
+  const otherTitle = link.blockedTaskId === id ? link.blockingTask.title : link.blockedTask.title;
+  await logActivity(prisma, {
+    taskId: id, userId, action: 'dependency_removed', fromValue: otherTitle
   });
 
   res.json({ success: true });

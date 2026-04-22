@@ -1253,6 +1253,20 @@ export const tasksAPI = {
   getStats: () => {
     const headers = { ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/tasks/stats`, { headers }).then(handleResponse);
+  },
+
+  addDependency: (taskId, blockingTaskId) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/dependencies`, {
+      method: 'POST', headers, body: JSON.stringify({ blockingTaskId })
+    }).then(handleResponse);
+  },
+
+  removeDependency: (taskId, linkId) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${taskId}/dependencies/${linkId}`, {
+      method: 'DELETE', headers
+    }).then(handleResponse);
   }
 };
 

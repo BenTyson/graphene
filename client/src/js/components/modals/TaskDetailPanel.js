@@ -181,6 +181,134 @@ export function getTaskDetailPanelHtml() {
               </div>
             </div>
 
+            <!-- Blocked by -->
+            <div class="px-6 py-4 border-b border-gray-100">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blocked by</h4>
+                  <template x-if="selectedTask.blockedBy?.length">
+                    <span class="text-[10px] text-gray-400" x-text="selectedTask.blockedBy.length"></span>
+                  </template>
+                </div>
+                <button @click="openDepPicker('blockedBy')"
+                  class="text-xs text-gray-500 hover:text-gray-700 font-medium">+ Add</button>
+              </div>
+
+              <div class="space-y-1">
+                <template x-for="dep in selectedTask.blockedBy || []" :key="dep.id">
+                  <div class="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 group">
+                    <span class="inline-block w-2 h-2 rounded-full shrink-0"
+                      :class="dep.blockingTask.status === 'DONE' ? 'bg-green-500' : dep.blockingTask.status === 'ARCHIVED' ? 'bg-gray-300' : 'bg-red-400'"></span>
+                    <button type="button" @click="openTaskDetail(dep.blockingTask.id)"
+                      class="text-sm flex-1 text-left truncate hover:text-gray-900"
+                      :class="['DONE','ARCHIVED'].includes(dep.blockingTask.status) ? 'text-gray-400 line-through' : 'text-gray-700'"
+                      x-text="dep.blockingTask.title"></button>
+                    <span class="text-[10px] text-gray-400 uppercase tracking-wide"
+                      x-text="dep.blockingTask.status === 'IN_PROGRESS' ? 'in progress' : dep.blockingTask.status === 'IN_REVIEW' ? 'in review' : dep.blockingTask.status.toLowerCase()"></span>
+                    <button @click="unlinkDependency(selectedTask.id, dep.id)"
+                      class="p-1 text-gray-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-opacity" title="Remove">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </template>
+                <template x-if="!selectedTask.blockedBy?.length && depPickerOpenFor !== 'blockedBy'">
+                  <p class="text-xs text-gray-400 py-2">None</p>
+                </template>
+              </div>
+
+              <!-- Picker -->
+              <template x-if="depPickerOpenFor === 'blockedBy'">
+                <div class="mt-2 border border-gray-200 rounded-md p-2 bg-gray-50">
+                  <input type="text" x-model="depPickerQuery"
+                    @input.debounce.200ms="searchDependencyCandidates(depPickerQuery, 'blockedBy')"
+                    placeholder="Search tasks..." autofocus
+                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                  <div class="mt-2 space-y-0.5 max-h-48 overflow-y-auto">
+                    <template x-for="result in depPickerResults" :key="result.id">
+                      <button type="button"
+                        @click="linkDependency(selectedTask.id, result.id); closeDepPicker()"
+                        class="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-white flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wide w-16 shrink-0"
+                          x-text="result.status === 'IN_PROGRESS' ? 'in progress' : result.status === 'IN_REVIEW' ? 'in review' : result.status.toLowerCase()"></span>
+                        <span class="text-gray-700 truncate" x-text="result.title"></span>
+                      </button>
+                    </template>
+                    <template x-if="depPickerQuery && !depPickerResults.length">
+                      <p class="text-xs text-gray-400 px-2 py-1">No matches</p>
+                    </template>
+                  </div>
+                  <div class="flex justify-end mt-2">
+                    <button type="button" @click="closeDepPicker()"
+                      class="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Blocking -->
+            <div class="px-6 py-4 border-b border-gray-100">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blocking</h4>
+                  <template x-if="selectedTask.blocking?.length">
+                    <span class="text-[10px] text-gray-400" x-text="selectedTask.blocking.length"></span>
+                  </template>
+                </div>
+                <button @click="openDepPicker('blocking')"
+                  class="text-xs text-gray-500 hover:text-gray-700 font-medium">+ Add</button>
+              </div>
+
+              <div class="space-y-1">
+                <template x-for="dep in selectedTask.blocking || []" :key="dep.id">
+                  <div class="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 group">
+                    <span class="inline-block w-2 h-2 rounded-full shrink-0"
+                      :class="dep.blockedTask.status === 'DONE' ? 'bg-green-500' : dep.blockedTask.status === 'ARCHIVED' ? 'bg-gray-300' : 'bg-gray-400'"></span>
+                    <button type="button" @click="openTaskDetail(dep.blockedTask.id)"
+                      class="text-sm flex-1 text-left truncate hover:text-gray-900"
+                      :class="['DONE','ARCHIVED'].includes(dep.blockedTask.status) ? 'text-gray-400 line-through' : 'text-gray-700'"
+                      x-text="dep.blockedTask.title"></button>
+                    <span class="text-[10px] text-gray-400 uppercase tracking-wide"
+                      x-text="dep.blockedTask.status === 'IN_PROGRESS' ? 'in progress' : dep.blockedTask.status === 'IN_REVIEW' ? 'in review' : dep.blockedTask.status.toLowerCase()"></span>
+                    <button @click="unlinkDependency(selectedTask.id, dep.id)"
+                      class="p-1 text-gray-300 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition-opacity" title="Remove">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </template>
+                <template x-if="!selectedTask.blocking?.length && depPickerOpenFor !== 'blocking'">
+                  <p class="text-xs text-gray-400 py-2">None</p>
+                </template>
+              </div>
+
+              <!-- Picker -->
+              <template x-if="depPickerOpenFor === 'blocking'">
+                <div class="mt-2 border border-gray-200 rounded-md p-2 bg-gray-50">
+                  <input type="text" x-model="depPickerQuery"
+                    @input.debounce.200ms="searchDependencyCandidates(depPickerQuery, 'blocking')"
+                    placeholder="Search tasks..." autofocus
+                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-black">
+                  <div class="mt-2 space-y-0.5 max-h-48 overflow-y-auto">
+                    <template x-for="result in depPickerResults" :key="result.id">
+                      <button type="button"
+                        @click="linkDependency(result.id, selectedTask.id); closeDepPicker()"
+                        class="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-white flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wide w-16 shrink-0"
+                          x-text="result.status === 'IN_PROGRESS' ? 'in progress' : result.status === 'IN_REVIEW' ? 'in review' : result.status.toLowerCase()"></span>
+                        <span class="text-gray-700 truncate" x-text="result.title"></span>
+                      </button>
+                    </template>
+                    <template x-if="depPickerQuery && !depPickerResults.length">
+                      <p class="text-xs text-gray-400 px-2 py-1">No matches</p>
+                    </template>
+                  </div>
+                  <div class="flex justify-end mt-2">
+                    <button type="button" @click="closeDepPicker()"
+                      class="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
             <!-- Tags -->
             <div class="px-6 py-3 border-b border-gray-100">
               <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Tags</label>
@@ -346,6 +474,8 @@ export function getTaskDetailPanelHtml() {
                         activity.action === 'edited' ? ' edited the title' :
                         activity.action === 'attachment_added' ? ' attached ' + (activity.toValue || 'a file') :
                         activity.action === 'attachment_removed' ? ' removed ' + (activity.fromValue || 'an attachment') :
+                        activity.action === 'dependency_added' ? ' linked a blocker: ' + (activity.toValue || '') :
+                        activity.action === 'dependency_removed' ? ' unlinked blocker: ' + (activity.fromValue || '') :
                         ' ' + activity.action
                       "></span>
                       <span class="text-gray-400 ml-1" x-text="new Date(activity.createdAt).toLocaleDateString()"></span>
