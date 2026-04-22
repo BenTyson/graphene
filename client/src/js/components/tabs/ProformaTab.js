@@ -1,5 +1,5 @@
 import { formatCurrency, formatPercent } from '../../utils/formatters.js';
-import { metricsBanner, sectionNav } from './proforma/helpers.js';
+import { metricsAndNav } from './proforma/cards.js';
 import { getProductionSection } from './proforma/ProductionSection.js';
 import { getRevenueSection } from './proforma/RevenueSection.js';
 import { getCostsSection } from './proforma/CostsSection.js';
@@ -23,10 +23,17 @@ export function getProformaTabHtml() {
             <p class="text-sm text-gray-500" x-show="proformaScenarios.length">
               <span x-text="proformaScenarios.length"></span> scenario(s)
             </p>
-            <button @click="createProformaScenario()"
-                    class="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
-              New Scenario
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="createProformaDemoScenario()"
+                      x-show="!proformaScenarios.some(s => s.name === 'Demo Scenario')"
+                      class="px-3 py-2 border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                Try Demo Scenario
+              </button>
+              <button @click="createProformaScenario()"
+                      class="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
+                New Scenario
+              </button>
+            </div>
           </div>
 
           <!-- Loading -->
@@ -38,21 +45,32 @@ export function getProformaTabHtml() {
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
             </svg>
             <p class="text-gray-500 text-sm">No scenarios yet</p>
-            <button @click="createProformaScenario()"
-                    class="mt-3 text-sm text-gray-700 underline hover:text-gray-900">
-              Create your first scenario
-            </button>
+            <div class="mt-4 flex items-center justify-center gap-3">
+              <button @click="createProformaScenario()"
+                      class="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
+                Create your first scenario
+              </button>
+              <button @click="createProformaDemoScenario()"
+                      class="px-4 py-2 border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                Try Demo Scenario
+              </button>
+            </div>
           </div>
 
           <!-- Scenario cards -->
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" x-show="!proformaLoading && proformaScenarios.length > 0">
             <template x-for="s in proformaScenarios" :key="s.id">
               <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-300 cursor-pointer transition-colors"
+                   :class="s.name === 'Demo Scenario' ? 'border-l-4 border-l-indigo-400' : ''"
                    @click="openProformaScenario(s.id)">
                 <div class="flex items-start justify-between">
                   <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
                       <span x-text="s.name"></span>
+                      <span x-show="s.name === 'Demo Scenario'"
+                            class="text-[9px] font-semibold tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">
+                        Demo
+                      </span>
                       <svg x-show="s.locked" class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
                       </svg>
@@ -108,6 +126,10 @@ export function getProformaTabHtml() {
                    :disabled="proformaScenario.locked"
                    :class="proformaScenario.locked ? 'text-gray-500 cursor-not-allowed' : 'text-gray-900 hover:border-gray-300 focus:border-gray-900'"
                    class="text-lg font-semibold border-0 border-b border-transparent focus:ring-0 px-0 py-1 bg-transparent flex-1 min-w-[200px]">
+            <span x-show="proformaScenario.name === 'Demo Scenario'"
+                  class="text-[10px] font-semibold tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">
+              Demo
+            </span>
             <div class="flex items-center gap-2 ml-auto">
               <span x-show="proformaScenario.locked" class="text-xs text-gray-400 font-medium flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -116,6 +138,16 @@ export function getProformaTabHtml() {
                 Locked
               </span>
               <span x-show="proformaDirty && !proformaScenario.locked" class="text-xs text-amber-600 font-medium">Unsaved</span>
+              <button x-show="proformaScenario.name === 'Demo Scenario'"
+                      @click="cloneProformaToReal()"
+                      class="px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                Clone to real scenario
+              </button>
+              <button x-show="proformaDirty && !proformaScenario.locked"
+                      @click="resetProformaToBaseline()"
+                      class="px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                Reset
+              </button>
               <button @click="saveProformaScenario()"
                       :disabled="proformaLoading || proformaScenario.locked"
                       class="px-4 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
@@ -139,22 +171,30 @@ export function getProformaTabHtml() {
           <div x-show="proformaEditorTab === 'assumptions'"
                :class="proformaScenario.locked ? 'opacity-60 pointer-events-none' : ''">
 
-            <!-- Metrics Banner -->
-            ${metricsBanner()}
+            <!-- Sticky combined header: metric tiles + journey bar -->
+            ${metricsAndNav()}
 
-            <!-- Section Nav + Content -->
-            <div class="flex gap-0">
-              ${sectionNav()}
-              <div class="flex-1 lg:pl-4 min-w-0">
-                <div x-show="proformaSection === 'production'">${getProductionSection()}</div>
-                <div x-show="proformaSection === 'revenue'">${getRevenueSection()}</div>
-                <div x-show="proformaSection === 'costs'">${getCostsSection()}</div>
-                <div x-show="proformaSection === 'operations'">${getOperationsSection()}</div>
-                <div x-show="proformaSection === 'machines'">${getMachinesSection()}</div>
-                <div x-show="proformaSection === 'capital'">${getCapitalSection()}</div>
-                <div x-show="proformaSection === 'technical'">${getTechnicalSection()}</div>
-              </div>
+            <!-- Active section -->
+            <div class="min-w-0">
+              <div x-show="proformaSection === 'revenue'">${getRevenueSection()}</div>
+              <div x-show="proformaSection === 'production'">${getProductionSection()}</div>
+              <div x-show="proformaSection === 'costs'">${getCostsSection()}</div>
+              <div x-show="proformaSection === 'operations'">${getOperationsSection()}</div>
+              <div x-show="proformaSection === 'machines'">${getMachinesSection()}</div>
+              <div x-show="proformaSection === 'capital'">${getCapitalSection()}</div>
             </div>
+
+            <!-- Technical reference accordion: collapsed by default, always at the bottom -->
+            <details class="mt-16 border-t border-gray-200 pt-6 max-w-3xl">
+              <summary class="cursor-pointer flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 select-none">
+                <svg class="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+                <span>Advanced: Technical Reference</span>
+                <span class="text-[11px] text-gray-400 font-normal">Battery chemistry, market sizing, conversion factors</span>
+              </summary>
+              <div class="mt-6">${getTechnicalSection()}</div>
+            </details>
           </div>
 
           <!-- ─── OUTLOOK SUB-TAB ─── -->

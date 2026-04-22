@@ -1,120 +1,149 @@
-import { numInput, card, HELP } from './helpers.js';
+import { sectionHero, conversationalCard, timelineCard, advancedReveal } from './cards.js';
 
-function _revenueSegment(title, segmentKey, revenueComputedKey) {
-  const yearMap = { year1: 1, year2: 2, year3: 3 };
+// Revenue is the biggest strategic lever in the proforma. Cards are ordered
+// so the highest-impact decisions (Y3 market share) surface first, with
+// ramp-up timelines and pricing grouped logically. Quarterly distribution
+// weights (qDist) stay out of sight under the advanced reveal — they rarely
+// change in a strategy meeting but accuracy still depends on them.
 
-  return card(title, `
-    <div class="space-y-4">
-      ${numInput('Start Month', 'proformaAssumptions.revenue.' + segmentKey + '.startMonth', {
-        help: HELP['revenue.startMonth']
-      })}
-
-      <div>
-        <label class="block text-[11px] font-medium text-gray-500 mb-2">Market Share by Year</label>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          ${['year1', 'year2', 'year3'].map(yr => `
-            <div class="border border-gray-100 rounded-lg p-3">
-              <span class="text-xs font-semibold text-gray-600">${yr.replace('year', 'Y')}</span>
-              <div class="mt-2">
-                ${numInput('Market Share %', 'proformaAssumptions.revenue.' + segmentKey + '.' + yr + '.marketSharePct', {
-                  step: 0.001,
-                  indicator: `proformaComputed ? '\u2192 ' + window._pfFmtC(proformaComputed.yearly.${revenueComputedKey} ? proformaComputed.yearly.${revenueComputedKey}[${yearMap[yr]}] : 0, true) + '/yr' : ''`
-                })}
-              </div>
+function _qDistBlock(segmentKey, segmentLabel) {
+  return `
+    <div class="rounded-2xl border border-gray-200 bg-gray-50/60 p-5">
+      <h4 class="text-sm font-semibold text-gray-900 mb-1">${segmentLabel} — quarterly shape</h4>
+      <p class="text-xs text-gray-500 mb-4">Weights must sum to 1.0 for each year. Click Normalize to auto-balance.</p>
+      <div class="space-y-2.5">
+        ${['year1', 'year2', 'year3'].map(yr => `
+          <div class="flex items-center gap-3">
+            <span class="text-[11px] font-semibold text-gray-500 w-6 shrink-0">${yr.replace('year', 'Y')}</span>
+            <div class="grid grid-cols-4 gap-2 flex-1">
+              <template x-for="qi in [0,1,2,3]" :key="qi">
+                <div class="flex flex-col items-center">
+                  <span class="text-[10px] text-gray-400 font-mono" x-text="'Q' + (qi+1)"></span>
+                  <input type="number" step="0.01"
+                         :value="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist[qi]"
+                         @input="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist[qi] = +$event.target.value; proformaRecompute()"
+                         class="w-full text-center text-xs border-gray-200 rounded-md px-1.5 py-1 font-mono focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+                </div>
+              </template>
             </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-medium text-gray-500 mb-2">Q Distribution</label>
-        <span class="block text-[10px] text-gray-400 italic mb-2">${HELP['revenue.qDist']}</span>
-        <div class="space-y-2">
-          ${['year1', 'year2', 'year3'].map(yr => `
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-medium text-gray-500 w-6 shrink-0">${yr.replace('year', 'Y')}</span>
-              <div class="grid grid-cols-4 gap-1.5 flex-1">
-                <template x-for="(qv, qi) in proformaAssumptions.revenue.${segmentKey}.${yr}.qDist" :key="qi">
-                  <div>
-                    <span class="text-[10px] text-gray-400" x-text="'Q' + (qi+1)"></span>
-                    <input type="number" step="0.01"
-                           :value="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist[qi]"
-                           @input="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist[qi] = +$event.target.value; proformaRecompute()"
-                           class="w-full text-xs border-gray-300 rounded px-1.5 py-1 font-mono focus:ring-1 focus:ring-black focus:border-black">
-                  </div>
-                </template>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                <span class="text-[10px] font-mono w-10 text-right"
-                      :class="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) < 0.001 ? 'text-green-600' : 'text-red-500'"
-                      x-text="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0).toFixed(3)"></span>
-                <template x-if="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) < 0.001">
-                  <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                  </svg>
-                </template>
-                <template x-if="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) >= 0.001">
-                  <button @click="normalizeProformaQDist(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist)"
-                          class="text-[10px] text-red-500 hover:text-red-700 underline whitespace-nowrap">
-                    Normalize
-                  </button>
-                </template>
-              </div>
+            <div class="flex items-center gap-2 shrink-0 w-28 justify-end">
+              <span class="text-[11px] font-mono tabular-nums"
+                    :class="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) < 0.001 ? 'text-green-600' : 'text-red-500'"
+                    x-text="proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0).toFixed(3)"></span>
+              <template x-if="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) < 0.001">
+                <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+              </template>
+              <template x-if="Math.abs(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist.reduce((a,b) => a+b, 0) - 1.0) >= 0.001">
+                <button @click="normalizeProformaQDist(proformaAssumptions.revenue.${segmentKey}.${yr}.qDist)"
+                        class="text-[11px] text-gray-700 hover:text-gray-900 underline">
+                  Normalize
+                </button>
+              </template>
             </div>
-          `).join('')}
-        </div>
+          </div>
+        `).join('')}
       </div>
     </div>
-  `);
+  `;
 }
 
 export function getRevenueSection() {
+  const y3Rev = `window._pfFmtC(proformaComputed?.metrics?.y3Revenue || 0, true)`;
+  const y3RevDelta = { label: 'Y3 revenue', expr: y3Rev, deltaKey: 'y3Revenue' };
+  const breakEvenImpact = {
+    label: 'Break-even',
+    expr: `proformaComputed?.metrics?.breakEvenMonth >= 0 ? 'Month ' + proformaComputed.metrics.breakEvenMonth : 'N/A'`,
+    deltaKey: 'breakEvenMonth'
+  };
+
   return `
-    <div class="space-y-4">
+    <section class="max-w-3xl">
+      ${sectionHero(
+        'How big do we think we can get?',
+        'Two segments, three years. Market share compounds everything downstream — this is where the conversation starts.'
+      )}
 
-      ${card('Pricing', `
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="text-gray-500">
-                <th class="text-left py-1.5 pr-2 font-medium"></th>
-                <template x-for="yr in ['year0','year1','year2','year3']" :key="yr">
-                  <th class="text-center py-1.5 px-1.5 font-medium" x-text="yr.replace('year','Y')"></th>
-                </template>
-              </tr>
-            </thead>
-            <tbody class="font-mono">
-              <tr class="border-t border-gray-100">
-                <td class="py-1.5 pr-2 text-gray-600 font-medium font-sans">Supercap ($/kg)</td>
-                <template x-for="yr in ['year0','year1','year2','year3']" :key="yr">
-                  <td class="py-1 px-1">
-                    <input type="number"
-                           :value="proformaAssumptions.pricing.supercapPerKg[yr]"
-                           @input="proformaAssumptions.pricing.supercapPerKg[yr] = +$event.target.value; proformaRecompute()"
-                           class="w-full text-right text-xs border-gray-300 rounded px-1.5 py-1 font-mono focus:ring-1 focus:ring-black focus:border-black">
-                  </td>
-                </template>
-              </tr>
-              <tr class="border-t border-gray-100">
-                <td class="py-1.5 pr-2 text-gray-600 font-medium font-sans">Carbon Black ($/kg)</td>
-                <template x-for="yr in ['year0','year1','year2','year3']" :key="yr">
-                  <td class="py-1 px-1">
-                    <input type="number"
-                           :value="proformaAssumptions.pricing.carbonBlackPerKg[yr]"
-                           @input="proformaAssumptions.pricing.carbonBlackPerKg[yr] = +$event.target.value; proformaRecompute()"
-                           class="w-full text-right text-xs border-gray-300 rounded px-1.5 py-1 font-mono focus:ring-1 focus:ring-black focus:border-black">
-                  </td>
-                </template>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="space-y-4">
+
+        <!-- Supercap: biggest strategic lever first -->
+        ${conversationalCard({
+          sentence: 'If we capture __INPUT__ of the supercap market by 2027,',
+          path: 'proformaAssumptions.revenue.supercapElectrode.year3.marketSharePct',
+          unit: '%',
+          format: 'fraction-percent',
+          step: 0.1,
+          inputWidth: 'w-20',
+          slider: { min: 0, max: 25, step: 0.1, stops: [0, 5, 10, 15, 20, 25] },
+          impact: y3RevDelta
+        })}
+
+        ${timelineCard({
+          title: 'Supercap ramp',
+          supporting: 'How market share builds up to the 2027 target.',
+          inputs: [
+            { label: 'Y1', path: 'proformaAssumptions.revenue.supercapElectrode.year1.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' },
+            { label: 'Y2', path: 'proformaAssumptions.revenue.supercapElectrode.year2.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' },
+            { label: 'Y3', path: 'proformaAssumptions.revenue.supercapElectrode.year3.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' }
+          ],
+          impact: y3RevDelta
+        })}
+
+        ${conversationalCard({
+          sentence: 'We start recognizing supercap revenue in month __INPUT__.',
+          path: 'proformaAssumptions.revenue.supercapElectrode.startMonth',
+          unit: '',
+          format: 'number',
+          step: 1,
+          inputWidth: 'w-14',
+          slider: { min: 0, max: 36, step: 1, stops: [0, 12, 24, 36] },
+          impact: breakEvenImpact
+        })}
+
+        <!-- Divider between segments -->
+        <div class="pt-3"></div>
+
+        <!-- Carbon Black -->
+        ${conversationalCard({
+          sentence: 'If we capture __INPUT__ of the carbon black market by 2027,',
+          path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year3.marketSharePct',
+          unit: '%',
+          format: 'fraction-percent',
+          step: 0.1,
+          inputWidth: 'w-20',
+          slider: { min: 0, max: 5, step: 0.05, stops: [0, 1, 2, 3, 4, 5] },
+          impact: y3RevDelta
+        })}
+
+        ${timelineCard({
+          title: 'Carbon black ramp',
+          supporting: 'Slower to develop — the market is bigger but the sales cycle is longer.',
+          inputs: [
+            { label: 'Y1', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year1.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' },
+            { label: 'Y2', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year2.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' },
+            { label: 'Y3', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year3.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' }
+          ],
+          impact: y3RevDelta
+        })}
+
+        ${conversationalCard({
+          sentence: 'We start recognizing carbon black revenue in month __INPUT__.',
+          path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.startMonth',
+          unit: '',
+          format: 'number',
+          step: 1,
+          inputWidth: 'w-14',
+          slider: { min: 0, max: 47, step: 1, stops: [0, 12, 24, 36, 47] },
+          impact: breakEvenImpact
+        })}
+
+      </div>
+
+      ${advancedReveal('revenue', 2, `
+        ${_qDistBlock('supercapElectrode', 'Supercap')}
+        ${_qDistBlock('carbonBlackCathodeAnode', 'Carbon Black')}
       `)}
-
-      ${_revenueSegment('Supercap Electrode', 'supercapElectrode', 'revenueSupercap')}
-
-      ${_revenueSegment('Carbon Black CB/CA', 'carbonBlackCathodeAnode', 'revenueCarbonBlack')}
-
-    </div>
+    </section>
   `;
 }
