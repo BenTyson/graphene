@@ -1,4 +1,8 @@
+import { TASK_CATEGORY_TAGS, TASK_INSTITUTION_TAGS } from '../../utils/constants.js';
+
 export function getTasksTabHtml() {
+  const categoryOptions = TASK_CATEGORY_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
+  const institutionOptions = TASK_INSTITUTION_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
   return `
     <div x-show="activeTab === 'tasks'" x-cloak>
       <!-- Header -->
@@ -41,6 +45,16 @@ export function getTasksTabHtml() {
               <option :value="user.id" x-text="(user.firstName || '') + ' ' + (user.lastName || user.username)"></option>
             </template>
           </select>
+          <select x-model="taskFilters.tag"
+            class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+            <option value="">All Tags</option>
+            ${categoryOptions}
+          </select>
+          <select x-model="taskFilters.institution"
+            class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+            <option value="">All Institutions</option>
+            ${institutionOptions}
+          </select>
           <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" x-model="taskFilters.overdue" @change="loadTasks()"
               class="rounded border-gray-300 text-black focus:ring-black">
@@ -51,8 +65,8 @@ export function getTasksTabHtml() {
               class="rounded border-gray-300 text-black focus:ring-black">
             Show archived
           </label>
-          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || showArchivedTasks">
-            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false }; showArchivedTasks = false; loadTasks()"
+          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || taskFilters.tag || taskFilters.institution || showArchivedTasks">
+            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '' }; showArchivedTasks = false; loadTasks()"
               class="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline">
               Clear filters
             </button>
@@ -108,7 +122,7 @@ export function getTasksTabHtml() {
                         <span :class="getPriorityBadgeClass(task.priority)"
                           class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 mt-0.5"
                           x-text="task.priority"></span>
-                        <p class="text-sm font-medium text-gray-900 line-clamp-2 leading-snug" x-text="task.title"></p>
+                        <p class="text-sm font-medium text-gray-900 leading-snug break-words" x-text="task.title"></p>
                       </div>
 
                       <!-- Tags -->
@@ -155,10 +169,20 @@ export function getTasksTabHtml() {
                             </span>
                           </template>
                         </div>
-                        <template x-if="task.assignee">
-                          <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
-                            :title="getAssigneeName(task)">
-                            <span class="text-[10px] font-medium text-gray-600" x-text="getAssigneeInitials(task)"></span>
+                        <template x-if="getTaskAssigneeUsers(task).length">
+                          <div class="flex -space-x-1.5" :title="getTaskAssigneeNames(task)">
+                            <template x-for="(u, idx) in getTaskAssigneeUsers(task).slice(0, 3)" :key="u.id">
+                              <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center ring-2 ring-white">
+                                <span class="text-[10px] font-medium text-gray-600"
+                                  x-text="(u.firstName?.[0] || '') + (u.lastName?.[0] || u.username?.[0] || '')"></span>
+                              </div>
+                            </template>
+                            <template x-if="getTaskAssigneeUsers(task).length > 3">
+                              <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center ring-2 ring-white">
+                                <span class="text-[9px] font-medium text-gray-500"
+                                  x-text="'+' + (getTaskAssigneeUsers(task).length - 3)"></span>
+                              </div>
+                            </template>
                           </div>
                         </template>
                       </div>
@@ -212,7 +236,7 @@ export function getTasksTabHtml() {
                       <span :class="getPriorityBadgeClass(task.priority)"
                         class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 mt-0.5"
                         x-text="task.priority"></span>
-                      <p class="text-sm font-medium text-gray-900 line-clamp-2 leading-snug" x-text="task.title"></p>
+                      <p class="text-sm font-medium text-gray-900 leading-snug break-words" x-text="task.title"></p>
                     </div>
                     <div class="mt-2 pt-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
                       <select @change="updateTaskStatus(task.id, $event.target.value); $event.target.value = task.status"
@@ -254,15 +278,15 @@ export function getTasksTabHtml() {
                   <template x-for="task in getFilteredTasks()" :key="task.id">
                     <tr @click="openTaskDetail(task.id)" class="hover:bg-gray-50 cursor-pointer transition-colors">
                       <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          <template x-if="task.tags && task.tags.length">
-                            <template x-for="tag in task.tags.slice(0, 2)" :key="tag">
-                              <span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] shrink-0" x-text="tag"></span>
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-sm text-gray-900 font-medium" x-text="task.title"></span>
+                            <template x-if="task._count?.comments">
+                              <span class="text-[10px] text-gray-400 shrink-0" x-text="task._count.comments + ' comments'"></span>
                             </template>
-                          </template>
-                          <span class="text-sm text-gray-900 font-medium" x-text="task.title"></span>
-                          <template x-if="task._count?.comments">
-                            <span class="text-[10px] text-gray-400" x-text="task._count.comments + ' comments'"></span>
+                          </div>
+                          <template x-if="task.tags && task.tags.length">
+                            <div class="text-[11px] text-gray-400 truncate" x-text="task.tags.join(' · ')"></div>
                           </template>
                         </div>
                       </td>
@@ -277,14 +301,25 @@ export function getTasksTabHtml() {
                           x-text="task.priority"></span>
                       </td>
                       <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                          <template x-if="task.assignee">
-                            <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                              <span class="text-[9px] font-medium text-gray-600" x-text="getAssigneeInitials(task)"></span>
-                            </div>
-                          </template>
-                          <span class="text-sm text-gray-600 truncate" x-text="getAssigneeName(task)"></span>
-                        </div>
+                        <template x-if="getTaskAssigneeUsers(task).length">
+                          <div class="flex -space-x-1.5" :title="getTaskAssigneeNames(task)">
+                            <template x-for="u in getTaskAssigneeUsers(task).slice(0, 3)" :key="u.id">
+                              <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center ring-2 ring-white shrink-0">
+                                <span class="text-[9px] font-medium text-gray-600"
+                                  x-text="(u.firstName?.[0] || '') + (u.lastName?.[0] || u.username?.[0] || '')"></span>
+                              </div>
+                            </template>
+                            <template x-if="getTaskAssigneeUsers(task).length > 3">
+                              <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center ring-2 ring-white shrink-0">
+                                <span class="text-[9px] font-medium text-gray-500"
+                                  x-text="'+' + (getTaskAssigneeUsers(task).length - 3)"></span>
+                              </div>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="!getTaskAssigneeUsers(task).length">
+                          <span class="text-xs text-gray-300">Unassigned</span>
+                        </template>
                       </td>
                       <td class="px-4 py-3">
                         <span :class="getTaskDueClass(task.dueDate, task.status)" class="text-xs"
@@ -347,7 +382,7 @@ export function getTasksTabHtml() {
                   <div class="flex items-center gap-3 text-xs text-gray-500">
                     <span :class="getStatusBadgeClass(task.status)" class="px-2 py-0.5 rounded font-medium"
                       x-text="formatStatusLabel(task.status)"></span>
-                    <span x-text="getAssigneeName(task)"></span>
+                    <span x-text="getTaskAssigneeNames(task)"></span>
                     <template x-if="task.dueDate">
                       <span :class="getTaskDueClass(task.dueDate, task.status)" x-text="getTaskDueLabel(task.dueDate)"></span>
                     </template>

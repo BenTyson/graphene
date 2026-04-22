@@ -3,6 +3,17 @@
  * Default form values and other constants used across the application
  */
 
+export const TASK_CATEGORY_TAGS = [
+  'Fundraising', 'Shareholders', 'Patents', 'Legal',
+  'Decks & Graphics', 'Notes & Research', 'Production',
+  'Finances', 'Sales', 'Administrative Ops', 'Proforma', 'Web & Marketing'
+];
+
+export const TASK_INSTITUTION_TAGS = [
+  'Curia', 'NEI', 'SpectraPower', 'GoEco',
+  'Positron Magnetics', 'GEIC', 'Apollo', 'EAG'
+];
+
 export const DEFAULT_FORMS = {
   biochar: {
     experimentNumber: '',

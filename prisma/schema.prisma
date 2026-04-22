@@ -865,7 +865,7 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   createdTasks   Task[]         @relation("TaskCreator")
-  assignedTasks  Task[]         @relation("TaskAssignee")
+  taskAssignments TaskAssignment[] @relation("TaskAssignmentUser")
   taskComments   TaskComment[]  @relation("TaskCommentAuthor")
   taskActivities  TaskActivity[]  @relation("TaskActivityUser")
   taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
@@ -950,13 +950,13 @@ model Task {
   tags        String[]     @default([])
 
   creatorId  String  @map("creator_id")
-  assigneeId String? @map("assignee_id")
   creator    User    @relation("TaskCreator", fields: [creatorId], references: [id])
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
 
   parentId String? @map("parent_id")
   parent   Task?   @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
   subtasks Task[]  @relation("TaskSubtasks")
+
+  assignees   TaskAssignment[]
 
   comments    TaskComment[]
   activities  TaskActivity[]
@@ -970,12 +970,24 @@ model Task {
 
   @@index([status])
   @@index([priority])
-  @@index([assigneeId])
   @@index([creatorId])
   @@index([parentId])
   @@index([dueDate])
   @@index([status, position])
   @@map("tasks")
+}
+
+model TaskAssignment {
+  taskId     String   @map("task_id")
+  userId     String   @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("TaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("task_assignments")
 }
 
 model TaskDependency {
