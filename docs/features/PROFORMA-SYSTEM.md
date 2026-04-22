@@ -17,8 +17,10 @@ shared/proformaEngine.js      -- 7-layer calculation pipeline (pure function)
          └── client (via @shared Vite alias)
               ├── services/ProformaService.js -- State management, chart lifecycle
               ├── components/tabs/ProformaTab.js -- Main tab shell (list, editor, outlook, charts, summary)
-              └── components/tabs/proforma/   -- 7 section files + helpers
-                   ├── helpers.js             -- numInput(), card(), quarterlyMatrix(), metricsBanner(), sectionNav(), HELP text registry
+              └── components/tabs/proforma/   -- 7 section files + helpers + sticky chrome
+                   ├── helpers.js             -- Form primitives: numInput(), formGrid(), card(), quarterlyMatrix(), criticalBlock(), advancedAccordion(), sectionHeader(); HELP metadata registry
+                   ├── cards.js               -- Sticky chrome only: metricsAndNav() + JOURNEY_SECTIONS (6 metric tiles + 6 section pills)
+                   ├── ProductionPulse.js     -- Material-flow visualization (hemp → graphene → stock) at top of Production section
                    ├── ProductionSection.js   -- Process chemistry, kiln specs, schedule, efficiency
                    ├── RevenueSection.js      -- Pricing, 2 segments with Q Distribution validation
                    ├── CostsSection.js        -- Hemp, manufacturing labor, biochar
@@ -145,15 +147,28 @@ Charts: `renderCharts` (uses requestAnimationFrame for canvas sizing), `destroyC
 
 ### Assumptions Editor Layout
 
-Section nav (left sidebar on desktop, horizontal pills on mobile) with 7 sections. Persistent metrics banner (6 KPIs) at top. Each section is a separate file returning an HTML template string.
+Sticky header on every section: six metric tiles (break-even, peak cash, Y3 revenue, Y3 EBITDA, total capex, peak production) over six journey pills — one per section with a live per-section headline metric. Rendered by `metricsAndNav()` in `cards.js`.
 
-Shared helpers in `proforma/helpers.js`:
-- `numInput(label, path, opts)` — number input with optional help text, unit, and computed indicator
-- `card(title, content, opts)` — bordered card with gray header
-- `quarterlyMatrix(title, basePath, opts)` — year x quarter editable grid with computed Annual column
-- `metricsBanner()` — sticky KPI strip
-- `sectionNav()` — 7-section navigation
-- `HELP` — help text registry keyed by field path
+Below the sticky chrome, each section renders a uniform two-tier layout:
+- **Critical** — a `criticalBlock()` wrapping a `formGrid()` of the handful of fields that dominate the model. Each field is a `numInput()` with label, unit badge, help sentence (what it IS), and a `Feeds →` dependency line (what it affects downstream).
+- **Advanced** — an `advancedAccordion()`, closed by default. Holds detail fields, `quarterlyMatrix` tables, multi-row schedules, and anything rarely touched in a strategy discussion. State key: `proformaAdvancedOpen['<sectionId>']`.
+
+A collapsible Technical Reference accordion sits at the very bottom of the Assumptions tab (battery chemistry, market sizing, conversion factors).
+
+Shared primitives in `proforma/helpers.js`:
+- `numInput(label, path, opts)` — label + number input + help + `Feeds →` line. `opts.format: 'fraction-percent'` stores 0–1 but edits as 0–100. Honors `isLocked()` from `shared/proformaLockedFields.js` (red-tinted, disabled).
+- `formGrid(innerHtml, {cols})` — responsive 1/2/3-column grid
+- `criticalBlock(body, {label, hint})` — "CRITICAL" label + hint + body
+- `advancedAccordion(sectionId, body, {label, hint})` — uniform collapsible, closed by default
+- `card(title, content, opts)` — bordered card with gray header (used for tables and compound blocks)
+- `quarterlyMatrix(title, basePath, opts)` — year × quarter editable grid with computed Annual column
+- `sectionHeader(title, supporting)` — H2 title + one-line supporting subtitle for each section
+- `HELP` — metadata registry keyed by dotted field path. Values are either `{help, dependsOn}` objects (modern sections spread with `...HELP['x']`) or plain strings (legacy Technical section reads `HELP['x']` as `help`).
+
+Exceptions to the Critical/Advanced pattern:
+- **Machines** — keeps the fleet-gantt timeline at top; each machine renders its own card with 3 critical inputs + a per-machine Advanced accordion (payments schedule + phase overrides).
+- **Production** — keeps the Material-flow visualization (`ProductionPulse.js`) between the section header and the Critical block.
+- **Technical** — rendered inside its own bottom-of-page accordion (not the per-section Advanced); all fields always visible when expanded.
 
 ### Live Recomputation
 
@@ -189,8 +204,11 @@ When `proformaScenario.locked === true`:
 | `server/routes/proforma.js` | CRUD + compute API |
 | `client/src/js/services/ProformaService.js` | Frontend service |
 | `client/src/js/components/tabs/ProformaTab.js` | Tab shell (list, editor, outlook, charts, summary) |
-| `client/src/js/components/tabs/proforma/helpers.js` | Shared UI helpers + HELP text |
-| `client/src/js/components/tabs/proforma/*Section.js` | 7 assumption editor sections |
+| `client/src/js/components/tabs/proforma/helpers.js` | Form primitives + HELP metadata (label/help/dependsOn) |
+| `client/src/js/components/tabs/proforma/cards.js` | Sticky metric tiles + journey bar (`metricsAndNav`, `JOURNEY_SECTIONS`) |
+| `client/src/js/components/tabs/proforma/ProductionPulse.js` | Material-flow visualization (Production section) |
+| `client/src/js/components/tabs/proforma/*Section.js` | 7 assumption editor sections (Critical form grid + Advanced accordion) |
+| `shared/proformaLockedFields.js` | Locked-field registry (red-tinted disabled inputs) |
 | `client/src/js/services/api.js` | `proformaAPI` block |
 | `client/src/js/app-refactored.js` | State + 20 delegate methods |
 | `vite.config.js` | `@shared` alias for client imports |
@@ -203,6 +221,8 @@ When `proformaScenario.locked === true`:
 - Charts use `requestAnimationFrame` after `$nextTick` for canvas sizing when switching sub-tabs.
 - Outlook table collapse uses direct `proformaCollapsed[key]` access in template (not pre-computed) for Alpine reactivity.
 - Auto-seed: GET `/api/proforma/scenarios` creates "2025 Projections" if table is empty, attributed to requesting user.
+- Every section uses the same Critical / Advanced shape. When adding a field, decide the tier based on whether it dominates the model (Critical) or is a detail knob (Advanced). Help text and `dependsOn` live in the `HELP` map in `helpers.js` — keep them in sync with the field.
+- `numInput` with `format: 'fraction-percent'` stores 0–1 but edits 0–100. Use it for every `*Pct` path so the editor shows `11` not `0.11`.
 
 ---
 
