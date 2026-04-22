@@ -7,7 +7,16 @@ echo "📍 Node version: $(node --version)"
 echo "📍 NPM version: $(npm --version)"
 
 echo ""
-echo "1️⃣ STARTING: Prisma database schema push"
+echo "1️⃣a STARTING: Backfill task assignees into join table (pre-push, idempotent)"
+if node scripts/migrate-task-assignees.js; then
+    echo "✅ SUCCESS: Task assignee backfill completed"
+else
+    echo "❌ FAILED: Task assignee backfill failed"
+    exit 1
+fi
+
+echo ""
+echo "1️⃣b STARTING: Prisma database schema push"
 if npx prisma db push --accept-data-loss; then
     echo "✅ SUCCESS: Prisma db push completed"
 else
