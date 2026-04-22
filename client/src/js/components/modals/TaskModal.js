@@ -65,22 +65,23 @@ export function getTaskModalHtml() {
               </div>
             </div>
 
-            <!-- Due Date + Assignee Row -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                <input type="date" x-model="taskForm.dueDate"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
-                <select x-model="taskForm.assigneeId"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
-                  <option value="">Unassigned</option>
-                  <template x-for="user in taskAssignees" :key="user.id">
-                    <option :value="user.id" x-text="(user.firstName || '') + ' ' + (user.lastName || user.username)"></option>
-                  </template>
-                </select>
+            <!-- Due Date -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input type="date" x-model="taskForm.dueDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+            </div>
+
+            <!-- Assignees -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Assignees</label>
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="user in taskAssignees" :key="user.id">
+                  <button type="button" @click="toggleTaskFormAssignee(user.id)"
+                    :class="taskForm.assigneeIds.includes(user.id) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="px-2 py-0.5 rounded text-xs font-medium transition-colors"
+                    x-text="(user.firstName || '') + ' ' + (user.lastName || user.username)"></button>
+                </template>
               </div>
             </div>
 

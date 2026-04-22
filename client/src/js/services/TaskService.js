@@ -40,7 +40,7 @@ class TaskService {
 
   openTaskForm(ctx, parentId = null) {
     ctx.editingTask = null;
-    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeId: '', parentId, tags: [] };
+    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, tags: [] };
     ctx.taskTagInput = '';
     ctx.showAddTask = true;
   }
@@ -53,7 +53,7 @@ class TaskService {
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate || '',
-      assigneeId: task.assigneeId || '',
+      assigneeIds: (task.assignees || []).map(a => a.user?.id || a.userId).filter(Boolean),
       parentId: task.parentId || null,
       tags: [...(task.tags || [])]
     };

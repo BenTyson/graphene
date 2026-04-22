@@ -388,12 +388,12 @@ window.grapheneApp = function() {
     taskAssignees: [],
     taskViewMode: 'kanban',
     taskSearch: '',
-    taskFilters: { status: '', priority: '', assigneeId: '', overdue: false },
+    taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '' },
     showAddTask: false,
     showTaskDetail: false,
     selectedTask: null,
     editingTask: null,
-    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeId: '', parentId: null, tags: [] },
+    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, tags: [] },
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
@@ -4912,12 +4912,18 @@ window.grapheneApp = function() {
 
     async loadTasks() { await taskService.loadTasks(this); },
     async loadTaskAssignees() { await taskService.loadTaskAssignees(this); },
-    getTasksByStatus(status) { return this.tasks.filter(t => t.status === status); },
+    getTasksByStatus(status) { return this.getFilteredTasks().filter(t => t.status === status); },
     getFilteredTasks() {
       let filtered = this.tasks.filter(t => this.showArchivedTasks || t.status !== 'ARCHIVED');
       if (this.taskSearch) {
         const q = this.taskSearch.toLowerCase();
         filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+      }
+      if (this.taskFilters.tag) {
+        filtered = filtered.filter(t => (t.tags || []).includes(this.taskFilters.tag));
+      }
+      if (this.taskFilters.institution) {
+        filtered = filtered.filter(t => (t.tags || []).includes(this.taskFilters.institution));
       }
       return filtered;
     },
@@ -4952,8 +4958,32 @@ window.grapheneApp = function() {
     },
     getTaskDueLabel(dueDate) { return getRelativeDateLabel(dueDate); },
     getTaskDueClass(dueDate, status) { return getRelativeDateClass(dueDate, ['DONE', 'ARCHIVED'], status); },
-    getAssigneeName(task) { return getUserDisplayName(task.assignee); },
-    getAssigneeInitials(task) { return getUserInitials(task.assignee); },
+    getTaskAssigneeUsers(task) {
+      return (task?.assignees || []).map(a => a.user).filter(Boolean);
+    },
+    getAssigneeLabelById(userId) {
+      if (!userId) return '';
+      const u = (this.taskAssignees || []).find(x => x.id === userId);
+      return u ? getUserDisplayName(u) : '';
+    },
+    getTaskAssigneeNames(task) {
+      const users = this.getTaskAssigneeUsers(task);
+      if (!users.length) return 'Unassigned';
+      return users.map(u => getUserDisplayName(u)).join(', ');
+    },
+    toggleTaskFormAssignee(userId) {
+      const ids = this.taskForm.assigneeIds || [];
+      const idx = ids.indexOf(userId);
+      if (idx >= 0) ids.splice(idx, 1); else ids.push(userId);
+      this.taskForm.assigneeIds = ids;
+    },
+    async toggleDetailTaskAssignee(userId) {
+      if (!this.selectedTask) return;
+      const current = this.getTaskAssigneeUsers(this.selectedTask).map(u => u.id);
+      const idx = current.indexOf(userId);
+      if (idx >= 0) current.splice(idx, 1); else current.push(userId);
+      await taskService.updateTaskInline(this, this.selectedTask.id, 'assigneeIds', current);
+    },
     getSubtaskProgress(task) {
       if (!task.subtasks?.length) return null;
       const done = task.subtasks.filter(s => s.status === 'DONE').length;

@@ -196,13 +196,13 @@ export function getPipelineTabHtml() {
                 <td class="py-2.5 px-3">
                   <div class="flex flex-wrap gap-1">
                     <template x-for="t in (contact.contactTypes && contact.contactTypes.length ? contact.contactTypes : (contact.contactType ? [contact.contactType] : []))" :key="t">
-                      <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(t)" x-text="getContactTypeLabel(t)"></span>
+                      <span class="px-1.5 py-0.5 text-[10px] font-medium rounded whitespace-nowrap" :class="getContactTypeBadgeClass(t)" x-text="getContactTypeLabel(t)"></span>
                     </template>
                     <span x-show="!(contact.contactTypes?.length) && !contact.contactType" class="text-xs text-gray-400">-</span>
                   </div>
                 </td>
                 <td class="py-2.5 px-3">
-                  <span x-show="contact.stage" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getStageBadgeClass(contact.stage)" x-text="getStageLabel(contact.stage)"></span>
+                  <span x-show="contact.stage" class="px-1.5 py-0.5 text-[10px] font-medium rounded whitespace-nowrap" :class="getStageBadgeClass(contact.stage)" x-text="getStageLabel(contact.stage)"></span>
                   <span x-show="!contact.stage" class="text-xs text-gray-400">-</span>
                 </td>
                 <td class="py-2.5 px-3 text-gray-600" x-text="getOwnerName(contact)"></td>

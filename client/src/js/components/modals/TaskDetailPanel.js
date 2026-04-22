@@ -91,22 +91,24 @@ export function getTaskDetailPanelHtml() {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Assignee</label>
-                  <select :value="selectedTask.assigneeId || ''"
-                    @change="updateTaskInline(selectedTask.id, 'assigneeId', $event.target.value || null)"
-                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
-                    <option value="">Unassigned</option>
-                    <template x-for="user in taskAssignees" :key="user.id">
-                      <option :value="user.id" x-text="(user.firstName || '') + ' ' + (user.lastName || user.username)"></option>
-                    </template>
-                  </select>
-                </div>
-                <div>
                   <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                   <input type="date" :value="selectedTask.dueDate || ''"
                     @change="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
                     @input="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
                     class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
+                </div>
+              </div>
+
+              <!-- Assignees -->
+              <div>
+                <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">Assignees</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <template x-for="user in taskAssignees" :key="user.id">
+                    <button type="button" @click="toggleDetailTaskAssignee(user.id)"
+                      :class="getTaskAssigneeUsers(selectedTask).some(u => u.id === user.id) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                      class="px-2 py-0.5 rounded text-xs font-medium transition-colors"
+                      x-text="(user.firstName || '') + ' ' + (user.lastName || user.username)"></button>
+                  </template>
                 </div>
               </div>
 
@@ -167,10 +169,14 @@ export function getTaskDetailPanelHtml() {
                       class="text-[11px] text-gray-400 border border-transparent hover:border-gray-200 focus:border-gray-300 rounded px-1 py-0.5 w-24 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                       :class="sub.dueDate ? '!opacity-100' : ''"
                       title="Due date">
-                    <template x-if="sub.assignee">
-                      <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="text-[8px] font-medium text-gray-500"
-                          x-text="(sub.assignee.firstName?.[0] || '') + (sub.assignee.lastName?.[0] || '')"></span>
+                    <template x-if="getTaskAssigneeUsers(sub).length">
+                      <div class="flex -space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <template x-for="u in getTaskAssigneeUsers(sub).slice(0, 2)" :key="u.id">
+                          <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 ring-2 ring-white">
+                            <span class="text-[8px] font-medium text-gray-500"
+                              x-text="(u.firstName?.[0] || '') + (u.lastName?.[0] || u.username?.[0] || '')"></span>
+                          </div>
+                        </template>
                       </div>
                     </template>
                   </div>
@@ -467,7 +473,8 @@ export function getTaskDetailPanelHtml() {
                       <span x-text="
                         activity.action === 'created' ? ' created this task' :
                         activity.action === 'status_changed' ? ' changed status to ' + (activity.toValue || '') :
-                        activity.action === 'assigned' ? ' assigned this task' :
+                        activity.action === 'assigned' ? ' added ' + (getAssigneeLabelById(activity.toValue) || 'an assignee') :
+                        activity.action === 'unassigned' ? ' removed ' + (getAssigneeLabelById(activity.fromValue) || 'an assignee') :
                         activity.action === 'priority_changed' ? ' changed priority to ' + (activity.toValue || '') :
                         activity.action === 'due_date_changed' ? ' changed due date' :
                         activity.action === 'comment_added' ? ' added a comment' :

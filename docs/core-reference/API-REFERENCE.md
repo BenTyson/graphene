@@ -1071,10 +1071,10 @@ Auth: All endpoints require JWT + internal role (SUPER_ADMIN, SCIENCE_TEAM, EXEC
 ```
 GET    /api/tasks/assignees                    - List assignable users (id, name, role)
 GET    /api/tasks/stats                        - Counts by status + myTasks + overdue
-GET    /api/tasks                              - List root tasks (filters: status, priority, assigneeId, search, overdue, sortBy, order, limit, offset)
+GET    /api/tasks                              - List root tasks (filters: status, priority, assigneeId [matches any assignee], search, overdue, sortBy, order, limit, offset)
 GET    /api/tasks/:id                          - Detail with subtasks, comments, attachments, activity
-POST   /api/tasks                              - Create task (title required; description, status, priority, dueDate, assigneeId, parentId, tags optional)
-PUT    /api/tasks/:id                          - Update task (creator + SUPER_ADMIN only)
+POST   /api/tasks                              - Create task (title required; description, status, priority, dueDate, assigneeIds[], parentId, tags optional)
+PUT    /api/tasks/:id                          - Update task (creator + SUPER_ADMIN only). assigneeIds[] reconciles assignments via diff (emits `assigned` / `unassigned` activity per user)
 DELETE /api/tasks/:id                          - Delete task + subtasks + attachment files (creator + SUPER_ADMIN only)
 PATCH  /api/tasks/:id/status                   - Quick status change (status, position)
 PATCH  /api/tasks/:id/position                 - Reorder within column

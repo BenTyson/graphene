@@ -63,7 +63,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
       _count: true
     }),
     prisma.task.count({
-      where: { assigneeId: userId, status: { notIn: ['DONE', 'ARCHIVED'] } }
+      where: { assignees: { some: { userId } }, status: { notIn: ['DONE', 'ARCHIVED'] } }
     }),
     prisma.task.count({
       where: {
@@ -107,7 +107,7 @@ router.get('/', asyncHandler(async (req, res) => {
     where.priority = priorities.length === 1 ? priorities[0] : { in: priorities };
   }
 
-  if (assigneeId) where.assigneeId = assigneeId;
+  if (assigneeId) where.assignees = { some: { userId: assigneeId } };
   if (creatorId) where.creatorId = creatorId;
 
   if (overdue === 'true') {
@@ -140,7 +140,7 @@ router.get('/', asyncHandler(async (req, res) => {
     where,
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
-      assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
       _count: { select: { subtasks: true, comments: true, attachments: true } },
       subtasks: {
         select: { id: true, status: true, dueDate: true },
@@ -227,10 +227,10 @@ router.get('/:id', asyncHandler(async (req, res) => {
     where: { id: req.params.id },
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
-      assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
       subtasks: {
         include: {
-          assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
           _count: { select: { subtasks: true, comments: true } }
         },
         orderBy: { position: 'asc' }
@@ -256,13 +256,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
       },
       blockedBy: {
         include: {
-          blockingTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+          blockingTask: { select: { id: true, title: true, status: true } }
         },
         orderBy: { createdAt: 'asc' }
       },
       blocking: {
         include: {
-          blockedTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+          blockedTask: { select: { id: true, title: true, status: true } }
         },
         orderBy: { createdAt: 'asc' }
       },
@@ -293,11 +293,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { title, description, status, priority, dueDate, assigneeId, parentId, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, parentId, tags } = req.body;
 
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'Title is required' });
   }
+
+  const cleanAssigneeIds = Array.isArray(assigneeIds) ? [...new Set(assigneeIds.filter(Boolean))] : [];
 
   // Get max position for the target status column
   const maxPos = await prisma.task.aggregate({
@@ -315,12 +317,14 @@ router.post('/', asyncHandler(async (req, res) => {
       position: (maxPos._max.position ?? -1) + 1,
       tags: tags || [],
       creatorId: userId,
-      assigneeId: assigneeId || null,
-      parentId: parentId || null
+      parentId: parentId || null,
+      assignees: cleanAssigneeIds.length
+        ? { create: cleanAssigneeIds.map(uid => ({ userId: uid })) }
+        : undefined
     },
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
-      assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }
@@ -328,8 +332,8 @@ router.post('/', asyncHandler(async (req, res) => {
 
   await logActivity(prisma, { taskId: task.id, userId, action: 'created' });
 
-  if (assigneeId) {
-    await logActivity(prisma, { taskId: task.id, userId, action: 'assigned', toValue: assigneeId });
+  for (const uid of cleanAssigneeIds) {
+    await logActivity(prisma, { taskId: task.id, userId, action: 'assigned', toValue: uid });
   }
 
   res.status(201).json({
@@ -343,9 +347,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { title, description, status, priority, dueDate, assigneeId, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, tags } = req.body;
 
-  const existing = await prisma.task.findUnique({ where: { id } });
+  const existing = await prisma.task.findUnique({
+    where: { id },
+    include: { assignees: { select: { userId: true } } }
+  });
   if (!existing) return res.status(404).json({ error: 'Task not found' });
 
   // Only creator or SUPER_ADMIN can edit
@@ -370,11 +377,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
     await logActivity(prisma, { taskId: id, userId, action: 'priority_changed', fromValue: existing.priority, toValue: priority });
   }
 
-  if (assigneeId !== undefined && assigneeId !== existing.assigneeId) {
-    data.assigneeId = assigneeId || null;
-    await logActivity(prisma, { taskId: id, userId, action: 'assigned', fromValue: existing.assigneeId, toValue: assigneeId || null });
-  }
-
   if (dueDate !== undefined) {
     const oldDate = existing.dueDate ? existing.dueDate.toISOString().split('T')[0] : null;
     if (dueDate !== oldDate) {
@@ -386,12 +388,36 @@ router.put('/:id', asyncHandler(async (req, res) => {
     await logActivity(prisma, { taskId: id, userId, action: 'edited', fromValue: existing.title, toValue: title.trim() });
   }
 
+  // Reconcile assignee list if provided
+  if (Array.isArray(assigneeIds)) {
+    const nextSet = new Set(assigneeIds.filter(Boolean));
+    const prevSet = new Set(existing.assignees.map(a => a.userId));
+    const toAdd = [...nextSet].filter(uid => !prevSet.has(uid));
+    const toRemove = [...prevSet].filter(uid => !nextSet.has(uid));
+
+    if (toRemove.length) {
+      await prisma.taskAssignment.deleteMany({ where: { taskId: id, userId: { in: toRemove } } });
+    }
+    if (toAdd.length) {
+      await prisma.taskAssignment.createMany({
+        data: toAdd.map(uid => ({ taskId: id, userId: uid })),
+        skipDuplicates: true
+      });
+    }
+    for (const uid of toAdd) {
+      await logActivity(prisma, { taskId: id, userId, action: 'assigned', toValue: uid });
+    }
+    for (const uid of toRemove) {
+      await logActivity(prisma, { taskId: id, userId, action: 'unassigned', fromValue: uid });
+    }
+  }
+
   const task = await prisma.task.update({
     where: { id },
     data,
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
-      assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }
@@ -425,7 +451,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
     data,
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
-      assignee: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }
@@ -640,7 +666,7 @@ router.post('/:id/dependencies', asyncHandler(async (req, res) => {
     const link = await prisma.taskDependency.create({
       data: { blockedTaskId: id, blockingTaskId },
       include: {
-        blockingTask: { select: { id: true, title: true, status: true, assigneeId: true } }
+        blockingTask: { select: { id: true, title: true, status: true } }
       }
     });
     await logActivity(prisma, {
