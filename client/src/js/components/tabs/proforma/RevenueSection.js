@@ -1,17 +1,17 @@
-import { sectionHero, conversationalCard, timelineCard, advancedReveal } from './cards.js';
+import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordion, HELP } from './helpers.js';
 
-// Revenue is the biggest strategic lever in the proforma. Cards are ordered
-// so the highest-impact decisions (Y3 market share) surface first, with
-// ramp-up timelines and pricing grouped logically. Quarterly distribution
-// weights (qDist) stay out of sight under the advanced reveal — they rarely
-// change in a strategy meeting but accuracy still depends on them.
+// Revenue is the biggest strategic lever in the proforma. Critical tier
+// shows the market share ramp + start months. Advanced tier holds pricing
+// and the quarterly-shape (qDist) weights that rarely move in a meeting.
 
 function _qDistBlock(segmentKey, segmentLabel) {
   return `
-    <div class="rounded-2xl border border-gray-200 bg-gray-50/60 p-5">
-      <h4 class="text-sm font-semibold text-gray-900 mb-1">${segmentLabel} — quarterly shape</h4>
-      <p class="text-xs text-gray-500 mb-4">Weights must sum to 1.0 for each year. Click Normalize to auto-balance.</p>
-      <div class="space-y-2.5">
+    <div class="border border-gray-200 rounded-lg overflow-hidden">
+      <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+        <h4 class="text-sm font-semibold text-gray-700">${segmentLabel} — quarterly shape</h4>
+        <p class="text-[11px] text-gray-500 mt-0.5">Weights split each year's revenue across Q1–Q4. Must sum to 1.0 per year.</p>
+      </div>
+      <div class="px-4 py-3.5 space-y-2.5">
         ${['year1', 'year2', 'year3'].map(yr => `
           <div class="flex items-center gap-3">
             <span class="text-[11px] font-semibold text-gray-500 w-6 shrink-0">${yr.replace('year', 'Y')}</span>
@@ -49,101 +49,80 @@ function _qDistBlock(segmentKey, segmentLabel) {
   `;
 }
 
+function _pricingBlock() {
+  return card('Unit pricing ($/kg)', `
+    <div class="grid grid-cols-2 gap-x-6 gap-y-5">
+      <div>
+        <h5 class="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Supercap</h5>
+        <div class="grid grid-cols-4 gap-2">
+          ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
+            <div>
+              <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i}</label>
+              <input type="number" step="1"
+                     :value="proformaAssumptions.pricing.supercapPerKg.${yr}"
+                     @input="proformaAssumptions.pricing.supercapPerKg.${yr} = +$event.target.value; proformaRecompute()"
+                     class="w-full text-sm border-gray-300 rounded-md px-2 py-1.5 font-mono tabular-nums focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <h5 class="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Carbon black</h5>
+        <div class="grid grid-cols-4 gap-2">
+          ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
+            <div>
+              <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i}</label>
+              <input type="number" step="1"
+                     :value="proformaAssumptions.pricing.carbonBlackPerKg.${yr}"
+                     @input="proformaAssumptions.pricing.carbonBlackPerKg.${yr} = +$event.target.value; proformaRecompute()"
+                     class="w-full text-sm border-gray-300 rounded-md px-2 py-1.5 font-mono tabular-nums focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    <p class="text-[11px] text-gray-500 leading-snug mt-3">
+      Blended sell price per kg for each segment, per year. Revenue = price × kg × market share.
+    </p>
+  `, { subtitle: 'Premium supercap pricing vs. commodity carbon black — both flow straight into revenue.' });
+}
+
 export function getRevenueSection() {
-  const y3Rev = `window._pfFmtC(proformaComputed?.metrics?.y3Revenue || 0, true)`;
-  const y3RevDelta = { label: 'Y3 revenue', expr: y3Rev, deltaKey: 'y3Revenue' };
-  const breakEvenImpact = {
-    label: 'Break-even',
-    expr: `proformaComputed?.metrics?.breakEvenMonth >= 0 ? 'Month ' + proformaComputed.metrics.breakEvenMonth : 'N/A'`,
-    deltaKey: 'breakEvenMonth'
-  };
+  const critical = [
+    // Supercap ramp
+    { label: 'Supercap — Y3 market share', path: 'proformaAssumptions.revenue.supercapElectrode.year3.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['revenue.supercap.year3'] },
+    { label: 'Supercap — Y2 market share', path: 'proformaAssumptions.revenue.supercapElectrode.year2.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['revenue.supercap.year2'] },
+    { label: 'Supercap — Y1 market share', path: 'proformaAssumptions.revenue.supercapElectrode.year1.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['revenue.supercap.year1'] },
+    { label: 'Supercap — revenue start month', path: 'proformaAssumptions.revenue.supercapElectrode.startMonth',
+      unit: 'mo', step: 1, ...HELP['revenue.supercap.startMonth'] },
+
+    // Carbon black ramp
+    { label: 'Carbon black — Y3 market share', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year3.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.05, ...HELP['revenue.carbonBlack.year3'] },
+    { label: 'Carbon black — Y2 market share', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year2.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.05, ...HELP['revenue.carbonBlack.year2'] },
+    { label: 'Carbon black — Y1 market share', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year1.marketSharePct',
+      unit: '%', format: 'fraction-percent', step: 0.05, ...HELP['revenue.carbonBlack.year1'] },
+    { label: 'Carbon black — revenue start month', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.startMonth',
+      unit: 'mo', step: 1, ...HELP['revenue.carbonBlack.startMonth'] }
+  ];
 
   return `
-    <section class="max-w-3xl">
-      ${sectionHero(
-        'How big do we think we can get?',
-        'Two segments, three years. Market share compounds everything downstream — this is where the conversation starts.'
+    <section class="max-w-5xl">
+      ${sectionHeader('Revenue', 'Market share ramp and revenue-start timing per segment. These dominate every downstream number.')}
+
+      ${criticalBlock(formGrid(critical.map(f => numInput(f.label, f.path, f)).join('')),
+        { label: 'Critical', hint: '8 fields — market share and ramp timing' })}
+
+      ${advancedAccordion('revenue',
+        `${_pricingBlock()}
+         ${_qDistBlock('supercapElectrode', 'Supercap')}
+         ${_qDistBlock('carbonBlackCathodeAnode', 'Carbon Black')}`,
+        { label: 'Advanced', hint: 'Unit pricing and quarterly shape weights' }
       )}
-
-      <div class="space-y-4">
-
-        <!-- Supercap: biggest strategic lever first -->
-        ${conversationalCard({
-          sentence: 'If we capture __INPUT__ of the supercap market by 2027,',
-          path: 'proformaAssumptions.revenue.supercapElectrode.year3.marketSharePct',
-          unit: '%',
-          format: 'fraction-percent',
-          step: 0.1,
-          inputWidth: 'w-20',
-          slider: { min: 0, max: 25, step: 0.1, stops: [0, 5, 10, 15, 20, 25] },
-          impact: y3RevDelta
-        })}
-
-        ${timelineCard({
-          title: 'Supercap ramp',
-          supporting: 'How market share builds up to the 2027 target.',
-          inputs: [
-            { label: 'Y1', path: 'proformaAssumptions.revenue.supercapElectrode.year1.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' },
-            { label: 'Y2', path: 'proformaAssumptions.revenue.supercapElectrode.year2.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' },
-            { label: 'Y3', path: 'proformaAssumptions.revenue.supercapElectrode.year3.marketSharePct', format: 'fraction-percent', step: 0.1, unit: '%', inputWidth: 'w-16' }
-          ],
-          impact: y3RevDelta
-        })}
-
-        ${conversationalCard({
-          sentence: 'We start recognizing supercap revenue in month __INPUT__.',
-          path: 'proformaAssumptions.revenue.supercapElectrode.startMonth',
-          unit: '',
-          format: 'number',
-          step: 1,
-          inputWidth: 'w-14',
-          slider: { min: 0, max: 36, step: 1, stops: [0, 12, 24, 36] },
-          impact: breakEvenImpact
-        })}
-
-        <!-- Divider between segments -->
-        <div class="pt-3"></div>
-
-        <!-- Carbon Black -->
-        ${conversationalCard({
-          sentence: 'If we capture __INPUT__ of the carbon black market by 2027,',
-          path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year3.marketSharePct',
-          unit: '%',
-          format: 'fraction-percent',
-          step: 0.1,
-          inputWidth: 'w-20',
-          slider: { min: 0, max: 5, step: 0.05, stops: [0, 1, 2, 3, 4, 5] },
-          impact: y3RevDelta
-        })}
-
-        ${timelineCard({
-          title: 'Carbon black ramp',
-          supporting: 'Slower to develop — the market is bigger but the sales cycle is longer.',
-          inputs: [
-            { label: 'Y1', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year1.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' },
-            { label: 'Y2', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year2.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' },
-            { label: 'Y3', path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.year3.marketSharePct', format: 'fraction-percent', step: 0.05, unit: '%', inputWidth: 'w-16' }
-          ],
-          impact: y3RevDelta
-        })}
-
-        ${conversationalCard({
-          sentence: 'We start recognizing carbon black revenue in month __INPUT__.',
-          path: 'proformaAssumptions.revenue.carbonBlackCathodeAnode.startMonth',
-          unit: '',
-          format: 'number',
-          step: 1,
-          inputWidth: 'w-14',
-          slider: { min: 0, max: 47, step: 1, stops: [0, 12, 24, 36, 47] },
-          impact: breakEvenImpact
-        })}
-
-      </div>
-
-      ${advancedReveal('revenue', 2, `
-        ${_qDistBlock('supercapElectrode', 'Supercap')}
-        ${_qDistBlock('carbonBlackCathodeAnode', 'Carbon Black')}
-      `)}
     </section>
   `;
 }
