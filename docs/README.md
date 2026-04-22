@@ -43,6 +43,7 @@ Feature-specific implementation documentation:
 - **[NEWS-SYSTEM.md](features/NEWS-SYSTEM.md)** - RSS aggregation, summarization, filtering
 - **[NEWS-FILTERING.md](features/NEWS-FILTERING.md)** - Advanced filtering implementation details
 - **[PROFORMA-SYSTEM.md](features/PROFORMA-SYSTEM.md)** - Financial projections: assumptions editor, 7-layer calc engine, P&L outlook, charts
+- **[PROFORMA-ROADMAP.md](features/PROFORMA-ROADMAP.md)** - Planned enhancements: scenario comparison, sensitivity analysis, ramp curves, AR lag, export
 - **[CHARACTERIZATION-ANALYSIS.md](features/CHARACTERIZATION-ANALYSIS.md)** - Comparison charts and analysis tools
 - **[MATERIAL-TRACKING.md](features/MATERIAL-TRACKING.md)** - Biochar, graphene, and batch tracking
 

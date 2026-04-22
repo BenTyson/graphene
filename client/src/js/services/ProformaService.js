@@ -1,6 +1,17 @@
 import API from './api.js';
 import { calculateProforma } from '@shared/proformaEngine.js';
 import { getDefaultAssumptions } from '@shared/proformaDefaults.js';
+import {
+  getDemoScenarioData,
+  isDemoScenario as _isDemoScenario
+} from '@shared/proformaDemoSeed.js';
+
+const DEMO_SEEDED_KEY = 'graphene.proforma.demoSeeded';
+
+function _snapshotMetrics(computed) {
+  if (!computed || !computed.metrics) return null;
+  return JSON.parse(JSON.stringify(computed.metrics));
+}
 
 class ProformaService {
   constructor() {
@@ -13,6 +24,23 @@ class ProformaService {
     ctx.proformaLoading = true;
     try {
       ctx.proformaScenarios = await API.proforma.getScenarios();
+      // Auto-seed a locked Demo Scenario the first time a user opens the
+      // proforma tab with no scenarios. Guarded by a localStorage flag so
+      // a user who deletes the demo doesn't get it back on every load.
+      const alreadySeeded = typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem(DEMO_SEEDED_KEY) === '1'
+        : false;
+      if (!alreadySeeded && ctx.proformaScenarios.length === 0) {
+        try {
+          await this.createDemoScenario(ctx, { openAfter: false });
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem(DEMO_SEEDED_KEY, '1');
+          }
+          ctx.proformaScenarios = await API.proforma.getScenarios();
+        } catch (seedErr) {
+          console.warn('Demo scenario auto-seed failed (non-fatal)', seedErr);
+        }
+      }
     } catch (e) {
       console.error('Failed to load proforma scenarios', e);
     } finally {
@@ -27,6 +55,7 @@ class ProformaService {
       ctx.proformaScenario = data.scenario;
       ctx.proformaAssumptions = JSON.parse(JSON.stringify(data.scenario.assumptions));
       ctx.proformaComputed = data.computed;
+      ctx.proformaBaseline = _snapshotMetrics(data.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
     } catch (e) {
@@ -49,6 +78,7 @@ class ProformaService {
       ctx.proformaScenario = result.scenario;
       ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
       ctx.proformaComputed = result.computed;
+      ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
       // Refresh list in background
@@ -58,6 +88,60 @@ class ProformaService {
     } finally {
       ctx.proformaLoading = false;
     }
+  }
+
+  // Create the locked "Demo Scenario" with plausible fake data so the
+  // redesigned UX can be explored without touching real scenarios.
+  // opts.openAfter: if true, open the scenario in the editor after creating.
+  async createDemoScenario(ctx, opts = {}) {
+    const { openAfter = true } = opts;
+    const { name, description, assumptions } = getDemoScenarioData();
+    const result = await API.proforma.create({ name, description, assumptions });
+    // Intentionally NOT locked — the whole point of the demo is to play
+    // with sliders live. The DEMO badge + "Clone to real" button still
+    // make it clear this is throwaway data.
+    if (openAfter) {
+      ctx.proformaScenario = result.scenario;
+      ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
+      ctx.proformaComputed = result.computed;
+      ctx.proformaBaseline = _snapshotMetrics(result.computed);
+      ctx.proformaView = 'editor';
+      ctx.proformaDirty = false;
+    }
+    // Refresh list so the demo appears in list view as well
+    this.loadScenarios(ctx);
+    return result.scenario;
+  }
+
+  // Clone the currently-open (demo) scenario into a new unlocked scenario
+  // with a user-supplied name, using the demo's current assumptions as seed.
+  async cloneToReal(ctx) {
+    if (!ctx.proformaScenario || !ctx.proformaAssumptions) return;
+    const suggested = ctx.proformaScenario.name.replace(/\s*\(copy\)\s*$/i, '') + ' (copy)';
+    const name = prompt('New scenario name:', suggested);
+    if (!name) return;
+    ctx.proformaLoading = true;
+    try {
+      const result = await API.proforma.create({
+        name,
+        assumptions: JSON.parse(JSON.stringify(ctx.proformaAssumptions))
+      });
+      ctx.proformaScenario = result.scenario;
+      ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
+      ctx.proformaComputed = result.computed;
+      ctx.proformaBaseline = _snapshotMetrics(result.computed);
+      ctx.proformaView = 'editor';
+      ctx.proformaDirty = false;
+      this.loadScenarios(ctx);
+    } catch (e) {
+      console.error('Failed to clone scenario', e);
+    } finally {
+      ctx.proformaLoading = false;
+    }
+  }
+
+  isDemoScenario(scenario) {
+    return _isDemoScenario(scenario);
   }
 
   async toggleLock(ctx, id) {
@@ -99,6 +183,7 @@ class ProformaService {
       });
       ctx.proformaScenario = result.scenario;
       ctx.proformaComputed = result.computed;
+      ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaDirty = false;
       // Refresh list
       this.loadScenarios(ctx);
@@ -107,6 +192,14 @@ class ProformaService {
     } finally {
       ctx.proformaLoading = false;
     }
+  }
+
+  // Restore assumptions to the last-saved state (reloads from server) and
+  // reset the baseline so delta chips return to zero.
+  async resetToBaseline(ctx) {
+    if (!ctx.proformaScenario) return;
+    if (!confirm('Revert assumptions to last saved state? Unsaved edits will be lost.')) return;
+    await this.openScenario(ctx, ctx.proformaScenario.id);
   }
 
   recompute(ctx) {
@@ -123,6 +216,7 @@ class ProformaService {
     ctx.proformaScenario = null;
     ctx.proformaAssumptions = null;
     ctx.proformaComputed = null;
+    ctx.proformaBaseline = null;
     ctx.proformaDirty = false;
     this.destroyCharts();
   }

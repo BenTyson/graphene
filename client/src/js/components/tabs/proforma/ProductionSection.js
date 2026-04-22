@@ -1,8 +1,18 @@
 import { numInput, card, HELP } from './helpers.js';
+import { sectionHero } from './cards.js';
+import { productionPulse } from './ProductionPulse.js';
 
 export function getProductionSection() {
   return `
-    <div class="space-y-4">
+    <section class="max-w-3xl">
+      ${sectionHero(
+        'How fast can we actually make it?',
+        'Hemp in, graphene out, stock in between. This is the heartbeat of the business — everything downstream depends on it.'
+      )}
+
+      ${productionPulse()}
+
+      <div class="space-y-4">
 
       ${card('Process Chemistry', `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -101,6 +111,7 @@ export function getProductionSection() {
         <span> kg/mo (Phase 3)</span>
       </div>
 
-    </div>
+      </div>
+    </section>
   `;
 }
