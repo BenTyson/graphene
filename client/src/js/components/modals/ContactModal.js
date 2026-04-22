@@ -34,17 +34,17 @@ export function getContactModalHtml() {
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
             </div>
 
-            <!-- Pipeline Type (optional) -->
+            <!-- Type (multi-select) -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select x-model="contactForm.contactType"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
-                <option value="">-- None --</option>
-                <option value="INVESTOR">Investor</option>
-                <option value="PARTNER">Partner</option>
-                <option value="CLIENT">Client</option>
-                <option value="OTHER">Other</option>
-              </select>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Type <span class="text-xs text-gray-400 font-normal">(can pick more than one)</span></label>
+              <div class="flex flex-wrap gap-1.5">
+                <template x-for="t in ALL_CONTACT_TYPES" :key="t">
+                  <button type="button" @click="toggleContactTypeOnForm(t)"
+                    :class="(contactForm.contactTypes || []).includes(t) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                    class="px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+                    x-text="getContactTypeLabel(t)"></button>
+                </template>
+              </div>
             </div>
 
             <!-- PERSON-specific fields -->

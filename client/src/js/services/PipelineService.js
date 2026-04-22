@@ -135,7 +135,7 @@ class PipelineService {
 
   openContactForm(ctx, type, kind) {
     ctx.editingContact = null;
-    ctx.contactForm = { name: '', contactKind: kind || 'PERSON', email: '', phone: '', role: '', contactType: type || '', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' };
+    ctx.contactForm = { name: '', contactKind: kind || 'PERSON', email: '', phone: '', role: '', contactType: type || '', contactTypes: type ? [type] : [], source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' };
     ctx.pipelineTagInput = '';
     ctx.showAddContact = true;
   }
@@ -149,6 +149,7 @@ class PipelineService {
       phone: contact.phone || '',
       role: contact.role || '',
       contactType: contact.contactType || '',
+      contactTypes: [...(contact.contactTypes || [])],
       source: contact.source || '',
       tags: [...(contact.tags || [])],
       notes: contact.notes || '',

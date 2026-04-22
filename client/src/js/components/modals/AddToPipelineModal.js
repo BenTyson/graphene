@@ -58,7 +58,7 @@ export function getAddToPipelineModalHtml() {
               <label class="block text-sm font-medium text-gray-700 mb-2">Pipeline Board <span class="text-red-500">*</span></label>
               <div class="flex gap-2">
                 <button @click="addToPipelineForm.pipelineType = 'INVESTOR'" :class="addToPipelineForm.pipelineType === 'INVESTOR' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'" class="flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors">
-                  Investor
+                  Potential Investor
                 </button>
                 <button @click="addToPipelineForm.pipelineType = 'PARTNER'" :class="addToPipelineForm.pipelineType === 'PARTNER' ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'" class="flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors">
                   Partner
