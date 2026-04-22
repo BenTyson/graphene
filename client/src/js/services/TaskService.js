@@ -99,6 +99,15 @@ class TaskService {
   }
 
   async updateTaskStatus(ctx, taskId, newStatus) {
+    if (newStatus === 'DONE') {
+      // If we already have the full detail (selected), use its blockedBy directly;
+      // otherwise fetch to get blockers before the confirm.
+      let task = ctx.selectedTask?.id === taskId ? ctx.selectedTask : null;
+      if (!task || !Array.isArray(task.blockedBy)) {
+        try { task = await API.tasks.getById(taskId); } catch (e) { task = null; }
+      }
+      if (task && !this.confirmDoneIfBlocked(task)) return;
+    }
     try {
       await API.tasks.updateStatus(taskId, newStatus);
       await this.loadTasks(ctx);
@@ -123,6 +132,9 @@ class TaskService {
     ctx.showTaskDetail = false;
     ctx.selectedTask = null;
     ctx.taskCommentForm.content = '';
+    ctx.depPickerOpenFor = null;
+    ctx.depPickerQuery = '';
+    ctx.depPickerResults = [];
   }
 
   async addTaskComment(ctx) {
@@ -174,6 +186,10 @@ class TaskService {
   async updateTaskInline(ctx, taskId, field, value) {
     const isSelected = ctx.selectedTask?.id === taskId;
     const previousValue = isSelected ? ctx.selectedTask[field] : undefined;
+    if (field === 'status' && value === 'DONE') {
+      const task = isSelected ? ctx.selectedTask : ctx.tasks.find(t => t.id === taskId);
+      if (task && !this.confirmDoneIfBlocked(task)) return;
+    }
     if (isSelected) ctx.selectedTask[field] = value;
     try {
       await API.tasks.update(taskId, { [field]: value });
@@ -187,6 +203,68 @@ class TaskService {
         ctx.selectedTask[field] = previousValue;
       }
       alert('Failed to save change: ' + (error.message || 'Unknown error'));
+    }
+  }
+
+  hasIncompleteBlockers(task) {
+    if (!task?.blockedBy?.length) return false;
+    return task.blockedBy.some(d => !['DONE', 'ARCHIVED'].includes(d.blockingTask?.status));
+  }
+
+  confirmDoneIfBlocked(task) {
+    if (!this.hasIncompleteBlockers(task)) return true;
+    const blockers = task.blockedBy
+      .filter(d => !['DONE', 'ARCHIVED'].includes(d.blockingTask?.status))
+      .map(d => '- ' + d.blockingTask.title)
+      .join('\n');
+    return confirm('Still blocked by:\n' + blockers + '\n\nMark done anyway?');
+  }
+
+  async linkDependency(ctx, taskId, blockingTaskId) {
+    try {
+      await API.tasks.addDependency(taskId, blockingTaskId);
+      if (ctx.selectedTask?.id === taskId) {
+        ctx.selectedTask = await API.tasks.getById(taskId);
+      }
+      await this.loadTasks(ctx);
+    } catch (error) {
+      console.error('Failed to add dependency:', error);
+      alert('Failed to add dependency: ' + (error.message || 'Unknown error'));
+    }
+  }
+
+  async unlinkDependency(ctx, taskId, linkId) {
+    if (!confirm('Remove this link?')) return;
+    try {
+      await API.tasks.removeDependency(taskId, linkId);
+      if (ctx.selectedTask?.id === taskId) {
+        ctx.selectedTask = await API.tasks.getById(taskId);
+      }
+      await this.loadTasks(ctx);
+    } catch (error) {
+      console.error('Failed to remove dependency:', error);
+      alert('Failed to remove dependency: ' + (error.message || 'Unknown error'));
+    }
+  }
+
+  async searchDependencyCandidates(ctx, query, direction) {
+    if (!ctx.selectedTask) return;
+    const q = (query || '').trim();
+    if (!q) { ctx.depPickerResults = []; return; }
+    try {
+      const results = await API.tasks.getAll({ search: q, parentId: 'all', limit: 20 });
+      const selfId = ctx.selectedTask.id;
+      // Exclude self, archived, and tasks already linked in this direction
+      const existingList = direction === 'blockedBy'
+        ? (ctx.selectedTask.blockedBy || []).map(d => d.blockingTask.id)
+        : (ctx.selectedTask.blocking || []).map(d => d.blockedTask.id);
+      const existing = new Set(existingList);
+      ctx.depPickerResults = results
+        .filter(t => t.id !== selfId && t.status !== 'ARCHIVED' && !existing.has(t.id))
+        .slice(0, 10);
+    } catch (error) {
+      console.error('Dependency search failed:', error);
+      ctx.depPickerResults = [];
     }
   }
 

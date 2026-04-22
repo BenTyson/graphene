@@ -1083,6 +1083,8 @@ POST   /api/tasks/:id/comments                 - Add comment (content required)
 DELETE /api/tasks/:id/comments/:cid            - Delete comment (author + SUPER_ADMIN only)
 POST   /api/tasks/:id/attachments              - Upload files (multipart, field: 'attachments', max 5 files, 15MB each)
 DELETE /api/tasks/:id/attachments/:attachmentId - Delete attachment (uploader, task creator, or SUPER_ADMIN)
+POST   /api/tasks/:id/dependencies             - Add "blocked by" link (body: { blockingTaskId }). Rejects self-link (400), duplicate (409), and circular chains (400)
+DELETE /api/tasks/:id/dependencies/:linkId     - Remove dependency link (either side of the link may pass :id)
 ```
 
 ### Task Status Flow
@@ -1097,7 +1099,15 @@ Kanban board shows 4 active columns (TODO, IN_PROGRESS, IN_REVIEW, DONE). ARCHIV
 Upload via `POST /:id/attachments` with multipart form data (field name: `attachments`). Accepted types: PDF, JPG, PNG, GIF, DOCX, XLSX, XLS, DOC, TXT, CSV. Files stored via Cloudinary (production) or local `uploads/task-attachments/` (dev). Task deletion auto-cleans attachment files from storage.
 
 ### Activity Logging
-All changes auto-log to TaskActivity: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed.
+All changes auto-log to TaskActivity: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed, dependency_added, dependency_removed.
+
+### Dependencies (Blocks / Blocked By)
+Directional task-to-task links via `TaskDependency` (blockingTaskId blocks blockedTaskId). Any task can link to any task, including across subtask/parent boundaries.
+- `GET /tasks/:id` includes `blockedBy` (incoming: tasks blocking this one) and `blocking` (outgoing: tasks this one blocks), each with `blockingTask`/`blockedTask` summaries; response also includes `blockerCount` and `incompleteBlockerCount` (where blocker is not DONE/ARCHIVED).
+- `GET /tasks` list attaches `blockerCount` + `incompleteBlockerCount` per row via batched `groupBy` aggregations (no N+1).
+- Cycle prevention: BFS forward along blocking edges at write time, depth cap 200. Archived tasks are treated as satisfied (like DONE) for incomplete-blocker counting.
+- Task delete cascades the dependency rows (`onDelete: Cascade` on both FKs).
+- UI enforcement is warn-but-don't-block: moving a task to DONE with incomplete blockers prompts a confirm dialog listing the blockers; user can override.
 
 ## Pipeline / CRM APIs
 

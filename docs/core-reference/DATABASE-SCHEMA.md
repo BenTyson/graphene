@@ -34,7 +34,7 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 - **Testing**: BET, ConductivityTest, RamanTest, TEMTest, ParticleSizeTest, XRDTest, XPSTest
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
-- **Task Management**: Task, TaskComment, TaskActivity, TaskAttachment
+- **Task Management**: Task, TaskComment, TaskActivity, TaskAttachment, TaskDependency (directional blocks/blocked-by link; unique on (blockingTaskId, blockedTaskId); cascades on task delete)
 - **Pipeline / CRM**: Contact (with pipeline stage/position fields), ContactActivity, ContactAttachment. Deal and DealActivity models exist but are deprecated.
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument
 - **References**: CharacterizationReference

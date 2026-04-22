@@ -399,6 +399,9 @@ window.grapheneApp = function() {
     taskTagInput: '',
     showArchivedTasks: false,
     taskAttachmentUploading: false,
+    depPickerOpenFor: null, // 'blockedBy' | 'blocking' | null
+    depPickerQuery: '',
+    depPickerResults: [],
 
     // Pipeline / CRM
     pipelineContacts: [],
@@ -4975,6 +4978,23 @@ window.grapheneApp = function() {
     openTaskFormWithStatus(status) { this.openTaskForm(); this.taskForm.status = status; },
     async archiveTask(taskId) { await taskService.archiveTask(this, taskId); },
     async unarchiveTask(taskId) { await taskService.unarchiveTask(this, taskId); },
+
+    // Dependency delegates
+    async linkDependency(taskId, blockingTaskId) { await taskService.linkDependency(this, taskId, blockingTaskId); },
+    async unlinkDependency(taskId, linkId) { await taskService.unlinkDependency(this, taskId, linkId); },
+    openDepPicker(direction) {
+      this.depPickerOpenFor = direction;
+      this.depPickerQuery = '';
+      this.depPickerResults = [];
+    },
+    closeDepPicker() {
+      this.depPickerOpenFor = null;
+      this.depPickerQuery = '';
+      this.depPickerResults = [];
+    },
+    async searchDependencyCandidates(query, direction) {
+      await taskService.searchDependencyCandidates(this, query, direction);
+    },
     initKanbanDragDrop() {
       kanbanService.invalidate('kanban');
       kanbanService.init({
@@ -4983,6 +5003,17 @@ window.grapheneApp = function() {
         itemIdAttr: 'data-task-id',
         statusAttr: 'data-status',
         onReorder: async (taskId, newStatus, oldStatus, positions) => {
+          // Guard DONE transitions when the task has incomplete blockers.
+          if (newStatus === 'DONE' && newStatus !== oldStatus) {
+            let task = this.tasks.find(t => t.id === taskId);
+            if (task && !Array.isArray(task.blockedBy)) {
+              try { task = await API.tasks.getById(taskId); } catch (e) { task = null; }
+            }
+            if (task && !taskService.confirmDoneIfBlocked(task)) {
+              await this.loadTasks();
+              return;
+            }
+          }
           try {
             await API.tasks.reorder(taskId, newStatus !== oldStatus ? newStatus : null, positions);
             await this.loadTasks();
