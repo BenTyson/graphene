@@ -44,7 +44,7 @@ export function getPipelineTabHtml() {
       <div class="flex items-center justify-between border-b border-gray-200 mb-3">
         <div class="flex gap-4">
           <button @click="switchPipelineType('INVESTOR')" :class="pipelineType === 'INVESTOR' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="pb-2 text-sm font-medium border-b-2 transition-colors">
-            Investors
+            Potential Investors
           </button>
           <button @click="switchPipelineType('PARTNER')" :class="pipelineType === 'PARTNER' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="pb-2 text-sm font-medium border-b-2 transition-colors">
             Partners
@@ -129,9 +129,10 @@ export function getPipelineTabHtml() {
         <div class="flex items-center gap-2 mb-2">
           <select x-model="pipelineFilters.contactType" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-gray-900">
             <option value="">All types</option>
-            <option value="INVESTOR">Investor</option>
-            <option value="PARTNER">Partner</option>
             <option value="CLIENT">Client</option>
+            <option value="INVESTOR">Potential Investor</option>
+            <option value="EXISTING_INVESTOR">Existing Investor</option>
+            <option value="PARTNER">Partner</option>
             <option value="OTHER">Other</option>
           </select>
           <select x-model="pipelineFilters.onPipeline" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-gray-900">
@@ -193,8 +194,12 @@ export function getPipelineTabHtml() {
                   <span x-show="contact.contactKind === 'COMPANY'" class="text-xs text-gray-400" x-text="(contact._count?.people || 0) + ' people'"></span>
                 </td>
                 <td class="py-2.5 px-3">
-                  <span x-show="contact.contactType" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(contact.contactType)" x-text="getContactTypeLabel(contact.contactType)"></span>
-                  <span x-show="!contact.contactType" class="text-xs text-gray-400">-</span>
+                  <div class="flex flex-wrap gap-1">
+                    <template x-for="t in (contact.contactTypes && contact.contactTypes.length ? contact.contactTypes : (contact.contactType ? [contact.contactType] : []))" :key="t">
+                      <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(t)" x-text="getContactTypeLabel(t)"></span>
+                    </template>
+                    <span x-show="!(contact.contactTypes?.length) && !contact.contactType" class="text-xs text-gray-400">-</span>
+                  </div>
                 </td>
                 <td class="py-2.5 px-3">
                   <span x-show="contact.stage" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getStageBadgeClass(contact.stage)" x-text="getStageLabel(contact.stage)"></span>
@@ -229,9 +234,11 @@ export function getPipelineTabHtml() {
                 </div>
                 <div x-show="contact.contactKind === 'PERSON' && contact.companyContact" class="text-xs text-gray-500 mt-0.5" x-text="contact.companyContact?.name"></div>
               </div>
-              <div class="flex items-center gap-1.5">
+              <div class="flex flex-wrap items-center gap-1 justify-end">
                 <span x-show="contact.stage" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStageBadgeClass(contact.stage)" x-text="getStageLabel(contact.stage)"></span>
-                <span x-show="contact.contactType" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getContactTypeBadgeClass(contact.contactType)" x-text="getContactTypeLabel(contact.contactType)"></span>
+                <template x-for="t in (contact.contactTypes && contact.contactTypes.length ? contact.contactTypes : (contact.contactType ? [contact.contactType] : []))" :key="t">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getContactTypeBadgeClass(t)" x-text="getContactTypeLabel(t)"></span>
+                </template>
               </div>
             </div>
             <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">

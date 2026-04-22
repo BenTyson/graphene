@@ -418,7 +418,7 @@ window.grapheneApp = function() {
     showContactDetail: false,
     selectedContact: null,
     editingContact: null,
-    contactForm: { name: '', contactKind: 'PERSON', email: '', phone: '', role: '', contactType: '', source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' },
+    contactForm: { name: '', contactKind: 'PERSON', email: '', phone: '', role: '', contactType: '', contactTypes: [], source: '', tags: [], notes: '', linkedInUrl: '', website: '', companyId: '', linkPersonId: '', ownerId: '', nextFollowUpAt: '' },
     addToPipelineForm: { contactId: '', pipelineType: 'INVESTOR', pipelineTitle: '' },
     addToPipelineSearch: '',
     addToPipelinePresetStage: '',
@@ -5044,12 +5044,35 @@ window.grapheneApp = function() {
     getStageLabel(stageKey) { return pipelineService.getStageLabel(stageKey); },
     getStageBadgeClass(stageKey) { return pipelineService.getStageBadgeClass(stageKey); },
     getContactTypeBadgeClass(type) {
-      const classes = { CLIENT: 'bg-blue-100 text-blue-700', INVESTOR: 'bg-purple-100 text-purple-700', PARTNER: 'bg-teal-100 text-teal-700', OTHER: 'bg-gray-100 text-gray-700' };
+      const classes = {
+        CLIENT: 'bg-blue-100 text-blue-700',
+        INVESTOR: 'bg-purple-100 text-purple-700',
+        EXISTING_INVESTOR: 'bg-emerald-100 text-emerald-700',
+        PARTNER: 'bg-teal-100 text-teal-700',
+        OTHER: 'bg-gray-100 text-gray-700'
+      };
       return classes[type] || classes.OTHER;
     },
     getContactTypeLabel(type) {
-      const labels = { CLIENT: 'Client', INVESTOR: 'Investor', PARTNER: 'Partner', OTHER: 'Other' };
+      const labels = {
+        CLIENT: 'Client',
+        INVESTOR: 'Potential Investor',
+        EXISTING_INVESTOR: 'Existing Investor',
+        PARTNER: 'Partner',
+        OTHER: 'Other'
+      };
       return labels[type] || type;
+    },
+    ALL_CONTACT_TYPES: ['CLIENT', 'INVESTOR', 'EXISTING_INVESTOR', 'PARTNER', 'OTHER'],
+    toggleContactTypeOnForm(type) {
+      const arr = this.contactForm.contactTypes || [];
+      this.contactForm.contactTypes = arr.includes(type) ? arr.filter(t => t !== type) : [...arr, type];
+    },
+    toggleContactTypeOnSelected(type) {
+      if (!this.selectedContact) return;
+      const arr = this.selectedContact.contactTypes || [];
+      const next = arr.includes(type) ? arr.filter(t => t !== type) : [...arr, type];
+      this.updateContactInline(this.selectedContact.id, 'contactTypes', next);
     },
     getContactsByStage(stage) { return this.pipelineBoardContacts.filter(c => c.stage === stage); },
     getFollowUpLabel(date) { return getRelativeDateLabel(date, { todayLabel: 'Today', tomorrowLabel: 'Tomorrow', withinWeekFmt: d => `In ${d}d` }); },
@@ -5079,7 +5102,8 @@ window.grapheneApp = function() {
         filtered = filtered.filter(c => c.ownerId === this.pipelineFilters.ownerId);
       }
       if (this.pipelineFilters.contactType) {
-        filtered = filtered.filter(c => c.contactType === this.pipelineFilters.contactType);
+        const want = this.pipelineFilters.contactType;
+        filtered = filtered.filter(c => (c.contactTypes || []).includes(want) || c.contactType === want);
       }
       if (this.pipelineFilters.onPipeline === 'yes') {
         filtered = filtered.filter(c => c.stage);
@@ -5092,7 +5116,7 @@ window.grapheneApp = function() {
         let va, vb;
         if (field === 'name') { va = a.name?.toLowerCase() || ''; vb = b.name?.toLowerCase() || ''; }
         else if (field === 'company') { va = (a.contactKind === 'PERSON' ? a.companyContact?.name?.toLowerCase() : a.name?.toLowerCase()) || ''; vb = (b.contactKind === 'PERSON' ? b.companyContact?.name?.toLowerCase() : b.name?.toLowerCase()) || ''; }
-        else if (field === 'type') { va = a.contactType || ''; vb = b.contactType || ''; }
+        else if (field === 'type') { va = (a.contactTypes && a.contactTypes[0]) || a.contactType || ''; vb = (b.contactTypes && b.contactTypes[0]) || b.contactType || ''; }
         else if (field === 'stage') { va = a.stage || ''; vb = b.stage || ''; }
         else if (field === 'followUp') { va = a.nextFollowUpAt || '9999'; vb = b.nextFollowUpAt || '9999'; }
         else if (field === 'lastContact') { va = a.lastContactedAt || ''; vb = b.lastContactedAt || ''; }

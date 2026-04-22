@@ -89,6 +89,7 @@ router.get('/contacts', asyncHandler(async (req, res) => {
   const { contactType, contactKind, ownerId, search, onPipeline, sortBy = 'createdAt', order = 'desc', limit, offset } = req.query;
 
   const where = {};
+  // contactType param = pipeline board membership (single). For multi-label filtering, client filters in-memory.
   if (contactType) where.contactType = contactType;
   if (contactKind) where.contactKind = contactKind;
   if (ownerId) where.ownerId = ownerId;
@@ -170,14 +171,23 @@ router.get('/contacts/:id', asyncHandler(async (req, res) => {
 router.post('/contacts', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { name, contactKind, email, phone, role, contactType, source, tags, notes, linkedInUrl, website, companyId, ownerId, nextFollowUpAt } = req.body;
+  const { name, contactKind, email, phone, role, contactType, contactTypes, source, tags, notes, linkedInUrl, website, companyId, ownerId, nextFollowUpAt } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
   }
-  if (contactType && !['CLIENT', 'INVESTOR', 'PARTNER', 'OTHER'].includes(contactType)) {
-    return res.status(400).json({ error: 'contactType must be CLIENT, INVESTOR, PARTNER, or OTHER' });
+  const VALID_TYPES = ['CLIENT', 'INVESTOR', 'EXISTING_INVESTOR', 'PARTNER', 'OTHER'];
+  if (contactType && !VALID_TYPES.includes(contactType)) {
+    return res.status(400).json({ error: 'contactType must be CLIENT, INVESTOR, EXISTING_INVESTOR, PARTNER, or OTHER' });
   }
+  if (contactTypes && (!Array.isArray(contactTypes) || contactTypes.some(t => !VALID_TYPES.includes(t)))) {
+    return res.status(400).json({ error: 'contactTypes must be an array of valid ContactType values' });
+  }
+
+  // Default contactTypes to [contactType] if singular provided but array not
+  const finalTypes = (contactTypes && contactTypes.length > 0)
+    ? Array.from(new Set(contactTypes))
+    : (contactType ? [contactType] : []);
 
   const contact = await prisma.contact.create({
     data: {
@@ -187,6 +197,7 @@ router.post('/contacts', asyncHandler(async (req, res) => {
       phone: phone || null,
       role: role || null,
       contactType: contactType || null,
+      contactTypes: finalTypes,
       source: source || null,
       tags: tags || [],
       notes: notes || null,
@@ -216,10 +227,18 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { name, contactKind, email, phone, role, contactType, source, tags, notes, linkedInUrl, website, companyId, ownerId, lastContactedAt, nextFollowUpAt, stage, lostReason, pipelineTitle } = req.body;
+  const { name, contactKind, email, phone, role, contactType, contactTypes, source, tags, notes, linkedInUrl, website, companyId, ownerId, lastContactedAt, nextFollowUpAt, stage, lostReason, pipelineTitle } = req.body;
 
   const existing = await prisma.contact.findUnique({ where: { id } });
   if (!existing) return res.status(404).json({ error: 'Contact not found' });
+
+  const VALID_TYPES = ['CLIENT', 'INVESTOR', 'EXISTING_INVESTOR', 'PARTNER', 'OTHER'];
+  if (contactType !== undefined && contactType && !VALID_TYPES.includes(contactType)) {
+    return res.status(400).json({ error: 'contactType must be a valid ContactType value' });
+  }
+  if (contactTypes !== undefined && contactTypes !== null && (!Array.isArray(contactTypes) || contactTypes.some(t => !VALID_TYPES.includes(t)))) {
+    return res.status(400).json({ error: 'contactTypes must be an array of valid ContactType values' });
+  }
 
   const data = {};
   if (name !== undefined) data.name = name.trim();
@@ -228,6 +247,7 @@ router.put('/contacts/:id', asyncHandler(async (req, res) => {
   if (phone !== undefined) data.phone = phone || null;
   if (role !== undefined) data.role = role || null;
   if (contactType !== undefined) data.contactType = contactType || null;
+  if (contactTypes !== undefined) data.contactTypes = Array.isArray(contactTypes) ? Array.from(new Set(contactTypes)) : [];
   if (companyId !== undefined) data.companyId = companyId || null;
   if (source !== undefined) data.source = source || null;
   if (tags !== undefined) data.tags = tags;
@@ -435,10 +455,16 @@ router.post('/contacts/:id/add-to-pipeline', asyncHandler(async (req, res) => {
     _max: { position: true }
   });
 
+  // Ensure contactType is reflected in the multi-type labels too
+  const updatedTypes = (existing.contactTypes || []).includes(contactType)
+    ? (existing.contactTypes || [])
+    : [...(existing.contactTypes || []), contactType];
+
   const contact = await prisma.contact.update({
     where: { id },
     data: {
       contactType,
+      contactTypes: updatedTypes,
       pipelineTitle: pipelineTitle || null,
       stage,
       position: (maxPos._max.position ?? -1) + 1,

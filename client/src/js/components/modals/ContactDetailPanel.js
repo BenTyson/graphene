@@ -34,9 +34,11 @@ export function getContactDetailPanelHtml() {
                   @blur="$event.target.value.trim() && $event.target.value.trim() !== selectedContact.name ? updateContactInline(selectedContact.id, 'name', $event.target.value.trim()) : ($event.target.value = selectedContact.name)"
                   @keydown.enter.prevent="$event.target.blur()"
                   class="w-full text-lg font-semibold text-gray-900 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-black rounded-md px-2 py-1 -mx-2 -my-1 truncate">
-                <div class="flex items-center gap-2 mt-2 ml-0">
+                <div class="flex flex-wrap items-center gap-2 mt-2 ml-0">
                   <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600" x-text="selectedContact.contactKind === 'COMPANY' ? 'Company' : 'Person'"></span>
-                  <span x-show="selectedContact.contactType" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(selectedContact.contactType)" x-text="getContactTypeLabel(selectedContact.contactType)"></span>
+                  <template x-for="t in (selectedContact.contactTypes && selectedContact.contactTypes.length ? selectedContact.contactTypes : (selectedContact.contactType ? [selectedContact.contactType] : []))" :key="t">
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getContactTypeBadgeClass(t)" x-text="getContactTypeLabel(t)"></span>
+                  </template>
                   <span x-show="selectedContact.stage" class="px-2 py-0.5 text-xs font-medium rounded-full" :class="getStageBadgeClass(selectedContact.stage)" x-text="getStageLabel(selectedContact.stage)"></span>
                 </div>
               </div>
@@ -90,21 +92,20 @@ export function getContactDetailPanelHtml() {
               </div>
             </div>
 
-            <!-- Metadata: Type, Owner, Follow-up -->
-            <div class="px-6 py-4 border-b border-gray-100">
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Type</label>
-                  <select :value="selectedContact.contactType || ''"
-                    @change="updateContactInline(selectedContact.id, 'contactType', $event.target.value || null)"
-                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
-                    <option value="">None</option>
-                    <option value="INVESTOR">Investor</option>
-                    <option value="PARTNER">Partner</option>
-                    <option value="CLIENT">Client</option>
-                    <option value="OTHER">Other</option>
-                  </select>
+            <!-- Metadata: Type (multi), Owner, Follow-up, Source -->
+            <div class="px-6 py-4 border-b border-gray-100 space-y-3">
+              <div>
+                <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">Type</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <template x-for="t in ALL_CONTACT_TYPES" :key="t">
+                    <button type="button" @click="toggleContactTypeOnSelected(t)"
+                      :class="(selectedContact.contactTypes || []).includes(t) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                      class="px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+                      x-text="getContactTypeLabel(t)"></button>
+                  </template>
                 </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Owner</label>
                   <select :value="selectedContact.ownerId || ''"
@@ -122,7 +123,7 @@ export function getContactDetailPanelHtml() {
                     @change="($event.target.value || null) !== (selectedContact.nextFollowUpAt || null) && updateContactInline(selectedContact.id, 'nextFollowUpAt', $event.target.value || null)"
                     class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
                 </div>
-                <div>
+                <div class="col-span-2">
                   <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Source</label>
                   <input type="text" :value="selectedContact.source || ''"
                     @blur="$event.target.value !== (selectedContact.source || '') && updateContactInline(selectedContact.id, 'source', $event.target.value || null)"

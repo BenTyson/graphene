@@ -1043,7 +1043,8 @@ model TaskAttachment {
 
 enum ContactType {
   CLIENT
-  INVESTOR
+  INVESTOR           // displayed as "Potential Investor"
+  EXISTING_INVESTOR
   PARTNER
   OTHER
 }
@@ -1060,7 +1061,8 @@ model Contact {
   email           String?
   phone           String?
   role            String?
-  contactType     ContactType? @map("contact_type")
+  contactType     ContactType? @map("contact_type")  // legacy: pipeline board membership (single)
+  contactTypes    ContactType[] @default([]) @map("contact_types") // multi-categorization labels
   source          String?
   tags            String[]    @default([])
   notes           String?     @db.Text
