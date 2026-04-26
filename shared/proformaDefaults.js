@@ -6,19 +6,53 @@ export const MONTHS_TOTAL = 48; // Year 0 (12) + Year 1 (12) + Year 2 (12) + Yea
 // Global phase boundaries (month indices where phases change)
 export const PHASE_BOUNDARIES = [0, 24, 36]; // Phase 1: 0-23, Phase 2: 24-35, Phase 3: 36-47
 
+// ── Built-in revenue stream factories ─────────────────────────────
+// Each stream is self-contained: pricing, market source, ramp, qDist.
+// `builtin: true` streams cannot be deleted via the UI but are otherwise
+// editable. New custom streams are appended with builtin: false.
+
+function _supercapStream() {
+  return {
+    id: 'supercapElectrode',
+    name: 'Supercapacitor Electrode',
+    builtin: true,
+    order: 0,
+    startMonth: 12,
+    pricing: { year0: 200, year1: 200, year2: 200, year3: 200 },
+    market: { mode: 'linked', linkedSource: 'supercap' },
+    year1: { marketSharePct: 0.03, qDist: [0.10, 0.20, 0.30, 0.40] },
+    year2: { marketSharePct: 0.06, qDist: [0.23, 0.24, 0.26, 0.27] },
+    year3: { marketSharePct: 0.09, qDist: [0.20, 0.24, 0.26, 0.30] }
+  };
+}
+
+function _carbonBlackStream() {
+  return {
+    id: 'carbonBlackCathodeAnode',
+    name: 'Carbon Black (Cathode + Anode)',
+    builtin: true,
+    order: 1,
+    startMonth: 36,
+    pricing: { year0: 50, year1: 50, year2: 50, year3: 50 },
+    market: { mode: 'linked', linkedSource: 'conductive' },
+    year1: { marketSharePct: 0.0025, qDist: [0.00, 0.20, 0.30, 0.50] },
+    year2: { marketSharePct: 0.005, qDist: [0.20, 0.23, 0.25, 0.27] },
+    year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] }
+  };
+}
+
+// Catalog of global market sources surfaced on the Technical tab. The
+// engine extends this in deriveTechnical(); the UI uses it to render
+// the linked-source dropdown when adding a stream.
+export const MARKET_SOURCE_CATALOG = [
+  { id: 'supercap',      label: 'Supercapacitor activated-carbon demand' },
+  { id: 'conductive',    label: 'EV conductive additives (cathode + anode)' },
+  { id: 'grapheneOxide', label: 'Graphene Oxide demand' }
+];
+
 export function getDefaultAssumptions() {
   return {
-    version: 1,
-
-    pricing: {
-      // Supercap uses premium pricing, Carbon Black uses commodity
-      supercapPerKg: {
-        year0: 200, year1: 200, year2: 200, year3: 200
-      },
-      carbonBlackPerKg: {
-        year0: 50, year1: 50, year2: 50, year3: 50
-      }
-    },
+    version: 2,
 
     production: {
       // Step 1: Hemp to Biochar
@@ -143,20 +177,7 @@ export function getDefaultAssumptions() {
     },
 
     revenue: {
-      supercapElectrode: {
-        // Revenue starts Year 1 (month 12)
-        startMonth: 12,
-        year1: { marketSharePct: 0.03, qDist: [0.10, 0.20, 0.30, 0.40] },
-        year2: { marketSharePct: 0.06, qDist: [0.23, 0.24, 0.26, 0.27] },
-        year3: { marketSharePct: 0.09, qDist: [0.20, 0.24, 0.26, 0.30] }
-      },
-      carbonBlackCathodeAnode: {
-        // Revenue starts Year 3 (month 36) -- only in OUTLOOK for Y3
-        startMonth: 36,
-        year1: { marketSharePct: 0.0025, qDist: [0.00, 0.20, 0.30, 0.50] },
-        year2: { marketSharePct: 0.005, qDist: [0.20, 0.23, 0.25, 0.27] },
-        year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] }
-      }
+      streams: [_supercapStream(), _carbonBlackStream()]
     },
 
     opex: {
@@ -260,21 +281,99 @@ export function getDefaultAssumptions() {
         globalEvBatteryCapacityGwh: 1200,
         evCagr: 1.20,
         supercapActivatedCarbonDemandTonnes: 5936,
-        supercapCagr: 1.20
+        supercapCagr: 1.20,
+        // Graphene Oxide global demand (user-edited on Technical tab).
+        // Defaults to 0 — the supercap/conductive sources are the funded
+        // baselines; GO is here so it can power a new revenue stream once
+        // the founder fills in real demand numbers.
+        grapheneOxideDemandTonnes: 0,
+        grapheneOxideCagr: 1.20
       }
     }
   };
 }
 
+// ───────────────────────────────────────────────────────────────────
+// Migration: convert legacy assumption shapes to the current schema.
+// Idempotent — safe to call on any blob. Mutates `a` in place AND
+// returns it for chaining. Run at the top of calculateProforma() and
+// after server load on the client so the UI always sees the new shape.
+// ───────────────────────────────────────────────────────────────────
+export function migrateAssumptions(a) {
+  if (!a || typeof a !== 'object') return a;
+
+  // v1 → v2: revenue.{supercapElectrode,carbonBlackCathodeAnode} +
+  // top-level pricing.{supercapPerKg,carbonBlackPerKg} → revenue.streams[].
+  if (a.revenue && !a.revenue.streams) {
+    const streams = [];
+    const legacySup = a.revenue.supercapElectrode;
+    const legacyCb  = a.revenue.carbonBlackCathodeAnode;
+    const legacyPricing = a.pricing || {};
+
+    if (legacySup) {
+      const s = _supercapStream();
+      s.startMonth = legacySup.startMonth ?? s.startMonth;
+      s.year1 = legacySup.year1 ?? s.year1;
+      s.year2 = legacySup.year2 ?? s.year2;
+      s.year3 = legacySup.year3 ?? s.year3;
+      if (legacyPricing.supercapPerKg) s.pricing = { ...s.pricing, ...legacyPricing.supercapPerKg };
+      streams.push(s);
+    }
+    if (legacyCb) {
+      const s = _carbonBlackStream();
+      s.startMonth = legacyCb.startMonth ?? s.startMonth;
+      s.year1 = legacyCb.year1 ?? s.year1;
+      s.year2 = legacyCb.year2 ?? s.year2;
+      s.year3 = legacyCb.year3 ?? s.year3;
+      if (legacyPricing.carbonBlackPerKg) s.pricing = { ...s.pricing, ...legacyPricing.carbonBlackPerKg };
+      streams.push(s);
+    }
+
+    if (streams.length === 0) {
+      streams.push(_supercapStream(), _carbonBlackStream());
+    }
+    a.revenue = { streams };
+  }
+
+  // Any version: ensure new market keys exist on technical (so old DB
+  // blobs render correctly even if they predate Graphene Oxide).
+  if (a.technical && a.technical.market) {
+    if (typeof a.technical.market.grapheneOxideDemandTonnes !== 'number') {
+      a.technical.market.grapheneOxideDemandTonnes = 0;
+    }
+    if (typeof a.technical.market.grapheneOxideCagr !== 'number') {
+      a.technical.market.grapheneOxideCagr = 1.20;
+    }
+  }
+
+  // Drop the old top-level pricing block — it's been folded into streams.
+  if (a.pricing && a.revenue?.streams) {
+    delete a.pricing;
+  }
+
+  // Normalise stream order field
+  if (a.revenue?.streams) {
+    a.revenue.streams.forEach((s, i) => {
+      if (typeof s.order !== 'number') s.order = i;
+    });
+    a.revenue.streams.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+  }
+
+  a.version = 2;
+  return a;
+}
+
 export function validateAssumptions(a) {
   const errors = [];
   if (!a || typeof a !== 'object') return ['Assumptions must be an object'];
-  if (a.version !== 1) errors.push('Unsupported version: ' + a.version);
-  if (!a.pricing) errors.push('Missing pricing');
+  if (a.version !== 1 && a.version !== 2) errors.push('Unsupported version: ' + a.version);
   if (!a.production) errors.push('Missing production');
   if (!Array.isArray(a.machines) || a.machines.length === 0) errors.push('Missing machines');
   if (!a.manufacturing) errors.push('Missing manufacturing');
   if (!a.revenue) errors.push('Missing revenue');
+  if (a.revenue && !Array.isArray(a.revenue.streams)) {
+    // Legacy shape — engine will migrate. No error.
+  }
   if (!a.opex) errors.push('Missing opex');
   if (!a.cogs) errors.push('Missing cogs');
   if (!a.capital) errors.push('Missing capital');

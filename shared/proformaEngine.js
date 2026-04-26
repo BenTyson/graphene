@@ -1,4 +1,4 @@
-import { MONTHS_TOTAL, PHASE_BOUNDARIES, validateAssumptions } from './proformaDefaults.js';
+import { MONTHS_TOTAL, PHASE_BOUNDARIES, validateAssumptions, migrateAssumptions } from './proformaDefaults.js';
 
 // Determine which phase index (0, 1, 2) a month falls in
 function getGlobalPhase(month) {
@@ -68,11 +68,22 @@ function deriveTechnical(tech) {
     supHGDemandKg * Math.pow(mkt.supercapCagr, 3)
   ];
 
+  // Graphene Oxide: simple base × CAGR^N market source. Tonnes → kg.
+  const goBaseKg = (mkt.grapheneOxideDemandTonnes || 0) * 1000;
+  const goCagr = mkt.grapheneOxideCagr || 1.0;
+  const grapheneOxideByYear = [
+    goBaseKg,
+    goBaseKg * goCagr,
+    goBaseKg * goCagr * goCagr,
+    goBaseKg * Math.pow(goCagr, 3)
+  ];
+
   return {
     globalHgConductiveTotalKg,
     supHGDemandKg,
     conductiveByYear,
-    supercapByYear
+    supercapByYear,
+    grapheneOxideByYear
   };
 }
 
@@ -219,78 +230,61 @@ function computeProduction(machines, prod, mfg) {
 // ──────────────────────────────────────────────────────────────
 // Layer 3: Revenue
 // ──────────────────────────────────────────────────────────────
-function computeRevenue(revenueAssumptions, pricing, techRef) {
+// Iterates revenue.streams[]. Each stream resolves its annual revenue
+// via either a linked market source (kg × marketSharePct × $/kg) or
+// a direct revenueByYear schedule, then distributes it through the
+// stream's qDist into months — clipped at startMonth.
+function computeRevenue(revenueAssumptions, techRef) {
   const monthly = {
-    supercap: new Array(MONTHS_TOTAL).fill(0),
-    carbonBlack: new Array(MONTHS_TOTAL).fill(0),
+    byStream: {},                           // { [streamId]: number[] }
     total: new Array(MONTHS_TOTAL).fill(0)
   };
 
-  // Supercapacitor Electrode revenue
-  const sup = revenueAssumptions.supercapElectrode;
-  if (sup) {
-    const yearConfigs = [null, sup.year1, sup.year2, sup.year3]; // index by year (0=none)
+  const streams = (revenueAssumptions && revenueAssumptions.streams) || [];
+
+  for (const stream of streams) {
+    const stripe = new Array(MONTHS_TOTAL).fill(0);
+    const market = stream.market || { mode: 'linked', linkedSource: 'supercap' };
+
     for (let year = 1; year <= 3; year++) {
-      const cfg = yearConfigs[year];
+      const cfg = stream['year' + year];
       if (!cfg) continue;
 
-      const marketKg = techRef.supercapByYear[year - 1]; // Year 1 uses base year market
-      // Actually, the spreadsheet uses a different mapping:
-      // Year 1 revenue uses TECHNICAL!B219 (base year supercap demand)
-      // Year 2 revenue uses TECHNICAL!B231 (CAGR year 2)
-      // Year 3 revenue uses TECHNICAL!B239 (CAGR year 3)
-      // So Year 1 = index 0, Year 2 = index 1, Year 3 = index 2
-      const kilosSold = marketKg * cfg.marketSharePct;
-      const pricePerKg = pricing.supercapPerKg['year' + year] || pricing.supercapPerKg.year1;
+      // Year 1 uses index 0 (base), Year 2 → index 1, Year 3 → index 2.
+      // (Matches the legacy mapping the spreadsheet uses.)
+      let yearRevenue = 0;
 
-      for (let q = 0; q < 4; q++) {
-        const quarterlyKilos = kilosSold * cfg.qDist[q];
-        const monthlyKilos = quarterlyKilos / 3;
-        const monthlyRev = monthlyKilos * pricePerKg;
-        const baseMonth = (year * 12) + (q * 3); // Year 1 Q1 = month 12
-
-        for (let i = 0; i < 3; i++) {
-          const m = baseMonth + i;
-          if (m >= sup.startMonth && m < MONTHS_TOTAL) {
-            monthly.supercap[m] = monthlyRev;
-          }
-        }
+      if (market.mode === 'linked') {
+        const sourceKey = (market.linkedSource || '') + 'ByYear';
+        const sourceArr = techRef[sourceKey];
+        if (!Array.isArray(sourceArr)) continue;
+        const marketKg = sourceArr[year - 1] || 0;
+        const kilosSold = marketKg * (cfg.marketSharePct || 0);
+        const pricing = stream.pricing || {};
+        const pricePerKg = pricing['year' + year] || pricing.year1 || 0;
+        yearRevenue = kilosSold * pricePerKg;
+      } else if (market.mode === 'direct') {
+        const rev = market.revenueByYear || {};
+        yearRevenue = rev['year' + year] || 0;
       }
-    }
-  }
 
-  // Carbon Black Cathode+Anode revenue
-  const cb = revenueAssumptions.carbonBlackCathodeAnode;
-  if (cb) {
-    const yearConfigs = [null, cb.year1, cb.year2, cb.year3];
-    for (let year = 1; year <= 3; year++) {
-      const cfg = yearConfigs[year];
-      if (!cfg) continue;
-
-      // Conductive total market (cathode + anode CB)
-      const marketKg = techRef.conductiveByYear[year - 1];
-      const kilosSold = marketKg * cfg.marketSharePct;
-      const pricePerKg = pricing.carbonBlackPerKg['year' + year] || pricing.carbonBlackPerKg.year1;
-
+      const qDist = Array.isArray(cfg.qDist) ? cfg.qDist : [0.25, 0.25, 0.25, 0.25];
       for (let q = 0; q < 4; q++) {
-        const quarterlyKilos = kilosSold * cfg.qDist[q];
-        const monthlyKilos = quarterlyKilos / 3;
-        const monthlyRev = monthlyKilos * pricePerKg;
+        const monthlyRev = (yearRevenue * (qDist[q] || 0)) / 3;
         const baseMonth = (year * 12) + (q * 3);
-
         for (let i = 0; i < 3; i++) {
           const m = baseMonth + i;
-          if (m >= cb.startMonth && m < MONTHS_TOTAL) {
-            monthly.carbonBlack[m] = monthlyRev;
+          if (m >= (stream.startMonth || 0) && m < MONTHS_TOTAL) {
+            stripe[m] = monthlyRev;
           }
         }
       }
     }
-  }
 
-  // Total
-  for (let m = 0; m < MONTHS_TOTAL; m++) {
-    monthly.total[m] = monthly.supercap[m] + monthly.carbonBlack[m];
+    monthly.byStream[stream.id] = stripe;
+    for (let m = 0; m < MONTHS_TOTAL; m++) {
+      monthly.total[m] += stripe[m];
+    }
   }
 
   return monthly;
@@ -410,11 +404,9 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
 // ──────────────────────────────────────────────────────────────
 // Layer 6: Assemble Outlook (P&L)
 // ──────────────────────────────────────────────────────────────
-function assembleOutlook(revenue, cogs, opex, production, capital, capexLab) {
+function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, streams) {
   const monthly = {
     revenue: revenue.total,
-    revenueSupercap: revenue.supercap,
-    revenueCarbonBlack: revenue.carbonBlack,
     cogs: cogs.total,
     cogsManufacturing: cogs.manufacturing,
     cogsHemp: cogs.hemp,
@@ -483,6 +475,15 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab) {
     monthly.cumulativeCash[m] = running;
   }
 
+  // Per-stream revenue series. Keyed `revenueStream_<id>` so they get
+  // picked up automatically by aggregateViews() and downstream UI loops
+  // that walk Object.keys(outlook) won't trip over a nested object.
+  if (Array.isArray(streams) && revenue && revenue.byStream) {
+    for (const s of streams) {
+      monthly['revenueStream_' + s.id] = revenue.byStream[s.id] || new Array(MONTHS_TOTAL).fill(0);
+    }
+  }
+
   return monthly;
 }
 
@@ -543,6 +544,10 @@ function aggregateViews(outlook) {
 // Main Entry Point
 // ──────────────────────────────────────────────────────────────
 export function calculateProforma(assumptions) {
+  // Idempotent shape upgrade — old DB blobs are reshaped into the
+  // current schema (revenue.streams[]) before validation.
+  migrateAssumptions(assumptions);
+
   const errors = validateAssumptions(assumptions);
   if (errors.length > 0) {
     throw new Error('Invalid assumptions: ' + errors.join('; '));
@@ -559,11 +564,7 @@ export function calculateProforma(assumptions) {
   );
 
   // Layer 3: Revenue
-  const revenue = computeRevenue(
-    assumptions.revenue,
-    assumptions.pricing,
-    techRef
-  );
+  const revenue = computeRevenue(assumptions.revenue, techRef);
 
   // Layer 4: COGS
   const cogs = computeCOGS(assumptions.cogs, production);
@@ -581,8 +582,12 @@ export function calculateProforma(assumptions) {
     grossMarginMonthly
   );
 
-  // Layer 6: Assemble Outlook
-  const outlook = assembleOutlook(revenue, cogs, opex, production, assumptions.capital, assumptions.capexLab);
+  // Layer 6: Assemble Outlook (carries per-stream revenue series too)
+  const outlook = assembleOutlook(
+    revenue, cogs, opex, production,
+    assumptions.capital, assumptions.capexLab,
+    assumptions.revenue.streams
+  );
 
   // Layer 7: Aggregate views
   const { quarterly, yearly } = aggregateViews(outlook);

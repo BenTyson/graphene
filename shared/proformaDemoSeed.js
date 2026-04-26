@@ -12,15 +12,19 @@ export function getDemoScenarioAssumptions() {
   const a = getDefaultAssumptions();
 
   // Revenue: slightly more aggressive share ramp, brings Y3 revenue up
-  a.revenue.supercapElectrode.year1.marketSharePct = 0.035;
-  a.revenue.supercapElectrode.year2.marketSharePct = 0.075;
-  a.revenue.supercapElectrode.year3.marketSharePct = 0.11;
-  a.revenue.carbonBlackCathodeAnode.year1.marketSharePct = 0.003;
-  a.revenue.carbonBlackCathodeAnode.year2.marketSharePct = 0.007;
-  a.revenue.carbonBlackCathodeAnode.year3.marketSharePct = 0.012;
-
-  // Pricing: hold defaults; founder will nudge in the demo.
-  a.pricing.supercapPerKg = { year0: 200, year1: 210, year2: 220, year3: 225 };
+  const sup = a.revenue.streams.find(s => s.id === 'supercapElectrode');
+  const cb  = a.revenue.streams.find(s => s.id === 'carbonBlackCathodeAnode');
+  if (sup) {
+    sup.year1.marketSharePct = 0.035;
+    sup.year2.marketSharePct = 0.075;
+    sup.year3.marketSharePct = 0.11;
+    sup.pricing = { year0: 200, year1: 210, year2: 220, year3: 225 };
+  }
+  if (cb) {
+    cb.year1.marketSharePct = 0.003;
+    cb.year2.marketSharePct = 0.007;
+    cb.year3.marketSharePct = 0.012;
+  }
 
   // Costs: slightly higher hemp
   a.cogs.hempCostPerKilo = 0.50;

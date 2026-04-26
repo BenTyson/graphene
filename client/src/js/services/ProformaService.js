@@ -1,10 +1,25 @@
 import API from './api.js';
 import { calculateProforma } from '@shared/proformaEngine.js';
-import { getDefaultAssumptions } from '@shared/proformaDefaults.js';
+import {
+  getDefaultAssumptions,
+  migrateAssumptions,
+  MARKET_SOURCE_CATALOG
+} from '@shared/proformaDefaults.js';
 import {
   getDemoScenarioData,
   isDemoScenario as _isDemoScenario
 } from '@shared/proformaDemoSeed.js';
+
+// Color palette used for the revenue-by-stream stacked chart. Built-ins
+// keep their historical colors; later streams get the next palette slot.
+const STREAM_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E'];
+
+function _slugifyStreamId(name) {
+  const base = (name || 'stream').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'stream';
+  return base + '_' + Math.random().toString(36).slice(2, 7);
+}
 
 const DEMO_SEEDED_KEY = 'graphene.proforma.demoSeeded';
 
@@ -53,7 +68,7 @@ class ProformaService {
     try {
       const data = await API.proforma.getScenario(id);
       ctx.proformaScenario = data.scenario;
-      ctx.proformaAssumptions = JSON.parse(JSON.stringify(data.scenario.assumptions));
+      ctx.proformaAssumptions = migrateAssumptions(JSON.parse(JSON.stringify(data.scenario.assumptions)));
       ctx.proformaComputed = data.computed;
       ctx.proformaBaseline = _snapshotMetrics(data.computed);
       ctx.proformaView = 'editor';
@@ -76,7 +91,7 @@ class ProformaService {
         assumptions: defaults
       });
       ctx.proformaScenario = result.scenario;
-      ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
+      ctx.proformaAssumptions = migrateAssumptions(JSON.parse(JSON.stringify(result.scenario.assumptions)));
       ctx.proformaComputed = result.computed;
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
@@ -102,7 +117,7 @@ class ProformaService {
     // make it clear this is throwaway data.
     if (openAfter) {
       ctx.proformaScenario = result.scenario;
-      ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
+      ctx.proformaAssumptions = migrateAssumptions(JSON.parse(JSON.stringify(result.scenario.assumptions)));
       ctx.proformaComputed = result.computed;
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
@@ -127,7 +142,7 @@ class ProformaService {
         assumptions: JSON.parse(JSON.stringify(ctx.proformaAssumptions))
       });
       ctx.proformaScenario = result.scenario;
-      ctx.proformaAssumptions = JSON.parse(JSON.stringify(result.scenario.assumptions));
+      ctx.proformaAssumptions = migrateAssumptions(JSON.parse(JSON.stringify(result.scenario.assumptions)));
       ctx.proformaComputed = result.computed;
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
@@ -317,6 +332,72 @@ class ProformaService {
     this.recompute(ctx);
   }
 
+  // ── Revenue stream management ──
+
+  // Catalog of global market sources surfaced in the linked-source dropdown.
+  getMarketSourceCatalog() {
+    return MARKET_SOURCE_CATALOG;
+  }
+
+  // mode: 'linked' | 'direct'. linkedSource only used when mode === 'linked'.
+  addRevenueStream(ctx, { name, mode = 'linked', linkedSource = 'supercap' } = {}) {
+    const finalName = (name && name.trim()) || 'New revenue stream';
+    if (!ctx.proformaAssumptions.revenue) ctx.proformaAssumptions.revenue = { streams: [] };
+    if (!Array.isArray(ctx.proformaAssumptions.revenue.streams)) ctx.proformaAssumptions.revenue.streams = [];
+
+    const streams = ctx.proformaAssumptions.revenue.streams;
+    const id = _slugifyStreamId(finalName);
+
+    const stream = {
+      id,
+      name: finalName,
+      builtin: false,
+      order: streams.length,
+      startMonth: 12,
+      pricing: { year0: 100, year1: 100, year2: 100, year3: 100 },
+      market: mode === 'direct'
+        ? { mode: 'direct', revenueByYear: { year1: 0, year2: 0, year3: 0 } }
+        : { mode: 'linked', linkedSource },
+      year1: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+      year2: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+      year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
+    };
+    streams.push(stream);
+    this.recompute(ctx);
+    return id;
+  }
+
+  removeRevenueStream(ctx, streamId) {
+    const streams = ctx.proformaAssumptions?.revenue?.streams;
+    if (!Array.isArray(streams)) return;
+    const idx = streams.findIndex(s => s.id === streamId);
+    if (idx < 0) return;
+    if (streams[idx].builtin) return; // Built-ins are not deletable
+    streams.splice(idx, 1);
+    streams.forEach((s, i) => { s.order = i; });
+    this.recompute(ctx);
+  }
+
+  // Switch a stream's market mode in place. When switching to 'direct',
+  // seed revenueByYear with a rough estimate of last-computed revenue so
+  // the user has a starting point instead of zeros.
+  setStreamMarketMode(ctx, streamId, mode) {
+    const stream = ctx.proformaAssumptions?.revenue?.streams?.find(s => s.id === streamId);
+    if (!stream) return;
+    if (mode === 'direct') {
+      stream.market = {
+        mode: 'direct',
+        revenueByYear: stream.market?.revenueByYear || { year1: 0, year2: 0, year3: 0 }
+      };
+    } else {
+      stream.market = {
+        mode: 'linked',
+        linkedSource: stream.market?.linkedSource || 'supercap'
+      };
+    }
+    this.recompute(ctx);
+  }
+
   // ── Outlook helpers ──
 
   getOutlookRows(ctx) {
@@ -334,10 +415,12 @@ class ProformaService {
     };
 
     add('Revenue', 'revenue', src.revenue, { category: true });
-    addChildren('revenue', [
-      { label: 'Supercap Electrode', key: 'revenueSupercap', data: src.revenueSupercap },
-      { label: 'Carbon Black CB/CA', key: 'revenueCarbonBlack', data: src.revenueCarbonBlack }
-    ]);
+    const streams = ctx.proformaAssumptions?.revenue?.streams || [];
+    addChildren('revenue', streams.map(s => ({
+      label: s.name,
+      key: 'revenueStream_' + s.id,
+      data: src['revenueStream_' + s.id] || []
+    })));
     add('COGS', 'cogs', src.cogs, { category: true });
     addChildren('cogs', [
       { label: 'Manufacturing', key: 'cogsManufacturing', data: src.cogsManufacturing },
@@ -395,24 +478,27 @@ class ProformaService {
     const c = ctx.proformaComputed;
     if (!c) return;
 
+    const streams = ctx.proformaAssumptions?.revenue?.streams || [];
+
     // Wait for browser layout after x-show toggle, then create charts
-    requestAnimationFrame(() => this._buildCharts(c));
+    requestAnimationFrame(() => this._buildCharts(c, streams));
   }
 
-  _buildCharts(c) {
+  _buildCharts(c, streams = []) {
     const labels = this.getColumnLabels({ proformaOutlookView: 'monthly' });
 
-    // Revenue by Segment
+    // Revenue by Stream — stacked bar, one dataset per stream in order.
     this._renderChart('proforma-chart-revenue', {
       type: 'bar',
       data: {
         labels,
-        datasets: [
-          { label: 'Supercap', data: c.outlook.revenueSupercap, backgroundColor: '#3B82F6' },
-          { label: 'Carbon Black', data: c.outlook.revenueCarbonBlack, backgroundColor: '#10B981' }
-        ]
+        datasets: streams.map((s, i) => ({
+          label: s.name,
+          data: c.outlook['revenueStream_' + s.id] || [],
+          backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length]
+        }))
       },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Revenue by Segment' } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } } } }
+      options: { responsive: true, plugins: { title: { display: true, text: 'Revenue by Stream' } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } } } }
     });
 
     // Rev vs COGS vs OPEX

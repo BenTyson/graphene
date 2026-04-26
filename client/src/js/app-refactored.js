@@ -471,6 +471,7 @@ window.grapheneApp = function() {
     proformaAdvancedOpen: {},
     proformaMachineHover: null,
     proformaStaffingYear: 'year0',
+    proformaMarketSources: [],
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -5444,7 +5445,10 @@ window.grapheneApp = function() {
     getActivityIcon(action) { return pipelineService.getActivityIcon(action); },
 
     // ── Proforma delegates ──
-    async loadProformaScenarios() { await proformaService.loadScenarios(this); },
+    async loadProformaScenarios() {
+      this.proformaMarketSources = proformaService.getMarketSourceCatalog();
+      await proformaService.loadScenarios(this);
+    },
     async openProformaScenario(id) { await proformaService.openScenario(this, id); },
     async createProformaScenario() { await proformaService.createScenario(this); },
     async createProformaDemoScenario() { await proformaService.createDemoScenario(this); },
@@ -5460,6 +5464,9 @@ window.grapheneApp = function() {
     removeProformaMachine(index) { proformaService.removeMachine(this, index); },
     addProformaRaise() { proformaService.addRaise(this); },
     removeProformaRaise(index) { proformaService.removeRaise(this, index); },
+    addProformaRevenueStream(opts) { proformaService.addRevenueStream(this, opts); },
+    removeProformaRevenueStream(streamId) { proformaService.removeRevenueStream(this, streamId); },
+    setProformaStreamMarketMode(streamId, mode) { proformaService.setStreamMarketMode(this, streamId, mode); },
     normalizeProformaQDist(arr) { proformaService.normalizeQDist(arr); proformaService.recompute(this); },
     toggleProformaSalaryMode(yearKey, role) { proformaService.toggleSalaryMode(this, yearKey, role); },
     addProformaMachinePayment(mi) { proformaService.addMachinePayment(this, mi); },
