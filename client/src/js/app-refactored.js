@@ -107,7 +107,7 @@ import './components/dataPage/DataPageLayout.js';
 import './components/dataPage/DataPageHeader.js';
 import './components/dataPage/DataPageSummary.js';
 import './components/dataPage/DataPageSection.js';
-import { DEFAULT_FORMS } from './utils/constants.js';
+import { DEFAULT_FORMS, TASK_CATEGORY_TAGS, TASK_INSTITUTION_TAGS } from './utils/constants.js';
 
 console.log('Loading app-refactored.js...');
 
@@ -387,6 +387,8 @@ window.grapheneApp = function() {
     tasks: [],
     taskAssignees: [],
     taskViewMode: 'kanban',
+    taskListGroupBy: localStorage.getItem('taskListGroupBy') || 'none',
+    taskCollapsedGroups: {},
     taskSearch: '',
     taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '' },
     showAddTask: false,
@@ -4997,6 +4999,83 @@ window.grapheneApp = function() {
     getPriorityBadgeClass(priority) {
       const classes = { LOW: 'bg-gray-100 text-gray-600', MEDIUM: 'bg-blue-100 text-blue-700', HIGH: 'bg-orange-100 text-orange-700', URGENT: 'bg-red-100 text-red-700' };
       return classes[priority] || classes.MEDIUM;
+    },
+    getPriorityDotClass(priority) {
+      const classes = { LOW: 'bg-gray-300', MEDIUM: 'bg-blue-400', HIGH: 'bg-orange-400', URGENT: 'bg-red-500' };
+      return classes[priority] || classes.MEDIUM;
+    },
+    getPriorityLabel(priority) {
+      const labels = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', URGENT: 'Urgent' };
+      return labels[priority] || 'Medium';
+    },
+    getTaskPrimaryAssigneeShort(task) {
+      const users = this.getTaskAssigneeUsers(task);
+      if (!users.length) return '';
+      const u = users[0];
+      return u.firstName || u.username || '';
+    },
+    setTaskListGroupBy(value) {
+      this.taskListGroupBy = value;
+      localStorage.setItem('taskListGroupBy', value);
+      this.taskCollapsedGroups = {};
+    },
+    toggleTaskGroup(key) {
+      this.taskCollapsedGroups = { ...this.taskCollapsedGroups, [key]: !this.taskCollapsedGroups[key] };
+    },
+    getGroupedTasks() {
+      const tasks = this.getFilteredTasks();
+      const mode = this.taskListGroupBy;
+      if (!mode || mode === 'none') {
+        return [{ key: 'all', label: '', tasks }];
+      }
+      const groups = new Map();
+      const push = (key, label, sortKey, task) => {
+        if (!groups.has(key)) groups.set(key, { key, label, sortKey, tasks: [] });
+        groups.get(key).tasks.push(task);
+      };
+      const statusOrder = { TODO: 0, IN_PROGRESS: 1, IN_REVIEW: 2, DONE: 3, ARCHIVED: 4 };
+      const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+      const tagSet = new Set(TASK_CATEGORY_TAGS);
+      const instSet = new Set(TASK_INSTITUTION_TAGS);
+      for (const task of tasks) {
+        if (mode === 'status') {
+          push(task.status, this.formatStatusLabel(task.status), statusOrder[task.status] ?? 99, task);
+        } else if (mode === 'priority') {
+          push(task.priority, this.getPriorityLabel(task.priority), priorityOrder[task.priority] ?? 99, task);
+        } else if (mode === 'assignee') {
+          const users = this.getTaskAssigneeUsers(task);
+          if (!users.length) { push('__unassigned', 'Unassigned', 999, task); continue; }
+          for (const u of users) push('user:' + u.id, getUserDisplayName(u), getUserDisplayName(u).toLowerCase(), task);
+        } else if (mode === 'tag') {
+          const matched = (task.tags || []).filter(t => tagSet.has(t));
+          if (!matched.length) { push('__untagged', 'Untagged', 999, task); continue; }
+          for (const t of matched) push('tag:' + t, t, t.toLowerCase(), task);
+        } else if (mode === 'institution') {
+          const matched = (task.tags || []).filter(t => instSet.has(t));
+          if (!matched.length) { push('__none', 'No institution', 999, task); continue; }
+          for (const t of matched) push('inst:' + t, t, t.toLowerCase(), task);
+        }
+      }
+      return [...groups.values()].sort((a, b) => {
+        if (typeof a.sortKey === 'number' && typeof b.sortKey === 'number') return a.sortKey - b.sortKey;
+        return String(a.sortKey).localeCompare(String(b.sortKey));
+      });
+    },
+    getTaskListRows() {
+      const groups = this.getGroupedTasks();
+      const showHeaders = this.taskListGroupBy && this.taskListGroupBy !== 'none';
+      const rows = [];
+      for (const group of groups) {
+        if (!group.tasks.length) continue;
+        if (showHeaders) {
+          rows.push({ rowKey: 'h:' + group.key, type: 'header', group });
+        }
+        if (this.taskCollapsedGroups[group.key]) continue;
+        for (const task of group.tasks) {
+          rows.push({ rowKey: 't:' + group.key + ':' + task.id, type: 'task', task, groupKey: group.key });
+        }
+      }
+      return rows;
     },
     getStatusBadgeClass(status) {
       const classes = { TODO: 'bg-gray-100 text-gray-700', IN_PROGRESS: 'bg-blue-100 text-blue-700', IN_REVIEW: 'bg-amber-100 text-amber-700', DONE: 'bg-green-100 text-green-700', ARCHIVED: 'bg-gray-100 text-gray-400' };
