@@ -72,6 +72,21 @@ export function getTaskModalHtml() {
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
             </div>
 
+            <!-- Goal (only on top-level tasks) -->
+            <template x-if="!taskForm.parentId">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+                <select x-model="taskForm.goalId"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+                  <option value="">No goal</option>
+                  <template x-for="g in getActiveGoals()" :key="g.id">
+                    <option :value="g.id" x-text="g.title"></option>
+                  </template>
+                </select>
+                <p class="text-[11px] text-gray-400 mt-1">Group this task under a higher-level outcome.</p>
+              </div>
+            </template>
+
             <!-- Assignees -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Assignees</label>

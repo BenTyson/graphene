@@ -112,6 +112,30 @@ export function getTaskDetailPanelHtml() {
                 </div>
               </div>
 
+              <!-- Goal (top-level tasks only) -->
+              <template x-if="!selectedTask.parentId">
+                <div>
+                  <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Goal</label>
+                  <select :value="selectedTask.goalId || ''"
+                    @change="updateTaskInline(selectedTask.id, 'goalId', $event.target.value || null)"
+                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
+                    <option value="">No goal</option>
+                    <template x-for="g in getActiveGoals()" :key="g.id">
+                      <option :value="g.id" x-text="g.title"></option>
+                    </template>
+                  </select>
+                  <template x-if="selectedTask.goal">
+                    <button @click="openGoalDetail(selectedTask.goal.id)"
+                      class="mt-1.5 inline-flex items-center gap-1 text-[11px] text-blue-700 hover:underline">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z M12 13a1 1 0 100-2 1 1 0 000 2z"/>
+                      </svg>
+                      Open goal: <span x-text="selectedTask.goal.title"></span>
+                    </button>
+                  </template>
+                </div>
+              </template>
+
               <!-- Created by / date -->
               <div class="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
                 <span>Created by <span class="text-gray-600" x-text="selectedTask.creator ? ((selectedTask.creator.firstName || '') + ' ' + (selectedTask.creator.lastName || selectedTask.creator.username)) : 'Unknown'"></span></span>
