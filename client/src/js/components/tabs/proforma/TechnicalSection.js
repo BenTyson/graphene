@@ -73,6 +73,11 @@ export function getTechnicalSection() {
       `)}
 
       ${card('Market Sizing', `
+        <p class="text-[11px] text-gray-500 leading-snug mb-3">
+          These are the global TAM sources a revenue stream can link to (Revenue tab → stream → "Linked market source").
+          Edit a base demand or CAGR here and every linked stream re-prices automatically.
+        </p>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           ${numInput('Global EV Battery Capacity', 'proformaAssumptions.technical.market.globalEvBatteryCapacityGwh', { unit: 'GWh' })}
           ${numInput('EV CAGR', 'proformaAssumptions.technical.market.evCagr', {
@@ -82,7 +87,13 @@ export function getTechnicalSection() {
           })}
           ${numInput('Supercap AC Demand', 'proformaAssumptions.technical.market.supercapActivatedCarbonDemandTonnes', { unit: 'tonnes' })}
           ${numInput('Supercap CAGR', 'proformaAssumptions.technical.market.supercapCagr', { step: 0.01, unit: 'x' })}
+          ${numInput('Graphene Oxide Demand', 'proformaAssumptions.technical.market.grapheneOxideDemandTonnes', {
+            unit: 'tonnes',
+            help: 'Global graphene oxide demand baseline. Powers any revenue stream linked to "Graphene Oxide".'
+          })}
+          ${numInput('Graphene Oxide CAGR', 'proformaAssumptions.technical.market.grapheneOxideCagr', { step: 0.01, unit: 'x' })}
         </div>
+
         <div x-show="proformaComputed && proformaComputed.techRef" class="mt-3 bg-gray-50 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 space-y-1">
           <div>
             Conductive additives:
@@ -95,6 +106,12 @@ export function getTechnicalSection() {
             <span x-text="proformaComputed.techRef.supercapByYear[0].toLocaleString()"></span> kg (Y0)
             &rarr;
             <span x-text="proformaComputed.techRef.supercapByYear[3].toLocaleString()"></span> kg (Y3)
+          </div>
+          <div>
+            Graphene Oxide:
+            <span x-text="(proformaComputed.techRef.grapheneOxideByYear?.[0] || 0).toLocaleString()"></span> kg (Y0)
+            &rarr;
+            <span x-text="(proformaComputed.techRef.grapheneOxideByYear?.[3] || 0).toLocaleString()"></span> kg (Y3)
           </div>
         </div>
       `, { subtitle: 'Global market parameters that drive revenue TAM calculations' })}

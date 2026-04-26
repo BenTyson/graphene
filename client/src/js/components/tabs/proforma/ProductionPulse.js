@@ -19,20 +19,24 @@ function _stockSeries(computed, assumptions) {
   if (!computed || !assumptions) return { sold: [], stock: [] };
   const sold = new Array(MONTHS).fill(0);
   const stock = new Array(MONTHS).fill(0);
-  const sup = assumptions.pricing?.supercapPerKg || {};
-  const cb = assumptions.pricing?.carbonBlackPerKg || {};
-  const revSup = computed.outlook?.revenueSupercap || [];
-  const revCb = computed.outlook?.revenueCarbonBlack || [];
+  const streams = assumptions.revenue?.streams || [];
+  const outlook = computed.outlook || {};
   const produced = computed.production?.monthlyGrapheneKg || [];
+
+  // Only `linked` streams have a price/kg we can back-solve from. Direct
+  // streams are dollar-only and don't contribute to the kg-out tally.
+  const linked = streams.filter(s => s.market?.mode !== 'direct');
 
   let running = 0;
   for (let m = 0; m < MONTHS; m++) {
     const y = 'year' + Math.min(3, Math.floor(m / 12));
-    const sP = sup[y] || 0;
-    const cP = cb[y] || 0;
-    const soldSup = sP > 0 ? (revSup[m] || 0) / sP : 0;
-    const soldCb = cP > 0 ? (revCb[m] || 0) / cP : 0;
-    sold[m] = soldSup + soldCb;
+    let monthSold = 0;
+    for (const s of linked) {
+      const price = s.pricing?.[y] || 0;
+      const rev = outlook['revenueStream_' + s.id]?.[m] || 0;
+      if (price > 0) monthSold += rev / price;
+    }
+    sold[m] = monthSold;
     running += (produced[m] || 0) - sold[m];
     stock[m] = Math.max(0, running);
   }
