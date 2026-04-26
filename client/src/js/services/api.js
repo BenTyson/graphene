@@ -1408,6 +1408,23 @@ export const proformaAPI = {
   }
 };
 
+// System tags API (org-wide tag/institution options)
+export const tagsAPI = {
+  getAll: (kind) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    const qs = kind ? '?kind=' + encodeURIComponent(kind) : '';
+    return fetch(`${API_BASE}/tags${qs}`, { headers }).then(handleResponse);
+  },
+  create: (name, kind) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tags`, { method: 'POST', headers, body: JSON.stringify({ name, kind }) }).then(handleResponse);
+  },
+  delete: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tags/${id}`, { method: 'DELETE', headers }).then(handleResponse);
+  }
+};
+
 // Goals API endpoints
 export const goalsAPI = {
   getAll: (params = {}) => {
@@ -1468,6 +1485,7 @@ export default {
   users: usersAPI,
   tasks: tasksAPI,
   goals: goalsAPI,
+  tags: tagsAPI,
   pipeline: pipelineAPI,
   proforma: proformaAPI
 };

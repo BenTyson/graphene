@@ -103,25 +103,53 @@ export function getTaskModalHtml() {
             <!-- Tags -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-              <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
+              <div class="flex flex-wrap gap-1.5 mb-2 items-center">
+                <template x-for="sysTag in systemCategoryTags" :key="sysTag">
                   <button type="button" @click="taskForm.tags.includes(sysTag) ? removeTaskTag(sysTag) : (taskForm.tags.push(sysTag))"
                     :class="taskForm.tags.includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
                 </template>
+                <template x-if="addingTagKind !== 'CATEGORY'">
+                  <button type="button" @click="showAddTagInput('CATEGORY')"
+                    class="px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 hover:border-gray-400">+ Add tag</button>
+                </template>
+                <template x-if="addingTagKind === 'CATEGORY'">
+                  <span class="inline-flex items-center gap-1">
+                    <input type="text" x-model="newTagInput" data-add-tag-input
+                      @keydown.enter.prevent="submitAddTag('taskForm')"
+                      @keydown.escape.prevent="cancelAddTag()"
+                      @blur="submitAddTag('taskForm')"
+                      class="px-2 py-0.5 rounded text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black w-32"
+                      placeholder="New tag name">
+                  </span>
+                </template>
               </div>
 
               <label class="block text-sm font-medium text-gray-700 mb-1">Institutions</label>
-              <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="instTag in ['Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG']" :key="instTag">
+              <div class="flex flex-wrap gap-1.5 mb-2 items-center">
+                <template x-for="instTag in systemInstitutionTags" :key="instTag">
                   <button type="button" @click="taskForm.tags.includes(instTag) ? removeTaskTag(instTag) : (taskForm.tags.push(instTag))"
                     :class="taskForm.tags.includes(instTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="instTag"></button>
                 </template>
+                <template x-if="addingTagKind !== 'INSTITUTION'">
+                  <button type="button" @click="showAddTagInput('INSTITUTION')"
+                    class="px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 hover:border-gray-400">+ Add institution</button>
+                </template>
+                <template x-if="addingTagKind === 'INSTITUTION'">
+                  <span class="inline-flex items-center gap-1">
+                    <input type="text" x-model="newTagInput" data-add-tag-input
+                      @keydown.enter.prevent="submitAddTag('taskForm')"
+                      @keydown.escape.prevent="cancelAddTag()"
+                      @blur="submitAddTag('taskForm')"
+                      class="px-2 py-0.5 rounded text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black w-36"
+                      placeholder="New institution">
+                  </span>
+                </template>
               </div>
 
               <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="tag in taskForm.tags.filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
+                <template x-for="tag in taskForm.tags.filter(t => !isSystemTag(t))" :key="tag">
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
                     <span x-text="tag"></span>
                     <button type="button" @click="removeTaskTag(tag)" class="text-gray-400 hover:text-gray-600">
@@ -135,7 +163,7 @@ export function getTaskModalHtml() {
               <div class="flex gap-2">
                 <input type="text" x-model="taskTagInput" @keydown.enter.prevent="addTaskTag()"
                   class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm"
-                  placeholder="Custom tag...">
+                  placeholder="One-off custom tag (this task only)...">
                 <button type="button" @click="addTaskTag()"
                   class="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Add</button>
               </div>

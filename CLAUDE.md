@@ -3,7 +3,7 @@
 ## What This Is
 Internal admin dashboard for tracking the full material pipeline:
 Biochar -> Graphene -> CompoundBatch / Micronization -> MCB -> Tests -> Shipments
-Plus: task management, news aggregation, AI insights, competitive analysis.
+Plus: goal & task management (Goals -> Tasks -> Subtasks), news aggregation, AI insights, competitive analysis.
 
 ## Stack
 - **Backend:** Node.js + Express + Prisma ORM + PostgreSQL
@@ -16,18 +16,19 @@ This is a tab-based SPA. Each tab returns an HTML template string (e.g., `getGra
 
 ## Key Files
 - `server/index.js` - Express entry, route registration, global middleware
-- `server/routes/*.js` - 27 API route files
+- `server/routes/*.js` - 29 API route files (incl. `tasks.js`, `goals.js`, `tags.js`, `pipeline.js`, `proforma.js`)
 - `server/routes/auth.js` - JWT auth middleware (authenticateToken, requireEditAccess, requireSuperAdmin)
 - `prisma/schema.prisma` - All database models
 - `client/index.html` - HTML shell, left sidebar nav, top header bar, tab/modal containers
-- `client/src/js/app-refactored.js` - Main Alpine.js app (~5300 lines): state + delegate methods
+- `client/src/js/app-refactored.js` - Main Alpine.js app (~5500 lines): state + delegate methods
 - `client/src/js/services/api.js` - All API client functions
 - `client/src/js/services/TaskService.js` - Task CRUD, comments, attachments, subtasks logic
+- `client/src/js/services/GoalService.js` - Goal CRUD, task linking, status changes
 - `client/src/js/services/PipelineService.js` - Contact CRUD, pipeline board ops, activities, stage constants
 - `client/src/js/services/KanbanService.js` - Shared SortableJS wrapper (Tasks + Pipeline)
 - `client/src/js/services/CRUDService.js` - Biochar/Graphene/CompoundBatch/etc. CRUD logic
-- `client/src/js/components/tabs/*.js` - 23 tab components
-- `client/src/js/components/modals/*.js` - 25 modal components
+- `client/src/js/components/tabs/*.js` - tab components (incl. `TasksTab.js`, `GoalsTab.js`, `PipelineTab.js`)
+- `client/src/js/components/modals/*.js` - modal components (incl. `GoalModal.js`, `GoalDetailPanel.js`, `TaskModal.js`, `TaskDetailPanel.js`)
 - `client/src/styles/main.css` - Tailwind entry + custom CSS
 
 ## Development
@@ -69,8 +70,8 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 
 ### Auth & Roles
 6 roles: SUPER_ADMIN, SCIENCE_TEAM, EXECUTIVE_TEAM, INVESTOR, TEAM_MEMBER, THIRD_PARTY
-- THIRD_PARTY: view-only. All POST/PUT/DELETE blocked by global middleware. Hidden tabs: Dashboard, News, Insights, Shipments, Tasks, User Management.
-- INVESTOR: no Tasks tab access.
+- THIRD_PARTY: view-only. All POST/PUT/DELETE blocked by global middleware. Hidden tabs: Dashboard, News, Insights, Shipments, Tasks, Goals, User Management.
+- INVESTOR: no Tasks/Goals tab access.
 - SUPER_ADMIN: full access + user management.
 
 ### Layout & Navigation
@@ -99,7 +100,8 @@ Services can access `appContext.$nextTick()` and all Alpine state. Shared utilit
 - News Feed tab is hidden (`x-show="false"`), code preserved for later.
 - Tasks and Pipeline both use KanbanService (shared SortableJS wrapper) for drag-and-drop.
 - Pipeline has no Deal/Lead entity. Contacts ARE pipeline items (stage/position/pipelineTitle on Contact model). `contactType` is optional (CLIENT/INVESTOR/PARTNER/OTHER). `DealModal.js` and `DealDetailPanel.js` are dead code (not imported). Contacts view has sortable columns (click headers) and filters (type, pipeline status, owner).
-- Task tags use two sets of system-defined toggle pills in the create modal and detail panel: category tags (Fundraising, Shareholders, Patents, Legal, etc.) and institution tags (Curia, NEI, SpectraPower, GoEco, etc.). Custom tags also supported. All stored in `tags[]`.
+- System tags (category + institution) live in the `Tag` Prisma model with `kind: CATEGORY | INSTITUTION`, NOT in a hardcoded constants file. The legacy `TASK_CATEGORY_TAGS`/`TASK_INSTITUTION_TAGS` arrays in `client/src/js/utils/constants.js` are unused — `server/routes/tags.js` lazy-seeds them on first GET. Tasks/Goals store tags as plain `tags[]` strings (not FKs), so renaming/deleting a system tag does NOT propagate to existing records — add-only is the safe pattern. The Alpine app loads tags into `systemCategoryTags`/`systemInstitutionTags` state on init via `loadSystemTags()`. Inline `+ Add tag`/`+ Add institution` buttons in TaskModal/TaskDetailPanel/GoalModal POST to `/api/tags` and refresh state. Use `isSystemTag(tag)` to distinguish system vs. custom tags.
+- Goals are top-level outcomes that group tasks. `Goal` model has status (ACTIVE/ON_HOLD/ACHIEVED/ABANDONED), optional champion (`ownerId`) and target date. Tasks have a nullable `goalId` FK with `onDelete: SetNull` so deleting a goal unlinks tasks rather than cascading. Subtasks inherit their parent's goal — only top-level tasks expose the goal field. Goal progress is derived (`done_tasks / total_tasks`); status is manual. `GoalDetailPanel.js` is the slide-over (matches Task pattern); `GoalsTab.js` is a card grid; `goalService` follows the appContext pattern. Tasks tab integrates goals via filter dropdown + "Goal" group-by + clickable goal pill on cards/rows + goal field in task modal & detail panel.
 - Task Kanban: "Show archived" checkbox reveals a 5th ARCHIVED column. Subtasks support due dates with inline date picker; parent cards show red "X overdue" indicator when subtasks are past due.
 - Task dependencies (`TaskDependency` model): directional "blocks / blocked by" links between any two tasks (distinct from parent/subtask). Detail panel has "Blocked by" / "Blocking" sections with an inline search picker. Kanban cards + list view show a chain-link icon + count, red-tinted when any blocker is incomplete. Archived counts as DONE for blocker purposes. Moving a task to DONE with incomplete blockers triggers a browser `confirm()` listing blocker titles (warn-but-don't-block). Cycle prevention is BFS at write time. The DONE-transition guard is applied in `updateTaskInline`, `updateTaskStatus`, and the kanban `onReorder` — if adding a new DONE-transition code path, route it through one of these.
 - Task assignees are many-to-many via `TaskAssignment` (composite PK taskId+userId). Task payloads include `assignees: [{ user }]` — use `getTaskAssigneeUsers(task)` to flatten. Create/update endpoints accept `assigneeIds: string[]`; PUT diffs old vs. new and emits `assigned`/`unassigned` activity per user. The `?assigneeId=x` list filter still exists and matches any assignee (drives the Tasks filter dropdown + dashboard "my tasks"). Kanban and list views show an avatar stack (up to 3, `+N` overflow). Tag + Institution filter dropdowns on the Tasks tab filter client-side via `getFilteredTasks()`; constants live in `client/src/js/utils/constants.js` (`TASK_CATEGORY_TAGS`, `TASK_INSTITUTION_TAGS`).

@@ -991,6 +991,23 @@ enum GoalStatus {
   ABANDONED
 }
 
+enum TagKind {
+  CATEGORY
+  INSTITUTION
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  kind      TagKind
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([kind, name])
+  @@index([kind])
+  @@map("tags")
+}
+
 model Goal {
   id          String     @id @default(cuid())
   title       String

@@ -32,6 +32,7 @@ import dataImportRoutes from './routes/data-import.js';
 import seedStagingRoutes from './routes/seed-staging.js';
 import taskRoutes from './routes/tasks.js';
 import goalRoutes from './routes/goals.js';
+import tagRoutes from './routes/tags.js';
 import pipelineRoutes from './routes/pipeline.js';
 import proformaRoutes from './routes/proforma.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -197,6 +198,7 @@ app.use('/api/data-import', dataImportRoutes);
 app.use('/api/seed-staging', seedStagingRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/tags', tagRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/proforma', proformaRoutes);
 
