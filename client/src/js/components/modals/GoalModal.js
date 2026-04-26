@@ -67,7 +67,7 @@ export function getGoalModalHtml() {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
               <div class="flex flex-wrap gap-1.5">
-                <template x-for="sysTag in ['Fundraising','Production','Sales','Patents','Legal','Web & Marketing','Proforma','Administrative Ops']" :key="sysTag">
+                <template x-for="sysTag in ['Fundraising','Production','Science','R&D','Sales','Patents','Legal','Web & Marketing','Proforma','Administrative Ops']" :key="sysTag">
                   <button type="button" @click="goalForm.tags.includes(sysTag) ? (goalForm.tags = goalForm.tags.filter(t => t !== sysTag)) : (goalForm.tags.push(sysTag))"
                     :class="goalForm.tags.includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>

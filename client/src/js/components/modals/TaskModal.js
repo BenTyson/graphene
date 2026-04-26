@@ -104,7 +104,7 @@ export function getTaskModalHtml() {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
               <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
+                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
                   <button type="button" @click="taskForm.tags.includes(sysTag) ? removeTaskTag(sysTag) : (taskForm.tags.push(sysTag))"
                     :class="taskForm.tags.includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
@@ -121,7 +121,7 @@ export function getTaskModalHtml() {
               </div>
 
               <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="tag in taskForm.tags.filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
+                <template x-for="tag in taskForm.tags.filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
                     <span x-text="tag"></span>
                     <button type="button" @click="removeTaskTag(tag)" class="text-gray-400 hover:text-gray-600">
