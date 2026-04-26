@@ -8,6 +8,7 @@
 
 export const JOURNEY_SECTIONS = [
   { id: 'revenue',    label: 'Revenue',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.y3Revenue, true) + ' Y3' : '--'` },
+  { id: 'markets',    label: 'Markets',    headline: `proformaMarketSources?.length ? proformaMarketSources.length + ' sources' : '--'` },
   { id: 'production', label: 'Production', headline: `proformaComputed?.metrics?.peakMonthlyProductionKg ? Math.round(proformaComputed.metrics.peakMonthlyProductionKg).toLocaleString() + ' kg/mo peak' : '--'` },
   { id: 'costs',      label: 'Costs',      headline: `proformaComputed?.yearly?.grossMarginPct ? window._pfFmtP(proformaComputed.yearly.grossMarginPct[3]) + ' Y3 margin' : '--'` },
   { id: 'operations', label: 'Operations', headline: `proformaComputed ? window._pfFmtP(proformaComputed.metrics.y3EbitdaMargin) + ' EBITDA' : '--'` },

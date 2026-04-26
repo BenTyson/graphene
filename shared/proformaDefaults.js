@@ -16,6 +16,7 @@ function _supercapStream() {
     id: 'supercapElectrode',
     name: 'Supercapacitor Electrode',
     builtin: true,
+    enabled: true,
     order: 0,
     startMonth: 12,
     pricing: { year0: 200, year1: 200, year2: 200, year3: 200 },
@@ -31,6 +32,7 @@ function _carbonBlackStream() {
     id: 'carbonBlackCathodeAnode',
     name: 'Carbon Black (Cathode + Anode)',
     builtin: true,
+    enabled: true,
     order: 1,
     startMonth: 36,
     pricing: { year0: 50, year1: 50, year2: 50, year3: 50 },
@@ -41,14 +43,44 @@ function _carbonBlackStream() {
   };
 }
 
-// Catalog of global market sources surfaced on the Technical tab. The
-// engine extends this in deriveTechnical(); the UI uses it to render
-// the linked-source dropdown when adding a stream.
-export const MARKET_SOURCE_CATALOG = [
-  { id: 'supercap',      label: 'Supercapacitor activated-carbon demand' },
-  { id: 'conductive',    label: 'EV conductive additives (cathode + anode)' },
-  { id: 'grapheneOxide', label: 'Graphene Oxide demand' }
+function _grapheneOxideStream() {
+  return {
+    id: 'grapheneOxideStream',
+    name: 'Graphene Oxide',
+    builtin: true,
+    enabled: true,
+    order: 2,
+    startMonth: 24,
+    // Pricing/share are placeholders — GO market data is highly variable.
+    // Defaults compute to $0 until baseTonnes on the GO market source is
+    // filled in (Markets tab) and a non-zero share is set here.
+    pricing: { year0: 100, year1: 100, year2: 100, year3: 100 },
+    market: { mode: 'linked', linkedSource: 'grapheneOxide' },
+    year1: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+    year2: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+    year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
+  };
+}
+
+// Bespoke built-in TAM sources rendered on the Markets tab. Their
+// kg-per-year arrays are derived in deriveTechnical() from EV-battery /
+// supercap composition fields, so they cannot be expressed as a generic
+// {baseTonnes, cagr} pair. Generic-formula sources live in
+// technical.market.customSources[] — including baked-in Graphene Oxide
+// (locked via builtin: true).
+export const BUILTIN_MARKET_SOURCES = [
+  { id: 'supercap',   label: 'Supercapacitor activated-carbon demand' },
+  { id: 'conductive', label: 'EV conductive additives (cathode + anode)' }
 ];
+
+// Default custom sources seeded into a brand-new scenario.
+// Graphene Oxide is `builtin: true` so it can't be deleted — every
+// scenario should ship with it as a first-class market.
+function _defaultCustomSources() {
+  return [
+    { id: 'grapheneOxide', label: 'Graphene Oxide demand', baseTonnes: 0, cagr: 1.20, builtin: true }
+  ];
+}
 
 export function getDefaultAssumptions() {
   return {
@@ -177,7 +209,7 @@ export function getDefaultAssumptions() {
     },
 
     revenue: {
-      streams: [_supercapStream(), _carbonBlackStream()]
+      streams: [_supercapStream(), _carbonBlackStream(), _grapheneOxideStream()]
     },
 
     opex: {
@@ -282,12 +314,11 @@ export function getDefaultAssumptions() {
         evCagr: 1.20,
         supercapActivatedCarbonDemandTonnes: 5936,
         supercapCagr: 1.20,
-        // Graphene Oxide global demand (user-edited on Technical tab).
-        // Defaults to 0 — the supercap/conductive sources are the funded
-        // baselines; GO is here so it can power a new revenue stream once
-        // the founder fills in real demand numbers.
-        grapheneOxideDemandTonnes: 0,
-        grapheneOxideCagr: 1.20
+        // User-editable list of generic TAM sources. Each entry produces a
+        // <id>ByYear array via the simple tonnes × CAGR^N formula. Built-in
+        // sources (supercap, conductive) live outside this array because
+        // their formulas reach into other technical fields.
+        customSources: _defaultCustomSources()
       }
     }
   };
@@ -330,20 +361,40 @@ export function migrateAssumptions(a) {
     }
 
     if (streams.length === 0) {
-      streams.push(_supercapStream(), _carbonBlackStream());
+      streams.push(_supercapStream(), _carbonBlackStream(), _grapheneOxideStream());
     }
     a.revenue = { streams };
   }
 
-  // Any version: ensure new market keys exist on technical (so old DB
-  // blobs render correctly even if they predate Graphene Oxide).
+  // Any version: reshape the Graphene-Oxide-specific fields into the
+  // generic customSources[] array. Older DB blobs may have neither the
+  // GO fields nor the array — in that case we still seed the default
+  // GO entry so the Markets tab has at least one editable source.
   if (a.technical && a.technical.market) {
-    if (typeof a.technical.market.grapheneOxideDemandTonnes !== 'number') {
-      a.technical.market.grapheneOxideDemandTonnes = 0;
+    const m = a.technical.market;
+    if (!Array.isArray(m.customSources)) {
+      const sources = [];
+      const hasLegacyGO = typeof m.grapheneOxideDemandTonnes === 'number'
+        || typeof m.grapheneOxideCagr === 'number';
+      if (hasLegacyGO) {
+        sources.push({
+          id: 'grapheneOxide',
+          label: 'Graphene Oxide demand',
+          baseTonnes: m.grapheneOxideDemandTonnes || 0,
+          cagr: m.grapheneOxideCagr || 1.20,
+          builtin: true
+        });
+      } else {
+        sources.push(..._defaultCustomSources());
+      }
+      m.customSources = sources;
     }
-    if (typeof a.technical.market.grapheneOxideCagr !== 'number') {
-      a.technical.market.grapheneOxideCagr = 1.20;
-    }
+    // Promote any pre-existing GO entry to builtin (locked-from-deletion).
+    // GO is now baked into every scenario as a first-class market source.
+    const goSource = m.customSources.find(s => s && s.id === 'grapheneOxide');
+    if (goSource) goSource.builtin = true;
+    delete m.grapheneOxideDemandTonnes;
+    delete m.grapheneOxideCagr;
   }
 
   // Drop the old top-level pricing block — it's been folded into streams.
@@ -351,12 +402,26 @@ export function migrateAssumptions(a) {
     delete a.pricing;
   }
 
-  // Normalise stream order field
+  // Normalise stream order field + ensure every stream has an `enabled`
+  // flag (default true). Existing scenarios predate the flag.
   if (a.revenue?.streams) {
     a.revenue.streams.forEach((s, i) => {
       if (typeof s.order !== 'number') s.order = i;
+      if (typeof s.enabled !== 'boolean') s.enabled = true;
     });
     a.revenue.streams.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+
+    // Bake in a Graphene Oxide stream for any scenario that doesn't
+    // already have one linked to the GO market source. GO is now
+    // first-class — every scenario should ship with all three.
+    const hasGoStream = a.revenue.streams.some(s =>
+      s.market?.mode === 'linked' && s.market?.linkedSource === 'grapheneOxide'
+    );
+    if (!hasGoStream) {
+      const go = _grapheneOxideStream();
+      go.order = a.revenue.streams.length;
+      a.revenue.streams.push(go);
+    }
   }
 
   a.version = 2;

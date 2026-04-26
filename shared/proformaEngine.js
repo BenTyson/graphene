@@ -68,22 +68,28 @@ function deriveTechnical(tech) {
     supHGDemandKg * Math.pow(mkt.supercapCagr, 3)
   ];
 
-  // Graphene Oxide: simple base × CAGR^N market source. Tonnes → kg.
-  const goBaseKg = (mkt.grapheneOxideDemandTonnes || 0) * 1000;
-  const goCagr = mkt.grapheneOxideCagr || 1.0;
-  const grapheneOxideByYear = [
-    goBaseKg,
-    goBaseKg * goCagr,
-    goBaseKg * goCagr * goCagr,
-    goBaseKg * Math.pow(goCagr, 3)
-  ];
+  // Generic custom market sources: each entry becomes a <id>ByYear array
+  // computed as tonnes × CAGR^N. Streams pick one via market.linkedSource.
+  const customSources = Array.isArray(mkt.customSources) ? mkt.customSources : [];
+  const customByYear = {};
+  for (const src of customSources) {
+    if (!src || !src.id) continue;
+    const baseKg = (src.baseTonnes || 0) * 1000;
+    const cagr = src.cagr || 1.0;
+    customByYear[src.id + 'ByYear'] = [
+      baseKg,
+      baseKg * cagr,
+      baseKg * cagr * cagr,
+      baseKg * Math.pow(cagr, 3)
+    ];
+  }
 
   return {
     globalHgConductiveTotalKg,
     supHGDemandKg,
     conductiveByYear,
     supercapByYear,
-    grapheneOxideByYear
+    ...customByYear
   };
 }
 
@@ -244,6 +250,12 @@ function computeRevenue(revenueAssumptions, techRef) {
 
   for (const stream of streams) {
     const stripe = new Array(MONTHS_TOTAL).fill(0);
+    // Disabled streams keep their config but contribute zero revenue.
+    // We still register the empty stripe so chart datasets stay stable.
+    if (stream.enabled === false) {
+      monthly.byStream[stream.id] = stripe;
+      continue;
+    }
     const market = stream.market || { mode: 'linked', linkedSource: 'supercap' };
 
     for (let year = 1; year <= 3; year++) {
