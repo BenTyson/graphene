@@ -342,24 +342,48 @@ export function getTaskDetailPanelHtml() {
             <!-- Tags -->
             <div class="px-6 py-3 border-b border-gray-100">
               <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Tags</label>
-              <div class="flex flex-wrap gap-1.5 mb-1.5">
-                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
+              <div class="flex flex-wrap gap-1.5 mb-1.5 items-center">
+                <template x-for="sysTag in systemCategoryTags" :key="sysTag">
                   <button type="button" @click="toggleDetailTaskTag(sysTag)"
                     :class="(selectedTask.tags || []).includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
                 </template>
+                <template x-if="addingTagKind !== 'CATEGORY'">
+                  <button type="button" @click="showAddTagInput('CATEGORY')"
+                    class="px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 hover:border-gray-400">+ Add tag</button>
+                </template>
+                <template x-if="addingTagKind === 'CATEGORY'">
+                  <input type="text" x-model="newTagInput" data-add-tag-input
+                    @keydown.enter.prevent="submitAddTag('taskDetail')"
+                    @keydown.escape.prevent="cancelAddTag()"
+                    @blur="submitAddTag('taskDetail')"
+                    class="px-2 py-0.5 rounded text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black w-32"
+                    placeholder="New tag name">
+                </template>
               </div>
               <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 mt-2">Institutions</label>
-              <div class="flex flex-wrap gap-1.5 mb-1.5">
-                <template x-for="instTag in ['Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG']" :key="instTag">
+              <div class="flex flex-wrap gap-1.5 mb-1.5 items-center">
+                <template x-for="instTag in systemInstitutionTags" :key="instTag">
                   <button type="button" @click="toggleDetailTaskTag(instTag)"
                     :class="(selectedTask.tags || []).includes(instTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="instTag"></button>
                 </template>
+                <template x-if="addingTagKind !== 'INSTITUTION'">
+                  <button type="button" @click="showAddTagInput('INSTITUTION')"
+                    class="px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 hover:border-gray-400">+ Add institution</button>
+                </template>
+                <template x-if="addingTagKind === 'INSTITUTION'">
+                  <input type="text" x-model="newTagInput" data-add-tag-input
+                    @keydown.enter.prevent="submitAddTag('taskDetail')"
+                    @keydown.escape.prevent="cancelAddTag()"
+                    @blur="submitAddTag('taskDetail')"
+                    class="px-2 py-0.5 rounded text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black w-36"
+                    placeholder="New institution">
+                </template>
               </div>
-              <template x-if="(selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t)).length">
+              <template x-if="(selectedTask.tags || []).filter(t => !isSystemTag(t)).length">
                 <div class="flex flex-wrap gap-1.5 mt-1.5">
-                  <template x-for="tag in (selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
+                  <template x-for="tag in (selectedTask.tags || []).filter(t => !isSystemTag(t))" :key="tag">
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
                       <span x-text="tag"></span>
                       <button type="button" @click="toggleDetailTaskTag(tag)" class="text-gray-400 hover:text-gray-600">

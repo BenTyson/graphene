@@ -35,6 +35,8 @@ Raw Materials → Biochar → Graphene → Compound Batch/Micronization → MCB 
 - **Reports**: UpdateReport, SemReport (with junction tables)
 - **Shipments**: MaterialShipment
 - **Task Management**: Task, TaskAssignment (many-to-many task↔user, composite PK on (taskId, userId), cascades on either delete), TaskComment, TaskActivity, TaskAttachment, TaskDependency (directional blocks/blocked-by link; unique on (blockingTaskId, blockedTaskId); cascades on task delete)
+- **Goals**: Goal (top-level outcomes that group tasks; status: ACTIVE/ON_HOLD/ACHIEVED/ABANDONED, optional ownerId champion + targetDate). Task has nullable `goalId` FK with `onDelete: SetNull` (deleting a goal unlinks tasks rather than cascading). Subtasks inherit their parent's goal — UI does not expose goalId on subtasks.
+- **System Tags**: Tag (org-wide category + institution library; `kind: CATEGORY | INSTITUTION`, unique on (kind, name)). Task/Goal `tags[]` are plain strings, NOT FK references — renaming/deleting a Tag does NOT propagate to existing records (add-only safe pattern). Lazy-seeded by `server/routes/tags.js` on first GET from legacy `client/src/js/utils/constants.js` defaults.
 - **Pipeline / CRM**: Contact (with pipeline stage/position fields), ContactActivity, ContactAttachment. Deal and DealActivity models exist but are deprecated.
 - **News & AI**: NewsSource, NewsArticle, UserBookmark, KnowledgeDocument
 - **References**: CharacterizationReference

@@ -66,11 +66,23 @@ export function getGoalModalHtml() {
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-              <div class="flex flex-wrap gap-1.5">
-                <template x-for="sysTag in ['Fundraising','Production','Science','R&D','Sales','Patents','Legal','Web & Marketing','Proforma','Administrative Ops']" :key="sysTag">
+              <div class="flex flex-wrap gap-1.5 items-center">
+                <template x-for="sysTag in systemCategoryTags" :key="sysTag">
                   <button type="button" @click="goalForm.tags.includes(sysTag) ? (goalForm.tags = goalForm.tags.filter(t => t !== sysTag)) : (goalForm.tags.push(sysTag))"
                     :class="goalForm.tags.includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
+                </template>
+                <template x-if="addingTagKind !== 'CATEGORY'">
+                  <button type="button" @click="showAddTagInput('CATEGORY')"
+                    class="px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 hover:border-gray-400">+ Add tag</button>
+                </template>
+                <template x-if="addingTagKind === 'CATEGORY'">
+                  <input type="text" x-model="newTagInput" data-add-tag-input
+                    @keydown.enter.prevent="submitAddTag('goalForm')"
+                    @keydown.escape.prevent="cancelAddTag()"
+                    @blur="submitAddTag('goalForm')"
+                    class="px-2 py-0.5 rounded text-xs border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black w-32"
+                    placeholder="New tag name">
                 </template>
               </div>
             </div>

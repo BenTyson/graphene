@@ -1,8 +1,4 @@
-import { TASK_CATEGORY_TAGS, TASK_INSTITUTION_TAGS } from '../../utils/constants.js';
-
 export function getTasksTabHtml() {
-  const categoryOptions = TASK_CATEGORY_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
-  const institutionOptions = TASK_INSTITUTION_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
   return `
     <div x-show="activeTab === 'tasks'" x-cloak>
       <!-- Header -->
@@ -48,12 +44,16 @@ export function getTasksTabHtml() {
           <select x-model="taskFilters.tag"
             class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
             <option value="">All Tags</option>
-            ${categoryOptions}
+            <template x-for="t in systemCategoryTags" :key="t">
+              <option :value="t" x-text="t"></option>
+            </template>
           </select>
           <select x-model="taskFilters.institution"
             class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
             <option value="">All Institutions</option>
-            ${institutionOptions}
+            <template x-for="t in systemInstitutionTags" :key="t">
+              <option :value="t" x-text="t"></option>
+            </template>
           </select>
           <select x-model="taskFilters.goalId" @change="loadTasks()"
             class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">

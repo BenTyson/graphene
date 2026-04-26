@@ -1109,6 +1109,47 @@ Directional task-to-task links via `TaskDependency` (blockingTaskId blocks block
 - Task delete cascades the dependency rows (`onDelete: Cascade` on both FKs).
 - UI enforcement is warn-but-don't-block: moving a task to DONE with incomplete blockers prompts a confirm dialog listing the blockers; user can override.
 
+### Goal Linkage
+Tasks have a nullable `goalId` FK to `Goal`. Both POST and PUT accept `goalId`. List endpoint accepts `goalId=<id>` filter (use `goalId=none` to fetch tasks without a goal). Read responses include `goal: { id, title, status }` when set. Subtasks (parentId set) inherit the parent goal — UI does not expose `goalId` on subtask forms.
+
+## Goals APIs
+
+Route file: `server/routes/goals.js`
+Auth: All endpoints require JWT + internal role. THIRD_PARTY and INVESTOR blocked.
+
+### Endpoints
+
+```
+GET    /api/goals                     - List goals (filters: status, ownerId, search, includeArchived)
+GET    /api/goals/:id                 - Detail with linked top-level tasks + derived progress
+POST   /api/goals                     - Create goal (title required; description, status, targetDate, ownerId, tags optional)
+PUT    /api/goals/:id                 - Update goal (creator + EXECUTIVE_TEAM + SUPER_ADMIN only)
+DELETE /api/goals/:id                 - Soft-archive (sets archivedAt). `?hard=true` for full delete (creator/admin only)
+POST   /api/goals/:id/restore         - Unarchive
+PATCH  /api/goals/:id/tasks           - Bulk attach/detach tasks: { addTaskIds[], removeTaskIds[] }
+```
+
+### Status Flow
+`ACTIVE` → `ON_HOLD` | `ACHIEVED` | `ABANDONED`. Status is **manual** — not derived from task completion. Progress (`done / total tasks`) is derived and surfaced as `taskCounts` and `progress` percent on read responses; ARCHIVED tasks are excluded from totals.
+
+### Cascading Behavior
+Deleting a goal sets `goalId = NULL` on linked tasks (`onDelete: SetNull`). Tasks are never deleted as a side-effect of goal deletion.
+
+## System Tags APIs
+
+Route file: `server/routes/tags.js`
+Auth: GET + POST require JWT + internal role. DELETE restricted to SUPER_ADMIN and EXECUTIVE_TEAM (since deletion affects org-wide pickers).
+
+### Endpoints
+
+```
+GET    /api/tags                      - List system tags (?kind=CATEGORY|INSTITUTION optional)
+POST   /api/tags                      - Create tag ({ name, kind }). Unique per (kind, name); 409 on duplicate
+DELETE /api/tags/:id                  - Remove from picker library (existing string tags on tasks/goals retain)
+```
+
+The first authenticated GET lazy-seeds the legacy default category + institution tags into the table (idempotent via `skipDuplicates`). Tags are stored as plain strings on `Task.tags[]` / `Goal.tags[]` — they are NOT FK references, so renaming or deleting a tag does not propagate to existing records (add-only is the safe pattern).
+
 ## Pipeline / CRM APIs
 
 Route file: `server/routes/pipeline.js`

@@ -111,7 +111,7 @@ import './components/dataPage/DataPageLayout.js';
 import './components/dataPage/DataPageHeader.js';
 import './components/dataPage/DataPageSummary.js';
 import './components/dataPage/DataPageSection.js';
-import { DEFAULT_FORMS, TASK_CATEGORY_TAGS, TASK_INSTITUTION_TAGS } from './utils/constants.js';
+import { DEFAULT_FORMS } from './utils/constants.js';
 
 console.log('Loading app-refactored.js...');
 
@@ -386,6 +386,12 @@ window.grapheneApp = function() {
     availableGrapheneSamples: [],
     availableCompoundBatches: [],
     users: [],
+
+    // System tag library (loaded from /api/tags) — replaces hardcoded constants
+    systemCategoryTags: [],
+    systemInstitutionTags: [],
+    addingTagKind: null,   // 'CATEGORY' | 'INSTITUTION' | null — controls inline add input visibility
+    newTagInput: '',
 
     // Task management
     tasks: [],
@@ -1191,7 +1197,8 @@ window.grapheneApp = function() {
         this.loadAvailableMicronizations()
       ]);
       this.loadDropdownOptions();
-      
+      this.loadSystemTags();
+
       // Validate state after initialization
       setTimeout(() => {
         this.validateApplicationState();
@@ -4932,6 +4939,53 @@ window.grapheneApp = function() {
       }
     },
 
+    // ===== SYSTEM TAGS (org-wide tag/institution library) =====
+    async loadSystemTags() {
+      try {
+        const tags = await API.tags.getAll();
+        this.systemCategoryTags = tags.filter(t => t.kind === 'CATEGORY').map(t => t.name);
+        this.systemInstitutionTags = tags.filter(t => t.kind === 'INSTITUTION').map(t => t.name);
+      } catch (error) {
+        console.error('Failed to load system tags:', error);
+      }
+    },
+    showAddTagInput(kind) {
+      this.addingTagKind = kind;
+      this.newTagInput = '';
+      this.$nextTick(() => {
+        const el = document.querySelector('[data-add-tag-input]');
+        if (el) el.focus();
+      });
+    },
+    cancelAddTag() {
+      this.addingTagKind = null;
+      this.newTagInput = '';
+    },
+    async submitAddTag(applyToContext) {
+      const name = (this.newTagInput || '').trim();
+      const kind = this.addingTagKind;
+      if (!name || !kind) { this.cancelAddTag(); return; }
+      try {
+        await API.tags.create(name, kind);
+        await this.loadSystemTags();
+        // Auto-apply the new tag to whatever context the user was editing
+        if (applyToContext === 'taskForm' && !this.taskForm.tags.includes(name)) {
+          this.taskForm.tags.push(name);
+        } else if (applyToContext === 'taskDetail' && this.selectedTask && !(this.selectedTask.tags || []).includes(name)) {
+          await this.toggleDetailTaskTag(name);
+        } else if (applyToContext === 'goalForm' && !this.goalForm.tags.includes(name)) {
+          this.goalForm.tags.push(name);
+        }
+      } catch (error) {
+        alert(error.message || 'Failed to add tag');
+      } finally {
+        this.cancelAddTag();
+      }
+    },
+    isSystemTag(tag) {
+      return this.systemCategoryTags.includes(tag) || this.systemInstitutionTags.includes(tag);
+    },
+
     // ===== TASK MANAGEMENT METHODS (delegated to TaskService) =====
 
     async loadTasks() { await taskService.loadTasks(this); },
@@ -5057,8 +5111,8 @@ window.grapheneApp = function() {
       };
       const statusOrder = { TODO: 0, IN_PROGRESS: 1, IN_REVIEW: 2, DONE: 3, ARCHIVED: 4 };
       const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-      const tagSet = new Set(TASK_CATEGORY_TAGS);
-      const instSet = new Set(TASK_INSTITUTION_TAGS);
+      const tagSet = new Set(this.systemCategoryTags);
+      const instSet = new Set(this.systemInstitutionTags);
       for (const task of tasks) {
         if (mode === 'status') {
           push(task.status, this.formatStatusLabel(task.status), statusOrder[task.status] ?? 99, task);
