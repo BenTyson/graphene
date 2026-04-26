@@ -16,6 +16,7 @@ class TaskService {
       if (ctx.taskFilters.priority) params.priority = ctx.taskFilters.priority;
       if (ctx.taskFilters.assigneeId) params.assigneeId = ctx.taskFilters.assigneeId;
       if (ctx.taskFilters.overdue) params.overdue = true;
+      if (ctx.taskFilters.goalId) params.goalId = ctx.taskFilters.goalId;
       if (ctx.taskSearch) params.search = ctx.taskSearch;
       ctx.tasks = await API.tasks.getAll(params);
     } catch (error) {
@@ -40,7 +41,7 @@ class TaskService {
 
   openTaskForm(ctx, parentId = null) {
     ctx.editingTask = null;
-    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, tags: [] };
+    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, goalId: '', tags: [] };
     ctx.taskTagInput = '';
     ctx.showAddTask = true;
   }
@@ -55,6 +56,7 @@ class TaskService {
       dueDate: task.dueDate || '',
       assigneeIds: (task.assignees || []).map(a => a.user?.id || a.userId).filter(Boolean),
       parentId: task.parentId || null,
+      goalId: task.goalId || task.goal?.id || '',
       tags: [...(task.tags || [])]
     };
     ctx.taskTagInput = '';

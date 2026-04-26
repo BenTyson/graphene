@@ -55,6 +55,14 @@ export function getTasksTabHtml() {
             <option value="">All Institutions</option>
             ${institutionOptions}
           </select>
+          <select x-model="taskFilters.goalId" @change="loadTasks()"
+            class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+            <option value="">All Goals</option>
+            <option value="none">No Goal</option>
+            <template x-for="g in getActiveGoals()" :key="g.id">
+              <option :value="g.id" x-text="g.title"></option>
+            </template>
+          </select>
           <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" x-model="taskFilters.overdue" @change="loadTasks()"
               class="rounded border-gray-300 text-black focus:ring-black">
@@ -65,8 +73,8 @@ export function getTasksTabHtml() {
               class="rounded border-gray-300 text-black focus:ring-black">
             Show archived
           </label>
-          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || taskFilters.tag || taskFilters.institution || showArchivedTasks">
-            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '' }; showArchivedTasks = false; loadTasks()"
+          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || taskFilters.tag || taskFilters.institution || taskFilters.goalId || showArchivedTasks">
+            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' }; showArchivedTasks = false; loadTasks()"
               class="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline">
               Clear filters
             </button>
@@ -80,6 +88,7 @@ export function getTasksTabHtml() {
                 <option value="status">Status</option>
                 <option value="priority">Priority</option>
                 <option value="assignee">Assignee</option>
+                <option value="goal">Goal</option>
                 <option value="tag">Tag</option>
                 <option value="institution">Institution</option>
               </select>
@@ -165,6 +174,19 @@ export function getTasksTabHtml() {
                           </span>
                         </template>
                       </div>
+
+                      <!-- Goal pill -->
+                      <template x-if="task.goal">
+                        <div class="mb-2">
+                          <button @click.stop="openGoalDetail(task.goal.id)"
+                            class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[10px] font-medium max-w-full">
+                            <svg class="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z M12 13a1 1 0 100-2 1 1 0 000 2z"/>
+                            </svg>
+                            <span class="truncate" x-text="task.goal.title"></span>
+                          </button>
+                        </div>
+                      </template>
 
                       <!-- Tags -->
                       <template x-if="task.tags && task.tags.length">
@@ -362,9 +384,20 @@ export function getTasksTabHtml() {
                                 <span class="text-[10px] text-gray-400" :title="row.task._count.comments + ' comment(s)'" x-text="row.task._count.comments + ' c'"></span>
                               </template>
                             </div>
-                            <template x-if="row.task.tags && row.task.tags.length">
-                              <div class="text-[11px] text-gray-400 truncate" x-text="row.task.tags.join(' · ')"></div>
-                            </template>
+                            <div class="flex items-center gap-2 min-w-0">
+                              <template x-if="row.task.goal">
+                                <button @click.stop="openGoalDetail(row.task.goal.id)"
+                                  class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[10px] font-medium max-w-full shrink-0">
+                                  <svg class="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z M12 13a1 1 0 100-2 1 1 0 000 2z"/>
+                                  </svg>
+                                  <span class="truncate" x-text="row.task.goal.title"></span>
+                                </button>
+                              </template>
+                              <template x-if="row.task.tags && row.task.tags.length">
+                                <div class="text-[11px] text-gray-400 truncate" x-text="row.task.tags.join(' · ')"></div>
+                              </template>
+                            </div>
                           </div>
                         </td>
                       </template>

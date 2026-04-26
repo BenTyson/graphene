@@ -109,6 +109,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
   if (assigneeId) where.assignees = { some: { userId: assigneeId } };
   if (creatorId) where.creatorId = creatorId;
+  if (req.query.goalId !== undefined) {
+    where.goalId = req.query.goalId === 'none' ? null : req.query.goalId;
+  }
 
   if (overdue === 'true') {
     where.dueDate = { lt: new Date() };
@@ -141,6 +144,7 @@ router.get('/', asyncHandler(async (req, res) => {
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      goal: { select: { id: true, title: true, status: true } },
       _count: { select: { subtasks: true, comments: true, attachments: true } },
       subtasks: {
         select: { id: true, status: true, dueDate: true },
@@ -293,7 +297,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { title, description, status, priority, dueDate, assigneeIds, parentId, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, parentId, goalId, tags } = req.body;
 
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'Title is required' });
@@ -318,6 +322,7 @@ router.post('/', asyncHandler(async (req, res) => {
       tags: tags || [],
       creatorId: userId,
       parentId: parentId || null,
+      goalId: goalId || null,
       assignees: cleanAssigneeIds.length
         ? { create: cleanAssigneeIds.map(uid => ({ userId: uid })) }
         : undefined
@@ -325,6 +330,7 @@ router.post('/', asyncHandler(async (req, res) => {
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      goal: { select: { id: true, title: true, status: true } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }
@@ -347,7 +353,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { title, description, status, priority, dueDate, assigneeIds, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, goalId, tags } = req.body;
 
   const existing = await prisma.task.findUnique({
     where: { id },
@@ -365,6 +371,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (description !== undefined) data.description = description || null;
   if (tags !== undefined) data.tags = tags;
   if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
+  if (goalId !== undefined) data.goalId = goalId || null;
 
   // Track changes for activity log
   if (status !== undefined && status !== existing.status) {
@@ -418,6 +425,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      goal: { select: { id: true, title: true, status: true } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }
@@ -452,6 +460,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
     include: {
       creator: { select: { id: true, firstName: true, lastName: true, username: true } },
       assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      goal: { select: { id: true, title: true, status: true } },
       _count: { select: { subtasks: true, comments: true } },
       subtasks: { select: { id: true, status: true, dueDate: true } }
     }

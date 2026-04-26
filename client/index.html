@@ -351,9 +351,25 @@
             </div>
           </div>
 
-          <!-- Tasks -->
+          <!-- Goals -->
           <div class="pt-4">
             <div x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'" class="group relative">
+              <button @click="sidebarNavigate('goals')"
+                      :class="activeTab === 'goals' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                      class="sidebar-nav-item">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 17a5 5 0 100-10 5 5 0 000 10z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 13a1 1 0 100-2 1 1 0 000 2z"/>
+                </svg>
+                <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Goals</span>
+                <span class="ml-3 lg:hidden">Goals</span>
+              </button>
+              <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Goals</span>
+            </div>
+
+            <!-- Tasks -->
+            <div x-show="!isThirdParty() && currentUser?.role !== 'INVESTOR'" class="group relative mt-0.5">
               <button @click="sidebarNavigate('tasks')"
                       :class="activeTab === 'tasks' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
                       class="sidebar-nav-item">
@@ -561,6 +577,7 @@
               <div x-html="getGrapheneTabHtml()"></div>
               <div x-html="getUserManagementTabHtml()"></div>
               <div x-html="getTasksTabHtml()"></div>
+              <div x-html="getGoalsTabHtml()"></div>
               <div x-html="getPipelineTabHtml()"></div>
               <div x-html="getProformaTabHtml()"></div>
               <div x-html="getBETTabHtml()"></div>
@@ -611,6 +628,12 @@
 
     <!-- Task Detail Panel -->
     <div x-html="getTaskDetailPanelHtml()"></div>
+
+    <!-- Goal Add/Edit Modal -->
+    <div x-html="getGoalModalHtml()"></div>
+
+    <!-- Goal Detail Panel -->
+    <div x-html="getGoalDetailPanelHtml()"></div>
 
     <!-- Pipeline/CRM Modals & Panels -->
     <div x-html="getContactModalHtml()"></div>

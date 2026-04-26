@@ -1170,6 +1170,7 @@ export const tasksAPI = {
     if (params.assigneeId) query.append('assigneeId', params.assigneeId);
     if (params.search) query.append('search', params.search);
     if (params.parentId !== undefined) query.append('parentId', params.parentId);
+    if (params.goalId !== undefined) query.append('goalId', params.goalId);
     if (params.overdue) query.append('overdue', 'true');
     if (params.sortBy) query.append('sortBy', params.sortBy);
     if (params.order) query.append('order', params.order);
@@ -1407,6 +1408,46 @@ export const proformaAPI = {
   }
 };
 
+// Goals API endpoints
+export const goalsAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.append('status', params.status);
+    if (params.ownerId) query.append('ownerId', params.ownerId);
+    if (params.search) query.append('search', params.search);
+    if (params.includeArchived) query.append('includeArchived', 'true');
+    const qs = query.toString();
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals${qs ? '?' + qs : ''}`, { headers }).then(handleResponse);
+  },
+  getById: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals/${id}`, { headers }).then(handleResponse);
+  },
+  create: (data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals`, { method: 'POST', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+  update: (id, data) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals/${id}`, { method: 'PUT', headers, body: JSON.stringify(data) }).then(handleResponse);
+  },
+  delete: (id, hard = false) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals/${id}${hard ? '?hard=true' : ''}`, { method: 'DELETE', headers }).then(handleResponse);
+  },
+  restore: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals/${id}/restore`, { method: 'POST', headers }).then(handleResponse);
+  },
+  setTasks: (id, { addTaskIds = [], removeTaskIds = [] }) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/goals/${id}/tasks`, {
+      method: 'PATCH', headers, body: JSON.stringify({ addTaskIds, removeTaskIds })
+    }).then(handleResponse);
+  }
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -1426,6 +1467,7 @@ export default {
   shipment: shipmentAPI,
   users: usersAPI,
   tasks: tasksAPI,
+  goals: goalsAPI,
   pipeline: pipelineAPI,
   proforma: proformaAPI
 };

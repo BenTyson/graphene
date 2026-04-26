@@ -43,6 +43,10 @@ import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
 import { getTasksTabHtml } from './components/tabs/TasksTab.js';
 import { getTaskModalHtml } from './components/modals/TaskModal.js';
 import { getTaskDetailPanelHtml } from './components/modals/TaskDetailPanel.js';
+import { getGoalsTabHtml } from './components/tabs/GoalsTab.js';
+import { getGoalModalHtml } from './components/modals/GoalModal.js';
+import { getGoalDetailPanelHtml } from './components/modals/GoalDetailPanel.js';
+import goalService from './services/GoalService.js';
 import { getPipelineTabHtml } from './components/tabs/PipelineTab.js';
 import { getContactModalHtml } from './components/modals/ContactModal.js';
 import { getAddToPipelineModalHtml } from './components/modals/AddToPipelineModal.js';
@@ -194,7 +198,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
 
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -206,7 +210,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -390,12 +394,25 @@ window.grapheneApp = function() {
     taskListGroupBy: localStorage.getItem('taskListGroupBy') || 'none',
     taskCollapsedGroups: {},
     taskSearch: '',
-    taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '' },
+    taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' },
+
+    // Goal management
+    goals: [],
+    goalLoading: false,
+    goalSearch: '',
+    goalFilters: { status: '', ownerId: '' },
+    showArchivedGoals: false,
+    showGoalForm: false,
+    editingGoal: null,
+    goalForm: { title: '', description: '', status: 'ACTIVE', targetDate: '', ownerId: '', tags: [] },
+    showGoalDetail: false,
+    selectedGoal: null,
+    goalLinkSearch: '',
     showAddTask: false,
     showTaskDetail: false,
     selectedTask: null,
     editingTask: null,
-    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, tags: [] },
+    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, goalId: '', tags: [] },
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
@@ -4284,6 +4301,11 @@ window.grapheneApp = function() {
           this.$nextTick(() => {
             if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
           });
+        } else if (tab === 'goals') {
+          if (!this.goals.length) {
+            await this.loadGoals();
+            if (!this.taskAssignees.length) await this.loadTaskAssignees();
+          }
         } else if (tab === 'pipeline') {
           if (!this.pipelineContacts.length && !this.pipelineBoardContacts.length) {
             await this.loadPipelineContacts();
@@ -5054,6 +5076,10 @@ window.grapheneApp = function() {
           const matched = (task.tags || []).filter(t => instSet.has(t));
           if (!matched.length) { push('__none', 'No institution', 999, task); continue; }
           for (const t of matched) push('inst:' + t, t, t.toLowerCase(), task);
+        } else if (mode === 'goal') {
+          if (!task.goalId) { push('__nogoal', 'No goal', 999, task); continue; }
+          const label = task.goal?.title || 'Goal';
+          push('goal:' + task.goalId, label, label.toLowerCase(), task);
         }
       }
       return [...groups.values()].sort((a, b) => {
@@ -5139,6 +5165,48 @@ window.grapheneApp = function() {
     getTasksTabHtml() { return getTasksTabHtml(); },
     getTaskModalHtml() { return getTaskModalHtml(); },
     getTaskDetailPanelHtml() { return getTaskDetailPanelHtml(); },
+    getGoalsTabHtml() { return getGoalsTabHtml(); },
+    getGoalModalHtml() { return getGoalModalHtml(); },
+    getGoalDetailPanelHtml() { return getGoalDetailPanelHtml(); },
+
+    // ===== GOAL MANAGEMENT METHODS (delegated to GoalService) =====
+    async loadGoals() { await goalService.loadGoals(this); },
+    openGoalForm() { goalService.openGoalForm(this); },
+    openEditGoalForm(goal) { goalService.openEditGoalForm(this, goal); },
+    closeGoalForm() { goalService.closeGoalForm(this); },
+    async saveGoal() { await goalService.saveGoal(this); },
+    async deleteGoal(goalId) { await goalService.deleteGoal(this, goalId); },
+    async restoreGoal(goalId) { await goalService.restoreGoal(this, goalId); },
+    async openGoalDetail(goalId) { await goalService.openGoalDetail(this, goalId); },
+    closeGoalDetail() { goalService.closeGoalDetail(this); },
+    async updateGoalInline(goalId, field, value) { await goalService.updateGoalInline(this, goalId, field, value); },
+    async linkTasksToGoal(goalId, taskIds) { await goalService.linkTasksToGoal(this, goalId, taskIds); },
+    async unlinkTaskFromGoal(goalId, taskId) { await goalService.unlinkTaskFromGoal(this, goalId, taskId); },
+    getGoalStatusLabel(status) {
+      const labels = { ACTIVE: 'Active', ON_HOLD: 'On Hold', ACHIEVED: 'Achieved', ABANDONED: 'Abandoned' };
+      return labels[status] || status;
+    },
+    getGoalStatusBadgeClass(status) {
+      const classes = {
+        ACTIVE: 'bg-blue-100 text-blue-700',
+        ON_HOLD: 'bg-amber-100 text-amber-700',
+        ACHIEVED: 'bg-green-100 text-green-700',
+        ABANDONED: 'bg-gray-200 text-gray-500'
+      };
+      return classes[status] || classes.ACTIVE;
+    },
+    getGoalProgressColor(goal) {
+      if (goal.status === 'ACHIEVED') return 'bg-green-500';
+      if (goal.status === 'ABANDONED') return 'bg-gray-300';
+      if (goal.status === 'ON_HOLD') return 'bg-amber-400';
+      return 'bg-blue-500';
+    },
+    getActiveGoals() {
+      return (this.goals || []).filter(g => g.status === 'ACTIVE' && !g.archivedAt);
+    },
+    getGoalById(goalId) {
+      return (this.goals || []).find(g => g.id === goalId) || null;
+    },
 
     // Pipeline / CRM methods
     getPipelineTabHtml() { return getPipelineTabHtml(); },
@@ -5426,7 +5494,7 @@ window.grapheneApp = function() {
         'graphene': 'Graphene', 'biochar': 'Biochar',
         'compound-batches': 'Compound Batches', 'micronization': 'Micronization',
         'shipments': 'Shipments', 'analysis': 'Analysis',
-        'ai-insights': 'Insights', 'tasks': 'Tasks', 'pipeline': 'Pipeline', 'proforma': 'Proforma',
+        'ai-insights': 'Insights', 'tasks': 'Tasks', 'goals': 'Goals', 'pipeline': 'Pipeline', 'proforma': 'Proforma',
         'user-management': 'User Management',
         'test-bet': 'BET', 'test-conductivity': 'Conductivity',
         'test-raman': 'RAMAN', 'test-tem': 'TEM',
