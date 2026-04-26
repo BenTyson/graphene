@@ -343,7 +343,7 @@ export function getTaskDetailPanelHtml() {
             <div class="px-6 py-3 border-b border-gray-100">
               <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Tags</label>
               <div class="flex flex-wrap gap-1.5 mb-1.5">
-                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
+                <template x-for="sysTag in ['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing']" :key="sysTag">
                   <button type="button" @click="toggleDetailTaskTag(sysTag)"
                     :class="(selectedTask.tags || []).includes(sysTag) ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="sysTag"></button>
@@ -357,9 +357,9 @@ export function getTaskDetailPanelHtml() {
                     class="px-2 py-0.5 rounded text-xs font-medium transition-colors" x-text="instTag"></button>
                 </template>
               </div>
-              <template x-if="(selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t)).length">
+              <template x-if="(selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t)).length">
                 <div class="flex flex-wrap gap-1.5 mt-1.5">
-                  <template x-for="tag in (selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
+                  <template x-for="tag in (selectedTask.tags || []).filter(t => !['Fundraising','Shareholders','Patents','Legal','Decks & Graphics','Notes & Research','Production','Science','R&D','Finances','Sales','Administrative Ops','Proforma','Web & Marketing','Curia','NEI','SpectraPower','GoEco','Positron Magnetics','GEIC','Apollo','EAG'].includes(t))" :key="tag">
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
                       <span x-text="tag"></span>
                       <button type="button" @click="toggleDetailTaskTag(tag)" class="text-gray-400 hover:text-gray-600">

@@ -6,6 +6,7 @@
 export const TASK_CATEGORY_TAGS = [
   'Fundraising', 'Shareholders', 'Patents', 'Legal',
   'Decks & Graphics', 'Notes & Research', 'Production',
+  'Science', 'R&D',
   'Finances', 'Sales', 'Administrative Ops', 'Proforma', 'Web & Marketing'
 ];
 
