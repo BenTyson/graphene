@@ -1,16 +1,16 @@
 import { numInput, sectionHeader, criticalBlock } from './helpers.js';
 
-// Revenue tab: one self-contained card per stream. Each card owns its own
-// ramp (Y1 → Y2 → Y3), pricing (linked mode), market source, and
-// quarterly-shape weights. New streams append at the bottom; built-ins
-// can be renamed but not deleted.
+// Revenue tab — one self-contained card per stream, structured as a
+// numbered recipe so the mental model reads top-to-bottom:
+//   ① Source        (which global TAM does this draw from)
+//   ② Capture       (market share + price by year — or direct $/year)
+//   ③ Timing        (start month + optional quarterly shape)
 //
-// Implementation note: every Alpine binding inside a stream card uses
+// Built-ins can be renamed but not deleted; custom streams append at
+// the bottom. Every Alpine binding inside a stream card uses
 // `proformaAssumptions.revenue.streams[streamIndex]…` where `streamIndex`
-// is the loop variable from `<template x-for>`. The numeric index has to
-// be late-bound this way (NOT substituted at render time) so that the
-// directives Alpine wires up live inside the `<template>` and don't go
-// stale when a stream is added or removed.
+// is late-bound from the loop variable so directives stay live across
+// add/remove.
 
 const SBASE = 'proformaAssumptions.revenue.streams[streamIndex]';
 
@@ -51,139 +51,178 @@ function _qDistRow(yearKey) {
   `;
 }
 
-// Critical fields: start month + Y1/Y2/Y3 share (linked) or revenue $ (direct).
-function _criticalFields() {
+// ① Source — linked-mode only. Dropdown + live Y1→Y3 TAM preview pulled
+// from techRef[<linkedSource>ByYear], with a deep-link to the Markets
+// section so users can edit the source without losing their place.
+function _sourceBlock() {
+  const sourceArr = `(proformaComputed?.techRef?.[${SBASE}.market.linkedSource + 'ByYear'] || [])`;
   return `
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5">
-      ${numInput('Revenue start month', `${SBASE}.startMonth`, { unit: 'mo', step: 1 })}
-
-      <template x-if="${SBASE}.market.mode === 'linked'">
-        <div class="contents">
-          ${numInput('Y1 market share', `${SBASE}.year1.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
-          ${numInput('Y2 market share', `${SBASE}.year2.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
-          ${numInput('Y3 market share', `${SBASE}.year3.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
+    <template x-if="${SBASE}.market.mode === 'linked'">
+      <section>
+        <header class="flex items-baseline gap-2 mb-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
+          <h4 class="text-sm font-semibold text-gray-800">Source</h4>
+          <span class="text-[11px] text-gray-400">Which global TAM this stream draws from</span>
+        </header>
+        <select
+          @change="${SBASE}.market.linkedSource = $event.target.value; proformaRecompute()"
+          class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+          <template x-for="src in proformaMarketSources" :key="src.id">
+            <option :value="src.id" :selected="src.id === ${SBASE}.market.linkedSource" x-text="src.label"></option>
+          </template>
+        </select>
+        <div class="mt-2 flex items-center justify-between gap-3 text-[11px]">
+          <div class="font-mono text-gray-600">
+            <span class="text-gray-400">Y1</span>
+            <span x-text="(${sourceArr}[0] || 0).toLocaleString()"></span>
+            <span class="text-gray-400">kg &rarr; Y3</span>
+            <span x-text="(${sourceArr}[2] || 0).toLocaleString()"></span>
+            <span class="text-gray-400">kg</span>
+          </div>
+          <button type="button"
+                  @click="proformaSection = 'markets'; proformaSectionsReviewed['markets'] = true"
+                  class="text-gray-500 hover:text-gray-900 underline underline-offset-2">
+            Edit on Markets &rarr;
+          </button>
         </div>
-      </template>
-
-      <template x-if="${SBASE}.market.mode === 'direct'">
-        <div class="contents">
-          ${numInput('Y1 revenue', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
-          ${numInput('Y2 revenue', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
-          ${numInput('Y3 revenue', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
-        </div>
-      </template>
-    </div>
+      </section>
+    </template>
   `;
 }
 
-function _pricingBlock() {
+// ② Capture — linked mode shows market share % by year + sell price by
+// year. Direct mode shows yearly $ revenue inputs instead.
+function _captureBlock() {
   return `
     <template x-if="${SBASE}.market.mode === 'linked'">
-      <div class="border border-gray-200 rounded-lg overflow-hidden">
-        <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-          <h4 class="text-sm font-semibold text-gray-700">Unit pricing ($/kg)</h4>
-          <p class="text-[11px] text-gray-500 mt-0.5">Sell price per kg by year. Revenue = price × kg × market share.</p>
-        </div>
-        <div class="px-4 py-3.5">
-          <div class="grid grid-cols-4 gap-3">
-            ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
-              <div>
-                <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i}</label>
-                <input type="number" step="1"
-                       :value="${SBASE}.pricing.${yr}"
-                       @input="${SBASE}.pricing.${yr} = +$event.target.value; proformaRecompute()"
-                       class="w-full text-sm border-gray-300 rounded-md px-2 py-1.5 font-mono tabular-nums focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
-              </div>
-            `).join('')}
+      <section>
+        <header class="flex items-baseline gap-2 mb-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">2</span>
+          <h4 class="text-sm font-semibold text-gray-800">Capture &amp; price</h4>
+          <span class="text-[11px] text-gray-400">Revenue = TAM &times; share &times; $/kg</span>
+        </header>
+        <div class="space-y-3">
+          <div>
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Market share by year</p>
+            <div class="grid grid-cols-3 gap-3">
+              ${numInput('Y1', `${SBASE}.year1.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
+              ${numInput('Y2', `${SBASE}.year2.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
+              ${numInput('Y3', `${SBASE}.year3.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
+            </div>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Sell price ($/kg) by year</p>
+            <div class="grid grid-cols-4 gap-3">
+              ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i}</label>
+                  <input type="number" step="1"
+                         :value="${SBASE}.pricing.${yr}"
+                         @input="${SBASE}.pricing.${yr} = +$event.target.value; proformaRecompute()"
+                         class="w-full text-sm border-gray-300 rounded-md px-2 py-1.5 font-mono tabular-nums focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+                </div>
+              `).join('')}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+    </template>
+
+    <template x-if="${SBASE}.market.mode === 'direct'">
+      <section>
+        <header class="flex items-baseline gap-2 mb-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
+          <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
+          <span class="text-[11px] text-gray-400">Set the dollar amount directly &mdash; no market math</span>
+        </header>
+        <div class="grid grid-cols-3 gap-3">
+          ${numInput('Y1', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
+          ${numInput('Y2', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
+          ${numInput('Y3', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
+        </div>
+      </section>
     </template>
   `;
 }
 
-function _marketSourceBlock() {
+// ③ Timing — start month + an Advanced (single-purpose) accordion for
+// the qDist quarterly shape. This is the only "Advanced" left in the
+// stream card, and it owns one self-contained thing.
+function _timingBlock() {
+  const stateKey = `proformaAdvancedOpen['stream_qdist_' + ${SBASE}.id]`;
+  const numLinked = `${SBASE}.market.mode === 'linked' ? 3 : 2`;
   return `
-    <template x-if="${SBASE}.market.mode === 'linked'">
-      <div class="border border-gray-200 rounded-lg overflow-hidden">
-        <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-          <h4 class="text-sm font-semibold text-gray-700">Linked market source</h4>
-          <p class="text-[11px] text-gray-500 mt-0.5">
-            Pulls global TAM (kg/year) from the Technical tab. Edit the demand or CAGR there to re-price every linked stream.
-          </p>
-        </div>
-        <div class="px-4 py-3.5">
-          <select
-            @change="${SBASE}.market.linkedSource = $event.target.value; proformaRecompute()"
-            class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
-            <template x-for="src in proformaMarketSources" :key="src.id">
-              <option :value="src.id" :selected="src.id === ${SBASE}.market.linkedSource" x-text="src.label"></option>
-            </template>
-          </select>
-        </div>
-      </div>
-    </template>
-  `;
-}
+    <section>
+      <header class="flex items-baseline gap-2 mb-2">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold"
+              x-text="${numLinked}"></span>
+        <h4 class="text-sm font-semibold text-gray-800">Timing</h4>
+        <span class="text-[11px] text-gray-400">When revenue starts and how it spreads through the year</span>
+      </header>
 
-function _qDistBlock() {
-  return `
-    <div class="border border-gray-200 rounded-lg overflow-hidden">
-      <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-        <h4 class="text-sm font-semibold text-gray-700">Quarterly shape</h4>
-        <p class="text-[11px] text-gray-500 mt-0.5">Weights split each year's revenue across Q1–Q4. Must sum to 1.0 per year.</p>
+      <div class="grid grid-cols-3 gap-3">
+        ${numInput('First revenue month', `${SBASE}.startMonth`, { unit: 'mo', step: 1 })}
       </div>
-      <div class="px-4 py-3.5 space-y-2.5">
-        ${_qDistRow('year1')}
-        ${_qDistRow('year2')}
-        ${_qDistRow('year3')}
-      </div>
-    </div>
-  `;
-}
 
-// Per-stream advanced disclosure. State key includes the stream id so each
-// card opens/closes independently across re-renders.
-function _advancedAccordion() {
-  const stateKey = `proformaAdvancedOpen['stream_' + ${SBASE}.id]`;
-  return `
-    <section class="mt-2 border-t border-gray-100 pt-4">
-      <button type="button"
-              @click="${stateKey} = !${stateKey}"
-              class="w-full flex items-center gap-2 text-left group"
-              :aria-expanded="${stateKey} ? 'true' : 'false'">
-        <svg class="w-3.5 h-3.5 text-gray-400 transition-transform"
-             :class="${stateKey} ? 'rotate-90' : ''"
-             fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-        </svg>
-        <span class="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-700 group-hover:text-gray-900">Advanced</span>
-        <span class="text-[11px] text-gray-400 truncate">Pricing, market source, quarterly shape</span>
-      </button>
-      <div x-show="${stateKey}" x-collapse class="mt-4 space-y-4">
-        ${_pricingBlock()}
-        ${_marketSourceBlock()}
-        ${_qDistBlock()}
+      <div class="mt-3 border-t border-gray-100 pt-3">
+        <button type="button"
+                @click="${stateKey} = !${stateKey}"
+                class="flex items-center gap-2 text-left group"
+                :aria-expanded="${stateKey} ? 'true' : 'false'">
+          <svg class="w-3.5 h-3.5 text-gray-400 transition-transform"
+               :class="${stateKey} ? 'rotate-90' : ''"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+          <span class="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-700 group-hover:text-gray-900">Quarterly shape</span>
+          <span class="text-[11px] text-gray-400">How each year splits across Q1&ndash;Q4 (must sum to 1.0)</span>
+        </button>
+        <div x-show="${stateKey}" x-collapse class="mt-3 space-y-2.5 pl-5">
+          ${_qDistRow('year1')}
+          ${_qDistRow('year2')}
+          ${_qDistRow('year3')}
+        </div>
       </div>
     </section>
   `;
 }
 
 function _streamCard() {
+  // Treat missing `enabled` as true so v1 blobs that haven't migrated
+  // yet still render normally on the very first paint.
+  const isEnabled = `(${SBASE}.enabled !== false)`;
   return `
-    <article class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+    <article class="border rounded-2xl overflow-hidden bg-white transition-colors"
+             :class="${isEnabled} ? 'border-gray-200' : 'border-gray-200 bg-gray-50'">
       <header class="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+
+        <!-- Enable/disable toggle -->
+        <button type="button"
+                @click="toggleProformaRevenueStream(${SBASE}.id)"
+                :title="${isEnabled} ? 'Disable this stream (keeps config, contributes $0)' : 'Re-enable this stream'"
+                :class="${isEnabled} ? 'bg-gray-900' : 'bg-gray-300'"
+                class="relative inline-flex shrink-0 items-center h-5 w-9 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">
+          <span :class="${isEnabled} ? 'translate-x-[18px]' : 'translate-x-[2px]'"
+                class="inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform"></span>
+        </button>
+
         <input type="text"
                :value="${SBASE}.name"
                @input="${SBASE}.name = $event.target.value; proformaMarkDirty()"
-               class="flex-1 min-w-[200px] text-base font-semibold text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-200 focus:border-gray-900 focus:ring-0 px-0 py-1">
+               class="flex-1 min-w-[200px] text-base font-semibold bg-transparent border-0 border-b border-transparent hover:border-gray-200 focus:border-gray-900 focus:ring-0 px-0 py-1"
+               :class="${isEnabled} ? 'text-gray-900' : 'text-gray-500 line-through decoration-gray-400'">
+
+        <span x-show="!${isEnabled}"
+              class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 bg-gray-200 rounded px-1.5 py-0.5">
+          Disabled
+        </span>
 
         <div class="inline-flex items-center bg-gray-100 rounded-lg p-0.5 text-[11px] font-medium">
           <button type="button"
                   @click="setProformaStreamMarketMode(${SBASE}.id, 'linked')"
                   :class="${SBASE}.market.mode === 'linked' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
                   class="px-2.5 py-1 rounded-md transition">
-            Market share
+            Linked TAM
           </button>
           <button type="button"
                   @click="setProformaStreamMarketMode(${SBASE}.id, 'direct')"
@@ -205,12 +244,11 @@ function _streamCard() {
         </template>
       </header>
 
-      <div class="px-5 pt-5 pb-2">
-        ${_criticalFields()}
-      </div>
-
-      <div class="px-5 pb-5">
-        ${_advancedAccordion()}
+      <div class="px-5 py-5 space-y-5 transition-opacity"
+           :class="${isEnabled} ? '' : 'opacity-50'">
+        ${_sourceBlock()}
+        ${_captureBlock()}
+        ${_timingBlock()}
       </div>
     </article>
   `;
@@ -219,7 +257,7 @@ function _streamCard() {
 export function getRevenueSection() {
   return `
     <section class="max-w-5xl">
-      ${sectionHeader('Revenue', 'One module per revenue stream — each owns its market source, pricing, ramp, and quarterly shape. Built-in streams can be edited but not deleted; custom streams can be added below.')}
+      ${sectionHeader('Revenue', 'One card per revenue stream. Each stream picks a market source, captures a share at a price, and ramps in over time. Built-ins can be edited but not deleted.')}
 
       ${criticalBlock(`
         <div class="space-y-5">

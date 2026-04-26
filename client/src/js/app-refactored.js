@@ -5446,7 +5446,7 @@ window.grapheneApp = function() {
 
     // ── Proforma delegates ──
     async loadProformaScenarios() {
-      this.proformaMarketSources = proformaService.getMarketSourceCatalog();
+      this.proformaMarketSources = proformaService.getMarketSourceCatalog(this);
       await proformaService.loadScenarios(this);
     },
     async openProformaScenario(id) { await proformaService.openScenario(this, id); },
@@ -5466,7 +5466,19 @@ window.grapheneApp = function() {
     removeProformaRaise(index) { proformaService.removeRaise(this, index); },
     addProformaRevenueStream(opts) { proformaService.addRevenueStream(this, opts); },
     removeProformaRevenueStream(streamId) { proformaService.removeRevenueStream(this, streamId); },
+    toggleProformaRevenueStream(streamId) { proformaService.toggleRevenueStream(this, streamId); },
     setProformaStreamMarketMode(streamId, mode) { proformaService.setStreamMarketMode(this, streamId, mode); },
+    addProformaMarketSource(opts) { return proformaService.addMarketSource(this, opts); },
+    removeProformaMarketSource(sourceId) { proformaService.removeMarketSource(this, sourceId); },
+    countProformaStreamsLinkedToSource(sourceId) { return proformaService.countStreamsLinkedToSource(this, sourceId); },
+    reseedProformaMarketSources() { proformaService._reseedMarketSources(this); },
+    onDeleteProformaMarketSource(sourceId) {
+      const n = proformaService.countStreamsLinkedToSource(this, sourceId);
+      const msg = n > 0
+        ? `This source is linked by ${n} revenue stream${n === 1 ? '' : 's'}. Deleting it will leave those streams with $0 revenue until you re-link them. Delete anyway?`
+        : 'Delete this market source?';
+      if (confirm(msg)) proformaService.removeMarketSource(this, sourceId);
+    },
     normalizeProformaQDist(arr) { proformaService.normalizeQDist(arr); proformaService.recompute(this); },
     toggleProformaSalaryMode(yearKey, role) { proformaService.toggleSalaryMode(this, yearKey, role); },
     addProformaMachinePayment(mi) { proformaService.addMachinePayment(this, mi); },

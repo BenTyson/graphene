@@ -3,7 +3,7 @@ import { calculateProforma } from '@shared/proformaEngine.js';
 import {
   getDefaultAssumptions,
   migrateAssumptions,
-  MARKET_SOURCE_CATALOG
+  BUILTIN_MARKET_SOURCES
 } from '@shared/proformaDefaults.js';
 import {
   getDemoScenarioData,
@@ -18,6 +18,13 @@ function _slugifyStreamId(name) {
   const base = (name || 'stream').toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'stream';
+  return base + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function _slugifyMarketSourceId(label) {
+  const base = (label || 'source').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'source';
   return base + '_' + Math.random().toString(36).slice(2, 7);
 }
 
@@ -73,6 +80,7 @@ class ProformaService {
       ctx.proformaBaseline = _snapshotMetrics(data.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
+      this._reseedMarketSources(ctx);
     } catch (e) {
       console.error('Failed to load scenario', e);
     } finally {
@@ -96,6 +104,7 @@ class ProformaService {
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
+      this._reseedMarketSources(ctx);
       // Refresh list in background
       this.loadScenarios(ctx);
     } catch (e) {
@@ -122,6 +131,7 @@ class ProformaService {
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
+      this._reseedMarketSources(ctx);
     }
     // Refresh list so the demo appears in list view as well
     this.loadScenarios(ctx);
@@ -147,6 +157,7 @@ class ProformaService {
       ctx.proformaBaseline = _snapshotMetrics(result.computed);
       ctx.proformaView = 'editor';
       ctx.proformaDirty = false;
+      this._reseedMarketSources(ctx);
       this.loadScenarios(ctx);
     } catch (e) {
       console.error('Failed to clone scenario', e);
@@ -332,12 +343,68 @@ class ProformaService {
     this.recompute(ctx);
   }
 
-  // ── Revenue stream management ──
+  // ── Market source management ──
 
-  // Catalog of global market sources surfaced in the linked-source dropdown.
-  getMarketSourceCatalog() {
-    return MARKET_SOURCE_CATALOG;
+  // Catalog of global market sources surfaced in the linked-source
+  // dropdown. Built-ins (supercap, conductive) come first; the remainder
+  // is derived from the open scenario's technical.market.customSources[].
+  // Safe to call before a scenario is open — returns just the built-ins.
+  getMarketSourceCatalog(ctx) {
+    const sources = BUILTIN_MARKET_SOURCES.map(s => ({ id: s.id, label: s.label }));
+    const custom = ctx?.proformaAssumptions?.technical?.market?.customSources || [];
+    for (const s of custom) {
+      if (!s || !s.id) continue;
+      sources.push({ id: s.id, label: s.label || s.id });
+    }
+    return sources;
   }
+
+  // Re-seed proformaMarketSources whenever the source list changes so
+  // the Revenue tab dropdown picks up additions/removals without reload.
+  _reseedMarketSources(ctx) {
+    ctx.proformaMarketSources = this.getMarketSourceCatalog(ctx);
+  }
+
+  // Count revenue streams currently linked to a given source id. Used by
+  // the Technical tab to warn before deleting a source that's in use.
+  countStreamsLinkedToSource(ctx, sourceId) {
+    const streams = ctx.proformaAssumptions?.revenue?.streams || [];
+    return streams.filter(s =>
+      s.market?.mode === 'linked' && s.market?.linkedSource === sourceId
+    ).length;
+  }
+
+  addMarketSource(ctx, { label, baseTonnes = 0, cagr = 1.20 } = {}) {
+    const finalLabel = (label && label.trim()) || 'New market source';
+    const market = ctx.proformaAssumptions?.technical?.market;
+    if (!market) return null;
+    if (!Array.isArray(market.customSources)) market.customSources = [];
+    const id = _slugifyMarketSourceId(finalLabel);
+    market.customSources.push({
+      id,
+      label: finalLabel,
+      baseTonnes: +baseTonnes || 0,
+      cagr: +cagr || 1.0,
+      builtin: false
+    });
+    this._reseedMarketSources(ctx);
+    this.recompute(ctx);
+    return id;
+  }
+
+  removeMarketSource(ctx, sourceId) {
+    const market = ctx.proformaAssumptions?.technical?.market;
+    const sources = market?.customSources;
+    if (!Array.isArray(sources)) return;
+    const idx = sources.findIndex(s => s.id === sourceId);
+    if (idx < 0) return;
+    if (sources[idx].builtin) return; // Built-in customs are not deletable.
+    sources.splice(idx, 1);
+    this._reseedMarketSources(ctx);
+    this.recompute(ctx);
+  }
+
+  // ── Revenue stream management ──
 
   // mode: 'linked' | 'direct'. linkedSource only used when mode === 'linked'.
   addRevenueStream(ctx, { name, mode = 'linked', linkedSource = 'supercap' } = {}) {
@@ -352,6 +419,7 @@ class ProformaService {
       id,
       name: finalName,
       builtin: false,
+      enabled: true,
       order: streams.length,
       startMonth: 12,
       pricing: { year0: 100, year1: 100, year2: 100, year3: 100 },
@@ -365,6 +433,13 @@ class ProformaService {
     streams.push(stream);
     this.recompute(ctx);
     return id;
+  }
+
+  toggleRevenueStream(ctx, streamId) {
+    const stream = ctx.proformaAssumptions?.revenue?.streams?.find(s => s.id === streamId);
+    if (!stream) return;
+    stream.enabled = stream.enabled === false; // flip; treat undefined as true
+    this.recompute(ctx);
   }
 
   removeRevenueStream(ctx, streamId) {

@@ -6,7 +6,7 @@ import { getCostsSection } from './proforma/CostsSection.js';
 import { getOperationsSection } from './proforma/OperationsSection.js';
 import { getMachinesSection } from './proforma/MachinesSection.js';
 import { getCapitalSection } from './proforma/CapitalSection.js';
-import { getTechnicalSection } from './proforma/TechnicalSection.js';
+import { getMarketsSection, getReferenceDataSection } from './proforma/TechnicalSection.js';
 
 // Make formatters available for inline template expressions
 window._pfFmtC = formatCurrency;
@@ -177,6 +177,7 @@ export function getProformaTabHtml() {
             <!-- Active section -->
             <div class="min-w-0">
               <div x-show="proformaSection === 'revenue'">${getRevenueSection()}</div>
+              <div x-show="proformaSection === 'markets'">${getMarketsSection()}</div>
               <div x-show="proformaSection === 'production'">${getProductionSection()}</div>
               <div x-show="proformaSection === 'costs'">${getCostsSection()}</div>
               <div x-show="proformaSection === 'operations'">${getOperationsSection()}</div>
@@ -184,16 +185,16 @@ export function getProformaTabHtml() {
               <div x-show="proformaSection === 'capital'">${getCapitalSection()}</div>
             </div>
 
-            <!-- Technical reference accordion: collapsed by default, always at the bottom -->
+            <!-- Reference data accordion: collapsed by default, always at the bottom -->
             <details class="mt-16 border-t border-gray-200 pt-6 max-w-3xl">
               <summary class="cursor-pointer flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 select-none">
                 <svg class="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                 </svg>
-                <span>Advanced: Technical Reference</span>
-                <span class="text-[11px] text-gray-400 font-normal">Battery chemistry, market sizing, conversion factors</span>
+                <span>Reference data</span>
+                <span class="text-[11px] text-gray-400 font-normal">Battery chemistry, supercap specs &mdash; rarely edited; powers built-in market sources</span>
               </summary>
-              <div class="mt-6">${getTechnicalSection()}</div>
+              <div class="mt-6">${getReferenceDataSection()}</div>
             </details>
           </div>
 
