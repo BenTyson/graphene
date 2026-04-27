@@ -16,6 +16,11 @@ export function getTasksTabHtml() {
                 class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">
                 List
               </button>
+              <button @click="taskViewMode = 'costs'; loadCostsSummary()"
+                :class="taskViewMode === 'costs' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">
+                Costs
+              </button>
             </div>
             <button @click="openTaskForm()" class="px-4 py-1.5 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors">
               + New Task
@@ -200,6 +205,20 @@ export function getTasksTabHtml() {
                         </div>
                       </template>
 
+                      <!-- Cost chip -->
+                      <template x-if="task.cost != null">
+                        <div class="mb-2">
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                            :class="getTaskCostStatusClass(task)">
+                            <svg x-show="task.costPaid" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span x-text="formatCost(task.cost)"></span>
+                            <span class="opacity-70" x-text="task.costPaid ? '· Paid' : ''"></span>
+                          </span>
+                        </div>
+                      </template>
+
                       <!-- Bottom indicators: subtasks, attachments, blockers -->
                       <template x-if="getSubtaskProgress(task) || task._count?.attachments || task.blockerCount > 0 || getOverdueSubtaskCount(task)">
                         <div class="flex items-center gap-3 text-[11px] text-gray-400 pt-1">
@@ -330,6 +349,7 @@ export function getTasksTabHtml() {
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Priority</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-40">Assignee</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Due</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,7 +357,7 @@ export function getTasksTabHtml() {
                     <tr :class="row.type === 'header' ? 'bg-gray-50/70 border-y border-gray-200 cursor-pointer hover:bg-gray-100/70' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100'"
                       @click="row.type === 'header' ? toggleTaskGroup(row.group.key) : openTaskDetail(row.task.id)">
                       <template x-if="row.type === 'header'">
-                        <td colspan="5" class="px-4 py-2">
+                        <td colspan="6" class="px-4 py-2">
                           <div class="flex items-center gap-2">
                             <svg class="w-3 h-3 text-gray-400 transition-transform"
                               :class="taskCollapsedGroups[row.group.key] ? '-rotate-90' : ''"
@@ -445,11 +465,24 @@ export function getTasksTabHtml() {
                           </template>
                         </td>
                       </template>
+                      <template x-if="row.type === 'task'">
+                        <td class="px-4 py-2.5 w-28">
+                          <template x-if="row.task.cost != null">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium"
+                              :class="getTaskCostStatusClass(row.task)">
+                              <svg x-show="row.task.costPaid" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                              </svg>
+                              <span x-text="formatCost(row.task.cost)"></span>
+                            </span>
+                          </template>
+                        </td>
+                      </template>
                     </tr>
                   </template>
                   <template x-if="getFilteredTasks().length === 0">
                     <tr>
-                      <td colspan="5" class="px-4 py-12 text-center text-sm text-gray-400">
+                      <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-400">
                         No tasks found. Create one to get started.
                       </td>
                     </tr>
@@ -477,9 +510,209 @@ export function getTasksTabHtml() {
                     <template x-if="task.dueDate">
                       <span :class="getTaskDueClass(task.dueDate, task.status)" x-text="getTaskDueLabel(task.dueDate)"></span>
                     </template>
+                    <template x-if="task.cost != null">
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                        :class="getTaskCostStatusClass(task)" x-text="formatCost(task.cost)"></span>
+                    </template>
                   </div>
                 </div>
               </template>
+            </div>
+          </div>
+
+          <!-- Costs View -->
+          <div x-show="taskViewMode === 'costs'">
+            <!-- Stat tiles -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div class="border border-amber-200 bg-amber-50/60 rounded-lg p-4">
+                <div class="text-[11px] font-medium text-amber-700 uppercase tracking-wide">Open</div>
+                <div class="text-2xl font-semibold text-gray-900 mt-1" x-text="formatCost(taskCostsSummary.openTotal)"></div>
+                <div class="text-xs text-gray-500 mt-0.5"><span x-text="taskCostsSummary.openCount"></span> task<span x-show="taskCostsSummary.openCount !== 1">s</span> unpaid</div>
+              </div>
+              <div class="border border-emerald-200 bg-emerald-50/60 rounded-lg p-4">
+                <div class="text-[11px] font-medium text-emerald-700 uppercase tracking-wide">Paid</div>
+                <div class="text-2xl font-semibold text-gray-900 mt-1" x-text="formatCost(taskCostsSummary.paidTotal)"></div>
+                <div class="text-xs text-gray-500 mt-0.5"><span x-text="taskCostsSummary.paidCount"></span> task<span x-show="taskCostsSummary.paidCount !== 1">s</span> settled</div>
+              </div>
+              <div class="border border-gray-200 bg-white rounded-lg p-4">
+                <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Total</div>
+                <div class="text-2xl font-semibold text-gray-900 mt-1" x-text="formatCost(taskCostsSummary.grandTotal)"></div>
+                <div class="text-xs text-gray-500 mt-0.5"><span x-text="taskCostsSummary.totalCount"></span> task<span x-show="taskCostsSummary.totalCount !== 1">s</span> with cost</div>
+              </div>
+            </div>
+
+            <!-- Costs filters strip -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <div class="flex rounded-md border border-gray-300 overflow-hidden">
+                <button @click="taskCostsFilter = 'open'"
+                  :class="taskCostsFilter === 'open' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                  class="px-3 py-1.5 text-xs font-medium transition-colors">Open</button>
+                <button @click="taskCostsFilter = 'paid'"
+                  :class="taskCostsFilter === 'paid' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                  class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">Paid</button>
+                <button @click="taskCostsFilter = 'all'"
+                  :class="taskCostsFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                  class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">All</button>
+              </div>
+              <div class="flex items-center gap-1.5 ml-auto">
+                <span class="text-xs text-gray-500">Group by</span>
+                <select x-model="taskCostsGroupBy" @change="localStorage.setItem('taskCostsGroupBy', $event.target.value)"
+                  class="px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black">
+                  <option value="none">None</option>
+                  <option value="goal">Goal</option>
+                  <option value="assignee">Assignee</option>
+                  <option value="category">Category</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Costs table -->
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <table class="min-w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-32">Status</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-44">Assignee</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Due</th>
+                    <th class="px-4 py-2.5 text-right text-[11px] font-medium text-gray-500 uppercase tracking-wider w-32">Cost</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-44">Paid</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-if="taskCostsGroupBy === 'none'">
+                    <template x-for="task in getCostsViewTasks()" :key="task.id">
+                      <tr class="hover:bg-gray-50 border-b border-gray-100 cursor-pointer" @click="openTaskDetail(task.id)">
+                        <td class="px-4 py-2.5">
+                          <div class="flex flex-col gap-0.5">
+                            <span class="text-sm text-gray-900 font-medium" x-text="task.title"></span>
+                            <template x-if="task.goal">
+                              <span class="text-[11px] text-blue-700" x-text="task.goal.title"></span>
+                            </template>
+                          </div>
+                        </td>
+                        <td class="px-4 py-2.5 w-32">
+                          <span :class="getStatusBadgeClass(task.status)"
+                            class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium"
+                            x-text="formatStatusLabel(task.status)"></span>
+                        </td>
+                        <td class="px-4 py-2.5 w-44">
+                          <template x-if="getTaskAssigneeUsers(task).length">
+                            <span class="text-xs text-gray-700 truncate" x-text="getTaskPrimaryAssigneeShort(task)"></span>
+                          </template>
+                          <template x-if="!getTaskAssigneeUsers(task).length">
+                            <span class="text-xs text-gray-300 italic">Unassigned</span>
+                          </template>
+                        </td>
+                        <td class="px-4 py-2.5 w-28">
+                          <template x-if="task.dueDate">
+                            <span :class="getTaskDueClass(task.dueDate, task.status)" class="text-xs" x-text="getTaskDueLabel(task.dueDate)"></span>
+                          </template>
+                        </td>
+                        <td class="px-4 py-2.5 w-32 text-right">
+                          <span class="text-sm font-semibold text-gray-900" x-text="formatCost(task.cost)"></span>
+                        </td>
+                        <td class="px-4 py-2.5 w-44" @click.stop>
+                          <div class="flex items-center gap-2">
+                            <button type="button" @click="toggleCostPaid(task.id, !task.costPaid)"
+                              class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border transition-colors"
+                              :class="task.costPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'">
+                              <svg x-show="task.costPaid" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                              </svg>
+                              <span x-text="task.costPaid ? 'Paid' : 'Mark paid'"></span>
+                            </button>
+                            <template x-if="task.costPaid && task.costPaidAt">
+                              <span class="text-[10px] text-gray-400" x-text="new Date(task.costPaidAt).toLocaleDateString()"></span>
+                            </template>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </template>
+                  <template x-if="taskCostsGroupBy !== 'none'">
+                    <template x-for="row in getCostsRows()" :key="row.rowKey">
+                      <tr :class="row.type === 'header' ? 'bg-gray-50/70 border-y border-gray-200' : 'hover:bg-gray-50 border-b border-gray-100 cursor-pointer'"
+                        @click="row.type === 'task' && openTaskDetail(row.task.id)">
+                        <template x-if="row.type === 'header'">
+                          <td colspan="6" class="px-4 py-2">
+                            <div class="flex items-center justify-between">
+                              <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide" x-text="row.group.label"></span>
+                              <span class="text-xs font-medium text-gray-700">
+                                <span x-text="row.group.tasks.length"></span> task<span x-show="row.group.tasks.length !== 1">s</span>
+                                · <span x-text="formatCost(row.group.total)"></span>
+                              </span>
+                            </div>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5">
+                            <div class="flex flex-col gap-0.5">
+                              <span class="text-sm text-gray-900 font-medium" x-text="row.task.title"></span>
+                              <template x-if="row.task.goal && taskCostsGroupBy !== 'goal'">
+                                <span class="text-[11px] text-blue-700" x-text="row.task.goal.title"></span>
+                              </template>
+                            </div>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5 w-32">
+                            <span :class="getStatusBadgeClass(row.task.status)"
+                              class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium"
+                              x-text="formatStatusLabel(row.task.status)"></span>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5 w-44">
+                            <template x-if="getTaskAssigneeUsers(row.task).length">
+                              <span class="text-xs text-gray-700 truncate" x-text="getTaskPrimaryAssigneeShort(row.task)"></span>
+                            </template>
+                            <template x-if="!getTaskAssigneeUsers(row.task).length">
+                              <span class="text-xs text-gray-300 italic">Unassigned</span>
+                            </template>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5 w-28">
+                            <template x-if="row.task.dueDate">
+                              <span :class="getTaskDueClass(row.task.dueDate, row.task.status)" class="text-xs" x-text="getTaskDueLabel(row.task.dueDate)"></span>
+                            </template>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5 w-32 text-right">
+                            <span class="text-sm font-semibold text-gray-900" x-text="formatCost(row.task.cost)"></span>
+                          </td>
+                        </template>
+                        <template x-if="row.type === 'task'">
+                          <td class="px-4 py-2.5 w-44" @click.stop>
+                            <div class="flex items-center gap-2">
+                              <button type="button" @click="toggleCostPaid(row.task.id, !row.task.costPaid)"
+                                class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded border transition-colors"
+                                :class="row.task.costPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'">
+                                <svg x-show="row.task.costPaid" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span x-text="row.task.costPaid ? 'Paid' : 'Mark paid'"></span>
+                              </button>
+                              <template x-if="row.task.costPaid && row.task.costPaidAt">
+                                <span class="text-[10px] text-gray-400" x-text="new Date(row.task.costPaidAt).toLocaleDateString()"></span>
+                              </template>
+                            </div>
+                          </td>
+                        </template>
+                      </tr>
+                    </template>
+                  </template>
+                  <template x-if="getCostsViewTasks().length === 0">
+                    <tr>
+                      <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-400">
+                        No tasks with cost match the current filters.
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

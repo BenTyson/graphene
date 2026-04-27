@@ -65,11 +65,32 @@ export function getTaskModalHtml() {
               </div>
             </div>
 
-            <!-- Due Date -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <input type="date" x-model="taskForm.dueDate"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+            <!-- Due Date + Cost Row -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input type="date" x-model="taskForm.dueDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+                <div class="flex items-stretch gap-2">
+                  <div class="relative flex-1">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
+                    <input type="number" min="0" step="0.01" x-model="taskForm.cost"
+                      @input="if (!taskForm.cost) taskForm.costPaid = false"
+                      class="w-full pl-6 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm"
+                      placeholder="0.00">
+                  </div>
+                  <label class="inline-flex items-center gap-1.5 px-2 text-xs text-gray-600 select-none whitespace-nowrap"
+                    :class="!taskForm.cost ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'">
+                    <input type="checkbox" x-model="taskForm.costPaid" :disabled="!taskForm.cost"
+                      class="rounded border-gray-300 text-black focus:ring-black">
+                    Paid
+                  </label>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1">Optional. Mark Paid when settled.</p>
+              </div>
             </div>
 
             <!-- Goal (only on top-level tasks) -->

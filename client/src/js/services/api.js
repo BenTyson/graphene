@@ -1256,6 +1256,18 @@ export const tasksAPI = {
     return fetch(`${API_BASE}/tasks/stats`, { headers }).then(handleResponse);
   },
 
+  getCostsSummary: () => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/costs/summary`, { headers }).then(handleResponse);
+  },
+
+  setCostPaid: (id, paid) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/tasks/${id}/cost-paid`, {
+      method: 'PATCH', headers, body: JSON.stringify({ paid })
+    }).then(handleResponse);
+  },
+
   addDependency: (taskId, blockingTaskId) => {
     const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/tasks/${taskId}/dependencies`, {
