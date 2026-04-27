@@ -1,4 +1,4 @@
-import { numInput, sectionHeader, criticalBlock } from './helpers.js';
+import { numInput, sectionHeader } from './helpers.js';
 
 // Revenue tab — one self-contained card per stream, structured as a
 // numbered recipe so the mental model reads top-to-bottom:
@@ -259,13 +259,11 @@ export function getRevenueSection() {
     <section class="max-w-5xl">
       ${sectionHeader('Revenue', 'One card per revenue stream. Each stream picks a market source, captures a share at a price, and ramps in over time. Built-ins can be edited but not deleted.')}
 
-      ${criticalBlock(`
-        <div class="space-y-5">
-          <template x-for="(stream, streamIndex) in (proformaAssumptions.revenue.streams || [])" :key="stream.id">
-            ${_streamCard()}
-          </template>
-        </div>
-      `, { label: 'Revenue streams', hint: 'Each card is self-contained' })}
+      <div class="space-y-5">
+        <template x-for="(stream, streamIndex) in (proformaAssumptions.revenue.streams || [])" :key="stream.id">
+          ${_streamCard()}
+        </template>
+      </div>
 
       <div class="mt-6 flex justify-center">
         <button type="button"

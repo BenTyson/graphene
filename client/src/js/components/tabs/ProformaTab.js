@@ -185,8 +185,8 @@ export function getProformaTabHtml() {
               <div x-show="proformaSection === 'capital'">${getCapitalSection()}</div>
             </div>
 
-            <!-- Reference data accordion: collapsed by default, always at the bottom -->
-            <details class="mt-16 border-t border-gray-200 pt-6 max-w-3xl">
+            <!-- Reference data accordion: Markets section only -->
+            <details x-show="proformaSection === 'markets'" class="mt-16 border-t border-gray-200 pt-6 max-w-3xl">
               <summary class="cursor-pointer flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 select-none">
                 <svg class="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -206,14 +206,23 @@ export function getProformaTabHtml() {
           <!-- ─── CHARTS SUB-TAB ─── -->
           <div x-show="proformaEditorTab === 'charts'">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-revenue"></canvas></div></div>
-              <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-pnl"></canvas></div></div>
-              <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-cash"></canvas></div></div>
-              <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-production"></canvas></div></div>
-              <div class="border border-gray-200 rounded-lg p-4 lg:col-span-2">
-                <div style="height:360px"><canvas id="proforma-chart-capacity-vs-demand"></canvas></div>
-                <p class="mt-2 text-[11px] text-gray-500">Stacked bars are kg-of-graphene implied by each revenue stream; the dark line is what the modeled machines can actually produce. Where the line dips below the bars, sales projections exceed production capacity.</p>
-              </div>
+              ${_chartCard('proforma-chart-revenue')}
+              ${_chartCard('proforma-chart-pnl')}
+
+              ${_chartCard('proforma-chart-margins')}
+              ${_chartCard('proforma-chart-unit-economics', { caption: 'Per-kg revenue and cost, using stream-implied kg as the denominator. The vertical gap between the lines is gross margin per kg.' })}
+
+              ${_chartCard('proforma-chart-cogs-composition')}
+              ${_chartCard('proforma-chart-opex-composition')}
+
+              ${_chartCard('proforma-chart-cash')}
+              ${_chartCard('proforma-chart-production')}
+
+              ${_chartCard('proforma-chart-capacity-vs-demand', {
+                wide: true,
+                height: 360,
+                caption: 'Stacked bars are kg-of-graphene implied by each revenue stream; the dark line is what the modeled machines can actually produce. Where the line dips below the bars, sales projections exceed production capacity.'
+              })}
             </div>
           </div>
 
@@ -223,6 +232,61 @@ export function getProformaTabHtml() {
           </div>
         </div>
       </template>
+
+      ${_fullscreenChartModal()}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHART CARD + FULLSCREEN MODAL
+// ═══════════════════════════════════════════════════════════════
+// Each chart sits in a clickable card. Click anywhere on the card to
+// open the chart in the fullscreen modal. The expand icon in the
+// corner is just an affordance — the whole card is the hit target.
+function _chartCard(canvasId, opts = {}) {
+  const { caption, wide = false, height = 320 } = opts;
+  const wideClass = wide ? ' lg:col-span-2' : '';
+  return `
+    <div class="group relative border border-gray-200 rounded-lg p-4 cursor-pointer
+                hover:border-gray-400 hover:shadow-sm transition-all${wideClass}"
+         @click="openProformaFullscreenChart('${canvasId}')">
+      <button type="button"
+              class="absolute top-2.5 right-2.5 z-10 p-1.5 text-gray-300 group-hover:text-gray-700
+                     rounded-md hover:bg-gray-100 transition-colors"
+              @click.stop="openProformaFullscreenChart('${canvasId}')"
+              aria-label="Expand chart">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4"/>
+        </svg>
+      </button>
+      <div style="height:${height}px"><canvas id="${canvasId}"></canvas></div>
+      ${caption ? `<p class="mt-2 text-[11px] text-gray-500">${caption}</p>` : ''}
+    </div>
+  `;
+}
+
+function _fullscreenChartModal() {
+  return `
+    <div x-show="proformaFullscreenChart"
+         x-cloak
+         x-transition.opacity
+         @keydown.escape.window="closeProformaFullscreenChart()"
+         @click.self="closeProformaFullscreenChart()"
+         class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8">
+      <div class="relative bg-white rounded-xl shadow-2xl w-full h-full max-w-[1400px] max-h-[92vh] p-6 sm:p-8 flex flex-col">
+        <button type="button"
+                @click="closeProformaFullscreenChart()"
+                class="absolute top-3 right-3 z-10 p-1.5 text-gray-400 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                aria-label="Close fullscreen chart">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="flex-1 min-h-0">
+          <canvas id="proforma-chart-fullscreen"></canvas>
+        </div>
+      </div>
     </div>
   `;
 }

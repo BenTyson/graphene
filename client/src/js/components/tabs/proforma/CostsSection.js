@@ -1,13 +1,5 @@
-import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordion, HELP } from './helpers.js';
+import { numInput, formGrid, card, sectionHeader, HELP } from './helpers.js';
 
-// Costs = raw material + manufacturing labor + phase-specific biochar.
-// Critical tier: hemp cost inputs (directly hit COGS) and top-line
-// manufacturing params. Advanced tier: per-phase biochar cost and the
-// FTE role table.
-
-// Hemp purchases summary — Y1/Y2/Y3 total kg + $. Hemp consumption is
-// fully derived (graphene_kg × hempRatioMultiplier), so this strip is
-// the closest thing to a "hemp purchased" reading the proforma exposes.
 function _hempPurchasesStrip() {
   return `
     <figure x-show="proformaComputed?.production?.monthlyHempKg && proformaComputed?.outlook?.cogsHemp"
@@ -165,24 +157,22 @@ export function getCostsSection() {
 
       ${_hempPurchasesStrip()}
 
-      ${criticalBlock(
-        `<h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-2">Hemp / raw materials</h3>
-         ${formGrid(hemp.map(f => numInput(f.label, f.path, f)).join(''))}
-         <div class="mt-3 bg-gray-50 rounded-md px-3 py-2 text-xs font-mono text-gray-600 inline-block">
-           Effective hemp cost:
-           <span class="font-semibold text-gray-900"
-                 x-text="'$' + ((proformaAssumptions.cogs.hempCostPerKilo * (1 + proformaAssumptions.cogs.hempContingencyPct)) + proformaAssumptions.cogs.hempShippingPerKilo).toFixed(2) + '/kg'"></span>
-         </div>
-         <h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-6">Manufacturing parameters</h3>
-         ${formGrid(manufacturing.map(f => numInput(f.label, f.path, f)).join(''))}`,
-        { label: 'Critical', hint: 'Hemp inputs + top-line manufacturing costs' }
-      )}
+      <div class="space-y-6">
+        ${card('Hemp costs', `
+          ${formGrid(hemp.map(f => numInput(f.label, f.path, f)).join(''))}
+          <div class="mt-3 bg-gray-50 rounded-md px-3 py-2 text-xs font-mono text-gray-600 inline-block">
+            Effective hemp cost:
+            <span class="font-semibold text-gray-900"
+                  x-text="'$' + ((proformaAssumptions.cogs.hempCostPerKilo * (1 + proformaAssumptions.cogs.hempContingencyPct)) + proformaAssumptions.cogs.hempShippingPerKilo).toFixed(2) + '/kg'"></span>
+          </div>
+        `)}
 
-      ${advancedAccordion('costs',
-        `${_biocharByPhaseBlock()}
-         ${_fteRolesTable()}`,
-        { label: 'Advanced', hint: 'Per-phase biochar cost and FTE role table' }
-      )}
+        ${card('Manufacturing parameters', formGrid(manufacturing.map(f => numInput(f.label, f.path, f)).join('')))}
+
+        ${_biocharByPhaseBlock()}
+
+        ${_fteRolesTable()}
+      </div>
     </section>
   `;
 }

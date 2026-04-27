@@ -1,9 +1,4 @@
-import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordion, quarterlyMatrix, HELP } from './helpers.js';
-
-// OPEX. Critical tier: the three percentage levers (benefits, royalty,
-// commission) + the staffing table (it's the biggest OPEX line but best
-// rendered as a table, not a form grid). Advanced tier: overhead growth,
-// insurance, legal matrices, R&D.
+import { numInput, formGrid, card, sectionHeader, quarterlyMatrix, HELP } from './helpers.js';
 
 function _staffingTable() {
   return card('Staffing', `
@@ -167,21 +162,21 @@ export function getOperationsSection() {
     <section class="max-w-5xl">
       ${sectionHeader('Operations', 'Staffing, benefits, overhead, and R&D. These are the OPEX levers that determine break-even timing.')}
 
-      ${criticalBlock(
-        `${_staffingTable()}
-         <h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-6">Percentage levers</h3>
-         ${formGrid(percentages.map(f => numInput(f.label, f.path, f)).join(''))}`,
-        { label: 'Critical', hint: 'Staffing table + the three percentage levers' }
-      )}
+      <div class="space-y-6">
+        ${_staffingTable()}
 
-      ${advancedAccordion('operations',
-        `${_overheadBlock()}
-         ${_insuranceBlock()}
-         ${quarterlyMatrix('Patent legal costs', 'proformaAssumptions.opex.legal.patent', { showTotal: true, subtitle: 'Quarterly patent spend by year.' })}
-         ${quarterlyMatrix('Corporate legal costs', 'proformaAssumptions.opex.legal.corporate', { showTotal: true, subtitle: 'Quarterly corporate counsel spend by year.' })}
-         ${quarterlyMatrix('R&D spend', 'proformaAssumptions.rnd', { showTotal: true, subtitle: 'Quarterly research-and-development spend.' })}`,
-        { label: 'Advanced', hint: 'Overhead, insurance, legal and R&D matrices' }
-      )}
+        ${card('Rates & percentages', formGrid(percentages.map(f => numInput(f.label, f.path, f)).join('')))}
+
+        ${_overheadBlock()}
+
+        ${_insuranceBlock()}
+
+        ${quarterlyMatrix('Patent legal costs', 'proformaAssumptions.opex.legal.patent', { showTotal: true, subtitle: 'Quarterly patent spend by year.' })}
+
+        ${quarterlyMatrix('Corporate legal costs', 'proformaAssumptions.opex.legal.corporate', { showTotal: true, subtitle: 'Quarterly corporate counsel spend by year.' })}
+
+        ${quarterlyMatrix('R&D spend', 'proformaAssumptions.rnd', { showTotal: true, subtitle: 'Quarterly research-and-development spend.' })}
+      </div>
     </section>
   `;
 }
