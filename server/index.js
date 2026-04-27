@@ -35,6 +35,8 @@ import goalRoutes from './routes/goals.js';
 import tagRoutes from './routes/tags.js';
 import pipelineRoutes from './routes/pipeline.js';
 import proformaRoutes from './routes/proforma.js';
+import emailRoutes from './routes/email.js';
+import emailCronRoutes from './routes/emailCron.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -151,7 +153,7 @@ app.use('/news-images', (req, res, next) => {
 // This applies to POST, PUT, DELETE requests on /api/* routes (except auth and users)
 app.use('/api', (req, res, next) => {
   // Skip routes that handle their own authentication
-  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health') {
+  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron')) {
     return next();
   }
 
@@ -201,6 +203,8 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/proforma', proformaRoutes);
+app.use('/api/email/cron', emailCronRoutes);
+app.use('/api/email', emailRoutes);
 
 // Catch-all route - serve index.html for client-side routing
 // This MUST come after all other routes and static file serving

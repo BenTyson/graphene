@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, requireSuperAdmin } from './auth.js';
+import { subscribeUser, isConfigured as sparrowConfigured } from '../services/sparrowClient.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -128,6 +129,14 @@ router.post('/', authenticateToken, requireSuperAdmin, async (req, res) => {
         createdAt: true
       }
     });
+
+    // Best-effort subscribe to Listmonk graphene-users via Sparrow.
+    // Failures here must not block user creation.
+    if (sparrowConfigured() && newUser.isActive) {
+      const fullName = [newUser.firstName, newUser.lastName].filter(Boolean).join(' ') || newUser.username;
+      subscribeUser({ email: newUser.email, name: fullName, list: 'users' })
+        .catch((err) => console.error('[users.create] sparrow subscribe failed:', err.message));
+    }
 
     res.status(201).json({
       success: true,
