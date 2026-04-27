@@ -402,6 +402,8 @@ window.grapheneApp = function() {
     taskCostsFilter: 'open', // 'open' | 'paid' | 'all'
     taskCostsSummary: { openTotal: 0, paidTotal: 0, grandTotal: 0, openCount: 0, paidCount: 0, totalCount: 0 },
     taskCollapsedGroups: {},
+    calendarCursor: (() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; })(),
+    calendarSubMode: localStorage.getItem('taskCalendarSubMode') || 'month', // 'month' | 'agenda'
     taskSearch: '',
     taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' },
 
@@ -5259,6 +5261,155 @@ window.grapheneApp = function() {
         }
       }
       return rows;
+    },
+
+    // ===== CALENDAR VIEW =====
+    setCalendarSubMode(mode) {
+      this.calendarSubMode = mode;
+      localStorage.setItem('taskCalendarSubMode', mode);
+    },
+    prevCalendarMonth() {
+      const d = new Date(this.calendarCursor);
+      d.setMonth(d.getMonth() - 1);
+      this.calendarCursor = d;
+    },
+    nextCalendarMonth() {
+      const d = new Date(this.calendarCursor);
+      d.setMonth(d.getMonth() + 1);
+      this.calendarCursor = d;
+    },
+    gotoCalendarToday() {
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      this.calendarCursor = d;
+    },
+    getCalendarMonthLabel() {
+      return this.calendarCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    },
+    _ymd(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    },
+    _todayYmd() {
+      return this._ymd(new Date());
+    },
+    getTasksByDueDate() {
+      const map = new Map();
+      for (const t of this.getFilteredTasks()) {
+        if (!t.dueDate) continue;
+        const ymd = String(t.dueDate).split('T')[0];
+        if (!map.has(ymd)) map.set(ymd, []);
+        map.get(ymd).push(t);
+      }
+      const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+      for (const list of map.values()) {
+        list.sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9));
+      }
+      return map;
+    },
+    getCalendarWeeks() {
+      const cursor = this.calendarCursor;
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth();
+      const first = new Date(year, month, 1);
+      const start = new Date(first);
+      start.setDate(1 - first.getDay()); // back up to Sunday
+      const todayYmd = this._todayYmd();
+      const tasksByDay = this.getTasksByDueDate();
+      const weeks = [];
+      const cur = new Date(start);
+      for (let w = 0; w < 6; w++) {
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+          const ymd = this._ymd(cur);
+          const tasks = tasksByDay.get(ymd) || [];
+          days.push({
+            date: new Date(cur),
+            ymd,
+            day: cur.getDate(),
+            isCurrentMonth: cur.getMonth() === month,
+            isToday: ymd === todayYmd,
+            isPast: ymd < todayYmd,
+            isWeekend: cur.getDay() === 0 || cur.getDay() === 6,
+            tasks,
+          });
+          cur.setDate(cur.getDate() + 1);
+        }
+        weeks.push(days);
+        // Stop early if we've covered the month and started next month
+        if (w >= 3 && days[6].date.getMonth() !== month && days[0].date.getMonth() !== month) break;
+      }
+      return weeks;
+    },
+    getCalendarAgenda() {
+      const tasksByDay = this.getTasksByDueDate();
+      const todayYmd = this._todayYmd();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const horizon = new Date(today);
+      horizon.setDate(today.getDate() + 60);
+      const horizonYmd = this._ymd(horizon);
+      const overdue = [];
+      const upcomingMap = new Map();
+      for (const [ymd, tasks] of tasksByDay.entries()) {
+        const incomplete = tasks.filter(t => t.status !== 'DONE' && t.status !== 'ARCHIVED');
+        if (ymd < todayYmd) {
+          if (incomplete.length) overdue.push(...incomplete);
+        } else if (ymd <= horizonYmd) {
+          upcomingMap.set(ymd, tasks);
+        }
+      }
+      overdue.sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+      const groups = [];
+      if (overdue.length) {
+        groups.push({ ymd: '__overdue', label: 'Overdue', sublabel: `${overdue.length} task${overdue.length === 1 ? '' : 's'}`, tasks: overdue, isOverdue: true });
+      }
+      const sortedYmds = [...upcomingMap.keys()].sort();
+      for (const ymd of sortedYmds) {
+        groups.push({
+          ymd,
+          label: this.getAgendaDateLabel(ymd),
+          sublabel: this.getAgendaDateSublabel(ymd),
+          tasks: upcomingMap.get(ymd),
+          isOverdue: false,
+        });
+      }
+      return groups;
+    },
+    getAgendaDateLabel(ymd) {
+      const d = new Date(ymd + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diff = Math.round((d - today) / 86400000);
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Tomorrow';
+      if (diff < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    },
+    getAgendaDateSublabel(ymd) {
+      const d = new Date(ymd + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+    getCalendarPillClass(task) {
+      const isDone = task.status === 'DONE' || task.status === 'ARCHIVED';
+      if (isDone) return 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200';
+      const todayYmd = this._todayYmd();
+      const ymd = String(task.dueDate || '').split('T')[0];
+      if (ymd && ymd < todayYmd) return 'bg-red-50 text-red-700 hover:bg-red-100 border-l-2 border-red-500';
+      const map = {
+        URGENT: 'bg-red-50 text-red-700 hover:bg-red-100 border-l-2 border-red-500',
+        HIGH: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border-l-2 border-orange-400',
+        MEDIUM: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-l-2 border-blue-400',
+        LOW: 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-l-2 border-gray-300',
+      };
+      return map[task.priority] || map.MEDIUM;
+    },
+    openTaskFormForDate(ymd) {
+      this.openTaskForm();
+      this.taskForm.dueDate = ymd;
     },
 
     // Dependency delegates
