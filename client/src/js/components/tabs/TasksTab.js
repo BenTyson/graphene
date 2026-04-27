@@ -16,6 +16,11 @@ export function getTasksTabHtml() {
                 class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">
                 List
               </button>
+              <button @click="taskViewMode = 'calendar'"
+                :class="taskViewMode === 'calendar' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">
+                Calendar
+              </button>
               <button @click="taskViewMode = 'costs'; loadCostsSummary()"
                 :class="taskViewMode === 'costs' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
                 class="px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-300">
@@ -517,6 +522,146 @@ export function getTasksTabHtml() {
                   </div>
                 </div>
               </template>
+            </div>
+          </div>
+
+          <!-- Calendar View -->
+          <div x-show="taskViewMode === 'calendar'">
+            <!-- Calendar header: month nav + sub-mode toggle -->
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div class="flex items-center gap-1">
+                <button @click="prevCalendarMonth()" class="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors" title="Previous month">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button @click="gotoCalendarToday()" class="px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors">Today</button>
+                <button @click="nextCalendarMonth()" class="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors" title="Next month">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <h3 class="ml-2 text-base font-semibold text-gray-900" x-text="getCalendarMonthLabel()"></h3>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-3 text-[11px] text-gray-500">
+                  <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Urgent / Overdue</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-400"></span>High</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span>Medium</span>
+                </div>
+                <div class="flex rounded-md border border-gray-300 overflow-hidden">
+                  <button @click="setCalendarSubMode('month')"
+                    :class="calendarSubMode === 'month' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                    class="px-2.5 py-1 text-[11px] font-medium transition-colors">Month</button>
+                  <button @click="setCalendarSubMode('agenda')"
+                    :class="calendarSubMode === 'agenda' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                    class="px-2.5 py-1 text-[11px] font-medium transition-colors border-l border-gray-300">Agenda</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Month grid (desktop only when sub-mode is month) -->
+            <div x-show="calendarSubMode === 'month'" class="hidden md:block border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <!-- Weekday header -->
+              <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+                <template x-for="(d, i) in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']" :key="d">
+                  <div class="px-2 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wide text-center"
+                    :class="i === 0 || i === 6 ? 'text-gray-400' : ''"
+                    x-text="d"></div>
+                </template>
+              </div>
+              <!-- Weeks -->
+              <template x-for="(week, wIdx) in getCalendarWeeks()" :key="wIdx">
+                <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
+                  <template x-for="day in week" :key="day.ymd">
+                    <div @click="$event.target === $event.currentTarget && openTaskFormForDate(day.ymd)"
+                      class="relative min-h-[110px] p-1.5 border-r border-gray-200 last:border-r-0 cursor-pointer group transition-colors"
+                      :class="[
+                        day.isCurrentMonth ? 'bg-white hover:bg-gray-50/70' : 'bg-gray-50/40 hover:bg-gray-100/40',
+                        day.isToday ? 'ring-1 ring-inset ring-gray-900' : ''
+                      ]">
+                      <!-- Day number -->
+                      <div class="flex items-center justify-between mb-1 pointer-events-none">
+                        <span class="inline-flex items-center justify-center text-[11px] font-medium"
+                          :class="[
+                            day.isToday ? 'w-5 h-5 rounded-full bg-gray-900 text-white' : '',
+                            !day.isToday && day.isCurrentMonth ? 'text-gray-700' : '',
+                            !day.isToday && !day.isCurrentMonth ? 'text-gray-300' : ''
+                          ]"
+                          x-text="day.day"></span>
+                        <template x-if="day.tasks.length">
+                          <span class="text-[9px] text-gray-400 font-medium" x-text="day.tasks.length"></span>
+                        </template>
+                      </div>
+                      <!-- Task pills -->
+                      <div class="space-y-0.5">
+                        <template x-for="task in day.tasks.slice(0, 3)" :key="task.id">
+                          <button @click.stop="openTaskDetail(task.id)"
+                            :class="getCalendarPillClass(task)"
+                            class="w-full text-left text-[10.5px] px-1.5 py-0.5 rounded truncate transition-colors block"
+                            :title="task.title"
+                            x-text="task.title"></button>
+                        </template>
+                        <template x-if="day.tasks.length > 3">
+                          <button @click.stop="setCalendarSubMode('agenda')"
+                            class="w-full text-left text-[10px] text-gray-500 hover:text-gray-900 px-1.5 py-0.5 font-medium">
+                            +<span x-text="day.tasks.length - 3"></span> more
+                          </button>
+                        </template>
+                      </div>
+                      <!-- Hover hint to add -->
+                      <span class="absolute bottom-1 right-1.5 text-[10px] text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none">+</span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            <!-- Agenda list (mobile always, desktop when sub-mode is agenda) -->
+            <div :class="calendarSubMode === 'agenda' ? 'block' : 'block md:hidden'">
+              <template x-if="getCalendarAgenda().length === 0">
+                <div class="text-center py-12 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
+                  No upcoming due dates in the next 60 days.
+                </div>
+              </template>
+              <div class="space-y-3">
+                <template x-for="group in getCalendarAgenda()" :key="group.ymd">
+                  <div class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+                    :class="group.isOverdue ? 'border-red-200' : ''">
+                    <div class="px-3 py-2 flex items-center justify-between"
+                      :class="group.isOverdue ? 'bg-red-50/60' : 'bg-gray-50'">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold"
+                          :class="group.isOverdue ? 'text-red-700' : 'text-gray-900'"
+                          x-text="group.label"></span>
+                        <template x-if="group.sublabel">
+                          <span class="text-[11px] text-gray-500" x-text="group.sublabel"></span>
+                        </template>
+                      </div>
+                      <span class="text-[11px] text-gray-400" x-text="group.tasks.length + ' task' + (group.tasks.length === 1 ? '' : 's')"></span>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                      <template x-for="task in group.tasks" :key="task.id">
+                        <button @click="openTaskDetail(task.id)"
+                          class="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+                          <span :class="getPriorityDotClass(task.priority)" class="w-1.5 h-1.5 rounded-full shrink-0"></span>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-sm text-gray-900 truncate"
+                              :class="task.status === 'DONE' || task.status === 'ARCHIVED' ? 'line-through text-gray-400' : ''"
+                              x-text="task.title"></div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                              <span :class="getStatusBadgeClass(task.status)" class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium" x-text="formatStatusLabel(task.status)"></span>
+                              <template x-if="getTaskAssigneeUsers(task).length">
+                                <span class="text-[11px] text-gray-500" x-text="getTaskPrimaryAssigneeShort(task) + (getTaskAssigneeUsers(task).length > 1 ? ' +' + (getTaskAssigneeUsers(task).length - 1) : '')"></span>
+                              </template>
+                              <template x-if="task.goal">
+                                <span class="text-[11px] text-blue-600 truncate" x-text="task.goal.title"></span>
+                              </template>
+                            </div>
+                          </div>
+                          <span :class="getTaskDueClass(task.dueDate, task.status)" class="text-[11px] shrink-0" x-text="getTaskDueLabel(task.dueDate)"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
 
