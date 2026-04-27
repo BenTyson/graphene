@@ -613,6 +613,48 @@ class ProformaService {
       data: { labels, datasets: machineDatasets },
       options: { responsive: true, plugins: { title: { display: true, text: 'Production Ramp by Machine (kg)' } }, scales: { x: { stacked: true }, y: { stacked: true } } }
     });
+
+    // Production Capacity vs Sales Demand (kg) — stacked per-stream demand
+    // bars overlaid with a capacity line. Where the line dips below the
+    // stack, the planned sales exceed what the facility can actually make.
+    const demandDatasets = streams.map((s, i) => ({
+      label: s.name + ' (kg)',
+      type: 'bar',
+      data: c.outlook['demandKg_' + s.id] || [],
+      backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length] + 'CC',
+      borderColor: STREAM_COLORS[i % STREAM_COLORS.length],
+      borderWidth: 0,
+      stack: 'demand',
+      order: 2
+    }));
+    const capacityLine = {
+      label: 'Production capacity (kg)',
+      type: 'line',
+      data: c.outlook.productionCapacityKg || [],
+      borderColor: '#111827',
+      borderWidth: 2,
+      backgroundColor: 'transparent',
+      fill: false,
+      order: 1,
+      pointRadius: 0
+    };
+    this._renderChart('proforma-chart-capacity-vs-demand', {
+      type: 'bar',
+      data: { labels, datasets: [...demandDatasets, capacityLine] },
+      options: {
+        responsive: true,
+        plugins: {
+          title: { display: true, text: 'Production Capacity vs Sales Demand (kg/mo)' },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()} kg` } }
+        },
+        // Bars share stack:'demand' so they stack into one bar per month;
+        // the line dataset draws against absolute y (not stacked).
+        scales: {
+          x: { stacked: true },
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + ' kg' } }
+        }
+      }
+    });
   }
 
   _renderChart(canvasId, config) {

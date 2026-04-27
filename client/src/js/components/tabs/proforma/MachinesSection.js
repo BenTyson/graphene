@@ -8,6 +8,57 @@ import { sectionHeader, HELP } from './helpers.js';
 
 const MONTHS = 48;
 
+// Per-year capacity vs peak demand strip. Reads from the live proformaComputed
+// snapshot (engine outputs `productionCapacityKg` and `demandKgTotal` arrays of
+// length 48). Shows the worst-case month in each year so under-capacity is
+// visible from the editing surface, not just the Charts tab.
+function _capacityVsDemandStrip() {
+  return `
+    <figure x-show="proformaComputed?.outlook?.productionCapacityKg && proformaComputed?.outlook?.demandKgTotal"
+            class="rounded-lg border border-gray-200 bg-white p-5 mb-6">
+      <figcaption class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900">Capacity vs sales demand</h3>
+          <p class="text-[11px] text-gray-500 mt-0.5">Peak monthly kg of graphene each year — what we can make vs what revenue streams imply we'll sell.</p>
+        </div>
+        <a href="#" @click.prevent="proformaEditorTab = 'charts'"
+           class="text-[11px] text-gray-500 hover:text-gray-900 underline">View full chart →</a>
+      </figcaption>
+
+      <div class="grid grid-cols-3 gap-3">
+        <template x-for="y in [1, 2, 3]" :key="y">
+          <div class="border border-gray-100 rounded-md p-3" x-data="{
+            cap: Math.max(...proformaComputed.outlook.productionCapacityKg.slice(y * 12, y * 12 + 12)),
+            dem: Math.max(...proformaComputed.outlook.demandKgTotal.slice(y * 12, y * 12 + 12))
+          }">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-600" x-text="'Year ' + y"></span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                    :class="dem > cap ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'"
+                    x-text="dem > cap ? 'short ' + Math.round(dem - cap).toLocaleString() + ' kg/mo' : 'OK · ' + (cap > 0 ? Math.round((dem / cap) * 100) : 0) + '% used'"></span>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <div class="text-gray-400">Capacity</div>
+                <div class="font-mono tabular-nums text-gray-900" x-text="Math.round(cap).toLocaleString() + ' kg/mo'"></div>
+              </div>
+              <div>
+                <div class="text-gray-400">Demand</div>
+                <div class="font-mono tabular-nums text-gray-900" x-text="Math.round(dem).toLocaleString() + ' kg/mo'"></div>
+              </div>
+            </div>
+            <div class="mt-2 relative h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="absolute inset-y-0 left-0 bg-gray-900 rounded-full"
+                   :style="'width:' + (cap > 0 ? Math.min(100, (dem / cap) * 100) : 0) + '%'"
+                   :class="dem > cap ? '!bg-red-500' : ''"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </figure>
+  `;
+}
+
 function _fleetTimeline() {
   const monthMarkers = [0, 12, 24, 36, 48];
   return `
@@ -256,6 +307,8 @@ export function getMachinesSection() {
   return `
     <section class="max-w-5xl">
       ${sectionHeader('Machines', 'Each kiln is a capex + revenue-timing commitment. Timing shifts revenue; cost shifts the raise.')}
+
+      ${_capacityVsDemandStrip()}
 
       ${_fleetTimeline()}
 

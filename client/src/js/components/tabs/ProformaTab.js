@@ -210,6 +210,10 @@ export function getProformaTabHtml() {
               <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-pnl"></canvas></div></div>
               <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-cash"></canvas></div></div>
               <div class="border border-gray-200 rounded-lg p-4"><div style="height:320px"><canvas id="proforma-chart-production"></canvas></div></div>
+              <div class="border border-gray-200 rounded-lg p-4 lg:col-span-2">
+                <div style="height:360px"><canvas id="proforma-chart-capacity-vs-demand"></canvas></div>
+                <p class="mt-2 text-[11px] text-gray-500">Stacked bars are kg-of-graphene implied by each revenue stream; the dark line is what the modeled machines can actually produce. Where the line dips below the bars, sales projections exceed production capacity.</p>
+              </div>
             </div>
           </div>
 

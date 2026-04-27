@@ -242,18 +242,22 @@ function computeProduction(machines, prod, mfg) {
 // stream's qDist into months — clipped at startMonth.
 function computeRevenue(revenueAssumptions, techRef) {
   const monthly = {
-    byStream: {},                           // { [streamId]: number[] }
-    total: new Array(MONTHS_TOTAL).fill(0)
+    byStream: {},                           // { [streamId]: number[] } (revenue $)
+    total: new Array(MONTHS_TOTAL).fill(0),
+    kgByStream: {},                         // { [streamId]: number[] } (kg sold)
+    kgTotal: new Array(MONTHS_TOTAL).fill(0)
   };
 
   const streams = (revenueAssumptions && revenueAssumptions.streams) || [];
 
   for (const stream of streams) {
     const stripe = new Array(MONTHS_TOTAL).fill(0);
+    const kgStripe = new Array(MONTHS_TOTAL).fill(0);
     // Disabled streams keep their config but contribute zero revenue.
     // We still register the empty stripe so chart datasets stay stable.
     if (stream.enabled === false) {
       monthly.byStream[stream.id] = stripe;
+      monthly.kgByStream[stream.id] = kgStripe;
       continue;
     }
     const market = stream.market || { mode: 'linked', linkedSource: 'supercap' };
@@ -265,37 +269,46 @@ function computeRevenue(revenueAssumptions, techRef) {
       // Year 1 uses index 0 (base), Year 2 → index 1, Year 3 → index 2.
       // (Matches the legacy mapping the spreadsheet uses.)
       let yearRevenue = 0;
+      let yearKg = 0;
 
       if (market.mode === 'linked') {
         const sourceKey = (market.linkedSource || '') + 'ByYear';
         const sourceArr = techRef[sourceKey];
         if (!Array.isArray(sourceArr)) continue;
         const marketKg = sourceArr[year - 1] || 0;
-        const kilosSold = marketKg * (cfg.marketSharePct || 0);
+        yearKg = marketKg * (cfg.marketSharePct || 0);
         const pricing = stream.pricing || {};
         const pricePerKg = pricing['year' + year] || pricing.year1 || 0;
-        yearRevenue = kilosSold * pricePerKg;
+        yearRevenue = yearKg * pricePerKg;
       } else if (market.mode === 'direct') {
         const rev = market.revenueByYear || {};
         yearRevenue = rev['year' + year] || 0;
+        // Direct-$ mode has no kg input — derive implied kg from price if set.
+        const pricing = stream.pricing || {};
+        const pricePerKg = pricing['year' + year] || pricing.year1 || 0;
+        yearKg = pricePerKg > 0 ? yearRevenue / pricePerKg : 0;
       }
 
       const qDist = Array.isArray(cfg.qDist) ? cfg.qDist : [0.25, 0.25, 0.25, 0.25];
       for (let q = 0; q < 4; q++) {
         const monthlyRev = (yearRevenue * (qDist[q] || 0)) / 3;
+        const monthlyKg = (yearKg * (qDist[q] || 0)) / 3;
         const baseMonth = (year * 12) + (q * 3);
         for (let i = 0; i < 3; i++) {
           const m = baseMonth + i;
           if (m >= (stream.startMonth || 0) && m < MONTHS_TOTAL) {
             stripe[m] = monthlyRev;
+            kgStripe[m] = monthlyKg;
           }
         }
       }
     }
 
     monthly.byStream[stream.id] = stripe;
+    monthly.kgByStream[stream.id] = kgStripe;
     for (let m = 0; m < MONTHS_TOTAL; m++) {
       monthly.total[m] += stripe[m];
+      monthly.kgTotal[m] += kgStripe[m];
     }
   }
 
@@ -440,7 +453,12 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, str
     capexLab: new Array(MONTHS_TOTAL).fill(0),
     capitalRaised: new Array(MONTHS_TOTAL).fill(0),
     cashFlow: new Array(MONTHS_TOTAL).fill(0),
-    cumulativeCash: new Array(MONTHS_TOTAL).fill(0)
+    cumulativeCash: new Array(MONTHS_TOTAL).fill(0),
+    // kg series — production capacity vs sales demand. Surfaced so the UI
+    // can compare "what we can make" against "what we plan to sell."
+    productionCapacityKg: production.monthlyGrapheneKg,
+    demandKgTotal: revenue.kgTotal || new Array(MONTHS_TOTAL).fill(0),
+    capacityShortfallKg: new Array(MONTHS_TOTAL).fill(0)
   };
 
   // CapEx Lab (R&D equipment)
@@ -493,7 +511,14 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, str
   if (Array.isArray(streams) && revenue && revenue.byStream) {
     for (const s of streams) {
       monthly['revenueStream_' + s.id] = revenue.byStream[s.id] || new Array(MONTHS_TOTAL).fill(0);
+      monthly['demandKg_' + s.id] = (revenue.kgByStream && revenue.kgByStream[s.id]) || new Array(MONTHS_TOTAL).fill(0);
     }
+  }
+
+  // Capacity shortfall (positive = demand exceeds capacity that month).
+  for (let m = 0; m < MONTHS_TOTAL; m++) {
+    const gap = monthly.demandKgTotal[m] - monthly.productionCapacityKg[m];
+    monthly.capacityShortfallKg[m] = gap > 0 ? gap : 0;
   }
 
   return monthly;
