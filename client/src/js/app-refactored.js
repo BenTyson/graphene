@@ -398,6 +398,9 @@ window.grapheneApp = function() {
     taskAssignees: [],
     taskViewMode: 'kanban',
     taskListGroupBy: localStorage.getItem('taskListGroupBy') || 'none',
+    taskCostsGroupBy: localStorage.getItem('taskCostsGroupBy') || 'none',
+    taskCostsFilter: 'open', // 'open' | 'paid' | 'all'
+    taskCostsSummary: { openTotal: 0, paidTotal: 0, grandTotal: 0, openCount: 0, paidCount: 0, totalCount: 0 },
     taskCollapsedGroups: {},
     taskSearch: '',
     taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' },
@@ -418,7 +421,7 @@ window.grapheneApp = function() {
     showTaskDetail: false,
     selectedTask: null,
     editingTask: null,
-    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, goalId: '', tags: [] },
+    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, goalId: '', tags: [], cost: '', costPaid: false },
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
@@ -4307,6 +4310,7 @@ window.grapheneApp = function() {
             await this.loadTasks();
             await this.loadTaskAssignees();
           }
+          await this.loadCostsSummary();
           this.$nextTick(() => {
             if (this.taskViewMode === 'kanban') this.initKanbanDragDrop();
           });
@@ -5170,6 +5174,92 @@ window.grapheneApp = function() {
     openTaskFormWithStatus(status) { this.openTaskForm(); this.taskForm.status = status; },
     async archiveTask(taskId) { await taskService.archiveTask(this, taskId); },
     async unarchiveTask(taskId) { await taskService.unarchiveTask(this, taskId); },
+    async toggleCostPaid(taskId, paid) { await taskService.toggleCostPaid(this, taskId, paid); },
+    async loadCostsSummary() { await taskService.loadCostsSummary(this); },
+    formatCost(value) {
+      if (value == null || value === '') return '';
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '';
+      return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+    },
+    getTaskCostStatusClass(task) {
+      if (task?.cost == null) return '';
+      return task.costPaid
+        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        : 'bg-amber-50 text-amber-800 border border-amber-200';
+    },
+    getCostsViewTasks() {
+      const all = this.tasks || [];
+      let list = all.filter(t => t.cost != null);
+      if (this.taskCostsFilter === 'open') list = list.filter(t => !t.costPaid);
+      else if (this.taskCostsFilter === 'paid') list = list.filter(t => t.costPaid);
+      // Honor the assignee/goal/tag filters from the main tasks tab too
+      if (this.taskFilters.goalId) {
+        list = this.taskFilters.goalId === 'none'
+          ? list.filter(t => !t.goalId && !t.goal?.id)
+          : list.filter(t => (t.goalId || t.goal?.id) === this.taskFilters.goalId);
+      }
+      if (this.taskFilters.assigneeId) {
+        list = list.filter(t => (t.assignees || []).some(a => (a.user?.id || a.userId) === this.taskFilters.assigneeId));
+      }
+      if (this.taskFilters.tag) {
+        list = list.filter(t => (t.tags || []).includes(this.taskFilters.tag));
+      }
+      if (this.taskFilters.institution) {
+        list = list.filter(t => (t.tags || []).includes(this.taskFilters.institution));
+      }
+      if (this.taskSearch) {
+        const q = this.taskSearch.toLowerCase();
+        list = list.filter(t => t.title?.toLowerCase().includes(q));
+      }
+      // Sort by cost descending by default
+      return list.slice().sort((a, b) => Number(b.cost || 0) - Number(a.cost || 0));
+    },
+    getCostsViewGroups() {
+      const list = this.getCostsViewTasks();
+      const groupBy = this.taskCostsGroupBy;
+      if (groupBy === 'none') {
+        return [{ key: 'all', label: '', tasks: list, total: list.reduce((s, t) => s + Number(t.cost || 0), 0) }];
+      }
+      const map = new Map();
+      for (const t of list) {
+        let key, label;
+        if (groupBy === 'goal') {
+          key = t.goal?.id || t.goalId || '__none';
+          label = t.goal?.title || (key === '__none' ? 'No goal' : '(unknown goal)');
+        } else if (groupBy === 'assignee') {
+          const first = (t.assignees || [])[0];
+          key = first?.user?.id || first?.userId || '__none';
+          label = first?.user
+            ? [first.user.firstName, first.user.lastName].filter(Boolean).join(' ') || first.user.username
+            : 'Unassigned';
+        } else if (groupBy === 'category') {
+          const cats = (t.tags || []).filter(tag => (this.systemCategoryTags || []).some(s => s.name === tag));
+          if (cats.length === 0) { key = '__none'; label = 'No category'; }
+          else { key = cats[0]; label = cats[0]; }
+        } else {
+          key = '__all'; label = '';
+        }
+        if (!map.has(key)) map.set(key, { key, label, tasks: [], total: 0 });
+        const g = map.get(key);
+        g.tasks.push(t);
+        g.total += Number(t.cost || 0);
+      }
+      return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    },
+    getCostsRows() {
+      const groups = this.getCostsViewGroups();
+      const rows = [];
+      for (const g of groups) {
+        if (g.label) {
+          rows.push({ type: 'header', group: g, rowKey: 'h-' + g.key });
+        }
+        for (const t of g.tasks) {
+          rows.push({ type: 'task', task: t, rowKey: 't-' + g.key + '-' + t.id });
+        }
+      }
+      return rows;
+    },
 
     // Dependency delegates
     async linkDependency(taskId, blockingTaskId) { await taskService.linkDependency(this, taskId, blockingTaskId); },

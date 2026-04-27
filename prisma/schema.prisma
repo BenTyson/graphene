@@ -952,6 +952,10 @@ model Task {
   position    Int          @default(0)
   tags        String[]     @default([])
 
+  cost       Decimal?  @db.Decimal(12, 2)
+  costPaid   Boolean   @default(false) @map("cost_paid")
+  costPaidAt DateTime? @map("cost_paid_at")
+
   creatorId  String  @map("creator_id")
   creator    User    @relation("TaskCreator", fields: [creatorId], references: [id])
 
@@ -981,6 +985,7 @@ model Task {
   @@index([goalId])
   @@index([dueDate])
   @@index([status, position])
+  @@index([costPaid, cost])
   @@map("tasks")
 }
 

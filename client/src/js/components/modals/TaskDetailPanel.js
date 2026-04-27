@@ -136,6 +136,40 @@ export function getTaskDetailPanelHtml() {
                 </div>
               </template>
 
+              <!-- Cost -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide">Cost</label>
+                  <template x-if="selectedTask.cost != null">
+                    <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                      :class="selectedTask.costPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'">
+                      <svg x-show="selectedTask.costPaid" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span x-text="selectedTask.costPaid ? 'Paid' : 'Open'"></span>
+                    </span>
+                  </template>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="relative flex-1">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
+                    <input type="number" min="0" step="0.01" :value="selectedTask.cost == null ? '' : selectedTask.cost"
+                      @blur="(($event.target.value === '' ? null : Number($event.target.value)) !== selectedTask.cost) && updateTaskInline(selectedTask.id, 'cost', $event.target.value === '' ? null : Number($event.target.value))"
+                      placeholder="0.00"
+                      class="w-full pl-6 pr-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
+                  </div>
+                  <template x-if="selectedTask.cost != null">
+                    <button type="button" @click="toggleCostPaid(selectedTask.id, !selectedTask.costPaid)"
+                      class="px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap"
+                      :class="selectedTask.costPaid ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'"
+                      x-text="selectedTask.costPaid ? 'Mark unpaid' : 'Mark paid'"></button>
+                  </template>
+                </div>
+                <template x-if="selectedTask.costPaid && selectedTask.costPaidAt">
+                  <p class="text-[11px] text-gray-400 mt-1">Paid <span x-text="new Date(selectedTask.costPaidAt).toLocaleDateString()"></span></p>
+                </template>
+              </div>
+
               <!-- Created by / date -->
               <div class="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
                 <span>Created by <span class="text-gray-600" x-text="selectedTask.creator ? ((selectedTask.creator.firstName || '') + ' ' + (selectedTask.creator.lastName || selectedTask.creator.username)) : 'Unknown'"></span></span>

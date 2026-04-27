@@ -32,6 +32,23 @@ async function logActivity(prisma, { taskId, userId, action, fromValue, toValue 
   });
 }
 
+function normalizeCost(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : parseFloat(String(value));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
+function serializeTask(task) {
+  if (!task) return task;
+  return {
+    ...task,
+    dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null,
+    cost: task.cost == null ? null : Number(task.cost),
+    costPaidAt: task.costPaidAt ? task.costPaidAt.toISOString() : null
+  };
+}
+
 // All routes require auth + internal access
 router.use(authenticateToken, requireInternalAccess);
 
@@ -77,6 +94,70 @@ router.get('/stats', asyncHandler(async (req, res) => {
   statusCounts.forEach(s => { stats[s.status] = s._count; });
 
   res.json({ ...stats, myTasks: myTaskCount, overdue: overdueCount });
+}));
+
+// GET /api/tasks/costs/summary - aggregate totals for the Costs view
+router.get('/costs/summary', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+
+  const tasks = await prisma.task.findMany({
+    where: { cost: { not: null }, status: { not: 'ARCHIVED' } },
+    select: { cost: true, costPaid: true, goalId: true, tags: true }
+  });
+
+  let openTotal = 0, paidTotal = 0, openCount = 0, paidCount = 0;
+  for (const t of tasks) {
+    const amt = Number(t.cost);
+    if (t.costPaid) { paidTotal += amt; paidCount += 1; }
+    else { openTotal += amt; openCount += 1; }
+  }
+
+  res.json({
+    openTotal: Math.round(openTotal * 100) / 100,
+    paidTotal: Math.round(paidTotal * 100) / 100,
+    grandTotal: Math.round((openTotal + paidTotal) * 100) / 100,
+    openCount,
+    paidCount,
+    totalCount: openCount + paidCount
+  });
+}));
+
+// PATCH /api/tasks/:id/cost-paid - quick toggle
+router.patch('/:id/cost-paid', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const userId = req.user.userId;
+  const { id } = req.params;
+  const { paid } = req.body;
+
+  const existing = await prisma.task.findUnique({ where: { id } });
+  if (!existing) return res.status(404).json({ error: 'Task not found' });
+  if (existing.cost == null) return res.status(400).json({ error: 'Task has no cost set' });
+
+  const target = Boolean(paid);
+  if (target !== existing.costPaid) {
+    await prisma.task.update({
+      where: { id },
+      data: { costPaid: target, costPaidAt: target ? new Date() : null }
+    });
+    await logActivity(prisma, {
+      taskId: id, userId,
+      action: target ? 'cost_paid' : 'cost_unpaid',
+      toValue: String(Number(existing.cost))
+    });
+  }
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: {
+      creator: { select: { id: true, firstName: true, lastName: true, username: true } },
+      assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      goal: { select: { id: true, title: true, status: true } },
+      _count: { select: { subtasks: true, comments: true } },
+      subtasks: { select: { id: true, status: true, dueDate: true } }
+    }
+  });
+
+  res.json(serializeTask(task));
 }));
 
 // GET /api/tasks - list with filters
@@ -183,6 +264,8 @@ router.get('/', asyncHandler(async (req, res) => {
   const result = tasks.map(t => ({
     ...t,
     dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null,
+    cost: t.cost == null ? null : Number(t.cost),
+    costPaidAt: t.costPaidAt ? t.costPaidAt.toISOString() : null,
     blockerCount: totalByTask[t.id] || 0,
     incompleteBlockerCount: incompleteByTask[t.id] || 0
   }));
@@ -282,12 +365,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
   ).length;
 
   res.json({
-    ...task,
-    dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null,
-    subtasks: task.subtasks.map(s => ({
-      ...s,
-      dueDate: s.dueDate ? s.dueDate.toISOString().split('T')[0] : null
-    })),
+    ...serializeTask(task),
+    subtasks: task.subtasks.map(s => serializeTask(s)),
     blockerCount,
     incompleteBlockerCount
   });
@@ -297,13 +376,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { title, description, status, priority, dueDate, assigneeIds, parentId, goalId, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, parentId, goalId, tags, cost, costPaid } = req.body;
 
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'Title is required' });
   }
 
   const cleanAssigneeIds = Array.isArray(assigneeIds) ? [...new Set(assigneeIds.filter(Boolean))] : [];
+  const normalizedCost = normalizeCost(cost);
+  const isPaid = normalizedCost != null && Boolean(costPaid);
 
   // Get max position for the target status column
   const maxPos = await prisma.task.aggregate({
@@ -320,6 +401,9 @@ router.post('/', asyncHandler(async (req, res) => {
       dueDate: dueDate ? new Date(dueDate) : null,
       position: (maxPos._max.position ?? -1) + 1,
       tags: tags || [],
+      cost: normalizedCost,
+      costPaid: isPaid,
+      costPaidAt: isPaid ? new Date() : null,
       creatorId: userId,
       parentId: parentId || null,
       goalId: goalId || null,
@@ -342,10 +426,14 @@ router.post('/', asyncHandler(async (req, res) => {
     await logActivity(prisma, { taskId: task.id, userId, action: 'assigned', toValue: uid });
   }
 
-  res.status(201).json({
-    ...task,
-    dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null
-  });
+  if (normalizedCost != null) {
+    await logActivity(prisma, { taskId: task.id, userId, action: 'cost_set', toValue: String(normalizedCost) });
+    if (isPaid) {
+      await logActivity(prisma, { taskId: task.id, userId, action: 'cost_paid', toValue: String(normalizedCost) });
+    }
+  }
+
+  res.status(201).json(serializeTask(task));
 }));
 
 // PUT /api/tasks/:id - update
@@ -353,7 +441,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { title, description, status, priority, dueDate, assigneeIds, goalId, tags } = req.body;
+  const { title, description, status, priority, dueDate, assigneeIds, goalId, tags, cost, costPaid } = req.body;
 
   const existing = await prisma.task.findUnique({
     where: { id },
@@ -395,6 +483,52 @@ router.put('/:id', asyncHandler(async (req, res) => {
     await logActivity(prisma, { taskId: id, userId, action: 'edited', fromValue: existing.title, toValue: title.trim() });
   }
 
+  // Cost handling -- amount and paid flag are independent inputs
+  let nextCost = existing.cost == null ? null : Number(existing.cost);
+  let nextPaid = existing.costPaid;
+  let costAmountChanged = false;
+  let paidStateChanged = false;
+
+  if (cost !== undefined) {
+    const normalized = normalizeCost(cost);
+    if (normalized !== nextCost) {
+      nextCost = normalized;
+      costAmountChanged = true;
+    }
+  }
+
+  if (costPaid !== undefined) {
+    const targetPaid = nextCost != null && Boolean(costPaid);
+    if (targetPaid !== nextPaid) {
+      nextPaid = targetPaid;
+      paidStateChanged = true;
+    }
+  }
+
+  // If cost was cleared, force paid -> false
+  if (costAmountChanged && nextCost == null && nextPaid) {
+    nextPaid = false;
+    paidStateChanged = true;
+  }
+
+  if (costAmountChanged) {
+    data.cost = nextCost;
+    const fromVal = existing.cost == null ? null : String(Number(existing.cost));
+    const toVal = nextCost == null ? null : String(nextCost);
+    const action = existing.cost == null ? 'cost_set' : (nextCost == null ? 'cost_removed' : 'cost_changed');
+    await logActivity(prisma, { taskId: id, userId, action, fromValue: fromVal, toValue: toVal });
+  }
+
+  if (paidStateChanged) {
+    data.costPaid = nextPaid;
+    data.costPaidAt = nextPaid ? new Date() : null;
+    await logActivity(prisma, {
+      taskId: id, userId,
+      action: nextPaid ? 'cost_paid' : 'cost_unpaid',
+      toValue: nextCost == null ? null : String(nextCost)
+    });
+  }
+
   // Reconcile assignee list if provided
   if (Array.isArray(assigneeIds)) {
     const nextSet = new Set(assigneeIds.filter(Boolean));
@@ -431,10 +565,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     }
   });
 
-  res.json({
-    ...task,
-    dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null
-  });
+  res.json(serializeTask(task));
 }));
 
 // PATCH /api/tasks/:id/status - quick status change
@@ -466,10 +597,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
     }
   });
 
-  res.json({
-    ...task,
-    dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null
-  });
+  res.json(serializeTask(task));
 }));
 
 // PATCH /api/tasks/:id/position - reorder

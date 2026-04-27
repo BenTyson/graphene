@@ -19,6 +19,10 @@ class TaskService {
       if (ctx.taskFilters.goalId) params.goalId = ctx.taskFilters.goalId;
       if (ctx.taskSearch) params.search = ctx.taskSearch;
       ctx.tasks = await API.tasks.getAll(params);
+      // Refresh costs summary when tasks reload (kept lightweight on the server)
+      if (ctx.taskCostsSummary !== undefined) {
+        try { ctx.taskCostsSummary = await API.tasks.getCostsSummary(); } catch (e) { /* non-fatal */ }
+      }
     } catch (error) {
       console.error('Failed to load tasks:', error);
       ctx.tasks = [];
@@ -41,7 +45,7 @@ class TaskService {
 
   openTaskForm(ctx, parentId = null) {
     ctx.editingTask = null;
-    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, goalId: '', tags: [] };
+    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, goalId: '', tags: [], cost: '', costPaid: false };
     ctx.taskTagInput = '';
     ctx.showAddTask = true;
   }
@@ -57,7 +61,9 @@ class TaskService {
       assigneeIds: (task.assignees || []).map(a => a.user?.id || a.userId).filter(Boolean),
       parentId: task.parentId || null,
       goalId: task.goalId || task.goal?.id || '',
-      tags: [...(task.tags || [])]
+      tags: [...(task.tags || [])],
+      cost: task.cost == null ? '' : String(task.cost),
+      costPaid: Boolean(task.costPaid)
     };
     ctx.taskTagInput = '';
     ctx.showAddTask = true;
@@ -70,10 +76,20 @@ class TaskService {
 
   async saveTask(ctx) {
     try {
-      if (ctx.editingTask) {
-        await API.tasks.update(ctx.editingTask.id, ctx.taskForm);
+      const payload = { ...ctx.taskForm };
+      // Normalize cost: empty string -> null; otherwise parse number
+      if (payload.cost === '' || payload.cost == null) {
+        payload.cost = null;
+        payload.costPaid = false;
       } else {
-        await API.tasks.create(ctx.taskForm);
+        const n = parseFloat(payload.cost);
+        payload.cost = Number.isFinite(n) && n >= 0 ? n : null;
+        if (payload.cost == null) payload.costPaid = false;
+      }
+      if (ctx.editingTask) {
+        await API.tasks.update(ctx.editingTask.id, payload);
+      } else {
+        await API.tasks.create(payload);
       }
       this.closeTaskForm(ctx);
       await this.loadTasks(ctx);
@@ -83,6 +99,31 @@ class TaskService {
     } catch (error) {
       console.error('Failed to save task:', error);
       alert('Failed to save task: ' + error.message);
+    }
+  }
+
+  async toggleCostPaid(ctx, taskId, paid) {
+    try {
+      await API.tasks.setCostPaid(taskId, paid);
+      await this.loadTasks(ctx);
+      if (ctx.selectedTask?.id === taskId) {
+        ctx.selectedTask = await API.tasks.getById(taskId);
+      }
+      if (ctx.taskCostsSummary !== undefined) {
+        await this.loadCostsSummary(ctx);
+      }
+    } catch (error) {
+      console.error('Failed to toggle cost paid:', error);
+      alert('Failed to update: ' + (error.message || 'Unknown error'));
+    }
+  }
+
+  async loadCostsSummary(ctx) {
+    try {
+      ctx.taskCostsSummary = await API.tasks.getCostsSummary();
+    } catch (error) {
+      console.error('Failed to load costs summary:', error);
+      ctx.taskCostsSummary = { openTotal: 0, paidTotal: 0, grandTotal: 0, openCount: 0, paidCount: 0, totalCount: 0 };
     }
   }
 

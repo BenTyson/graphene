@@ -1073,8 +1073,10 @@ GET    /api/tasks/assignees                    - List assignable users (id, name
 GET    /api/tasks/stats                        - Counts by status + myTasks + overdue
 GET    /api/tasks                              - List root tasks (filters: status, priority, assigneeId [matches any assignee], search, overdue, sortBy, order, limit, offset)
 GET    /api/tasks/:id                          - Detail with subtasks, comments, attachments, activity
-POST   /api/tasks                              - Create task (title required; description, status, priority, dueDate, assigneeIds[], parentId, tags optional)
-PUT    /api/tasks/:id                          - Update task (creator + SUPER_ADMIN only). assigneeIds[] reconciles assignments via diff (emits `assigned` / `unassigned` activity per user)
+POST   /api/tasks                              - Create task (title required; description, status, priority, dueDate, assigneeIds[], parentId, tags, cost, costPaid optional)
+PUT    /api/tasks/:id                          - Update task (creator + SUPER_ADMIN only). assigneeIds[] reconciles assignments via diff (emits `assigned` / `unassigned` activity per user). Accepts `cost` (number|null) and `costPaid` (bool); clearing cost forces costPaid=false
+PATCH  /api/tasks/:id/cost-paid                - Quick toggle for the paid flag (body: { paid: boolean }). Updates `costPaidAt`. Errors 400 if task has no cost set
+GET    /api/tasks/costs/summary                - Aggregate totals across all non-archived tasks with cost: { openTotal, paidTotal, grandTotal, openCount, paidCount, totalCount }
 DELETE /api/tasks/:id                          - Delete task + subtasks + attachment files (creator + SUPER_ADMIN only)
 PATCH  /api/tasks/:id/status                   - Quick status change (status, position)
 PATCH  /api/tasks/:id/position                 - Reorder within column
@@ -1099,7 +1101,10 @@ Kanban board shows 4 active columns (TODO, IN_PROGRESS, IN_REVIEW, DONE). ARCHIV
 Upload via `POST /:id/attachments` with multipart form data (field name: `attachments`). Accepted types: PDF, JPG, PNG, GIF, DOCX, XLSX, XLS, DOC, TXT, CSV. Files stored via Cloudinary (production) or local `uploads/task-attachments/` (dev). Task deletion auto-cleans attachment files from storage.
 
 ### Activity Logging
-All changes auto-log to TaskActivity: created, status_changed, assigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed, dependency_added, dependency_removed.
+All changes auto-log to TaskActivity: created, status_changed, assigned, unassigned, priority_changed, due_date_changed, comment_added, edited, attachment_added, attachment_removed, dependency_added, dependency_removed, cost_set, cost_changed, cost_removed, cost_paid, cost_unpaid.
+
+### Costs
+Each task can carry one optional `cost` (Decimal 12,2) plus `costPaid` (bool) and `costPaidAt` (timestamp). Server normalizes/serializes via `normalizeCost()` and `serializeTask()` in `server/routes/tasks.js`. Clearing cost auto-resets `costPaid=false`. The Tasks tab Costs view consumes `GET /api/tasks/costs/summary` for the totals strip and `PATCH /api/tasks/:id/cost-paid` for the inline Mark paid/unpaid button.
 
 ### Dependencies (Blocks / Blocked By)
 Directional task-to-task links via `TaskDependency` (blockingTaskId blocks blockedTaskId). Any task can link to any task, including across subtask/parent boundaries.
