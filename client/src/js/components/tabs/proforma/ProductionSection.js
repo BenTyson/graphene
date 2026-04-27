@@ -1,12 +1,35 @@
-import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordion, HELP } from './helpers.js';
-import { productionPulse } from './ProductionPulse.js';
+import { numInput, formGrid, card, sectionHeader, HELP } from './helpers.js';
 
-// Production = the heartbeat. Critical tier is chemistry + kiln sizes (the
-// levers that change output kg). Advanced tier holds phase operating schedule,
-// per-year efficiency multipliers, and the raw volume conversion.
+export function getProductionSection() {
+  const chemistry = [
+    { label: 'Biochar per batch', path: 'proformaAssumptions.production.initialBiocharUseG',
+      unit: 'g', step: 1,
+      indicator: `proformaComputed ? '= ' + (proformaAssumptions.production.initialBiocharUseG * proformaAssumptions.production.grapheneYieldPercent).toFixed(1) + ' g graphene/batch' : ''`,
+      ...HELP['production.initialBiocharUseG'] },
+    { label: 'KOH per batch', path: 'proformaAssumptions.production.initialKOHG',
+      unit: 'g', step: 1, ...HELP['production.initialKOHG'] },
+    { label: 'Density of mix', path: 'proformaAssumptions.production.densityMix',
+      unit: 'g/mL', step: 0.01, ...HELP['production.densityMix'] },
+    { label: 'Graphene yield', path: 'proformaAssumptions.production.grapheneYieldPercent',
+      unit: '%', format: 'fraction-percent', step: 0.5, ...HELP['production.grapheneYieldPercent'] },
+    { label: 'Buffer (production multiplier)', path: 'proformaAssumptions.production.bufferToggle',
+      unit: '×', step: 0.05, ...HELP['production.bufferToggle'] },
+    { label: 'Volume conversion', path: 'proformaAssumptions.production.volumeConversionCuFt',
+      unit: 'cu ft/mL', step: 0.0000001, ...HELP['production.volumeConversionCuFt'] }
+  ];
 
-function _phaseScheduleBlock() {
-  return card('Operating schedule by phase', `
+  const kilns = [
+    { label: 'Pilot kiln feed rate', path: 'proformaAssumptions.production.smallKilnCuFtPerHour',
+      unit: 'cu ft / hr', step: 0.5,
+      indicator: `proformaComputed ? '→ ' + proformaComputed.production.pilotMonthlyByPhase[0].toFixed(1) + ' kg/mo (Phase 1)' : ''`,
+      ...HELP['production.smallKilnCuFtPerHour'] },
+    { label: 'Broderick kiln feed rate', path: 'proformaAssumptions.production.largeKilnCuFtPerHour',
+      unit: 'cu ft / hr', step: 1,
+      indicator: `proformaComputed ? '→ ' + proformaComputed.production.broderickMonthlyByPhase[2].toFixed(1) + ' kg/mo (Phase 3)' : ''`,
+      ...HELP['production.largeKilnCuFtPerHour'] }
+  ];
+
+  const phaseSchedule = `
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <template x-for="(phase, pi) in proformaAssumptions.production.phases" :key="pi">
         <div class="border border-gray-100 rounded-lg p-3">
@@ -36,11 +59,9 @@ function _phaseScheduleBlock() {
     <p class="text-[11px] text-gray-500 leading-snug mt-3">
       Hours × days per phase sets the monthly run-time. Feeds monthly production (kg) which feeds revenue.
     </p>
-  `, { subtitle: 'Phase 1 = initial ramp, Phase 3 = full-rate operations.' });
-}
+  `;
 
-function _efficiencyBlock() {
-  return card('Cost efficiency by year', `
+  const efficiencyGrid = `
     <div class="grid grid-cols-4 gap-3">
       <template x-for="(eff, ei) in proformaAssumptions.production.efficiencyByYear" :key="ei">
         <div>
@@ -55,61 +76,21 @@ function _efficiencyBlock() {
     <p class="text-[11px] text-gray-500 leading-snug mt-3">
       ${HELP['production.efficiencyByYear'].help} <span class="text-gray-400">Feeds → ${HELP['production.efficiencyByYear'].dependsOn}</span>
     </p>
-  `);
-}
-
-export function getProductionSection() {
-  const chemistry = [
-    { label: 'Biochar per batch', path: 'proformaAssumptions.production.initialBiocharUseG',
-      unit: 'g', step: 1,
-      indicator: `proformaComputed ? '= ' + (proformaAssumptions.production.initialBiocharUseG * proformaAssumptions.production.grapheneYieldPercent).toFixed(1) + ' g graphene/batch' : ''`,
-      ...HELP['production.initialBiocharUseG'] },
-    { label: 'KOH per batch', path: 'proformaAssumptions.production.initialKOHG',
-      unit: 'g', step: 1, ...HELP['production.initialKOHG'] },
-    { label: 'Density of mix', path: 'proformaAssumptions.production.densityMix',
-      unit: 'g/mL', step: 0.01, ...HELP['production.densityMix'] },
-    { label: 'Graphene yield', path: 'proformaAssumptions.production.grapheneYieldPercent',
-      unit: '%', format: 'fraction-percent', step: 0.5, ...HELP['production.grapheneYieldPercent'] },
-    { label: 'Buffer (production multiplier)', path: 'proformaAssumptions.production.bufferToggle',
-      unit: '×', step: 0.05, ...HELP['production.bufferToggle'] }
-  ];
-
-  const kilns = [
-    { label: 'Pilot kiln feed rate', path: 'proformaAssumptions.production.smallKilnCuFtPerHour',
-      unit: 'cu ft / hr', step: 0.5,
-      indicator: `proformaComputed ? '\u2192 ' + proformaComputed.production.pilotMonthlyByPhase[0].toFixed(1) + ' kg/mo (Phase 1)' : ''`,
-      ...HELP['production.smallKilnCuFtPerHour'] },
-    { label: 'Broderick kiln feed rate', path: 'proformaAssumptions.production.largeKilnCuFtPerHour',
-      unit: 'cu ft / hr', step: 1,
-      indicator: `proformaComputed ? '\u2192 ' + proformaComputed.production.broderickMonthlyByPhase[2].toFixed(1) + ' kg/mo (Phase 3)' : ''`,
-      ...HELP['production.largeKilnCuFtPerHour'] }
-  ];
-
-  const advancedChemistry = [
-    { label: 'Volume conversion', path: 'proformaAssumptions.production.volumeConversionCuFt',
-      unit: 'cu ft/mL', step: 0.0000001, ...HELP['production.volumeConversionCuFt'] }
-  ];
+  `;
 
   return `
     <section class="max-w-5xl">
       ${sectionHeader('Production', 'Hemp in, graphene out. Chemistry and kiln throughput set the kg/mo ceiling for everything downstream.')}
 
-      ${productionPulse()}
-
-      ${criticalBlock(
-        `<h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-2">Process chemistry</h3>
-         ${formGrid(chemistry.map(f => numInput(f.label, f.path, f)).join(''))}
-         <h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-6">Kiln throughput</h3>
-         ${formGrid(kilns.map(f => numInput(f.label, f.path, f)).join(''), { cols: 2 })}`,
-        { label: 'Critical', hint: 'Chemistry + kiln sizes — every output volume depends on these' }
-      )}
-
-      ${advancedAccordion('production',
-        `${_phaseScheduleBlock()}
-         ${_efficiencyBlock()}
-         ${formGrid(advancedChemistry.map(f => numInput(f.label, f.path, f)).join(''))}`,
-        { label: 'Advanced', hint: 'Phase schedule, year-over-year efficiency, conversion constants' }
-      )}
+      <div class="space-y-6">
+        ${card('Process chemistry', formGrid(chemistry.map(f => numInput(f.label, f.path, f)).join('')))}
+        ${card('Kiln throughput', formGrid(kilns.map(f => numInput(f.label, f.path, f)).join(''), { cols: 2 }))}
+        ${card('Operating schedule by phase',
+          phaseSchedule,
+          { subtitle: 'Phase 1 = initial ramp, Phase 3 = full-rate operations.' }
+        )}
+        ${card('Cost efficiency by year', efficiencyGrid)}
+      </div>
     </section>
   `;
 }

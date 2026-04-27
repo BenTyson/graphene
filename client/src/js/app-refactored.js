@@ -462,6 +462,7 @@ window.grapheneApp = function() {
     proformaBaseline: null,
     proformaView: 'list',
     proformaEditorTab: 'assumptions',
+    proformaFullscreenChart: null,
     proformaOutlookView: 'monthly',
     proformaLoading: false,
     proformaDirty: false,
@@ -5488,6 +5489,14 @@ window.grapheneApp = function() {
     getProformaOutlookRows() { return proformaService.getOutlookRows(this); },
     getProformaColumns() { return proformaService.getColumnLabels(this); },
     renderProformaCharts() { proformaService.renderCharts(this); },
+    openProformaFullscreenChart(canvasId) {
+      this.proformaFullscreenChart = canvasId;
+      this.$nextTick(() => proformaService.renderFullscreenChart(canvasId));
+    },
+    closeProformaFullscreenChart() {
+      proformaService.destroyFullscreenChart();
+      this.proformaFullscreenChart = null;
+    },
     getProformaTabHtml() { return getProformaTabHtml(); },
 
     // Redirect restricted users away from tabs they can't access

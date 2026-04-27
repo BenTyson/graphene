@@ -198,21 +198,8 @@ function _machineCard() {
         </div>
       </div>
 
-      <!-- Per-machine advanced: payment schedule + phase overrides -->
-      <div class="mt-5 border-t border-gray-100 pt-4">
-        <button type="button"
-                @click="proformaAdvancedOpen['machine_' + mi] = !proformaAdvancedOpen['machine_' + mi]"
-                class="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
-          <svg class="w-3.5 h-3.5 transition-transform"
-               :class="proformaAdvancedOpen['machine_' + mi] ? 'rotate-90' : ''"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-          </svg>
-          <span class="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-700">Advanced</span>
-          <span class="text-[11px] text-gray-400">Payment schedule + phase overrides</span>
-        </button>
-
-        <div x-show="proformaAdvancedOpen['machine_' + mi]" x-collapse class="mt-4 space-y-4">
+      <!-- Payment schedule + phase overrides -->
+      <div class="mt-5 border-t border-gray-100 pt-4 space-y-4">
           <div>
             <h4 class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Payment schedule</h4>
             <div x-show="machine.payments?.length" class="overflow-x-auto">
@@ -297,7 +284,6 @@ function _machineCard() {
               </select>
             </div>
           </div>
-        </div>
       </div>
     </article>
   `;

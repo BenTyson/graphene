@@ -1,8 +1,4 @@
-import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordion, quarterlyMatrix, HELP } from './helpers.js';
-
-// Capital = opening balance + raises + R&D capex. Critical tier: starting
-// cash, seed investment, and the raises table. Advanced tier: R&D
-// equipment capex matrix.
+import { numInput, formGrid, card, sectionHeader, quarterlyMatrix, HELP } from './helpers.js';
 
 function _raisesBlock() {
   return card('Capital raises', `
@@ -73,22 +69,21 @@ export function getCapitalSection() {
     <section class="max-w-5xl">
       ${sectionHeader('Capital', 'Cash position — opening balance, planned raises, and R&D equipment spend.')}
 
-      ${criticalBlock(
-        `${formGrid(starting.map(f => numInput(f.label, f.path, f)).join(''), { cols: 2 })}
-         <div class="mt-3 text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-1.5 inline-block"
-              x-text="'Opening balance: ' + window._pfFmtC(proformaAssumptions.capital.startingCash + (proformaAssumptions.capital.initialInvestment || 0))">
-         </div>
-         <div class="mt-6">${_raisesBlock()}</div>`,
-        { label: 'Critical', hint: 'Opening balance and scheduled raises' }
-      )}
+      <div class="space-y-6">
+        ${card('Opening balance', `
+          ${formGrid(starting.map(f => numInput(f.label, f.path, f)).join(''), { cols: 2 })}
+          <div class="mt-3 text-xs font-mono text-gray-600 bg-gray-50 rounded-md px-3 py-1.5 inline-block"
+               x-text="'Opening balance: ' + window._pfFmtC(proformaAssumptions.capital.startingCash + (proformaAssumptions.capital.initialInvestment || 0))">
+          </div>
+        `)}
 
-      ${advancedAccordion('capital',
-        quarterlyMatrix('R&D equipment capex', 'proformaAssumptions.capexLab', {
+        ${_raisesBlock()}
+
+        ${quarterlyMatrix('R&D equipment capex', 'proformaAssumptions.capexLab', {
           showTotal: true,
           subtitle: 'Quarterly spend on lab equipment separate from production machines.'
-        }),
-        { label: 'Advanced', hint: 'R&D equipment capex by quarter' }
-      )}
+        })}
+      </div>
     </section>
   `;
 }

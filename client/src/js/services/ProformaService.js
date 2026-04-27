@@ -10,9 +10,71 @@ import {
   isDemoScenario as _isDemoScenario
 } from '@shared/proformaDemoSeed.js';
 
-// Color palette used for the revenue-by-stream stacked chart. Built-ins
-// keep their historical colors; later streams get the next palette slot.
-const STREAM_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E'];
+// Categorical palette for stream-by-stream charts. Bronze is the brand
+// anchor; the rest sit at similar saturation/value so adjacent stacks read
+// as a designed system rather than a Chart.js default. Hues are spaced
+// ~45° apart on the wheel to keep streams discernable side-by-side.
+const STREAM_COLORS = [
+  '#B87333', // bronze (brand)
+  '#3F5B6B', // slate teal
+  '#7A8B5C', // sage olive
+  '#8B5A6B', // mauve
+  '#C9A66B', // wheat
+  '#5D7B8C', // steel blue
+  '#7D6B8A', // heather
+  '#5B7561'  // moss
+];
+
+// Semantic palette for the P&L, cash-flow, and capacity charts. Same
+// muted register as STREAM_COLORS so the two never clash on screen.
+const PALETTE = {
+  revenue:    '#B87333', // bronze — headline
+  cogs:       '#3F5B6B', // slate teal — a cost
+  opex:       '#A67F5D', // walnut — another cost, distinct from bronze
+  positive:   '#7A8B5C', // sage — positive cash flow
+  negative:   '#8B5A6B', // mauve — negative cash flow
+  cumulative: '#1F2937', // ink — strong reference line on top of bars
+  capacity:   '#1F2937'  // ink — capacity ceiling line
+};
+
+// Apply once. Lighter grids, mute axis text, system font, refined legend
+// and tooltip. Runs the first time we render any chart.
+let _chartDefaultsApplied = false;
+function _applyChartDefaults() {
+  if (_chartDefaultsApplied || typeof Chart === 'undefined') return;
+  const C = Chart.defaults;
+  C.font.family = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+  C.font.size = 11;
+  C.color = '#6B7280';
+  C.borderColor = '#F3F4F6';
+  if (C.plugins?.legend?.labels) {
+    C.plugins.legend.labels.boxWidth = 8;
+    C.plugins.legend.labels.boxHeight = 8;
+    C.plugins.legend.labels.usePointStyle = true;
+    C.plugins.legend.labels.padding = 14;
+    C.plugins.legend.labels.color = '#4B5563';
+  }
+  if (C.plugins?.title) {
+    C.plugins.title.color = '#111827';
+    C.plugins.title.font = { size: 13, weight: '600' };
+    C.plugins.title.padding = { top: 4, bottom: 14 };
+  }
+  if (C.plugins?.tooltip) {
+    C.plugins.tooltip.backgroundColor = 'rgba(17,24,39,0.95)';
+    C.plugins.tooltip.padding = 10;
+    C.plugins.tooltip.cornerRadius = 6;
+    C.plugins.tooltip.titleFont = { size: 11, weight: '600' };
+    C.plugins.tooltip.bodyFont = { size: 11 };
+    C.plugins.tooltip.boxPadding = 4;
+  }
+  if (C.scale?.grid) {
+    C.scale.grid.color = '#F3F4F6';
+    C.scale.grid.tickColor = '#E5E7EB';
+  }
+  if (C.scale?.border) C.scale.border.color = '#E5E7EB';
+  if (C.scale?.ticks) C.scale.ticks.color = '#9CA3AF';
+  _chartDefaultsApplied = true;
+}
 
 function _slugifyStreamId(name) {
   const base = (name || 'stream').toLowerCase()
@@ -38,6 +100,10 @@ function _snapshotMetrics(computed) {
 class ProformaService {
   constructor() {
     this._charts = {};
+    // Cached chart configs by canvas id, so we can re-instantiate the
+    // same chart in the fullscreen modal without rebuilding from scratch.
+    this._chartConfigs = {};
+    this._fullscreenChart = null;
   }
 
   // ── Scenario List ──
@@ -491,7 +557,7 @@ class ProformaService {
 
     add('Revenue', 'revenue', src.revenue, { category: true });
     const streams = ctx.proformaAssumptions?.revenue?.streams || [];
-    addChildren('revenue', streams.map(s => ({
+    addChildren('revenue', streams.filter(s => s.enabled !== false).map(s => ({
       label: s.name,
       key: 'revenueStream_' + s.id,
       data: src['revenueStream_' + s.id] || []
@@ -560,7 +626,9 @@ class ProformaService {
   }
 
   _buildCharts(c, streams = []) {
+    _applyChartDefaults();
     const labels = this.getColumnLabels({ proformaOutlookView: 'monthly' });
+    const dollarTick = v => '$' + (v / 1e6).toFixed(1) + 'M';
 
     // Revenue by Stream — stacked bar, one dataset per stream in order.
     this._renderChart('proforma-chart-revenue', {
@@ -570,48 +638,97 @@ class ProformaService {
         datasets: streams.map((s, i) => ({
           label: s.name,
           data: c.outlook['revenueStream_' + s.id] || [],
-          backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length]
+          backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length],
+          borderWidth: 0,
+          borderRadius: 1
         }))
       },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Revenue by Stream' } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } } } }
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Revenue by Stream' } },
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: dollarTick } } }
+      }
     });
 
-    // Rev vs COGS vs OPEX
+    // Rev vs COGS vs OPEX — Revenue as the headline (filled), costs as
+    // unfilled lines underneath so the gross/operating margin reads as
+    // visual whitespace between the curves.
     this._renderChart('proforma-chart-pnl', {
       type: 'line',
       data: {
         labels,
         datasets: [
-          { label: 'Revenue', data: c.outlook.revenue, borderColor: '#3B82F6', fill: false },
-          { label: 'COGS', data: c.outlook.cogs, borderColor: '#EF4444', fill: false },
-          { label: 'OPEX', data: c.outlook.opex, borderColor: '#F59E0B', fill: false }
+          {
+            label: 'Revenue',
+            data: c.outlook.revenue,
+            borderColor: PALETTE.revenue,
+            backgroundColor: PALETTE.revenue + '1F',
+            borderWidth: 2,
+            fill: 'origin'
+          },
+          { label: 'COGS', data: c.outlook.cogs, borderColor: PALETTE.cogs, borderWidth: 1.75, fill: false },
+          { label: 'OPEX', data: c.outlook.opex, borderColor: PALETTE.opex, borderWidth: 1.75, fill: false, borderDash: [4, 3] }
         ]
       },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Revenue vs COGS vs OPEX' } }, scales: { y: { ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } } } }
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Revenue vs COGS vs OPEX' } },
+        scales: { y: { ticks: { callback: dollarTick } } }
+      }
     });
 
-    // Cash Flow + Cumulative
+    // Cash Flow + Cumulative — sage/mauve diverging bars, ink line on top.
     this._renderChart('proforma-chart-cash', {
       type: 'bar',
       data: {
         labels,
         datasets: [
-          { label: 'Cash Flow', data: c.outlook.cashFlow, backgroundColor: c.outlook.cashFlow.map(v => v >= 0 ? '#10B981' : '#EF4444'), order: 2 },
-          { label: 'Cumulative Cash', data: c.outlook.cumulativeCash, type: 'line', borderColor: '#6366F1', fill: false, order: 1 }
+          {
+            label: 'Cash Flow',
+            data: c.outlook.cashFlow,
+            backgroundColor: c.outlook.cashFlow.map(v => v >= 0 ? PALETTE.positive : PALETTE.negative),
+            borderWidth: 0,
+            borderRadius: 1,
+            order: 2
+          },
+          {
+            label: 'Cumulative Cash',
+            data: c.outlook.cumulativeCash,
+            type: 'line',
+            borderColor: PALETTE.cumulative,
+            borderWidth: 2,
+            fill: false,
+            order: 1
+          }
         ]
       },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Cash Flow & Cumulative Cash' } }, scales: { y: { ticks: { callback: v => '$' + (v/1e6).toFixed(1) + 'M' } } } }
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Cash Flow & Cumulative Cash' } },
+        scales: { y: { ticks: { callback: dollarTick } } }
+      }
     });
 
-    // Production Ramp
+    // Production Ramp — stacked area, one band per machine.
     const machineDatasets = c.production.machineTimelines.map((mt, i) => {
-      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-      return { label: mt.name, data: mt.monthlyKg, fill: true, backgroundColor: colors[i % colors.length] + '40', borderColor: colors[i % colors.length] };
+      const color = STREAM_COLORS[i % STREAM_COLORS.length];
+      return {
+        label: mt.name,
+        data: mt.monthlyKg,
+        fill: true,
+        backgroundColor: color + '99',
+        borderColor: color,
+        borderWidth: 1
+      };
     });
     this._renderChart('proforma-chart-production', {
       type: 'line',
       data: { labels, datasets: machineDatasets },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Production Ramp by Machine (kg)' } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'Production Ramp by Machine (kg)' } },
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => v.toLocaleString() + ' kg' } } }
+      }
     });
 
     // Production Capacity vs Sales Demand (kg) — stacked per-stream demand
@@ -621,9 +738,9 @@ class ProformaService {
       label: s.name + ' (kg)',
       type: 'bar',
       data: c.outlook['demandKg_' + s.id] || [],
-      backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length] + 'CC',
-      borderColor: STREAM_COLORS[i % STREAM_COLORS.length],
+      backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length] + 'D9',
       borderWidth: 0,
+      borderRadius: 1,
       stack: 'demand',
       order: 2
     }));
@@ -631,8 +748,9 @@ class ProformaService {
       label: 'Production capacity (kg)',
       type: 'line',
       data: c.outlook.productionCapacityKg || [],
-      borderColor: '#111827',
+      borderColor: PALETTE.capacity,
       borderWidth: 2,
+      borderDash: [5, 4],
       backgroundColor: 'transparent',
       fill: false,
       order: 1,
@@ -655,9 +773,139 @@ class ProformaService {
         }
       }
     });
+
+    // Margin curves — gross margin % and EBITDA margin %. Both as fraction
+    // → percent. EBITDA margin can dive deep negative pre-revenue, so we
+    // null pre-revenue months to keep the chart legible.
+    const grossPct = (c.outlook.grossMarginPct || []).map(v => (v || 0) * 100);
+    const ebitdaPct = c.outlook.revenue.map((rev, i) =>
+      rev > 0 ? (c.outlook.ebitda[i] / rev) * 100 : null
+    );
+    this._renderChart('proforma-chart-margins', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Gross margin %',
+            data: grossPct,
+            borderColor: PALETTE.revenue,
+            backgroundColor: PALETTE.revenue + '14',
+            borderWidth: 2,
+            fill: 'origin',
+            spanGaps: true
+          },
+          {
+            label: 'EBITDA margin %',
+            data: ebitdaPct,
+            borderColor: PALETTE.cumulative,
+            borderWidth: 2,
+            borderDash: [5, 4],
+            fill: false,
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: { display: true, text: 'Margins (% of Revenue)' },
+          tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.parsed.y == null ? '—' : ctx.parsed.y.toFixed(1) + '%') } }
+        },
+        scales: { y: { ticks: { callback: v => v + '%' } } }
+      }
+    });
+
+    // COGS composition — three-band stacked area showing where the
+    // unit cost actually lives over time.
+    const cogsBands = [
+      { key: 'cogsManufacturing', label: 'Manufacturing', color: PALETTE.cogs },
+      { key: 'cogsHemp',          label: 'Hemp',          color: PALETTE.opex },
+      { key: 'cogsBiochar',       label: 'Biochar',       color: STREAM_COLORS[2] }
+    ];
+    this._renderChart('proforma-chart-cogs-composition', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: cogsBands.map(b => ({
+          label: b.label,
+          data: c.outlook[b.key] || [],
+          backgroundColor: b.color + 'BB',
+          borderColor: b.color,
+          borderWidth: 1,
+          fill: true
+        }))
+      },
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'COGS Composition' } },
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: dollarTick } } }
+      }
+    });
+
+    // OPEX composition — eight-band stacked area. Hits eight palette
+    // slots; later wraps would collide visually so we cap labels here.
+    const opexBands = [
+      { key: 'opexStaffing',   label: 'Staffing' },
+      { key: 'opexBenefits',   label: 'Benefits' },
+      { key: 'opexOverhead',   label: 'Overhead' },
+      { key: 'opexRnd',        label: 'R&D' },
+      { key: 'opexLegal',      label: 'Legal' },
+      { key: 'opexRoyalty',    label: 'Royalty' },
+      { key: 'opexCommission', label: 'Commission' },
+      { key: 'opexInsurance',  label: 'Insurance' }
+    ];
+    this._renderChart('proforma-chart-opex-composition', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: opexBands.map((b, i) => {
+          const color = STREAM_COLORS[i % STREAM_COLORS.length];
+          return {
+            label: b.label,
+            data: c.outlook[b.key] || [],
+            backgroundColor: color + 'BB',
+            borderColor: color,
+            borderWidth: 1,
+            fill: true
+          };
+        })
+      },
+      options: {
+        responsive: true,
+        plugins: { title: { display: true, text: 'OPEX Composition' } },
+        scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: dollarTick } } }
+      }
+    });
+
+    // Unit economics — $/kg sold. Denominator is `demandKgTotal` (the
+    // kg implied by revenue streams). Months with zero demand emit null
+    // so Chart.js skips the point rather than spiking to infinity.
+    const demandKg = c.outlook.demandKgTotal || [];
+    const revPerKg  = c.outlook.revenue.map((v, i) => demandKg[i] > 0 ? v / demandKg[i] : null);
+    const costPerKg = c.outlook.cogs.map(   (v, i) => demandKg[i] > 0 ? v / demandKg[i] : null);
+    this._renderChart('proforma-chart-unit-economics', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenue / kg', data: revPerKg,  borderColor: PALETTE.revenue, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Cost / kg',    data: costPerKg, borderColor: PALETTE.cogs,    borderWidth: 2, fill: false, spanGaps: true }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: { display: true, text: 'Unit Economics ($/kg sold)' },
+          tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.parsed.y == null ? '—' : '$' + Math.round(ctx.parsed.y).toLocaleString()) } }
+        },
+        scales: { y: { ticks: { callback: v => '$' + v.toLocaleString() } } }
+      }
+    });
   }
 
   _renderChart(canvasId, config) {
+    this._chartConfigs[canvasId] = config;
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const existing = this._charts[canvasId];
@@ -671,6 +919,33 @@ class ProformaService {
         elements: { point: { radius: 0 }, line: { tension: 0.3 } }
       }
     });
+  }
+
+  // Mounts the saved config of `sourceCanvasId` onto a fullscreen target
+  // canvas. The same config object is reused — Chart.js doesn't share
+  // state between instances, so this is a clean second render.
+  renderFullscreenChart(sourceCanvasId, targetCanvasId = 'proforma-chart-fullscreen') {
+    const config = this._chartConfigs[sourceCanvasId];
+    if (!config) return;
+    const canvas = document.getElementById(targetCanvasId);
+    if (!canvas) return;
+    if (this._fullscreenChart) this._fullscreenChart.destroy();
+    this._fullscreenChart = new Chart(canvas, {
+      ...config,
+      options: {
+        ...config.options,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        elements: { point: { radius: 0 }, line: { tension: 0.3 } }
+      }
+    });
+  }
+
+  destroyFullscreenChart() {
+    if (this._fullscreenChart) {
+      this._fullscreenChart.destroy();
+      this._fullscreenChart = null;
+    }
   }
 }
 
