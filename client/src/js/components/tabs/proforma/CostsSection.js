@@ -5,6 +5,53 @@ import { numInput, formGrid, card, sectionHeader, criticalBlock, advancedAccordi
 // manufacturing params. Advanced tier: per-phase biochar cost and the
 // FTE role table.
 
+// Hemp purchases summary — Y1/Y2/Y3 total kg + $. Hemp consumption is
+// fully derived (graphene_kg × hempRatioMultiplier), so this strip is
+// the closest thing to a "hemp purchased" reading the proforma exposes.
+function _hempPurchasesStrip() {
+  return `
+    <figure x-show="proformaComputed?.production?.monthlyHempKg && proformaComputed?.outlook?.cogsHemp"
+            class="rounded-lg border border-gray-200 bg-white p-5 mb-6">
+      <figcaption class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900">Hemp purchases</h3>
+          <p class="text-[11px] text-gray-500 mt-0.5">Derived from graphene production × hemp-per-graphene ratio. Edit ratio in Production; edit cost below.</p>
+        </div>
+        <span class="text-[11px] text-gray-500 font-mono">
+          ratio:
+          <span class="text-gray-900 font-semibold" x-text="(proformaComputed.production.hempRatioMultiplier || 0).toFixed(2)"></span>
+          kg hemp / kg graphene
+        </span>
+      </figcaption>
+
+      <div class="grid grid-cols-3 gap-3">
+        <template x-for="y in [1, 2, 3]" :key="y">
+          <div class="border border-gray-100 rounded-md p-3" x-data="{
+            kg: proformaComputed.production.monthlyHempKg.slice(y * 12, y * 12 + 12).reduce((a, b) => a + (b || 0), 0),
+            cost: proformaComputed.outlook.cogsHemp.slice(y * 12, y * 12 + 12).reduce((a, b) => a + (b || 0), 0),
+            peakKg: Math.max(0, ...proformaComputed.production.monthlyHempKg.slice(y * 12, y * 12 + 12))
+          }">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-600" x-text="'Year ' + y"></span>
+              <span class="text-[10px] font-mono text-gray-400" x-text="'peak ' + Math.round(peakKg).toLocaleString() + ' kg/mo'"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <div class="text-gray-400">Total hemp</div>
+                <div class="font-mono tabular-nums text-gray-900 text-sm" x-text="Math.round(kg).toLocaleString() + ' kg'"></div>
+              </div>
+              <div>
+                <div class="text-gray-400">Total spend</div>
+                <div class="font-mono tabular-nums text-gray-900 text-sm" x-text="window._pfFmtC(cost, true)"></div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </figure>
+  `;
+}
+
 function _fteRolesTable() {
   return card('Manufacturing labor (FTE roles)', `
     <div class="overflow-x-auto">
@@ -115,6 +162,8 @@ export function getCostsSection() {
   return `
     <section class="max-w-5xl">
       ${sectionHeader('Costs', 'Raw materials, labor, and per-phase biochar. Directly sets gross margin.')}
+
+      ${_hempPurchasesStrip()}
 
       ${criticalBlock(
         `<h3 class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2 mt-2">Hemp / raw materials</h3>
