@@ -300,27 +300,27 @@ model TEMTest {
 }
 
 model ParticleSizeTest {
-  id                      String                   @id @default(cuid())
-  testDate                DateTime?                @map("test_date")
-  grapheneSample          String?                  @map("graphene_sample")
-  compoundBatchNumber     String?                  @map("compound_batch_number")
-  micronizationSku        String?                  @map("micronization_sku")
-  mcbNumber               String?                  @map("mcb_number")
-  d10                     Decimal?                 @db.Decimal(10, 4)
-  d50                     Decimal?                 @db.Decimal(10, 4)
-  d90                     Decimal?                 @db.Decimal(10, 4)
-  meanSize                Decimal?                 @map("mean_size") @db.Decimal(10, 4)
-  spanValue               Decimal?                 @map("span_value") @db.Decimal(10, 4)
-  testingLab              String?                  @map("testing_lab")
-  testingMethod           String?                  @map("testing_method")
-  particleSizeReportPath  String?                  @map("particle_size_report_path")
-  comments                String?
-  createdAt               DateTime                 @default(now()) @map("created_at")
-  updatedAt               DateTime                 @updatedAt @map("updated_at")
-  compoundBatchRef        CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef             Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
-  micronizationRef        Micronization?           @relation(fields: [micronizationSku], references: [sku])
-  mcbRef                  MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
+  id                     String                   @id @default(cuid())
+  testDate               DateTime?                @map("test_date")
+  grapheneSample         String?                  @map("graphene_sample")
+  compoundBatchNumber    String?                  @map("compound_batch_number")
+  micronizationSku       String?                  @map("micronization_sku")
+  mcbNumber              String?                  @map("mcb_number")
+  d10                    Decimal?                 @db.Decimal(10, 4)
+  d50                    Decimal?                 @db.Decimal(10, 4)
+  d90                    Decimal?                 @db.Decimal(10, 4)
+  meanSize               Decimal?                 @map("mean_size") @db.Decimal(10, 4)
+  spanValue              Decimal?                 @map("span_value") @db.Decimal(10, 4)
+  testingLab             String?                  @map("testing_lab")
+  testingMethod          String?                  @map("testing_method")
+  particleSizeReportPath String?                  @map("particle_size_report_path")
+  comments               String?
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  compoundBatchRef       CompoundBatch?           @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef            Graphene?                @relation(fields: [grapheneSample], references: [experimentNumber])
+  micronizationRef       Micronization?           @relation(fields: [micronizationSku], references: [sku])
+  mcbRef                 MicronizedCompoundBatch? @relation(fields: [mcbNumber], references: [mcbNumber])
 
   @@index([grapheneSample])
   @@index([compoundBatchNumber])
@@ -540,23 +540,23 @@ model MaterialShipment {
 }
 
 model Micronization {
-  id                      String            @id @default(cuid())
-  micronizationNumber     String            @unique @map("micronization_number")
-  date                    DateTime?         @map("date")
-  sku                     String?           @unique
-  startingMaterialAmount  Decimal?          @map("starting_material_amount") @db.Decimal(10, 2)
-  recoveredAmount         Decimal?          @map("recovered_amount") @db.Decimal(10, 2)
-  grindPressure           Int?              @map("grind_pressure")
-  micronizationReportPath String?           @map("micronization_report_path")
-  grapheneSample          String?           @map("graphene_sample")
-  compoundBatchNumber     String?           @map("compound_batch_number")
-  createdAt               DateTime          @default(now()) @map("created_at")
-  updatedAt               DateTime          @updatedAt @map("updated_at")
-  dx50                    String?           @map("dx50")
-  micronizationLocation   String?           @map("micronization_location")
+  id                      String             @id @default(cuid())
+  micronizationNumber     String             @unique @map("micronization_number")
+  date                    DateTime?          @map("date")
+  sku                     String?            @unique
+  startingMaterialAmount  Decimal?           @map("starting_material_amount") @db.Decimal(10, 2)
+  recoveredAmount         Decimal?           @map("recovered_amount") @db.Decimal(10, 2)
+  grindPressure           Int?               @map("grind_pressure")
+  micronizationReportPath String?            @map("micronization_report_path")
+  grapheneSample          String?            @map("graphene_sample")
+  compoundBatchNumber     String?            @map("compound_batch_number")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+  dx50                    String?            @map("dx50")
+  micronizationLocation   String?            @map("micronization_location")
   shipments               MaterialShipment[] @relation("MicronizationShipments")
-  compoundBatchRef        CompoundBatch?    @relation(fields: [compoundBatchNumber], references: [batchNumber])
-  grapheneRef             Graphene?         @relation(fields: [grapheneSample], references: [experimentNumber])
+  compoundBatchRef        CompoundBatch?     @relation(fields: [compoundBatchNumber], references: [batchNumber])
+  grapheneRef             Graphene?          @relation(fields: [grapheneSample], references: [experimentNumber])
   mcbMembership           MicronizationMCB? // Optional - only populated if part of an MCB
   particleSizeTests       ParticleSizeTest[]
   xrdTests                XRDTest[]
@@ -575,13 +575,13 @@ model Micronization {
 }
 
 model MicronizedCompoundBatch {
-  id                   String              @id @default(cuid())
-  mcbNumber            String              @unique @map("mcb_number")
-  totalRecoveredAmount Decimal?            @map("total_recovered_amount") @db.Decimal(10, 2)
-  mcbLocation          String?             @map("mcb_location")
-  combinedDate         DateTime?           @map("combined_date")
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
+  id                   String             @id @default(cuid())
+  mcbNumber            String             @unique @map("mcb_number")
+  totalRecoveredAmount Decimal?           @map("total_recovered_amount") @db.Decimal(10, 2)
+  mcbLocation          String?            @map("mcb_location")
+  combinedDate         DateTime?          @map("combined_date")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
   comments             String?
   micronizations       MicronizationMCB[]
   shipments            MaterialShipment[]
@@ -630,23 +630,23 @@ model NewsSource {
 }
 
 model NewsArticle {
-  id               String         @id @default(cuid())
-  title            String
-  summary          String?
-  content          String?
-  url              String         @unique
-  publishDate      DateTime       @map("publish_date")
-  fetchedAt        DateTime       @default(now()) @map("fetched_at")
-  category         NewsCategory
-  relevanceScore   Decimal        @map("relevance_score") @db.Decimal(4, 2)
-  contentHash      String         @unique @map("content_hash")
-  imageUrls        String[]       @map("image_urls")
-  keywordTags      String[]       @map("keyword_tags")
-  author           String?
-  readingTime      Int?           @map("reading_time")
-  sourceId         String         @map("source_id")
-  isBookmarked     Boolean        @default(false) @map("is_bookmarked")
-  viewCount        Int            @default(0) @map("view_count")
+  id                 String         @id @default(cuid())
+  title              String
+  summary            String?
+  content            String?
+  url                String         @unique
+  publishDate        DateTime       @map("publish_date")
+  fetchedAt          DateTime       @default(now()) @map("fetched_at")
+  category           NewsCategory
+  relevanceScore     Decimal        @map("relevance_score") @db.Decimal(4, 2)
+  contentHash        String         @unique @map("content_hash")
+  imageUrls          String[]       @map("image_urls")
+  keywordTags        String[]       @map("keyword_tags")
+  author             String?
+  readingTime        Int?           @map("reading_time")
+  sourceId           String         @map("source_id")
+  isBookmarked       Boolean        @default(false) @map("is_bookmarked")
+  viewCount          Int            @default(0) @map("view_count")
   laymanSummary      String?        @map("layman_summary") @db.Text
   summaryGenerated   Boolean        @default(false) @map("summary_generated")
   summaryError       String?        @map("summary_error")
@@ -655,8 +655,8 @@ model NewsArticle {
   summaryAttempts    Int            @default(0) @map("summary_attempts")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
-  source           NewsSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  bookmarks        UserBookmark[]
+  source             NewsSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  bookmarks          UserBookmark[]
 
   @@index([publishDate, relevanceScore])
   @@index([category, publishDate])
@@ -767,35 +767,35 @@ enum SummaryStatus {
 }
 
 model KnowledgeDocument {
-  id                    String            @id @default(cuid())
-  title                 String
-  description           String?
-  filename              String            @map("filename")
-  originalName          String            @map("original_name")
-  filePath              String            @map("file_path")
-  fileSize              Int?              @map("file_size")
-  mimeType              String?           @map("mime_type")
-  documentType          DocumentType      @map("document_type")
-  documentCategory      DocumentCategory? @map("document_category")
-  researchAreas         String[]          @map("research_areas")
-  keywords              String[]
-  authors               String[]
-  publicationDate       DateTime?         @map("publication_date")
-  uploadedAt            DateTime          @default(now()) @map("uploaded_at")
-  updatedAt             DateTime          @updatedAt @map("updated_at")
-  processingStatus      ProcessingStatus  @default(PENDING) @map("processing_status")
-  extractedText         String?           @map("extracted_text") @db.Text
-  summary               String?           @map("summary") @db.Text
-  laymanSummary         String?           @map("layman_summary") @db.Text
-  keyFindings           String[]          @map("key_findings")
-  relevanceScore        Decimal?          @map("relevance_score") @db.Decimal(4, 2)
-  contentHash           String?           @unique @map("content_hash")
-  processingError       String?           @map("processing_error")
-  processingAttempts    Int               @default(0) @map("processing_attempts")
-  lastProcessedAt       DateTime?         @map("last_processed_at")
-  isActive              Boolean           @default(true) @map("is_active")
-  tags                  String[]
-  metadata              Json?             // Additional flexible metadata
+  id                 String            @id @default(cuid())
+  title              String
+  description        String?
+  filename           String            @map("filename")
+  originalName       String            @map("original_name")
+  filePath           String            @map("file_path")
+  fileSize           Int?              @map("file_size")
+  mimeType           String?           @map("mime_type")
+  documentType       DocumentType      @map("document_type")
+  documentCategory   DocumentCategory? @map("document_category")
+  researchAreas      String[]          @map("research_areas")
+  keywords           String[]
+  authors            String[]
+  publicationDate    DateTime?         @map("publication_date")
+  uploadedAt         DateTime          @default(now()) @map("uploaded_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  processingStatus   ProcessingStatus  @default(PENDING) @map("processing_status")
+  extractedText      String?           @map("extracted_text") @db.Text
+  summary            String?           @map("summary") @db.Text
+  laymanSummary      String?           @map("layman_summary") @db.Text
+  keyFindings        String[]          @map("key_findings")
+  relevanceScore     Decimal?          @map("relevance_score") @db.Decimal(4, 2)
+  contentHash        String?           @unique @map("content_hash")
+  processingError    String?           @map("processing_error")
+  processingAttempts Int               @default(0) @map("processing_attempts")
+  lastProcessedAt    DateTime?         @map("last_processed_at")
+  isActive           Boolean           @default(true) @map("is_active")
+  tags               String[]
+  metadata           Json? // Additional flexible metadata
 
   @@index([documentType, processingStatus])
   @@index([documentCategory, uploadedAt])
@@ -864,22 +864,25 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  createdTasks   Task[]         @relation("TaskCreator")
+  createdTasks    Task[]           @relation("TaskCreator")
   taskAssignments TaskAssignment[] @relation("TaskAssignmentUser")
-  taskComments   TaskComment[]  @relation("TaskCommentAuthor")
-  taskActivities  TaskActivity[]  @relation("TaskActivityUser")
+  taskComments    TaskComment[]    @relation("TaskCommentAuthor")
+  taskActivities  TaskActivity[]   @relation("TaskActivityUser")
   taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
 
-  ownedGoals     Goal[]         @relation("GoalOwner")
-  createdGoals   Goal[]         @relation("GoalCreator")
+  ownedGoals   Goal[] @relation("GoalOwner")
+  createdGoals Goal[] @relation("GoalCreator")
 
-  ownedContacts        Contact[]            @relation("ContactOwner")
-  ownedDeals           Deal[]               @relation("DealOwner")
-  contactActivities    ContactActivity[]    @relation("ContactActivityUser")
-  dealActivities       DealActivity[]       @relation("DealActivityUser")
-  contactAttachments   ContactAttachment[]  @relation("ContactAttachmentUploader")
+  ownedContacts      Contact[]           @relation("ContactOwner")
+  ownedDeals         Deal[]              @relation("DealOwner")
+  contactActivities  ContactActivity[]   @relation("ContactActivityUser")
+  dealActivities     DealActivity[]      @relation("DealActivityUser")
+  contactAttachments ContactAttachment[] @relation("ContactAttachmentUploader")
 
-  proformaScenarios    ProformaScenario[]   @relation("ProformaCreator")
+  proformaScenarios ProformaScenario[] @relation("ProformaCreator")
+
+  emailPreferences UserEmailPreferences? @relation("UserEmailPrefs")
+  emailLogs        EmailLog[]            @relation("UserEmailLog")
 
   @@index([username])
   @@index([email])
@@ -905,13 +908,13 @@ model ProformaScenario {
 
 model CharacterizationReference {
   id          String    @id @default(cuid())
-  source      String    // "Dr. Li", "ISO", "ASTM", "GEIC Raw", "GEIC Milled", etc.
+  source      String // "Dr. Li", "ISO", "ASTM", "GEIC Raw", "GEIC Milled", etc.
   sourceType  String    @map("source_type") // "academic", "standard", "external_lab", "production"
   testType    String    @map("test_type") // "BET", "Conductivity", "RAMAN", "XPS", "ICP-OES", "TGA", etc.
   value       Decimal?  @db.Decimal(20, 6)
   valueString String?   @map("value_string") // For non-numeric values or complex notations
   unit        String?
-  conditions  Json?     // { pressure: "20kN", temperature: "25C", etc. }
+  conditions  Json? // { pressure: "20kN", temperature: "25C", etc. }
   testDate    DateTime? @map("test_date")
   notes       String?
   isRange     Boolean   @default(false) @map("is_range") // For standards that specify ranges
@@ -956,8 +959,8 @@ model Task {
   costPaid   Boolean   @default(false) @map("cost_paid")
   costPaidAt DateTime? @map("cost_paid_at")
 
-  creatorId  String  @map("creator_id")
-  creator    User    @relation("TaskCreator", fields: [creatorId], references: [id])
+  creatorId String @map("creator_id")
+  creator   User   @relation("TaskCreator", fields: [creatorId], references: [id])
 
   parentId String? @map("parent_id")
   parent   Task?   @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
@@ -966,7 +969,7 @@ model Task {
   goalId String? @map("goal_id")
   goal   Goal?   @relation("GoalTasks", fields: [goalId], references: [id], onDelete: SetNull)
 
-  assignees   TaskAssignment[]
+  assignees TaskAssignment[]
 
   comments    TaskComment[]
   activities  TaskActivity[]
@@ -1118,7 +1121,7 @@ model TaskAttachment {
 
 enum ContactType {
   CLIENT
-  INVESTOR           // displayed as "Potential Investor"
+  INVESTOR // displayed as "Potential Investor"
   EXISTING_INVESTOR
   PARTNER
   OTHER
@@ -1130,43 +1133,43 @@ enum ContactKind {
 }
 
 model Contact {
-  id              String      @id @default(cuid())
-  name            String
-  contactKind     ContactKind @default(PERSON) @map("contact_kind")
-  email           String?
-  phone           String?
-  role            String?
-  contactType     ContactType? @map("contact_type")  // legacy: pipeline board membership (single)
-  contactTypes    ContactType[] @default([]) @map("contact_types") // multi-categorization labels
-  source          String?
-  tags            String[]    @default([])
-  notes           String?     @db.Text
-  linkedInUrl     String?     @map("linkedin_url")
-  website         String?
+  id           String        @id @default(cuid())
+  name         String
+  contactKind  ContactKind   @default(PERSON) @map("contact_kind")
+  email        String?
+  phone        String?
+  role         String?
+  contactType  ContactType?  @map("contact_type") // legacy: pipeline board membership (single)
+  contactTypes ContactType[] @default([]) @map("contact_types") // multi-categorization labels
+  source       String?
+  tags         String[]      @default([])
+  notes        String?       @db.Text
+  linkedInUrl  String?       @map("linkedin_url")
+  website      String?
 
   // Self-referential: a Person can belong to a Company
-  companyId       String?     @map("company_id")
-  companyContact  Contact?    @relation("CompanyPeople", fields: [companyId], references: [id])
-  people          Contact[]   @relation("CompanyPeople")
+  companyId      String?   @map("company_id")
+  companyContact Contact?  @relation("CompanyPeople", fields: [companyId], references: [id])
+  people         Contact[] @relation("CompanyPeople")
 
-  ownerId         String?     @map("owner_id")
-  owner           User?       @relation("ContactOwner", fields: [ownerId], references: [id])
+  ownerId String? @map("owner_id")
+  owner   User?   @relation("ContactOwner", fields: [ownerId], references: [id])
 
   // Pipeline fields (null stage = not on any pipeline board)
-  pipelineTitle   String?     @map("pipeline_title")
-  stage           String?
-  position        Int         @default(0)
-  closedAt        DateTime?   @map("closed_at")
-  lostReason      String?     @map("lost_reason")
+  pipelineTitle String?   @map("pipeline_title")
+  stage         String?
+  position      Int       @default(0)
+  closedAt      DateTime? @map("closed_at")
+  lostReason    String?   @map("lost_reason")
 
-  lastContactedAt DateTime?   @map("last_contacted_at")
-  nextFollowUpAt  DateTime?   @map("next_follow_up_at")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  lastContactedAt DateTime? @map("last_contacted_at")
+  nextFollowUpAt  DateTime? @map("next_follow_up_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  deals           Deal[]
-  activities      ContactActivity[]
-  attachments     ContactAttachment[]
+  deals       Deal[]
+  activities  ContactActivity[]
+  attachments ContactAttachment[]
 
   @@index([contactKind])
   @@index([contactType])
@@ -1191,14 +1194,14 @@ model Deal {
   lostReason  String?  @map("lost_reason")
   tags        String[] @default([])
 
-  ownerId     String?  @map("owner_id")
-  owner       User?    @relation("DealOwner", fields: [ownerId], references: [id])
+  ownerId String? @map("owner_id")
+  owner   User?   @relation("DealOwner", fields: [ownerId], references: [id])
 
-  closedAt    DateTime? @map("closed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  closedAt  DateTime? @map("closed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  activities  DealActivity[]
+  activities DealActivity[]
 
   @@index([contactId])
   @@index([stage])
@@ -1209,15 +1212,15 @@ model Deal {
 }
 
 model ContactActivity {
-  id        String   @id @default(cuid())
-  contactId String   @map("contact_id")
-  userId    String   @map("user_id")
+  id        String  @id @default(cuid())
+  contactId String  @map("contact_id")
+  userId    String  @map("user_id")
   action    String
-  content   String?  @db.Text
-  fromValue String?  @map("from_value")
-  toValue   String?  @map("to_value")
-  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user      User     @relation("ContactActivityUser", fields: [userId], references: [id])
+  content   String? @db.Text
+  fromValue String? @map("from_value")
+  toValue   String? @map("to_value")
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user      User    @relation("ContactActivityUser", fields: [userId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1226,15 +1229,15 @@ model ContactActivity {
 }
 
 model DealActivity {
-  id        String   @id @default(cuid())
-  dealId    String   @map("deal_id")
-  userId    String   @map("user_id")
+  id        String  @id @default(cuid())
+  dealId    String  @map("deal_id")
+  userId    String  @map("user_id")
   action    String
-  content   String?  @db.Text
-  fromValue String?  @map("from_value")
-  toValue   String?  @map("to_value")
-  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  user      User     @relation("DealActivityUser", fields: [userId], references: [id])
+  content   String? @db.Text
+  fromValue String? @map("from_value")
+  toValue   String? @map("to_value")
+  deal      Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user      User    @relation("DealActivityUser", fields: [userId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1256,4 +1259,77 @@ model ContactAttachment {
 
   @@index([contactId, createdAt])
   @@map("contact_attachments")
+}
+
+// Per-user email notification preferences. 1:1 with User; lazy-created on first read.
+model UserEmailPreferences {
+  userId            String    @id @map("user_id")
+  user              User      @relation("UserEmailPrefs", fields: [userId], references: [id], onDelete: Cascade)
+  weeklyDigest      Boolean   @default(true) @map("weekly_digest")
+  dueTomorrow       Boolean   @default(true) @map("due_tomorrow")
+  overdue3Day       Boolean   @default(true) @map("overdue_3_day")
+  overdue6Day       Boolean   @default(true) @map("overdue_6_day")
+  overdue9Day       Boolean   @default(true) @map("overdue_9_day")
+  onlyMyTasks       Boolean   @default(true) @map("only_my_tasks")
+  includeUnassigned Boolean   @default(false) @map("include_unassigned")
+  timezone          String    @default("America/Los_Angeles")
+  unsubscribedAt    DateTime? @map("unsubscribed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("user_email_preferences")
+}
+
+// Singleton row (id = "default") storing global email settings, edited by superadmin only.
+model EmailSettings {
+  id                    String    @id @default("default")
+  weeklyDigestEnabled   Boolean   @default(true) @map("weekly_digest_enabled")
+  dueTomorrowEnabled    Boolean   @default(true) @map("due_tomorrow_enabled")
+  overdueAlertsEnabled  Boolean   @default(true) @map("overdue_alerts_enabled")
+  fromAddress           String    @default("HGraphene <no-reply@hgraphene.com>") @map("from_address")
+  replyTo               String?   @map("reply_to")
+  testRecipient         String?   @map("test_recipient")
+  templateIdWeekly      Int?      @map("template_id_weekly")
+  templateIdDueTomorrow Int?      @map("template_id_due_tomorrow")
+  templateIdOverdue     Int?      @map("template_id_overdue")
+  lastWeeklyRunAt       DateTime? @map("last_weekly_run_at")
+  lastDueTomorrowRunAt  DateTime? @map("last_due_tomorrow_run_at")
+  lastOverdueRunAt      DateTime? @map("last_overdue_run_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("email_settings")
+}
+
+enum EmailType {
+  WEEKLY_DIGEST
+  DUE_TOMORROW
+  OVERDUE_3
+  OVERDUE_6
+  OVERDUE_9
+  TEST
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// Audit log + idempotency guard for outbound emails.
+model EmailLog {
+  id             String      @id @default(cuid())
+  userId         String?     @map("user_id")
+  user           User?       @relation("UserEmailLog", fields: [userId], references: [id], onDelete: SetNull)
+  recipient      String
+  type           EmailType
+  status         EmailStatus
+  idempotencyKey String      @unique @map("idempotency_key")
+  taskIds        String[]    @default([]) @map("task_ids")
+  templateId     Int?        @map("template_id")
+  errorMessage   String?     @map("error_message")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("email_logs")
 }
