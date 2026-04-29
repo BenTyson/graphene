@@ -53,6 +53,9 @@ import { getAddToPipelineModalHtml } from './components/modals/AddToPipelineModa
 import { getContactDetailPanelHtml } from './components/modals/ContactDetailPanel.js';
 import { getProformaTabHtml } from './components/tabs/ProformaTab.js';
 import proformaService from './services/ProformaService.js';
+import { getEmailAdminTabHtml } from './components/tabs/EmailAdminTab.js';
+import { getEmailPreferencesModalHtml } from './components/modals/EmailPreferencesModal.js';
+import emailService from './services/EmailService.js';
 
 // Import new components for simplified cards and modals
 import './components/cards/SimplifiedGrapheneCard.js';
@@ -132,6 +135,8 @@ window.getAIInsightsTabHtml = getAIInsightsTabHtml;
 
 window.getNewsTabHtml = getNewsTabHtml;
 window.getProformaTabHtml = getProformaTabHtml;
+window.getEmailAdminTabHtml = getEmailAdminTabHtml;
+window.getEmailPreferencesModalHtml = getEmailPreferencesModalHtml;
 
 // Global safe date formatting function
 window.formatDateSafe = function(dateString) {
@@ -158,6 +163,23 @@ window.formatDateSafe = function(dateString) {
   }
 };
 
+// Relative timestamp helper — "2h ago", "3d ago", etc.
+window.formatRelativeTime = function(dateString) {
+  if (!dateString) return '—';
+  try {
+    const diff = Date.now() - new Date(dateString).getTime();
+    if (isNaN(diff)) return '—';
+    const abs = Math.abs(diff);
+    if (abs < 60000) return 'just now';
+    if (abs < 3600000) return Math.floor(abs / 60000) + 'm ago';
+    if (abs < 86400000) return Math.floor(abs / 3600000) + 'h ago';
+    if (abs < 604800000) return Math.floor(abs / 86400000) + 'd ago';
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return '—';
+  }
+};
+
 // Main Alpine.js application
 window.grapheneApp = function() {
   return {
@@ -170,7 +192,32 @@ window.grapheneApp = function() {
     sidebarProductionOpen: false,
     sidebarAnalyticsOpen: false,
     sidebarTestResultsOpen: false,
-    
+
+    // Email admin tab state
+    emailAdminSection: 'settings',
+    emailSettings: null,
+    emailSettingsForm: null,
+    emailSettingsLoading: false,
+    emailSettingsSaving: false,
+    emailSettingsSuccess: false,
+    emailSparrowConfigured: false,
+    emailTestForm: { to: '', kind: 'transactional', templateId: '', data: '{}', subject: '', html: '' },
+    emailTestSending: false,
+    emailTestResults: [],
+    emailLogs: [],
+    emailLogsLoading: false,
+    emailLogsFilter: { type: '', status: '', userId: '' },
+    emailLogsExpanded: null,
+
+    // Email preferences modal state
+    showEmailPrefs: false,
+    emailPrefs: null,
+    emailPrefsForm: null,
+    emailPrefsLoading: false,
+    emailPrefsSaving: false,
+    emailPrefsSuccess: false,
+    emailTimezones: emailService.getTimezoneList(),
+
     // Initialize app and handle initial route
     init() {
       this.initSidebarState();
@@ -198,7 +245,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
 
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -210,7 +257,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -4336,6 +4383,9 @@ window.grapheneApp = function() {
           }
         } else if (tab === 'user-management') {
           await this.loadUsers();
+        } else if (tab === 'email-admin') {
+          await this.loadEmailSettings();
+          await this.loadEmailLogs();
         } else if (tab === 'news') {
           console.log(`[Navigation] Initializing news tab: ${tab}`);
           await this.initializeNewsTab();
@@ -4911,6 +4961,20 @@ window.grapheneApp = function() {
         await this.loadUsers();
       }
     },
+
+    // Email admin — delegate methods
+    async loadEmailSettings() { await emailService.loadEmailSettings(this); },
+    async saveEmailSettings() { await emailService.saveEmailSettings(this); },
+    async sendTestEmail() { await emailService.sendTestEmail(this); },
+    async loadEmailLogs() { await emailService.loadEmailLogs(this); },
+    async subscribeUserToEmail(userId) { await emailService.subscribeUser(this, userId); },
+
+    // Email preferences — delegate methods
+    async openEmailPrefs() { emailService.openEmailPrefs(this); },
+    closeEmailPrefs() { emailService.closeEmailPrefs(this); },
+    async saveEmailPreferences() { await emailService.saveEmailPreferences(this); },
+    async pauseEmails() { await emailService.pauseEmails(this); },
+    async resumeEmails() { await emailService.resumeEmails(this); },
 
     // Update current user from AuthService
     updateCurrentUser() {
@@ -5819,6 +5883,7 @@ window.grapheneApp = function() {
         'shipments': 'Shipments', 'analysis': 'Analysis',
         'ai-insights': 'Insights', 'tasks': 'Tasks', 'goals': 'Goals', 'pipeline': 'Pipeline', 'proforma': 'Proforma',
         'user-management': 'User Management',
+        'email-admin': 'Email',
         'test-bet': 'BET', 'test-conductivity': 'Conductivity',
         'test-raman': 'RAMAN', 'test-tem': 'TEM',
         'test-particle-size': 'Particle Size', 'test-xrd': 'XRD',
