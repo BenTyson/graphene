@@ -106,13 +106,22 @@ function shapeTaskForTemplate(t) {
     title: t.title,
     status: t.status,
     priority: t.priority,
-    due_date: t.dueDate ? t.dueDate.toISOString() : null,
+    due_date: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
     goal: t.goal ? { id: t.goal.id, title: t.goal.title } : null,
   };
 }
 
 /**
  * Weekly digest payload for one user. Returns null if user opted out or empty.
+ *
+ * Sections:
+ *   - overdue, due_this_week: actionable now
+ *   - recently_done: positive reinforcement, last 7d
+ *   - goal_progress: ACTIVE goals the user has any visible task in (done/total/pct)
+ *   - upcoming_due_soon_count: tasks due in the 14d after this week (preview only)
+ *
+ * Send/skip rule: skip only when both overdue and due_this_week are empty —
+ * a digest with only "recently completed" or "goal progress" is noise.
  */
 export async function buildWeeklyDigest(user, now = new Date()) {
   const prefs = user.emailPreferences;
@@ -123,11 +132,29 @@ export async function buildWeeklyDigest(user, now = new Date()) {
   const weekStart = new Date(`${todayYmd}T00:00:00Z`);
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
+  const upcomingEnd = new Date(weekEnd);
+  upcomingEnd.setUTCDate(weekEnd.getUTCDate() + 14);
+  const weekAgo = new Date(weekStart);
+  weekAgo.setUTCDate(weekStart.getUTCDate() - 7);
 
   const tasks = await tasksVisibleToUser(user);
   const overdue = [];
   const dueThisWeek = [];
+  let upcomingDueSoonCount = 0;
+  const goalsMap = new Map();
+
   for (const t of tasks) {
+    // Goal progress aggregation (across all visible non-archived tasks).
+    if (t.goal && t.goal.status === 'ACTIVE') {
+      let g = goalsMap.get(t.goal.id);
+      if (!g) {
+        g = { id: t.goal.id, title: t.goal.title, total: 0, done: 0 };
+        goalsMap.set(t.goal.id, g);
+      }
+      g.total++;
+      if (t.status === 'DONE') g.done++;
+    }
+
     if (t.status === 'DONE') continue;
     if (!t.dueDate) continue;
     const od = daysOverdue(t.dueDate, now, tz);
@@ -135,10 +162,23 @@ export async function buildWeeklyDigest(user, now = new Date()) {
       overdue.push({ ...shapeTaskForTemplate(t), days_overdue: od });
     } else if (t.dueDate < weekEnd) {
       dueThisWeek.push(shapeTaskForTemplate(t));
+    } else if (t.dueDate < upcomingEnd) {
+      upcomingDueSoonCount++;
     }
   }
 
   if (!overdue.length && !dueThisWeek.length) return null;
+
+  const recentlyDoneTasks = await tasksVisibleToUser(user, {
+    status: 'DONE',
+    updatedAt: { gte: weekAgo },
+  });
+  recentlyDoneTasks.sort((a, b) => b.updatedAt - a.updatedAt);
+  const recentlyDone = recentlyDoneTasks.map(shapeTaskForTemplate);
+
+  const goalProgress = [...goalsMap.values()]
+    .map((g) => ({ ...g, pct: g.total ? Math.round((g.done / g.total) * 100) : 0 }))
+    .sort((a, b) => b.pct - a.pct);
 
   return {
     to: user.email,
@@ -146,11 +186,22 @@ export async function buildWeeklyDigest(user, now = new Date()) {
       user_name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
       week_label: `Week of ${todayYmd}`,
       overdue,
+      overdue_count: overdue.length,
       due_this_week: dueThisWeek,
+      due_this_week_count: dueThisWeek.length,
+      recently_done: recentlyDone,
+      recently_done_count: recentlyDone.length,
+      goal_progress: goalProgress,
+      goal_progress_count: goalProgress.length,
+      upcoming_due_soon_count: upcomingDueSoonCount,
       total_count: overdue.length + dueThisWeek.length,
     },
     idempotencyKey: `weekly-digest-${user.id}-${isoWeekKey(now, tz)}`,
-    taskIds: [...overdue, ...dueThisWeek].map((t) => t.id),
+    taskIds: [
+      ...overdue.map((t) => t.id),
+      ...dueThisWeek.map((t) => t.id),
+      ...recentlyDone.map((t) => t.id),
+    ],
   };
 }
 
@@ -181,6 +232,7 @@ export async function buildDueTomorrow(user, now = new Date()) {
       user_name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
       tasks: tasks.map(shapeTaskForTemplate),
       count: tasks.length,
+      title: tasks.length === 1 ? tasks[0].title : null,
       due_date_label: tomorrowYmd,
     },
     idempotencyKey: `due-tomorrow-${user.id}-${tomorrowYmd}`,
@@ -229,6 +281,7 @@ export async function buildOverduePayloads(user, now = new Date()) {
         days,
         tasks: list.map(shapeTaskForTemplate),
         count: list.length,
+        title: list.length === 1 ? list[0].title : null,
       },
       // Single key per (user, bucket, day) — all tasks in that bucket share the email.
       idempotencyKey: `overdue-${days}-${user.id}-${todayYmd}`,
