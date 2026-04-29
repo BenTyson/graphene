@@ -1477,6 +1477,37 @@ export const goalsAPI = {
   }
 };
 
+// Email API endpoints
+export const emailAPI = {
+  getSettings: () =>
+    fetch(`${API_BASE}/email/settings`).then(handleResponse),
+
+  updateSettings: (data) =>
+    jsonRequest(`${API_BASE}/email/settings`, 'PUT', data),
+
+  getPreferences: () =>
+    fetch(`${API_BASE}/email/preferences`).then(handleResponse),
+
+  updatePreferences: (data) =>
+    jsonRequest(`${API_BASE}/email/preferences`, 'PUT', data),
+
+  getLogs: ({ type, status, userId, limit } = {}) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (status) params.set('status', status);
+    if (userId) params.set('userId', userId);
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return fetch(`${API_BASE}/email/logs${qs ? '?' + qs : ''}`).then(handleResponse);
+  },
+
+  sendTest: (data) =>
+    jsonRequest(`${API_BASE}/email/test`, 'POST', data),
+
+  subscribeUser: (userId) =>
+    jsonRequest(`${API_BASE}/email/subscribe/${userId}`, 'POST'),
+};
+
 // Default export with all APIs
 export default {
   biochar: biocharAPI,
@@ -1499,5 +1530,6 @@ export default {
   goals: goalsAPI,
   tags: tagsAPI,
   pipeline: pipelineAPI,
-  proforma: proformaAPI
+  proforma: proformaAPI,
+  email: emailAPI,
 };

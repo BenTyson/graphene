@@ -72,6 +72,58 @@ the templates use): `{{ .path }}`, `{{ if … }}/{{ else }}/{{ end }}`,
 ranges. If a template ever needs more than this, extend
 `scripts/preview-email.mjs` rather than adding a real Go template engine.
 
+## cron-job.org wiring
+
+Create three jobs at [cron-job.org](https://cron-job.org) after staging is verified. Do **not** use
+`migrate dev` or any schema changes — just add the three entries below.
+
+### Job specs (copy-paste ready)
+
+| Job | URL | Schedule | Timezone |
+|-----|-----|----------|----------|
+| Weekly digest | `POST https://admin.hgraphene.com/api/email/cron/weekly-digest` | `0 8 * * 1` (Mon 08:00) | America/Los_Angeles |
+| Due tomorrow | `POST https://admin.hgraphene.com/api/email/cron/due-tomorrow` | `0 16 * * *` (Daily 16:00) | America/Los_Angeles |
+| Overdue alerts | `POST https://admin.hgraphene.com/api/email/cron/overdue-alerts` | `0 9 * * *` (Daily 09:00) | America/Los_Angeles |
+
+### Required header (all three jobs)
+
+```
+Authorization: Bearer <EMAIL_CRON_SECRET>
+```
+
+The value of `EMAIL_CRON_SECRET` lives in your Railway environment variables.
+Copy it from the Railway dashboard → your service → Variables.
+
+### cron-job.org settings per job
+
+1. **URL**: as shown above (production URL)
+2. **Request method**: `POST`
+3. **Headers**: add `Authorization` → `Bearer <secret>`
+4. **Body**: leave empty (no body required)
+5. **Schedule**: use the cron expression above; set timezone to `America/Los_Angeles`
+6. **Notifications**: enable "on failure" so you're alerted if the secret expires
+
+### Staging equivalent
+
+For the staging environment replace `admin.hgraphene.com` with your Railway
+staging URL. The `EMAIL_CRON_SECRET` may differ between environments — check
+Railway staging variables separately.
+
+### Verification after wiring
+
+```bash
+# Fire manually to confirm the secret and URL work
+curl -X POST https://admin.hgraphene.com/api/email/cron/weekly-digest \
+  -H "Authorization: Bearer $EMAIL_CRON_SECRET"
+# Expected: {"success":true,"sent":N,"skipped":M,"failed":0,"errors":[]}
+```
+
+The Email admin tab (super-admin only) shows `lastWeeklyRunAt`,
+`lastDueTomorrowRunAt`, and `lastOverdueRunAt` timestamps so you can
+confirm each job fired without checking logs.
+
+---
+
 ## Testing the full send path
 
 After IDs are wired, fire each cron endpoint against staging with the
