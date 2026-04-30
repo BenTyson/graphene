@@ -322,7 +322,7 @@ function _outlookTable() {
             </tr>
           </thead>
           <tbody>
-            <template x-for="(row, ri) in getProformaOutlookRows()" :key="row.key">
+            <template x-for="(row, ri) in getProformaOutlookRows()" :key="proformaOutlookView + '_' + row.key">
               <tr x-show="!row.child || !proformaCollapsed[row.parentKey]"
                   :class="{
                     'border-t border-gray-300 bg-gray-50': row.bold || row.category,
