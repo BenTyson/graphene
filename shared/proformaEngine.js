@@ -124,27 +124,32 @@ function computeProduction(machines, prod, mfg) {
   const pilotRatePerHourKg = graphenePerHourKg(p.smallKilnCuFtPerHour);
   const broderickRatePerHourKg = graphenePerHourKg(p.largeKilnCuFtPerHour);
 
-  // Pre-compute monthly production for each kiln type by phase
-  const pilotMonthlyByPhase = p.phases.map(ph =>
+  // Each kiln type runs on its own schedule (hoursPerDay × daysPerMonth per
+  // phase). Production rate AND op cost both follow the matching schedule —
+  // labor/maintenance scale with that machine type's monthly shifts.
+  const pilotPhases = p.phasesByMachineType.pilot;
+  const broderickPhases = p.phasesByMachineType.broderick;
+
+  const pilotMonthlyByPhase = pilotPhases.map(ph =>
     pilotRatePerHourKg * ph.hoursPerDay * ph.daysPerMonth
   );
-  const broderickMonthlyByPhase = p.phases.map(ph =>
+  const broderickMonthlyByPhase = broderickPhases.map(ph =>
     broderickRatePerHourKg * ph.hoursPerDay * ph.daysPerMonth
   );
 
-  // Pre-compute monthly operating costs by phase (same for pilot and broderick)
   const totalFteMonthlyCost = mfg.fteRoles.reduce((sum, r) => sum + r.count * r.monthlyCost, 0);
   const costPerShift = totalFteMonthlyCost / mfg.shiftsPerMonth;
 
-  // Shifts per month by phase: (hoursPerDay / 8) * daysPerMonth
-  const shiftsPerMonthByPhase = p.phases.map(ph =>
-    (ph.hoursPerDay / 8) * ph.daysPerMonth
-  );
-  const baseCostByPhase = shiftsPerMonthByPhase.map(shifts => {
+  const buildBaseCostByPhase = phasesArr => phasesArr.map(ph => {
+    const shifts = (ph.hoursPerDay / 8) * ph.daysPerMonth;
     const laborCost = shifts * costPerShift;
     const maintenance = laborCost * mfg.maintenanceContingencyPct;
     return laborCost + maintenance;
   });
+  const baseCostByPhase = {
+    pilot: buildBaseCostByPhase(pilotPhases),
+    broderick: buildBaseCostByPhase(broderickPhases)
+  };
 
   // Initialize monthly arrays
   const monthlyGrapheneKg = new Array(MONTHS_TOTAL).fill(0);
@@ -163,7 +168,9 @@ function computeProduction(machines, prod, mfg) {
       monthlyCapex: new Array(MONTHS_TOTAL).fill(0)
     };
 
-    const rateByPhase = machine.type === 'broderick' ? broderickMonthlyByPhase : pilotMonthlyByPhase;
+    const isBroderick = machine.type === 'broderick';
+    const rateByPhase = isBroderick ? broderickMonthlyByPhase : pilotMonthlyByPhase;
+    const costByPhase = isBroderick ? baseCostByPhase.broderick : baseCostByPhase.pilot;
 
     // CapEx payments
     for (const payment of machine.payments) {
@@ -202,7 +209,7 @@ function computeProduction(machines, prod, mfg) {
         ? machine.costPhaseOverride
         : globalPhase;
       const efficiency = p.efficiencyByYear[year] || p.efficiencyByYear[p.efficiencyByYear.length - 1];
-      const opCost = baseCostByPhase[costPhase] * efficiency;
+      const opCost = costByPhase[costPhase] * efficiency;
       timeline.monthlyOpCost[m] = opCost;
       monthlyManufacturingCost[m] += opCost;
     }

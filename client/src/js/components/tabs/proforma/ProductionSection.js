@@ -29,35 +29,54 @@ export function getProductionSection() {
       ...HELP['production.largeKilnCuFtPerHour'] }
   ];
 
-  const phaseSchedule = `
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <template x-for="(phase, pi) in proformaAssumptions.production.phases" :key="pi">
-        <div class="border border-gray-100 rounded-lg p-3">
-          <div class="text-xs font-semibold text-gray-600 mb-2"
-               x-text="'Phase ' + (pi+1) + ' (Mo ' + (pi === 0 ? '0-23' : pi === 1 ? '24-35' : '36-47') + ')'"></div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Hrs / day</label>
-              <input type="number"
-                     :value="proformaAssumptions.production.phases[pi].hoursPerDay"
-                     @input="proformaAssumptions.production.phases[pi].hoursPerDay = +$event.target.value; proformaRecompute()"
-                     class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+  const phaseGrid = (kilnType, label) => `
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-700">${label}</h4>
+        ${kilnType === 'broderick' ? `
+          <button type="button"
+                  @click="proformaAssumptions.production.phasesByMachineType.broderick = proformaAssumptions.production.phasesByMachineType.pilot.map(p => ({ ...p })); proformaRecompute()"
+                  class="text-[10px] uppercase tracking-wide text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline">
+            Copy from pilot
+          </button>
+        ` : ''}
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <template x-for="(phase, pi) in proformaAssumptions.production.phasesByMachineType.${kilnType}" :key="pi">
+          <div class="border border-gray-100 rounded-lg p-3">
+            <div class="text-xs font-semibold text-gray-600 mb-2"
+                 x-text="'Phase ' + (pi+1) + ' (Mo ' + (pi === 0 ? '0-23' : pi === 1 ? '24-35' : '36-47') + ')'"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Hrs / day</label>
+                <input type="number"
+                       :value="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay"
+                       @input="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay = +$event.target.value; proformaRecompute()"
+                       class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+              </div>
+              <div>
+                <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Days / mo</label>
+                <input type="number"
+                       :value="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth"
+                       @input="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth = +$event.target.value; proformaRecompute()"
+                       class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+              </div>
             </div>
-            <div>
-              <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Days / mo</label>
-              <input type="number"
-                     :value="proformaAssumptions.production.phases[pi].daysPerMonth"
-                     @input="proformaAssumptions.production.phases[pi].daysPerMonth = +$event.target.value; proformaRecompute()"
-                     class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
-            </div>
+            <span class="block text-[10px] text-gray-400 font-mono mt-1.5"
+                  x-text="'= ' + (proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay * proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth) + ' hrs/mo'"></span>
           </div>
-          <span class="block text-[10px] text-gray-400 font-mono mt-1.5"
-                x-text="'= ' + (proformaAssumptions.production.phases[pi].hoursPerDay * proformaAssumptions.production.phases[pi].daysPerMonth) + ' hrs/mo'"></span>
-        </div>
-      </template>
+        </template>
+      </div>
     </div>
-    <p class="text-[11px] text-gray-500 leading-snug mt-3">
-      Hours × days per phase sets the monthly run-time. Feeds monthly production (kg) which feeds revenue.
+  `;
+
+  const phaseSchedule = `
+    <div class="space-y-5">
+      ${phaseGrid('pilot', 'Pilot kilns')}
+      ${phaseGrid('broderick', 'Broderick kilns')}
+    </div>
+    <p class="text-[11px] text-gray-500 leading-snug mt-4">
+      Hours × days per phase sets each kiln type's monthly run-time. Feeds monthly production (kg) and labor/maintenance op cost. Phase indices match machine-level phase overrides on the Machines tab.
     </p>
   `;
 
