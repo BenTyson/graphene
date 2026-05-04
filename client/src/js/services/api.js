@@ -1478,18 +1478,32 @@ export const goalsAPI = {
 };
 
 // Email API endpoints
+// All endpoints require auth — settings/test/logs/subscribe are super-admin only.
+const _emailAuthHeaders = (json = false) => ({
+  ...(json ? { 'Content-Type': 'application/json' } : {}),
+  ...window.authService?.getAuthHeader()
+});
+
 export const emailAPI = {
   getSettings: () =>
-    fetch(`${API_BASE}/email/settings`).then(handleResponse),
+    fetch(`${API_BASE}/email/settings`, { headers: _emailAuthHeaders() }).then(handleResponse),
 
   updateSettings: (data) =>
-    jsonRequest(`${API_BASE}/email/settings`, 'PUT', data),
+    fetch(`${API_BASE}/email/settings`, {
+      method: 'PUT',
+      headers: _emailAuthHeaders(true),
+      body: JSON.stringify(data)
+    }).then(handleResponse),
 
   getPreferences: () =>
-    fetch(`${API_BASE}/email/preferences`).then(handleResponse),
+    fetch(`${API_BASE}/email/preferences`, { headers: _emailAuthHeaders() }).then(handleResponse),
 
   updatePreferences: (data) =>
-    jsonRequest(`${API_BASE}/email/preferences`, 'PUT', data),
+    fetch(`${API_BASE}/email/preferences`, {
+      method: 'PUT',
+      headers: _emailAuthHeaders(true),
+      body: JSON.stringify(data)
+    }).then(handleResponse),
 
   getLogs: ({ type, status, userId, limit } = {}) => {
     const params = new URLSearchParams();
@@ -1498,14 +1512,23 @@ export const emailAPI = {
     if (userId) params.set('userId', userId);
     if (limit) params.set('limit', String(limit));
     const qs = params.toString();
-    return fetch(`${API_BASE}/email/logs${qs ? '?' + qs : ''}`).then(handleResponse);
+    return fetch(`${API_BASE}/email/logs${qs ? '?' + qs : ''}`, {
+      headers: _emailAuthHeaders()
+    }).then(handleResponse);
   },
 
   sendTest: (data) =>
-    jsonRequest(`${API_BASE}/email/test`, 'POST', data),
+    fetch(`${API_BASE}/email/test`, {
+      method: 'POST',
+      headers: _emailAuthHeaders(true),
+      body: JSON.stringify(data)
+    }).then(handleResponse),
 
   subscribeUser: (userId) =>
-    jsonRequest(`${API_BASE}/email/subscribe/${userId}`, 'POST'),
+    fetch(`${API_BASE}/email/subscribe/${userId}`, {
+      method: 'POST',
+      headers: _emailAuthHeaders(true)
+    }).then(handleResponse),
 };
 
 // Default export with all APIs
