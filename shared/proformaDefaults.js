@@ -109,12 +109,22 @@ export function getDefaultAssumptions() {
       smallKilnCuFtPerHour: 4,   // Pilot
       largeKilnCuFtPerHour: 118, // Broderick
 
-      // Operating parameters by phase [Phase 1, Phase 2, Phase 3]
-      phases: [
-        { hoursPerDay: 15, daysPerMonth: 20 },
-        { hoursPerDay: 23, daysPerMonth: 24 },
-        { hoursPerDay: 23, daysPerMonth: 28 }
-      ],
+      // Operating parameters by phase [Phase 1, Phase 2, Phase 3], split
+      // by kiln type so pilot and broderick can run on independent schedules.
+      // Each array MUST have exactly 3 entries — phase indices line up with
+      // the global PHASE_BOUNDARIES timeline and machine-level phase overrides.
+      phasesByMachineType: {
+        pilot: [
+          { hoursPerDay: 15, daysPerMonth: 20 },
+          { hoursPerDay: 23, daysPerMonth: 24 },
+          { hoursPerDay: 23, daysPerMonth: 28 }
+        ],
+        broderick: [
+          { hoursPerDay: 15, daysPerMonth: 20 },
+          { hoursPerDay: 23, daysPerMonth: 24 },
+          { hoursPerDay: 23, daysPerMonth: 28 }
+        ]
+      },
 
       // Cost efficiency multiplier by year (costs decrease as operations mature)
       efficiencyByYear: [1.0, 1.0, 0.85, 0.75] // Year 0, Year 1, Year 2, Year 3
@@ -424,6 +434,32 @@ export function migrateAssumptions(a) {
     }
   }
 
+  // Split single production.phases[] into per-kiln-type schedules so pilot
+  // and broderick can run independently. Old blobs only have `phases`; deep
+  // clone it into both buckets so future edits to one type don't mutate the
+  // other through a shared reference.
+  if (a.production && !a.production.phasesByMachineType) {
+    const fallback = [
+      { hoursPerDay: 15, daysPerMonth: 20 },
+      { hoursPerDay: 23, daysPerMonth: 24 },
+      { hoursPerDay: 23, daysPerMonth: 28 }
+    ];
+    const legacy = Array.isArray(a.production.phases) && a.production.phases.length === 3
+      ? a.production.phases
+      : fallback;
+    const clone = arr => arr.map(p => ({
+      hoursPerDay: typeof p?.hoursPerDay === 'number' ? p.hoursPerDay : 0,
+      daysPerMonth: typeof p?.daysPerMonth === 'number' ? p.daysPerMonth : 0
+    }));
+    a.production.phasesByMachineType = {
+      pilot: clone(legacy),
+      broderick: clone(legacy)
+    };
+  }
+  if (a.production && a.production.phases) {
+    delete a.production.phases;
+  }
+
   a.version = 2;
   return a;
 }
@@ -448,8 +484,16 @@ export function validateAssumptions(a) {
     if (typeof a.production.grapheneYieldPercent !== 'number' || a.production.grapheneYieldPercent <= 0 || a.production.grapheneYieldPercent > 1) {
       errors.push('grapheneYieldPercent must be between 0 and 1');
     }
-    if (!Array.isArray(a.production.phases) || a.production.phases.length !== 3) {
-      errors.push('production.phases must have exactly 3 entries');
+    const pbm = a.production.phasesByMachineType;
+    if (!pbm || typeof pbm !== 'object') {
+      errors.push('production.phasesByMachineType must exist (run migration)');
+    } else {
+      if (!Array.isArray(pbm.pilot) || pbm.pilot.length !== 3) {
+        errors.push('production.phasesByMachineType.pilot must have exactly 3 entries');
+      }
+      if (!Array.isArray(pbm.broderick) || pbm.broderick.length !== 3) {
+        errors.push('production.phasesByMachineType.broderick must have exactly 3 entries');
+      }
     }
   }
 
