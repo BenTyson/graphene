@@ -5,7 +5,7 @@ function _staffingTable() {
     <div class="flex items-center gap-2 mb-3">
       <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Year</span>
       <div class="flex gap-1">
-        ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
+        ${['year0', 'year1', 'year2', 'year3', 'year4'].map((yr, i) => `
           <button @click="proformaStaffingYear = '${yr}'"
                   :class="proformaStaffingYear === '${yr}' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                   class="px-3 py-1 text-xs font-medium rounded-md transition-colors">
@@ -114,7 +114,7 @@ function _overheadBlock() {
         <label class="flex items-center text-[11px] font-semibold text-gray-600 uppercase tracking-wide mb-1">
           Growth multiplier by year
         </label>
-        <div class="grid grid-cols-4 gap-2">
+        <div class="grid grid-cols-5 gap-2">
           <template x-for="(gm, gi) in proformaAssumptions.opex.generalOverhead.growthByYear" :key="gi">
             <div>
               <span class="text-[10px] text-gray-400 font-mono" x-text="'Y' + gi"></span>
@@ -134,7 +134,7 @@ function _overheadBlock() {
 
 function _insuranceBlock() {
   return card('Business insurance (annual)', `
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-5 gap-3">
       <template x-for="(ins, ii) in proformaAssumptions.opex.businessInsurance" :key="ii">
         <div>
           <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1" x-text="'Y' + ii"></label>

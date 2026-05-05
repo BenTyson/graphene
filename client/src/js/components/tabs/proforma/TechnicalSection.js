@@ -27,7 +27,7 @@ export function getMarketsSection() {
             <div x-show="proformaComputed && proformaComputed.techRef" class="mt-3 bg-gray-50 rounded-md px-3 py-2 text-xs font-mono text-gray-600">
               <span x-text="(proformaComputed.techRef.supercapByYear?.[0] || 0).toLocaleString()"></span> kg (Y0)
               &rarr;
-              <span x-text="(proformaComputed.techRef.supercapByYear?.[3] || 0).toLocaleString()"></span> kg (Y3)
+              <span x-text="(proformaComputed.techRef.supercapByYear?.[proformaComputed.techRef.supercapByYear.length - 1] || 0).toLocaleString()"></span> kg (Y4)
             </div>
             <p class="mt-2 text-[11px] text-gray-400">
               Also derives from supercap module specs in Reference data.
@@ -60,7 +60,7 @@ export function getMarketsSection() {
             <div x-show="proformaComputed && proformaComputed.techRef" class="mt-3 bg-gray-50 rounded-md px-3 py-2 text-xs font-mono text-gray-600">
               <span x-text="(proformaComputed.techRef.conductiveByYear?.[0] || 0).toLocaleString()"></span> kg (Y0)
               &rarr;
-              <span x-text="(proformaComputed.techRef.conductiveByYear?.[3] || 0).toLocaleString()"></span> kg (Y3)
+              <span x-text="(proformaComputed.techRef.conductiveByYear?.[proformaComputed.techRef.conductiveByYear.length - 1] || 0).toLocaleString()"></span> kg (Y4)
             </div>
             <p class="mt-2 text-[11px] text-gray-400">
               Also derives from EV battery composition in Reference data.
@@ -124,7 +124,7 @@ export function getMarketsSection() {
                    class="mt-3 bg-gray-50 rounded-md px-3 py-2 text-xs font-mono text-gray-600">
                 <span x-text="((proformaComputed.techRef[src.id + 'ByYear'] || [])[0] || 0).toLocaleString()"></span> kg (Y0)
                 &rarr;
-                <span x-text="((proformaComputed.techRef[src.id + 'ByYear'] || [])[3] || 0).toLocaleString()"></span> kg (Y3)
+                <span x-text="(() => { const a = proformaComputed.techRef[src.id + 'ByYear'] || []; return (a[a.length - 1] || 0).toLocaleString(); })()"></span> kg (Y4)
               </div>
 
               <template x-if="countProformaStreamsLinkedToSource(src.id) > 0">

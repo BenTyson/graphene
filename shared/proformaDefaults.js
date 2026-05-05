@@ -1,10 +1,14 @@
 // Default assumptions matching the 2025 HGraphene Projections spreadsheet.
 // All values are direct inputs (not derived). The engine computes everything else.
 
-export const MONTHS_TOTAL = 48; // Year 0 (12) + Year 1 (12) + Year 2 (12) + Year 3 (12)
+// Horizon: Y0..Y4 (5 calendar years). Single source of truth — engine and UI
+// derive YEARS_TOTAL / QUARTERS_TOTAL from MONTHS_TOTAL.
+export const MONTHS_TOTAL = 60;
+export const YEARS_TOTAL = MONTHS_TOTAL / 12;       // 5
+export const QUARTERS_TOTAL = MONTHS_TOTAL / 3;     // 20
 
 // Global phase boundaries (month indices where phases change)
-export const PHASE_BOUNDARIES = [0, 24, 36]; // Phase 1: 0-23, Phase 2: 24-35, Phase 3: 36-47
+export const PHASE_BOUNDARIES = [0, 24, 36]; // Phase 1: 0-23, Phase 2: 24-35, Phase 3: 36-59
 
 // ── Built-in revenue stream factories ─────────────────────────────
 // Each stream is self-contained: pricing, market source, ramp, qDist.
@@ -19,11 +23,12 @@ function _supercapStream() {
     enabled: true,
     order: 0,
     startMonth: 12,
-    pricing: { year0: 200, year1: 200, year2: 200, year3: 200 },
+    pricing: { year0: 200, year1: 200, year2: 200, year3: 200, year4: 200 },
     market: { mode: 'linked', linkedSource: 'supercap' },
     year1: { marketSharePct: 0.03, qDist: [0.10, 0.20, 0.30, 0.40] },
     year2: { marketSharePct: 0.06, qDist: [0.23, 0.24, 0.26, 0.27] },
-    year3: { marketSharePct: 0.09, qDist: [0.20, 0.24, 0.26, 0.30] }
+    year3: { marketSharePct: 0.09, qDist: [0.20, 0.24, 0.26, 0.30] },
+    year4: { marketSharePct: 0.12, qDist: [0.22, 0.24, 0.26, 0.28] }
   };
 }
 
@@ -35,11 +40,12 @@ function _carbonBlackStream() {
     enabled: true,
     order: 1,
     startMonth: 36,
-    pricing: { year0: 50, year1: 50, year2: 50, year3: 50 },
+    pricing: { year0: 50, year1: 50, year2: 50, year3: 50, year4: 50 },
     market: { mode: 'linked', linkedSource: 'conductive' },
     year1: { marketSharePct: 0.0025, qDist: [0.00, 0.20, 0.30, 0.50] },
     year2: { marketSharePct: 0.005, qDist: [0.20, 0.23, 0.25, 0.27] },
-    year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] }
+    year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] },
+    year4: { marketSharePct: 0.012, qDist: [0.20, 0.23, 0.25, 0.27] }
   };
 }
 
@@ -54,11 +60,12 @@ function _grapheneOxideStream() {
     // Pricing/share are placeholders — GO market data is highly variable.
     // Defaults compute to $0 until baseTonnes on the GO market source is
     // filled in (Markets tab) and a non-zero share is set here.
-    pricing: { year0: 100, year1: 100, year2: 100, year3: 100 },
+    pricing: { year0: 100, year1: 100, year2: 100, year3: 100, year4: 100 },
     market: { mode: 'linked', linkedSource: 'grapheneOxide' },
     year1: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
     year2: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
-    year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
+    year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+    year4: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
   };
 }
 
@@ -127,7 +134,7 @@ export function getDefaultAssumptions() {
       },
 
       // Cost efficiency multiplier by year (costs decrease as operations mature)
-      efficiencyByYear: [1.0, 1.0, 0.85, 0.75] // Year 0, Year 1, Year 2, Year 3
+      efficiencyByYear: [1.0, 1.0, 0.85, 0.75, 0.75] // Year 0..Year 4
     },
 
     machines: [
@@ -244,23 +251,30 @@ export function getDefaultAssumptions() {
           operational: { count: [2, 2, 2, 2], salary: 75000 },
           sales:       { count: [2, 2, 2, 2], salary: 100000 },
           executive:   { count: [7, 7, 7, 7], salary: 150000 }
+        },
+        year4: {
+          operational: { count: [2, 2, 2, 2], salary: 75000 },
+          sales:       { count: [2, 2, 2, 2], salary: 100000 },
+          executive:   { count: [7, 7, 7, 7], salary: 150000 }
         }
       },
       benefitsPct: 0.40,
 
       legal: {
         patent:    { year0: [30000, 6000, 6000, 6000], year1: [20000, 6000, 20000, 6000],
-                     year2: [6000, 20000, 60000, 6000], year3: [6000, 20000, 60000, 6000] },
+                     year2: [6000, 20000, 60000, 6000], year3: [6000, 20000, 60000, 6000],
+                     year4: [6000, 20000, 60000, 6000] },
         corporate: { year0: [50000, 30000, 30000, 30000], year1: [45000, 45000, 45000, 45000],
-                     year2: [51000, 51000, 51000, 51000], year3: [51000, 51000, 51000, 51000] }
+                     year2: [51000, 51000, 51000, 51000], year3: [51000, 51000, 51000, 51000],
+                     year4: [51000, 51000, 51000, 51000] }
       },
 
       generalOverhead: {
         base: 170000, // Annual total: T&E 100K + Internet 5K + Marketing 50K + Misc 15K
-        growthByYear: [1.0, 1.2, 1.5, 1.6] // Year 0, 1, 2, 3 multipliers
+        growthByYear: [1.0, 1.2, 1.5, 1.6, 1.6] // Year 0..4 multipliers
       },
 
-      businessInsurance: [50000, 100000, 150000, 200000], // Year 0, 1, 2, 3 (annual, paid once)
+      businessInsurance: [50000, 100000, 150000, 200000, 200000], // Year 0..4 (annual, paid once)
 
       uofaRoyaltyPct: 0.06,
       salesCommissionPct: 0.055
@@ -271,7 +285,8 @@ export function getDefaultAssumptions() {
       year0: [15000, 0, 75000, 30000],
       year1: [100000, 126000, 215667, 240167],
       year2: [240167, 240167, 240167, 240167],
-      year3: [240167, 240167, 240167, 240167]
+      year3: [240167, 240167, 240167, 240167],
+      year4: [240167, 240167, 240167, 240167]
     },
 
     capexLab: {
@@ -279,7 +294,8 @@ export function getDefaultAssumptions() {
       year0: [0, 0, 0, 0],
       year1: [0, 130000, 80000, 10000],
       year2: [2000, 10000, 20000, 80000],
-      year3: [2000, 10000, 20000, 80000]
+      year3: [2000, 10000, 20000, 80000],
+      year4: [2000, 10000, 20000, 80000]
     },
 
     cogs: {
@@ -458,6 +474,60 @@ export function migrateAssumptions(a) {
   }
   if (a.production && a.production.phases) {
     delete a.production.phases;
+  }
+
+  // Horizon extension Y0..Y3 -> Y0..Y4: hybrid rule.
+  //   Cost/efficiency fields repeat last year (flat-line steady state).
+  //   Revenue share fields default to 0 (don't silently inflate forecasts).
+  //   Pricing $/kg copies the last year (unit price isn't a forecast).
+  // Idempotent: only fills in year4 / extends arrays when missing/short.
+  if (a.production && Array.isArray(a.production.efficiencyByYear) && a.production.efficiencyByYear.length < YEARS_TOTAL) {
+    const last = a.production.efficiencyByYear[a.production.efficiencyByYear.length - 1] ?? 1.0;
+    while (a.production.efficiencyByYear.length < YEARS_TOTAL) a.production.efficiencyByYear.push(last);
+  }
+  if (a.opex) {
+    if (a.opex.staffing && a.opex.staffing.year3 && !a.opex.staffing.year4) {
+      a.opex.staffing.year4 = JSON.parse(JSON.stringify(a.opex.staffing.year3));
+    }
+    if (a.opex.legal) {
+      if (a.opex.legal.patent && Array.isArray(a.opex.legal.patent.year3) && !a.opex.legal.patent.year4) {
+        a.opex.legal.patent.year4 = [...a.opex.legal.patent.year3];
+      }
+      if (a.opex.legal.corporate && Array.isArray(a.opex.legal.corporate.year3) && !a.opex.legal.corporate.year4) {
+        a.opex.legal.corporate.year4 = [...a.opex.legal.corporate.year3];
+      }
+    }
+    if (a.opex.generalOverhead && Array.isArray(a.opex.generalOverhead.growthByYear)
+        && a.opex.generalOverhead.growthByYear.length < YEARS_TOTAL) {
+      const last = a.opex.generalOverhead.growthByYear[a.opex.generalOverhead.growthByYear.length - 1] ?? 1.0;
+      while (a.opex.generalOverhead.growthByYear.length < YEARS_TOTAL) {
+        a.opex.generalOverhead.growthByYear.push(last);
+      }
+    }
+    if (Array.isArray(a.opex.businessInsurance) && a.opex.businessInsurance.length < YEARS_TOTAL) {
+      const last = a.opex.businessInsurance[a.opex.businessInsurance.length - 1] ?? 0;
+      while (a.opex.businessInsurance.length < YEARS_TOTAL) a.opex.businessInsurance.push(last);
+    }
+  }
+  if (a.rnd && Array.isArray(a.rnd.year3) && !a.rnd.year4) {
+    a.rnd.year4 = [...a.rnd.year3];
+  }
+  if (a.capexLab && Array.isArray(a.capexLab.year3) && !a.capexLab.year4) {
+    a.capexLab.year4 = [...a.capexLab.year3];
+  }
+  if (a.revenue && Array.isArray(a.revenue.streams)) {
+    for (const s of a.revenue.streams) {
+      if (!s) continue;
+      if (!s.year4) {
+        s.year4 = { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] };
+      }
+      if (s.pricing && s.pricing.year4 == null) {
+        s.pricing.year4 = s.pricing.year3 ?? s.pricing.year2 ?? s.pricing.year1 ?? s.pricing.year0 ?? 0;
+      }
+      if (s.market && s.market.mode === 'direct' && s.market.revenueByYear && s.market.revenueByYear.year4 == null) {
+        s.market.revenueByYear.year4 = 0;
+      }
+    }
   }
 
   a.version = 2;

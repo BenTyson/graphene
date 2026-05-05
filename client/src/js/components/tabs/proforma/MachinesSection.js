@@ -1,12 +1,11 @@
 import { sectionHeader, HELP } from './helpers.js';
+import { MONTHS_TOTAL as MONTHS } from '@shared/proformaDefaults.js';
 
 // Machines — each kiln gets a card with three critical fields
 // (validation start, production start, cost), plus a per-machine Advanced
 // accordion containing its payment schedule and phase overrides.
 // The fleet gantt at the top stays — it's the strongest read of the
 // whole fleet in one glance.
-
-const MONTHS = 48;
 
 // Per-year capacity vs peak demand strip. Reads from the live proformaComputed
 // snapshot (engine outputs `productionCapacityKg` and `demandKgTotal` arrays of
@@ -25,8 +24,8 @@ function _capacityVsDemandStrip() {
            class="text-[11px] text-gray-500 hover:text-gray-900 underline">View full chart →</a>
       </figcaption>
 
-      <div class="grid grid-cols-3 gap-3">
-        <template x-for="y in [1, 2, 3]" :key="y">
+      <div class="grid grid-cols-4 gap-3">
+        <template x-for="y in [1, 2, 3, 4]" :key="y">
           <div class="border border-gray-100 rounded-md p-3" x-data="{
             cap: Math.max(...proformaComputed.outlook.productionCapacityKg.slice(y * 12, y * 12 + 12)),
             dem: Math.max(...proformaComputed.outlook.demandKgTotal.slice(y * 12, y * 12 + 12))
@@ -60,7 +59,7 @@ function _capacityVsDemandStrip() {
 }
 
 function _fleetTimeline() {
-  const monthMarkers = [0, 12, 24, 36, 48];
+  const monthMarkers = [0, 12, 24, 36, 48, 60];
   return `
     <figure class="rounded-lg border border-gray-200 bg-white p-5 mb-6">
       <figcaption class="flex items-center justify-between mb-4">
@@ -86,7 +85,7 @@ function _fleetTimeline() {
               <span class="w-24 text-[11px] font-medium text-gray-700 truncate shrink-0" x-text="machine.name"></span>
 
               <div class="relative flex-1 h-6 bg-gray-50 rounded-md overflow-hidden">
-                <template x-for="m in [12, 24, 36]" :key="m">
+                <template x-for="m in [12, 24, 36, 48]" :key="m">
                   <span class="absolute top-0 bottom-0 w-px bg-gray-200" :style="'left:' + (m / ${MONTHS} * 100) + '%'"></span>
                 </template>
 

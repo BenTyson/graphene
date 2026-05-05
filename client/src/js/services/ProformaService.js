@@ -3,7 +3,8 @@ import { calculateProforma } from '@shared/proformaEngine.js';
 import {
   getDefaultAssumptions,
   migrateAssumptions,
-  BUILTIN_MARKET_SOURCES
+  BUILTIN_MARKET_SOURCES,
+  YEARS_TOTAL
 } from '@shared/proformaDefaults.js';
 import {
   getDemoScenarioData,
@@ -481,6 +482,12 @@ class ProformaService {
     const streams = ctx.proformaAssumptions.revenue.streams;
     const id = _slugifyStreamId(finalName);
 
+    const pricing = {};
+    const revenueByYear = {};
+    for (let y = 0; y < YEARS_TOTAL; y++) {
+      pricing['year' + y] = 100;
+      if (y >= 1) revenueByYear['year' + y] = 0;
+    }
     const stream = {
       id,
       name: finalName,
@@ -488,14 +495,14 @@ class ProformaService {
       enabled: true,
       order: streams.length,
       startMonth: 12,
-      pricing: { year0: 100, year1: 100, year2: 100, year3: 100 },
+      pricing,
       market: mode === 'direct'
-        ? { mode: 'direct', revenueByYear: { year1: 0, year2: 0, year3: 0 } }
-        : { mode: 'linked', linkedSource },
-      year1: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
-      year2: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
-      year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
+        ? { mode: 'direct', revenueByYear }
+        : { mode: 'linked', linkedSource }
     };
+    for (let y = 1; y < YEARS_TOTAL; y++) {
+      stream['year' + y] = { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] };
+    }
     streams.push(stream);
     this.recompute(ctx);
     return id;
@@ -526,10 +533,12 @@ class ProformaService {
     const stream = ctx.proformaAssumptions?.revenue?.streams?.find(s => s.id === streamId);
     if (!stream) return;
     if (mode === 'direct') {
-      stream.market = {
-        mode: 'direct',
-        revenueByYear: stream.market?.revenueByYear || { year1: 0, year2: 0, year3: 0 }
-      };
+      let revenueByYear = stream.market?.revenueByYear;
+      if (!revenueByYear) {
+        revenueByYear = {};
+        for (let y = 1; y < YEARS_TOTAL; y++) revenueByYear['year' + y] = 0;
+      }
+      stream.market = { mode: 'direct', revenueByYear };
     } else {
       stream.market = {
         mode: 'linked',
@@ -595,15 +604,19 @@ class ProformaService {
 
   getColumnLabels(ctx) {
     const view = ctx.proformaOutlookView;
-    if (view === 'yearly') return ['Year 0', 'Year 1', 'Year 2', 'Year 3'];
+    if (view === 'yearly') {
+      const labels = [];
+      for (let y = 0; y < YEARS_TOTAL; y++) labels.push(`Year ${y}`);
+      return labels;
+    }
     if (view === 'quarterly') {
       const labels = [];
-      for (let y = 0; y <= 3; y++) for (let q = 1; q <= 4; q++) labels.push(`Y${y} Q${q}`);
+      for (let y = 0; y < YEARS_TOTAL; y++) for (let q = 1; q <= 4; q++) labels.push(`Y${y} Q${q}`);
       return labels;
     }
     // monthly
     const labels = [];
-    for (let y = 0; y <= 3; y++) for (let m = 1; m <= 12; m++) labels.push(`Y${y} M${m}`);
+    for (let y = 0; y < YEARS_TOTAL; y++) for (let m = 1; m <= 12; m++) labels.push(`Y${y} M${m}`);
     return labels;
   }
 

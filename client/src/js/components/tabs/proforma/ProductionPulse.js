@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // Production Pulse — live material-flow visualization
 // ═══════════════════════════════════════════════════════════════
-// Three stacked stripes on a shared 0–48 month axis:
+// Three stacked stripes on a shared 0..MONTHS_TOTAL axis:
 //   1. HEMP IN     (kg/mo, amber bars)
 //   2. GRAPHENE OUT (kg/mo, stacked by machine, indigo/amber)
 //   3. STOCK       (kg cumulative produced − sold, emerald area)
@@ -9,7 +9,7 @@
 // The whole thing animates as assumptions change. Hover any column to
 // lock a vertical cursor and see exact numbers for that month.
 
-const MONTHS = 48;
+import { MONTHS_TOTAL as MONTHS, YEARS_TOTAL } from '@shared/proformaDefaults.js';
 
 // ── stock series computation ──
 // Exposed on window so inline Alpine expressions can call it. The engine
@@ -29,7 +29,7 @@ function _stockSeries(computed, assumptions) {
 
   let running = 0;
   for (let m = 0; m < MONTHS; m++) {
-    const y = 'year' + Math.min(3, Math.floor(m / 12));
+    const y = 'year' + Math.min(YEARS_TOTAL - 1, Math.floor(m / 12));
     let monthSold = 0;
     for (const s of linked) {
       const price = s.pricing?.[y] || 0;
@@ -82,10 +82,10 @@ const VB_H = STRIPE_Y.stock + STRIPE_H.stock + 40;
 // ── SVG builders (pure, Alpine-driven) ──
 
 function _axisGridlines() {
-  const ticks = [0, 12, 24, 36, 48];
+  const ticks = Array.from({ length: YEARS_TOTAL + 1 }, (_, i) => i * 12);
   return ticks.map(m => {
     const x = PAD_L + m * COL_W;
-    const label = m === 0 ? 'M0' : m === MONTHS ? 'Y3 end' : 'Y' + (m / 12);
+    const label = m === 0 ? 'M0' : m === MONTHS ? 'Y' + (YEARS_TOTAL - 1) + ' end' : 'Y' + (m / 12);
     return `
       <line x1="${x}" x2="${x}" y1="${STRIPE_Y.hemp - 8}" y2="${STRIPE_Y.stock + STRIPE_H.stock + 4}"
             stroke="#E5E7EB" stroke-dasharray="2 3"/>

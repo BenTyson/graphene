@@ -1,13 +1,13 @@
-import { MONTHS_TOTAL, PHASE_BOUNDARIES, validateAssumptions, migrateAssumptions } from './proformaDefaults.js';
+import { MONTHS_TOTAL, YEARS_TOTAL, QUARTERS_TOTAL, PHASE_BOUNDARIES, validateAssumptions, migrateAssumptions } from './proformaDefaults.js';
 
 // Determine which phase index (0, 1, 2) a month falls in
 function getGlobalPhase(month) {
   if (month < PHASE_BOUNDARIES[1]) return 0; // Phase 1: months 0-23
   if (month < PHASE_BOUNDARIES[2]) return 1; // Phase 2: months 24-35
-  return 2;                                   // Phase 3: months 36-47
+  return 2;                                   // Phase 3: months 36+
 }
 
-// Which year (0-3) a month falls in
+// Which year (0..YEARS_TOTAL-1) a month falls in
 function getYear(month) {
   return Math.floor(month / 12);
 }
@@ -53,20 +53,13 @@ function deriveTechnical(tech) {
   const supHGDemandKg = mkt.supercapActivatedCarbonDemandTonnes *
     (1 / sup.hgrapheneEfficiencyFactor) * 1000;
 
-  // Yearly global markets with CAGR
-  const conductiveByYear = [
-    globalHgConductiveTotalKg,
-    globalHgConductiveTotalKg * mkt.evCagr,
-    globalHgConductiveTotalKg * mkt.evCagr * mkt.evCagr,
-    globalHgConductiveTotalKg * Math.pow(mkt.evCagr, 3)
-  ];
-
-  const supercapByYear = [
-    supHGDemandKg,
-    supHGDemandKg * mkt.supercapCagr,
-    supHGDemandKg * mkt.supercapCagr * mkt.supercapCagr,
-    supHGDemandKg * Math.pow(mkt.supercapCagr, 3)
-  ];
+  // Yearly global markets with CAGR — Y0 is base, Y1+ compound.
+  const conductiveByYear = [];
+  const supercapByYear = [];
+  for (let y = 0; y < YEARS_TOTAL; y++) {
+    conductiveByYear.push(globalHgConductiveTotalKg * Math.pow(mkt.evCagr, y));
+    supercapByYear.push(supHGDemandKg * Math.pow(mkt.supercapCagr, y));
+  }
 
   // Generic custom market sources: each entry becomes a <id>ByYear array
   // computed as tonnes × CAGR^N. Streams pick one via market.linkedSource.
@@ -76,12 +69,9 @@ function deriveTechnical(tech) {
     if (!src || !src.id) continue;
     const baseKg = (src.baseTonnes || 0) * 1000;
     const cagr = src.cagr || 1.0;
-    customByYear[src.id + 'ByYear'] = [
-      baseKg,
-      baseKg * cagr,
-      baseKg * cagr * cagr,
-      baseKg * Math.pow(cagr, 3)
-    ];
+    const arr = [];
+    for (let y = 0; y < YEARS_TOTAL; y++) arr.push(baseKg * Math.pow(cagr, y));
+    customByYear[src.id + 'ByYear'] = arr;
   }
 
   return {
@@ -269,7 +259,7 @@ function computeRevenue(revenueAssumptions, techRef) {
     }
     const market = stream.market || { mode: 'linked', linkedSource: 'supercap' };
 
-    for (let year = 1; year <= 3; year++) {
+    for (let year = 1; year < YEARS_TOTAL; year++) {
       const cfg = stream['year' + year];
       if (!cfg) continue;
 
@@ -361,8 +351,8 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     total: new Array(MONTHS_TOTAL).fill(0)
   };
 
-  const staffYears = [opex.staffing.year0, opex.staffing.year1, opex.staffing.year2, opex.staffing.year3];
-  const legalYears = ['year0', 'year1', 'year2', 'year3'];
+  const staffYears = Array.from({ length: YEARS_TOTAL }, (_, y) => opex.staffing['year' + y]);
+  const legalYears = Array.from({ length: YEARS_TOTAL }, (_, y) => 'year' + y);
 
   for (let m = 0; m < MONTHS_TOTAL; m++) {
     const year = getYear(m);
@@ -470,7 +460,7 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, str
 
   // CapEx Lab (R&D equipment)
   if (capexLab) {
-    for (let year = 0; year <= 3; year++) {
+    for (let year = 0; year < YEARS_TOTAL; year++) {
       const yearData = capexLab['year' + year];
       if (!yearData) continue;
       for (let q = 0; q < 4; q++) {
@@ -544,7 +534,7 @@ function aggregateViews(outlook) {
 
     // Quarterly: sum every 3 months
     quarterly[key] = [];
-    for (let q = 0; q < 16; q++) {
+    for (let q = 0; q < QUARTERS_TOTAL; q++) {
       const base = q * 3;
       let sum = 0;
       for (let i = 0; i < 3; i++) {
@@ -562,7 +552,7 @@ function aggregateViews(outlook) {
 
     // Yearly: sum every 12 months
     yearly[key] = [];
-    for (let y = 0; y < 4; y++) {
+    for (let y = 0; y < YEARS_TOTAL; y++) {
       const base = y * 12;
       let sum = 0;
       for (let i = 0; i < 12; i++) {
@@ -639,9 +629,10 @@ export function calculateProforma(assumptions) {
   // Key metrics
   const breakEvenMonth = outlook.cumulativeCash.findIndex((v, i) => i > 0 && v > 0 && outlook.cumulativeCash[i - 1] <= 0);
   const peakCashNeed = Math.min(...outlook.cumulativeCash);
-  const y3Revenue = yearly.revenue[3] || 0;
-  const y3Ebitda = yearly.ebitda[3] || 0;
-  const y3EbitdaMargin = y3Revenue > 0 ? y3Ebitda / y3Revenue : 0;
+  const finalYearIdx = YEARS_TOTAL - 1;
+  const y4Revenue = yearly.revenue[finalYearIdx] || 0;
+  const y4Ebitda = yearly.ebitda[finalYearIdx] || 0;
+  const y4EbitdaMargin = y4Revenue > 0 ? y4Ebitda / y4Revenue : 0;
   const totalCapex = yearly.capex.reduce((a, b) => a + b, 0);
   const peakMonthlyProductionKg = Math.max(...production.monthlyGrapheneKg);
 
@@ -670,9 +661,9 @@ export function calculateProforma(assumptions) {
     metrics: {
       breakEvenMonth,
       peakCashNeed,
-      y3Revenue,
-      y3Ebitda,
-      y3EbitdaMargin,
+      y4Revenue,
+      y4Ebitda,
+      y4EbitdaMargin,
       totalCapex,
       peakMonthlyProductionKg
     }

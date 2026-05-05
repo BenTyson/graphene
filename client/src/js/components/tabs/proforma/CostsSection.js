@@ -16,8 +16,8 @@ function _hempPurchasesStrip() {
         </span>
       </figcaption>
 
-      <div class="grid grid-cols-3 gap-3">
-        <template x-for="y in [1, 2, 3]" :key="y">
+      <div class="grid grid-cols-4 gap-3">
+        <template x-for="y in [1, 2, 3, 4]" :key="y">
           <div class="border border-gray-100 rounded-md p-3" x-data="{
             kg: proformaComputed.production.monthlyHempKg.slice(y * 12, y * 12 + 12).reduce((a, b) => a + (b || 0), 0),
             cost: proformaComputed.outlook.cogsHemp.slice(y * 12, y * 12 + 12).reduce((a, b) => a + (b || 0), 0),
