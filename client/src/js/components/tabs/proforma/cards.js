@@ -7,11 +7,11 @@
 // itself doubles as an at-a-glance dashboard.
 
 export const JOURNEY_SECTIONS = [
-  { id: 'revenue',    label: 'Revenue',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.y3Revenue, true) + ' Y3' : '--'` },
+  { id: 'revenue',    label: 'Revenue',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.y4Revenue, true) + ' Y4' : '--'` },
   { id: 'markets',    label: 'Markets',    headline: `proformaMarketSources?.length ? proformaMarketSources.length + ' sources' : '--'` },
   { id: 'production', label: 'Production', headline: `proformaComputed?.metrics?.peakMonthlyProductionKg ? Math.round(proformaComputed.metrics.peakMonthlyProductionKg).toLocaleString() + ' kg/mo peak' : '--'` },
-  { id: 'costs',      label: 'Costs',      headline: `proformaComputed?.yearly?.grossMarginPct ? window._pfFmtP(proformaComputed.yearly.grossMarginPct[3]) + ' Y3 margin' : '--'` },
-  { id: 'operations', label: 'Operations', headline: `proformaComputed ? window._pfFmtP(proformaComputed.metrics.y3EbitdaMargin) + ' EBITDA' : '--'` },
+  { id: 'costs',      label: 'Costs',      headline: `proformaComputed?.yearly?.grossMarginPct ? window._pfFmtP(proformaComputed.yearly.grossMarginPct[proformaComputed.yearly.grossMarginPct.length - 1]) + ' Y4 margin' : '--'` },
+  { id: 'operations', label: 'Operations', headline: `proformaComputed ? window._pfFmtP(proformaComputed.metrics.y4EbitdaMargin) + ' EBITDA' : '--'` },
   { id: 'machines',   label: 'Machines',   headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.totalCapex, true) + ' CapEx' : '--'` },
   { id: 'capital',    label: 'Capital',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.peakCashNeed, true) + ' peak need' : '--'` }
 ];
@@ -52,15 +52,15 @@ export function metricsAndNav() {
              x-text="window._pfFmtC(proformaComputed.metrics.peakCashNeed, true)"></p>
         </div>
         <div class="bg-white px-3 py-2">
-          <p class="text-[10px] uppercase tracking-[0.08em] text-gray-400 font-medium">Y3 Revenue</p>
+          <p class="text-[10px] uppercase tracking-[0.08em] text-gray-400 font-medium">Y4 Revenue</p>
           <p class="text-base font-semibold text-gray-900 font-mono tabular-nums mt-0.5"
-             x-text="window._pfFmtC(proformaComputed.metrics.y3Revenue, true)"></p>
+             x-text="window._pfFmtC(proformaComputed.metrics.y4Revenue, true)"></p>
         </div>
         <div class="bg-white px-3 py-2">
-          <p class="text-[10px] uppercase tracking-[0.08em] text-gray-400 font-medium">Y3 EBITDA</p>
+          <p class="text-[10px] uppercase tracking-[0.08em] text-gray-400 font-medium">Y4 EBITDA</p>
           <p class="text-base font-semibold font-mono tabular-nums mt-0.5"
-             :class="proformaComputed.metrics.y3EbitdaMargin >= 0 ? 'text-green-700' : 'text-red-600'"
-             x-text="window._pfFmtP(proformaComputed.metrics.y3EbitdaMargin)"></p>
+             :class="proformaComputed.metrics.y4EbitdaMargin >= 0 ? 'text-green-700' : 'text-red-600'"
+             x-text="window._pfFmtP(proformaComputed.metrics.y4EbitdaMargin)"></p>
         </div>
         <div class="bg-white px-3 py-2">
           <p class="text-[10px] uppercase tracking-[0.08em] text-gray-400 font-medium">Total CapEx</p>

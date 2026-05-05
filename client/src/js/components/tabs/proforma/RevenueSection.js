@@ -104,16 +104,17 @@ function _captureBlock() {
         <div class="space-y-3">
           <div>
             <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Market share by year</p>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-4 gap-3">
               ${numInput('Y1', `${SBASE}.year1.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
               ${numInput('Y2', `${SBASE}.year2.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
               ${numInput('Y3', `${SBASE}.year3.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
+              ${numInput('Y4', `${SBASE}.year4.marketSharePct`, { unit: '%', format: 'fraction-percent', step: 0.05 })}
             </div>
           </div>
           <div>
             <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Sell price ($/kg) by year</p>
-            <div class="grid grid-cols-4 gap-3">
-              ${['year0', 'year1', 'year2', 'year3'].map((yr, i) => `
+            <div class="grid grid-cols-5 gap-3">
+              ${['year0', 'year1', 'year2', 'year3', 'year4'].map((yr, i) => `
                 <div>
                   <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i}</label>
                   <input type="number" step="1"
@@ -135,10 +136,11 @@ function _captureBlock() {
           <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
           <span class="text-[11px] text-gray-400">Set the dollar amount directly &mdash; no market math</span>
         </header>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-4 gap-3">
           ${numInput('Y1', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
           ${numInput('Y2', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
           ${numInput('Y3', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
+          ${numInput('Y4', `${SBASE}.market.revenueByYear.year4`, { unit: '$', step: 10000 })}
         </div>
       </section>
     </template>
@@ -181,6 +183,7 @@ function _timingBlock() {
           ${_qDistRow('year1')}
           ${_qDistRow('year2')}
           ${_qDistRow('year3')}
+          ${_qDistRow('year4')}
         </div>
       </div>
     </section>

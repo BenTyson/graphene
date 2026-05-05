@@ -185,7 +185,7 @@ export function quarterlyMatrix(title, basePath, opts = {}) {
           </tr>
         </thead>
         <tbody>
-          <template x-for="yr in ['year0','year1','year2','year3']" :key="yr">
+          <template x-for="yr in ['year0','year1','year2','year3','year4']" :key="yr">
             <tr class="border-t border-gray-100">
               <td class="py-1 pr-2 text-gray-500 font-medium" x-text="yr.replace('year','Y')"></td>
               <template x-for="qi in [0,1,2,3]" :key="qi">
@@ -204,7 +204,7 @@ export function quarterlyMatrix(title, basePath, opts = {}) {
             <td class="py-1.5 pr-2 text-gray-700 font-semibold">Total</td>
             <td colspan="4"></td>
             <td class="py-1.5 pl-2 text-right font-mono font-semibold text-gray-700 border-l border-gray-200 tabular-nums"
-                x-text="window._pfFmtC(['year0','year1','year2','year3'].reduce((t,yr) => t + ${basePath}[yr].reduce((a,b) => a+b, 0), 0), true)"></td>
+                x-text="window._pfFmtC(['year0','year1','year2','year3','year4'].reduce((t,yr) => t + ${basePath}[yr].reduce((a,b) => a+b, 0), 0), true)"></td>
           </tr>` : ''}
         </tbody>
       </table>

@@ -45,7 +45,7 @@ export function getProductionSection() {
         <template x-for="(phase, pi) in proformaAssumptions.production.phasesByMachineType.${kilnType}" :key="pi">
           <div class="border border-gray-100 rounded-lg p-3">
             <div class="text-xs font-semibold text-gray-600 mb-2"
-                 x-text="'Phase ' + (pi+1) + ' (Mo ' + (pi === 0 ? '0-23' : pi === 1 ? '24-35' : '36-47') + ')'"></div>
+                 x-text="'Phase ' + (pi+1) + ' (Mo ' + (pi === 0 ? '0-23' : pi === 1 ? '24-35' : '36-59') + ')'"></div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Hrs / day</label>
@@ -81,7 +81,7 @@ export function getProductionSection() {
   `;
 
   const efficiencyGrid = `
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-5 gap-3">
       <template x-for="(eff, ei) in proformaAssumptions.production.efficiencyByYear" :key="ei">
         <div>
           <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1" x-text="'Y' + ei"></label>

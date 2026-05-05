@@ -380,13 +380,13 @@ function _summaryView() {
           <p class="text-lg font-semibold text-red-600" x-text="window._pfFmtC(proformaComputed.metrics.peakCashNeed, true)"></p>
         </div>
         <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y3 Revenue Run Rate</p>
-          <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(proformaComputed.metrics.y3Revenue, true)"></p>
+          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y4 Revenue Run Rate</p>
+          <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(proformaComputed.metrics.y4Revenue, true)"></p>
         </div>
         <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y3 EBITDA Margin</p>
-          <p class="text-lg font-semibold" :class="proformaComputed.metrics.y3EbitdaMargin >= 0 ? 'text-green-700' : 'text-red-600'"
-             x-text="window._pfFmtP(proformaComputed.metrics.y3EbitdaMargin)"></p>
+          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y4 EBITDA Margin</p>
+          <p class="text-lg font-semibold" :class="proformaComputed.metrics.y4EbitdaMargin >= 0 ? 'text-green-700' : 'text-red-600'"
+             x-text="window._pfFmtP(proformaComputed.metrics.y4EbitdaMargin)"></p>
         </div>
         <div class="border border-gray-200 rounded-lg p-3">
           <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Total CapEx</p>
@@ -401,7 +401,7 @@ function _summaryView() {
           <thead>
             <tr class="bg-gray-50">
               <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-40 border-r border-gray-200">Metric</th>
-              <template x-for="q in 16" :key="q">
+              <template x-for="q in 20" :key="q">
                 <th class="px-2 py-2 text-right text-gray-500 font-medium whitespace-nowrap" x-text="'Y' + Math.floor((q-1)/4) + ' Q' + ((q-1)%4+1)"></th>
               </template>
             </tr>
