@@ -5,11 +5,16 @@ import crypto from 'crypto';
 
 class DocumentProcessingService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    this.openai = null;
     this.processingQueue = new Map();
     this.maxRetries = 3;
+  }
+
+  _getClient() {
+    if (!this.openai) {
+      this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+    return this.openai;
   }
 
   /**
@@ -209,7 +214,7 @@ Format your response as JSON:
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response = await this._getClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {

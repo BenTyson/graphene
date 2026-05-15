@@ -5793,6 +5793,13 @@ window.grapheneApp = function() {
     removeProformaFteRole(index) { proformaService.removeFteRole(this, index); },
     getProformaOutlookRows() { return proformaService.getOutlookRows(this); },
     getProformaColumns() { return proformaService.getColumnLabels(this); },
+    getStreamCommissionIncome(streamIndex, yr) {
+      const stream = this.proformaAssumptions?.revenue?.streams?.[streamIndex];
+      if (!stream) return '$0';
+      const rev = stream.market?.revenueByYear?.[yr] || 0;
+      const rate = stream.commission?.rateByYear?.[yr] || 0;
+      return '$' + Math.round(rev * rate).toLocaleString();
+    },
     renderProformaCharts() { proformaService.renderCharts(this); },
     openProformaFullscreenChart(canvasId) {
       this.proformaFullscreenChart = canvasId;

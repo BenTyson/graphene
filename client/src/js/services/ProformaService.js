@@ -496,6 +496,7 @@ class ProformaService {
       order: streams.length,
       startMonth: 12,
       pricing,
+      commission: { enabled: false, rateByYear: { year1: 0, year2: 0, year3: 0, year4: 0 }, dealValueByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } },
       market: mode === 'direct'
         ? { mode: 'direct', revenueByYear }
         : { mode: 'linked', linkedSource }

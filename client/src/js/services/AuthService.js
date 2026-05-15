@@ -7,7 +7,7 @@ class AuthService {
       return;
     }
     
-    this.baseURL = window.location.origin.includes('localhost') ? 'http://localhost:3001' : window.location.origin;
+    this.baseURL = window.location.origin;
     this.token = this.getStoredToken();
     this.user = null;
     this.isAuthenticated = false;
