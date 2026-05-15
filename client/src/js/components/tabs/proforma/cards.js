@@ -38,7 +38,7 @@ export function metricsAndNav() {
   `).join('');
 
   return `
-    <div x-show="proformaComputed" class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200 -mx-4 px-4 pt-2 pb-3 mb-6" style="margin-top:-0.5rem;">
+    <div x-show="proformaComputed" class="sticky top-9 z-20 bg-white/95 backdrop-blur border-b border-gray-200 -mx-4 px-4 pt-2 pb-3 mb-6" style="margin-top:-0.5rem;">
       <!-- Metric tiles -->
       <div class="grid grid-cols-3 lg:grid-cols-6 gap-px bg-gray-100 border border-gray-200 rounded-lg overflow-hidden mb-3">
         <div class="bg-white px-3 py-2">

@@ -621,6 +621,39 @@ class ProformaService {
     return labels;
   }
 
+  getDisplayColumns(ctx) {
+    const view = ctx.proformaOutlookView;
+    const base = this.getColumnLabels(ctx);
+    if (view === 'yearly') return base.map(l => ({ label: l, isTotal: false }));
+    const period = view === 'monthly' ? 12 : 4;
+    const out = [];
+    for (let i = 0; i < base.length; i++) {
+      out.push({ label: base[i], isTotal: false });
+      if ((i + 1) % period === 0) {
+        out.push({ label: 'Y' + Math.floor(i / period) + ' Total', isTotal: true });
+      }
+    }
+    return out;
+  }
+
+  getDisplayData(row, ctx) {
+    const view = ctx.proformaOutlookView;
+    const yearly = ctx.proformaComputed?.yearly;
+    const data = row.data || [];
+    if (view === 'yearly') return data.map(v => ({ val: v, isTotal: false }));
+    const period = view === 'monthly' ? 12 : 4;
+    const out = [];
+    for (let i = 0; i < data.length; i++) {
+      out.push({ val: data[i], isTotal: false });
+      if ((i + 1) % period === 0) {
+        const yi = Math.floor(i / period);
+        const totVal = (yearly && yearly[row.key] != null) ? (yearly[row.key][yi] ?? 0) : 0;
+        out.push({ val: totVal, isTotal: true });
+      }
+    }
+    return out;
+  }
+
   // ── Charts ──
 
   destroyCharts() {
