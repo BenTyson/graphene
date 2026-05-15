@@ -130,17 +130,60 @@ function _captureBlock() {
     </template>
 
     <template x-if="${SBASE}.market.mode === 'direct'">
-      <section>
-        <header class="flex items-baseline gap-2 mb-2">
-          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
-          <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
-          <span class="text-[11px] text-gray-400">Set the dollar amount directly &mdash; no market math</span>
-        </header>
-        <div class="grid grid-cols-4 gap-3">
-          ${numInput('Y1', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
-          ${numInput('Y2', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
-          ${numInput('Y3', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
-          ${numInput('Y4', `${SBASE}.market.revenueByYear.year4`, { unit: '$', step: 10000 })}
+      <section class="space-y-4">
+        <div>
+          <header class="flex items-baseline gap-2 mb-2">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
+            <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
+            <span class="text-[11px] text-gray-400">Set the dollar amount directly &mdash; no market math</span>
+          </header>
+          <div class="grid grid-cols-4 gap-3">
+            ${numInput('Y1', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
+            ${numInput('Y2', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
+            ${numInput('Y3', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
+            ${numInput('Y4', `${SBASE}.market.revenueByYear.year4`, { unit: '$', step: 10000 })}
+          </div>
+        </div>
+
+        <div class="border-t border-gray-100 pt-4">
+          <div class="flex items-center gap-3 mb-3">
+            <button type="button"
+                    @click="if (!${SBASE}.commission) ${SBASE}.commission = { enabled: false, rateByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } }; if (!${SBASE}.commission.rateByYear) ${SBASE}.commission.rateByYear = { year1: 0, year2: 0, year3: 0, year4: 0 }; ${SBASE}.commission.enabled = !${SBASE}.commission.enabled; proformaRecompute()"
+                    :class="(${SBASE}.commission && ${SBASE}.commission.enabled) ? 'bg-gray-900' : 'bg-gray-300'"
+                    class="relative inline-flex shrink-0 items-center h-5 w-9 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400">
+              <span :class="(${SBASE}.commission && ${SBASE}.commission.enabled) ? 'translate-x-[18px]' : 'translate-x-[2px]'"
+                    class="inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform"></span>
+            </button>
+            <div>
+              <p class="text-sm font-semibold text-gray-800">Commission income</p>
+            </div>
+          </div>
+          <template x-if="${SBASE}.commission.enabled">
+            <div class="space-y-3 pl-12">
+              <div>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Commission rate by year</p>
+                <div class="grid grid-cols-4 gap-3">
+                  ${numInput('Y1', `${SBASE}.commission.rateByYear.year1`, { unit: '%', format: 'fraction-percent', step: 1 })}
+                  ${numInput('Y2', `${SBASE}.commission.rateByYear.year2`, { unit: '%', format: 'fraction-percent', step: 1 })}
+                  ${numInput('Y3', `${SBASE}.commission.rateByYear.year3`, { unit: '%', format: 'fraction-percent', step: 1 })}
+                  ${numInput('Y4', `${SBASE}.commission.rateByYear.year4`, { unit: '%', format: 'fraction-percent', step: 1 })}
+                </div>
+              </div>
+              <div>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Commission income (calculated)</p>
+                <div class="grid grid-cols-4 gap-3">
+                  ${['year1','year2','year3','year4'].map((yr, i) => `
+                    <div class="flex flex-col">
+                      <span class="text-[10px] text-gray-400 font-mono mb-0.5">Y${i + 1}</span>
+                      <span class="text-sm font-mono tabular-nums text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5"
+                            x-text="getStreamCommissionIncome(streamIndex, '${yr}')">
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </section>
     </template>

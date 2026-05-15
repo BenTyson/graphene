@@ -312,12 +312,20 @@ function _outlookTable() {
 
       <!-- Table -->
       <div class="overflow-x-auto border border-gray-200 rounded-lg" x-show="proformaComputed">
-        <table class="text-xs w-full">
+        <table class="text-xs">
           <thead>
             <tr class="bg-gray-50">
-              <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-40 min-w-[160px] border-r border-gray-200">Line Item</th>
+              <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-44 min-w-[176px] border-r border-gray-200">Line Item</th>
               <template x-for="(col, ci) in getProformaColumns()" :key="ci">
-                <th class="px-2 py-2 text-right text-gray-500 font-medium whitespace-nowrap min-w-[80px]" x-text="col"></th>
+                <th class="py-2 text-right text-gray-500 font-medium whitespace-nowrap"
+                    :class="{
+                      'px-4 min-w-[150px]': proformaOutlookView === 'yearly',
+                      'px-3 min-w-[110px] border-l-2 border-gray-300': proformaOutlookView === 'quarterly' && ci % 4 === 0 && ci > 0,
+                      'px-3 min-w-[110px]': proformaOutlookView === 'quarterly' && !(ci % 4 === 0 && ci > 0),
+                      'px-2 min-w-[80px]': proformaOutlookView === 'monthly'
+                    }"
+                    x-text="col">
+                </th>
               </template>
             </tr>
           </thead>
@@ -345,8 +353,11 @@ function _outlookTable() {
                   </span>
                 </td>
                 <template x-for="(val, vi) in row.data" :key="vi">
-                  <td class="px-2 py-1.5 text-right whitespace-nowrap font-mono"
-                      :class="row.percent ? 'text-gray-600' : row.child ? (val < 0 ? 'text-red-400' : 'text-gray-500') : (val < 0 ? 'text-red-600' : (val > 0 && row.bold ? 'text-green-700' : 'text-gray-700'))">
+                  <td class="py-1.5 text-right whitespace-nowrap font-mono"
+                      :class="[
+                        row.percent ? 'text-gray-600' : row.child ? (val < 0 ? 'text-red-400' : 'text-gray-500') : (val < 0 ? 'text-red-600' : (val > 0 && row.bold ? 'text-green-700' : 'text-gray-700')),
+                        proformaOutlookView === 'yearly' ? 'px-4' : proformaOutlookView === 'quarterly' ? 'px-3' + (vi % 4 === 0 && vi > 0 ? ' border-l-2 border-gray-300' : '') : 'px-2'
+                      ]">
                     <span x-text="row.percent ? window._pfFmtP(val) : window._pfFmtC(val, proformaOutlookView !== 'monthly')"></span>
                   </td>
                 </template>

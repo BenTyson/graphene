@@ -2,11 +2,16 @@ import OpenAI from 'openai';
 
 class AIInsightsService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    this.openai = null;
     this.cache = new Map();
     this.cacheTimeout = 15 * 60 * 1000; // 15 minutes
+  }
+
+  _getClient() {
+    if (!this.openai) {
+      this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+    return this.openai;
   }
 
   // Get cached result or null if expired/missing
@@ -56,7 +61,7 @@ ${knowledgeContext}
 
 ` : ''}When referencing knowledge base information, cite it as "According to research documents in the knowledge base..." or similar.`;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this._getClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {

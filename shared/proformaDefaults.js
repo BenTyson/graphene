@@ -440,9 +440,7 @@ export function migrateAssumptions(a) {
     // Bake in a Graphene Oxide stream for any scenario that doesn't
     // already have one linked to the GO market source. GO is now
     // first-class — every scenario should ship with all three.
-    const hasGoStream = a.revenue.streams.some(s =>
-      s.market?.mode === 'linked' && s.market?.linkedSource === 'grapheneOxide'
-    );
+    const hasGoStream = a.revenue.streams.some(s => s.id === 'grapheneOxideStream');
     if (!hasGoStream) {
       const go = _grapheneOxideStream();
       go.order = a.revenue.streams.length;
@@ -526,6 +524,15 @@ export function migrateAssumptions(a) {
       }
       if (s.market && s.market.mode === 'direct' && s.market.revenueByYear && s.market.revenueByYear.year4 == null) {
         s.market.revenueByYear.year4 = 0;
+      }
+      if (!s.commission) {
+        s.commission = { enabled: false, rateByYear: { year1: 0, year2: 0, year3: 0, year4: 0 }, dealValueByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } };
+      }
+      // Migrate single `rate` field to `rateByYear`
+      if (s.commission && typeof s.commission.rate === 'number' && !s.commission.rateByYear) {
+        const r = s.commission.rate;
+        s.commission.rateByYear = { year1: r, year2: r, year3: r, year4: r };
+        delete s.commission.rate;
       }
     }
   }
