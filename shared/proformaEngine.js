@@ -545,16 +545,16 @@ function aggregateViews(outlook) {
     quarterly[key] = [];
     for (let q = 0; q < QUARTERS_TOTAL; q++) {
       const base = q * 3;
-      let sum = 0;
-      for (let i = 0; i < 3; i++) {
-        sum += outlook[key][base + i] || 0;
-      }
-      // For percentage fields, average instead of sum
       if (key === 'grossMarginPct') {
         const revSum = (outlook.revenue[base] || 0) + (outlook.revenue[base + 1] || 0) + (outlook.revenue[base + 2] || 0);
         const gmSum = (outlook.grossMargin[base] || 0) + (outlook.grossMargin[base + 1] || 0) + (outlook.grossMargin[base + 2] || 0);
         quarterly[key].push(revSum > 0 ? gmSum / revSum : 0);
+      } else if (key === 'cumulativeCash') {
+        // Running balance — end-of-quarter snapshot, not a sum
+        quarterly[key].push(outlook[key][base + 2] || 0);
       } else {
+        let sum = 0;
+        for (let i = 0; i < 3; i++) sum += outlook[key][base + i] || 0;
         quarterly[key].push(sum);
       }
     }
@@ -563,10 +563,6 @@ function aggregateViews(outlook) {
     yearly[key] = [];
     for (let y = 0; y < YEARS_TOTAL; y++) {
       const base = y * 12;
-      let sum = 0;
-      for (let i = 0; i < 12; i++) {
-        sum += outlook[key][base + i] || 0;
-      }
       if (key === 'grossMarginPct') {
         let revSum = 0, gmSum = 0;
         for (let i = 0; i < 12; i++) {
@@ -574,7 +570,12 @@ function aggregateViews(outlook) {
           gmSum += outlook.grossMargin[base + i] || 0;
         }
         yearly[key].push(revSum > 0 ? gmSum / revSum : 0);
+      } else if (key === 'cumulativeCash') {
+        // Running balance — end-of-year snapshot, not a sum
+        yearly[key].push(outlook[key][base + 11] || 0);
       } else {
+        let sum = 0;
+        for (let i = 0; i < 12; i++) sum += outlook[key][base + i] || 0;
         yearly[key].push(sum);
       }
     }

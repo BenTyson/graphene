@@ -157,7 +157,7 @@ export function getProformaTabHtml() {
           </div>
 
           <!-- Sub-tab pills -->
-          <div class="flex border-b border-gray-200 mb-4 gap-1">
+          <div class="sticky top-0 z-30 bg-white/95 backdrop-blur -mx-4 px-4 flex border-b border-gray-200 mb-4 gap-1">
             <template x-for="t in [{id:'assumptions',label:'Assumptions'},{id:'outlook',label:'Outlook'},{id:'charts',label:'Charts'},{id:'summary',label:'Summary'}]" :key="t.id">
               <button @click="proformaEditorTab = t.id; if(t.id === 'charts') $nextTick(() => renderProformaCharts())"
                       :class="proformaEditorTab === t.id ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'"
@@ -314,17 +314,28 @@ function _outlookTable() {
       <div class="overflow-x-auto border border-gray-200 rounded-lg" x-show="proformaComputed">
         <table class="text-xs">
           <thead>
+            <!-- Year-group banner (monthly / quarterly only) -->
+            <template x-if="proformaOutlookView !== 'yearly'">
+              <tr class="bg-gray-100 border-b border-gray-300">
+                <th class="sticky left-0 bg-gray-100 z-10 px-3 py-1 border-r border-gray-200"></th>
+                <template x-for="(yr, yi) in [0,1,2,3,4]" :key="yr">
+                  <th :colspan="proformaOutlookView === 'monthly' ? 13 : 5"
+                      class="py-1.5 px-3 text-center text-[11px] font-semibold text-gray-600 tracking-wide"
+                      x-text="'Year ' + yr">
+                  </th>
+                </template>
+              </tr>
+            </template>
             <tr class="bg-gray-50">
               <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-44 min-w-[176px] border-r border-gray-200">Line Item</th>
-              <template x-for="(col, ci) in getProformaColumns()" :key="ci">
-                <th class="py-2 text-right text-gray-500 font-medium whitespace-nowrap"
-                    :class="{
-                      'px-4 min-w-[150px]': proformaOutlookView === 'yearly',
-                      'px-3 min-w-[110px] border-l-2 border-gray-300': proformaOutlookView === 'quarterly' && ci % 4 === 0 && ci > 0,
-                      'px-3 min-w-[110px]': proformaOutlookView === 'quarterly' && !(ci % 4 === 0 && ci > 0),
-                      'px-2 min-w-[80px]': proformaOutlookView === 'monthly'
+              <template x-for="(col, ci) in getProformaDisplayColumns()" :key="ci">
+                <th class="py-2 text-right font-medium whitespace-nowrap"
+                    :class="col.isTotal ? 'px-3 min-w-[90px] bg-gray-100 text-gray-700 font-semibold border-x-2 border-gray-400' : {
+                      'px-4 min-w-[150px] text-gray-500': proformaOutlookView === 'yearly',
+                      'px-3 min-w-[110px] text-gray-500': proformaOutlookView === 'quarterly',
+                      'px-2 min-w-[80px] text-gray-500': proformaOutlookView === 'monthly'
                     }"
-                    x-text="col">
+                    x-text="col.label">
                 </th>
               </template>
             </tr>
@@ -352,13 +363,18 @@ function _outlookTable() {
                     <span x-text="row.label"></span>
                   </span>
                 </td>
-                <template x-for="(val, vi) in row.data" :key="vi">
+                <template x-for="(item, vi) in getProformaDisplayData(row)" :key="vi">
                   <td class="py-1.5 text-right whitespace-nowrap font-mono"
-                      :class="[
-                        row.percent ? 'text-gray-600' : row.child ? (val < 0 ? 'text-red-400' : 'text-gray-500') : (val < 0 ? 'text-red-600' : (val > 0 && row.bold ? 'text-green-700' : 'text-gray-700')),
-                        proformaOutlookView === 'yearly' ? 'px-4' : proformaOutlookView === 'quarterly' ? 'px-3' + (vi % 4 === 0 && vi > 0 ? ' border-l-2 border-gray-300' : '') : 'px-2'
+                      :class="item.isTotal ? [
+                        'px-3 border-x-2 border-gray-400 font-semibold',
+                        (row.bold || row.category) ? 'bg-gray-300' : 'bg-gray-100',
+                        row.percent ? 'text-gray-600' : item.val < 0 ? 'text-red-600' : (item.val > 0 && row.bold ? 'text-green-700' : 'text-gray-800')
+                      ] : [
+                        row.percent ? 'text-gray-600' : row.child ? (item.val < 0 ? 'text-red-400' : 'text-gray-500') : (item.val < 0 ? 'text-red-600' : (item.val > 0 && row.bold ? 'text-green-700' : 'text-gray-700')),
+                        proformaOutlookView === 'yearly' ? 'px-4' : proformaOutlookView === 'quarterly' ? 'px-3' : 'px-2',
+                        (row.bold || row.category) ? 'font-semibold' : ''
                       ]">
-                    <span x-text="row.percent ? window._pfFmtP(val) : window._pfFmtC(val, proformaOutlookView !== 'monthly')"></span>
+                    <span x-text="row.percent ? window._pfFmtP(item.val) : window._pfFmtC(item.val, item.isTotal || proformaOutlookView !== 'monthly')"></span>
                   </td>
                 </template>
               </tr>

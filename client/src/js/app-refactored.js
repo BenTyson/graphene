@@ -5793,6 +5793,8 @@ window.grapheneApp = function() {
     removeProformaFteRole(index) { proformaService.removeFteRole(this, index); },
     getProformaOutlookRows() { return proformaService.getOutlookRows(this); },
     getProformaColumns() { return proformaService.getColumnLabels(this); },
+    getProformaDisplayColumns() { return proformaService.getDisplayColumns(this); },
+    getProformaDisplayData(row) { return proformaService.getDisplayData(row, this); },
     getStreamCommissionIncome(streamIndex, yr) {
       const stream = this.proformaAssumptions?.revenue?.streams?.[streamIndex];
       if (!stream) return '$0';
