@@ -525,6 +525,19 @@ export function migrateAssumptions(a) {
       if (s.market && s.market.mode === 'direct' && s.market.revenueByYear && s.market.revenueByYear.year4 == null) {
         s.market.revenueByYear.year4 = 0;
       }
+      // Direct streams gained an input-mode toggle: 'revenue' (entered $, derive kg)
+      // vs 'kg' (entered kg, derive $). Older blobs default to 'revenue' to
+      // preserve behavior; kgByYear is seeded as zeros.
+      if (s.market && s.market.mode === 'direct') {
+        if (s.market.directInput !== 'kg') s.market.directInput = 'revenue';
+        if (!s.market.kgByYear || typeof s.market.kgByYear !== 'object') {
+          s.market.kgByYear = { year1: 0, year2: 0, year3: 0, year4: 0 };
+        } else {
+          for (const yk of ['year1','year2','year3','year4']) {
+            if (typeof s.market.kgByYear[yk] !== 'number') s.market.kgByYear[yk] = 0;
+          }
+        }
+      }
       if (!s.commission) {
         s.commission = { enabled: false, rateByYear: { year1: 0, year2: 0, year3: 0, year4: 0 }, dealValueByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } };
       }

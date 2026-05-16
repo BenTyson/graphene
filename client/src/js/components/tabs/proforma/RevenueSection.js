@@ -131,17 +131,71 @@ function _captureBlock() {
 
     <template x-if="${SBASE}.market.mode === 'direct'">
       <section class="space-y-4">
+        <!-- $ vs kg input-mode sub-toggle -->
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Drive from</span>
+          <div class="inline-flex rounded-md bg-gray-100 p-0.5">
+            <button type="button"
+                    @click="setProformaStreamDirectInput(${SBASE}.id, 'revenue')"
+                    :class="(${SBASE}.market.directInput || 'revenue') === 'revenue' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors">
+              $ &rarr; kg
+            </button>
+            <button type="button"
+                    @click="setProformaStreamDirectInput(${SBASE}.id, 'kg')"
+                    :class="${SBASE}.market.directInput === 'kg' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-2.5 py-1 text-[11px] font-medium rounded transition-colors">
+              kg &rarr; $
+            </button>
+          </div>
+        </div>
+
+        <!-- $-driven: enter yearly revenue, derive kg -->
+        <template x-if="(${SBASE}.market.directInput || 'revenue') === 'revenue'">
+          <div>
+            <header class="flex items-baseline gap-2 mb-2">
+              <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
+              <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
+              <span class="text-[11px] text-gray-400">Set the dollar amount; kg derived from price below</span>
+            </header>
+            <div class="grid grid-cols-4 gap-3">
+              ${['year1','year2','year3','year4'].map((yr, i) => numInput(`Y${i+1}`, `${SBASE}.market.revenueByYear.${yr}`, {
+                unit: '$', step: 10000,
+                indicator: `(${SBASE}.market.revenueByYear.${yr} > 0 && ${SBASE}.pricing.${yr} > 0) ? '≈ ' + Math.round(${SBASE}.market.revenueByYear.${yr} / ${SBASE}.pricing.${yr}).toLocaleString() + ' kg' : (${SBASE}.market.revenueByYear.${yr} > 0 ? '⚠ set price below' : '—')`
+              })).join('')}
+            </div>
+          </div>
+        </template>
+
+        <!-- kg-driven: enter yearly kg, derive revenue -->
+        <template x-if="${SBASE}.market.directInput === 'kg'">
+          <div>
+            <header class="flex items-baseline gap-2 mb-2">
+              <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
+              <h4 class="text-sm font-semibold text-gray-800">Yearly kg sold</h4>
+              <span class="text-[11px] text-gray-400">Set the kilos; revenue derived from price below</span>
+            </header>
+            <div class="grid grid-cols-4 gap-3">
+              ${['year1','year2','year3','year4'].map((yr, i) => numInput(`Y${i+1}`, `${SBASE}.market.kgByYear.${yr}`, {
+                unit: 'kg', step: 100,
+                indicator: `(${SBASE}.market.kgByYear.${yr} > 0 && ${SBASE}.pricing.${yr} > 0) ? '≈ $' + Math.round(${SBASE}.market.kgByYear.${yr} * ${SBASE}.pricing.${yr}).toLocaleString() : (${SBASE}.market.kgByYear.${yr} > 0 ? '⚠ set price below' : '—')`
+              })).join('')}
+            </div>
+          </div>
+        </template>
+
         <div>
-          <header class="flex items-baseline gap-2 mb-2">
-            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">1</span>
-            <h4 class="text-sm font-semibold text-gray-800">Yearly revenue</h4>
-            <span class="text-[11px] text-gray-400">Set the dollar amount directly &mdash; no market math</span>
-          </header>
+          <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Sell price ($/kg) by year</p>
           <div class="grid grid-cols-4 gap-3">
-            ${numInput('Y1', `${SBASE}.market.revenueByYear.year1`, { unit: '$', step: 10000 })}
-            ${numInput('Y2', `${SBASE}.market.revenueByYear.year2`, { unit: '$', step: 10000 })}
-            ${numInput('Y3', `${SBASE}.market.revenueByYear.year3`, { unit: '$', step: 10000 })}
-            ${numInput('Y4', `${SBASE}.market.revenueByYear.year4`, { unit: '$', step: 10000 })}
+            ${['year1','year2','year3','year4'].map((yr, i) => `
+              <div>
+                <label class="block text-[10px] text-gray-400 font-mono mb-0.5">Y${i+1}</label>
+                <input type="number" step="1"
+                       :value="${SBASE}.pricing.${yr}"
+                       @input="${SBASE}.pricing.${yr} = +$event.target.value; proformaRecompute()"
+                       class="w-full text-sm border-gray-300 rounded-md px-2 py-1.5 font-mono tabular-nums focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+              </div>
+            `).join('')}
           </div>
         </div>
 
@@ -202,7 +256,6 @@ function _timingBlock() {
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold"
               x-text="${numLinked}"></span>
         <h4 class="text-sm font-semibold text-gray-800">Timing</h4>
-        <span class="text-[11px] text-gray-400">When revenue starts and how it spreads through the year</span>
       </header>
 
       <div class="grid grid-cols-3 gap-3">

@@ -498,7 +498,7 @@ class ProformaService {
       pricing,
       commission: { enabled: false, rateByYear: { year1: 0, year2: 0, year3: 0, year4: 0 }, dealValueByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } },
       market: mode === 'direct'
-        ? { mode: 'direct', revenueByYear }
+        ? { mode: 'direct', directInput: 'revenue', revenueByYear, kgByYear: { year1: 0, year2: 0, year3: 0, year4: 0 } }
         : { mode: 'linked', linkedSource }
     };
     for (let y = 1; y < YEARS_TOTAL; y++) {
@@ -527,6 +527,21 @@ class ProformaService {
     this.recompute(ctx);
   }
 
+  // Toggle the input mode for a Direct-$ stream: 'revenue' (entered $)
+  // vs 'kg' (entered kg). Stores both, only the active one drives the calc.
+  setStreamDirectInput(ctx, streamId, input) {
+    const stream = ctx.proformaAssumptions?.revenue?.streams?.find(s => s.id === streamId);
+    if (!stream || stream.market?.mode !== 'direct') return;
+    stream.market.directInput = input === 'kg' ? 'kg' : 'revenue';
+    if (!stream.market.kgByYear) {
+      stream.market.kgByYear = { year1: 0, year2: 0, year3: 0, year4: 0 };
+    }
+    if (!stream.market.revenueByYear) {
+      stream.market.revenueByYear = { year1: 0, year2: 0, year3: 0, year4: 0 };
+    }
+    this.recompute(ctx);
+  }
+
   // Switch a stream's market mode in place. When switching to 'direct',
   // seed revenueByYear with a rough estimate of last-computed revenue so
   // the user has a starting point instead of zeros.
@@ -539,7 +554,9 @@ class ProformaService {
         revenueByYear = {};
         for (let y = 1; y < YEARS_TOTAL; y++) revenueByYear['year' + y] = 0;
       }
-      stream.market = { mode: 'direct', revenueByYear };
+      const kgByYear = stream.market?.kgByYear || { year1: 0, year2: 0, year3: 0, year4: 0 };
+      const directInput = stream.market?.directInput === 'kg' ? 'kg' : 'revenue';
+      stream.market = { mode: 'direct', directInput, revenueByYear, kgByYear };
     } else {
       stream.market = {
         mode: 'linked',
@@ -556,50 +573,85 @@ class ProformaService {
     if (!c) return [];
     const view = ctx.proformaOutlookView;
     const src = view === 'yearly' ? c.yearly : view === 'quarterly' ? c.quarterly : c.outlook;
+
+    // Section tints — header/parent rows get the -100 shade; child rows get
+    // -50; total cells go one step darker. Class strings must be literal
+    // (not concatenated) so Tailwind's JIT picks them up.
+    // Child rows use the section's -50 shade at 25% opacity — barely
+    // tinted, matches the very faint banding in the source spreadsheet.
+    const SECTION_TINTS = {
+      sales:   { row: 'bg-blue-100',   child: 'bg-blue-50/25',   totalParent: 'bg-blue-200',   totalChild: 'bg-blue-100/40' },
+      cogs:    { row: 'bg-rose-100',   child: 'bg-rose-50/25',   totalParent: 'bg-rose-200',   totalChild: 'bg-rose-100/40' },
+      margin:  { row: 'bg-green-50',   child: 'bg-green-50/25',  totalParent: 'bg-green-100', totalChild: 'bg-green-50/40' },
+      opex:    { row: 'bg-purple-100', child: 'bg-purple-50/25', totalParent: 'bg-purple-200', totalChild: 'bg-purple-100/40' },
+      ebitda:  { row: 'bg-sky-100',    child: 'bg-sky-50/25',    totalParent: 'bg-sky-200',    totalChild: 'bg-sky-100/40' },
+      capital: { row: 'bg-violet-100', child: 'bg-violet-50/25', totalParent: 'bg-violet-200', totalChild: 'bg-violet-100/40' },
+      capex:   { row: 'bg-orange-100', child: 'bg-orange-50/25', totalParent: 'bg-orange-200', totalChild: 'bg-orange-100/40' },
+      cash:    { row: 'bg-gray-200',   child: 'bg-gray-50/25',   totalParent: 'bg-gray-300',   totalChild: 'bg-gray-100/40' }
+    };
+
+    const applyTints = (r) => {
+      const t = SECTION_TINTS[r.section];
+      if (!t) {
+        r.bgRow = 'bg-gray-50';
+        r.bgTotal = 'bg-gray-100';
+        r.bgLabel = 'bg-white';
+        return r;
+      }
+      r.bgRow = r.child ? t.child : t.row;
+      r.bgTotal = r.child ? t.totalChild : t.totalParent;
+      // Sticky label cells must be OPAQUE so horizontally-scrolled content
+      // doesn't bleed through. Parents already use a solid -100 shade;
+      // children use plain white to avoid color stacking with the row tint.
+      r.bgLabel = r.child ? 'bg-white' : t.row;
+      return r;
+    };
+
     // Flat list: parent rows + child rows interleaved. Children have parentKey for collapse logic.
     const rows = [];
-    const add = (label, key, data, opts = {}) => rows.push({ label, key, data, ...opts });
+    const add = (label, key, data, opts = {}) => rows.push(applyTints({ label, key, data, ...opts }));
     const addChildren = (parentKey, children) => {
       for (const ch of children) {
-        rows.push({ ...ch, child: true, parentKey });
+        rows.push(applyTints({ ...ch, child: true, parentKey }));
       }
     };
 
-    add('Revenue', 'revenue', src.revenue, { category: true });
+    add('Revenue', 'revenue', src.revenue, { category: true, section: 'sales' });
     const streams = ctx.proformaAssumptions?.revenue?.streams || [];
     addChildren('revenue', streams.filter(s => s.enabled !== false).map(s => ({
       label: s.name,
       key: 'revenueStream_' + s.id,
-      data: src['revenueStream_' + s.id] || []
+      data: src['revenueStream_' + s.id] || [],
+      section: 'sales'
     })));
-    add('COGS', 'cogs', src.cogs, { category: true });
+    add('COGS', 'cogs', src.cogs, { category: true, section: 'cogs' });
     addChildren('cogs', [
-      { label: 'Manufacturing', key: 'cogsManufacturing', data: src.cogsManufacturing },
-      { label: 'Hemp', key: 'cogsHemp', data: src.cogsHemp },
-      { label: 'Biochar', key: 'cogsBiochar', data: src.cogsBiochar }
+      { label: 'Manufacturing', key: 'cogsManufacturing', data: src.cogsManufacturing, section: 'cogs' },
+      { label: 'Hemp', key: 'cogsHemp', data: src.cogsHemp, section: 'cogs' },
+      { label: 'Biochar', key: 'cogsBiochar', data: src.cogsBiochar, section: 'cogs' }
     ]);
-    add('Gross Margin', 'grossMargin', src.grossMargin, { bold: true });
-    add('Gross Margin %', 'grossMarginPct', src.grossMarginPct, { percent: true });
-    add('Operating Expenses', 'opex', src.opex, { category: true });
+    add('Gross Margin', 'grossMargin', src.grossMargin, { bold: true, section: 'margin' });
+    add('Gross Margin %', 'grossMarginPct', src.grossMarginPct, { percent: true, section: 'margin' });
+    add('Operating Expenses', 'opex', src.opex, { category: true, section: 'opex' });
     addChildren('opex', [
-      { label: 'Staffing', key: 'opexStaffing', data: src.opexStaffing },
-      { label: 'Benefits', key: 'opexBenefits', data: src.opexBenefits },
-      { label: 'Overhead', key: 'opexOverhead', data: src.opexOverhead },
-      { label: 'R&D', key: 'opexRnd', data: src.opexRnd },
-      { label: 'Legal', key: 'opexLegal', data: src.opexLegal },
-      { label: 'Royalty', key: 'opexRoyalty', data: src.opexRoyalty },
-      { label: 'Commission', key: 'opexCommission', data: src.opexCommission },
-      { label: 'Insurance', key: 'opexInsurance', data: src.opexInsurance }
+      { label: 'Staffing', key: 'opexStaffing', data: src.opexStaffing, section: 'opex' },
+      { label: 'Benefits', key: 'opexBenefits', data: src.opexBenefits, section: 'opex' },
+      { label: 'Overhead', key: 'opexOverhead', data: src.opexOverhead, section: 'opex' },
+      { label: 'R&D', key: 'opexRnd', data: src.opexRnd, section: 'opex' },
+      { label: 'Legal', key: 'opexLegal', data: src.opexLegal, section: 'opex' },
+      { label: 'Royalty', key: 'opexRoyalty', data: src.opexRoyalty, section: 'opex' },
+      { label: 'Commission', key: 'opexCommission', data: src.opexCommission, section: 'opex' },
+      { label: 'Insurance', key: 'opexInsurance', data: src.opexInsurance, section: 'opex' }
     ]);
-    add('EBITDA', 'ebitda', src.ebitda, { bold: true });
-    add('CapEx', 'capex', src.capex, { category: true });
+    add('EBITDA', 'ebitda', src.ebitda, { bold: true, section: 'ebitda' });
+    add('CapEx', 'capex', src.capex, { category: true, section: 'capex' });
     addChildren('capex', [
-      { label: 'Machinery', key: 'capexMachinery', data: src.capexMachinery },
-      { label: 'Lab/R&D', key: 'capexLab', data: src.capexLab }
+      { label: 'Machinery', key: 'capexMachinery', data: src.capexMachinery, section: 'capex' },
+      { label: 'Lab/R&D', key: 'capexLab', data: src.capexLab, section: 'capex' }
     ]);
-    add('Capital Raised', 'capitalRaised', src.capitalRaised);
-    add('Cash Flow', 'cashFlow', src.cashFlow, { bold: true });
-    add('Cumulative Cash', 'cumulativeCash', src.cumulativeCash, { bold: true });
+    add('Capital Raised', 'capitalRaised', src.capitalRaised, { section: 'capital' });
+    add('Cash Flow', 'cashFlow', src.cashFlow, { bold: true, section: 'cash' });
+    add('Cumulative Cash', 'cumulativeCash', src.cumulativeCash, { bold: true, section: 'cash' });
     return rows;
   }
 
@@ -652,6 +704,257 @@ class ProformaService {
       }
     }
     return out;
+  }
+
+  // ── Summary view (yearly snapshot) ──
+
+  getSummary(ctx) {
+    const c = ctx.proformaComputed;
+    if (!c) return null;
+    const y = c.yearly;
+    const prod = c.production;
+    const YEARS = y.revenue?.length || 5;
+
+    // Per-year production kg (yearly aggregator doesn't expose
+    // monthlyGrapheneKg, sum by hand off the monthly array)
+    const kgProducedByYear = Array.from({ length: YEARS }, (_, yr) => {
+      let s = 0;
+      for (let m = yr * 12; m < (yr + 1) * 12; m++) s += (prod.monthlyGrapheneKg[m] || 0);
+      return s;
+    });
+    const kgSoldByYear = y.demandKgTotal || new Array(YEARS).fill(0);
+
+    // Avg price/kg = revenue / kg sold; cost/kg = COGS / kg produced.
+    const avgPricePerKg = Array.from({ length: YEARS }, (_, yr) =>
+      kgSoldByYear[yr] > 0 ? y.revenue[yr] / kgSoldByYear[yr] : null);
+    const avgCostPerKg = Array.from({ length: YEARS }, (_, yr) =>
+      kgProducedByYear[yr] > 0 ? y.cogs[yr] / kgProducedByYear[yr] : null);
+
+    // FTEs = end-of-year headcount (Q4) across operational+sales+executive.
+    const staffing = ctx.proformaAssumptions?.opex?.staffing || {};
+    const fteByYear = Array.from({ length: YEARS }, (_, yr) => {
+      const ySt = staffing['year' + yr];
+      if (!ySt) return 0;
+      let n = 0;
+      for (const role of ['operational', 'sales', 'executive']) {
+        const c = ySt[role]?.count;
+        if (Array.isArray(c)) n += (c[3] || 0);
+      }
+      return n;
+    });
+
+    // Per-stream sales kg, only enabled streams.
+    const streams = (ctx.proformaAssumptions?.revenue?.streams || []).filter(s => s.enabled !== false);
+    const salesRows = streams.map(s => ({
+      label: s.name,
+      data: y['demandKg_' + s.id] || new Array(YEARS).fill(0)
+    }));
+
+    // OPEX subtotals to match the spreadsheet's groupings.
+    const salaryBenefits = Array.from({ length: YEARS }, (_, yr) =>
+      (y.opexStaffing[yr] || 0) + (y.opexBenefits[yr] || 0));
+    const royaltyCommission = Array.from({ length: YEARS }, (_, yr) =>
+      (y.opexRoyalty[yr] || 0) + (y.opexCommission[yr] || 0));
+    const otherOpex = Array.from({ length: YEARS }, (_, yr) =>
+      (y.opexOverhead[yr] || 0) + (y.opexRnd[yr] || 0) + (y.opexInsurance[yr] || 0));
+
+    // Opening cash = startingCash + initialInvestment (Y0 only — it's a stock).
+    const cap = ctx.proformaAssumptions?.capital || {};
+    const openingCash = (cap.startingCash || 0) + (cap.initialInvestment || 0);
+
+    // Cash needs: peak cash deficit + how much capex/opex was consumed
+    // before break-even (the funding bar the company has to clear).
+    const breakEvenMonth = c.metrics?.breakEvenMonth ?? -1;
+    const peakCashNeed = c.metrics?.peakCashNeed ?? 0;
+    let capexToBreakEven = 0, opexToBreakEven = 0;
+    if (breakEvenMonth >= 0) {
+      for (let m = 0; m <= breakEvenMonth; m++) {
+        capexToBreakEven += (c.outlook.capex[m] || 0);
+        opexToBreakEven += (c.outlook.opex[m] || 0);
+      }
+    }
+
+    // Headline P&L table: revenue / COGS / gross / opex / net income +
+    // gross & operating margin %. Net Operating Margin = EBITDA / revenue
+    // (no separate taxes modeled, so EBITDA stands in for Net Income Pre-Tax).
+    const grossMarginPctY = Array.from({ length: YEARS }, (_, yr) =>
+      y.revenue[yr] > 0 ? y.grossMargin[yr] / y.revenue[yr] : null);
+    const netOpMarginPctY = Array.from({ length: YEARS }, (_, yr) =>
+      y.revenue[yr] > 0 ? y.ebitda[yr] / y.revenue[yr] : null);
+
+    return {
+      years: Array.from({ length: YEARS }, (_, yr) => 'Y' + yr),
+      headline: {
+        revenue: y.revenue.slice(),
+        cogs: y.cogs.slice(),
+        gross: y.grossMargin.slice(),
+        grossMarginPct: grossMarginPctY,
+        opex: y.opex.slice(),
+        netIncome: y.ebitda.slice(),
+        netOpMarginPct: netOpMarginPctY
+      },
+      metrics: {
+        avgPricePerKg,
+        avgCostPerKg,
+        kgProducedByYear
+      },
+      sales: salesRows,
+      capexOpex: {
+        capex: y.capex,
+        opex: y.opex,
+        salaryBenefits,
+        legal: y.opexLegal,
+        royaltyCommission,
+        otherOpex,
+        fteByYear
+      },
+      cashFlow: {
+        cumulativeCash: y.cumulativeCash,
+        capex: y.capex,
+        opex: y.opex,
+        openingCash
+      },
+      cashNeeds: {
+        totalCashToBreakEven: Math.abs(peakCashNeed),
+        capexToBreakEven,
+        opexToBreakEven,
+        breakEvenMonth
+      }
+    };
+  }
+
+  // ── Production timeline (Gantt + data table) ──
+
+  getProductionGanttRows(ctx) {
+    const machines = ctx.proformaAssumptions?.machines || [];
+    return machines.map(machine => {
+      const constructionStart = machine.payments?.length
+        ? Math.min(...machine.payments.map(p => p.month))
+        : machine.validationStartMonth;
+      const paymentAmounts = {};
+      for (const p of (machine.payments || [])) {
+        paymentAmounts[p.month] = (machine.cost || 0) * p.pct;
+      }
+      // Yearly capex paid on this machine — surfaces in the total column
+      // when the gantt shares a table with the data section below.
+      const yearlyCapex = Array.from({ length: 5 }, (_, y) => {
+        let s = 0;
+        for (let m = y * 12; m < (y + 1) * 12; m++) s += (paymentAmounts[m] || 0);
+        return s;
+      });
+      return {
+        name: machine.name,
+        type: machine.type,
+        constructionStart,
+        validationStart: machine.validationStartMonth,
+        productionStart: machine.productionStartMonth,
+        paymentAmounts,
+        yearlyCapex
+      };
+    });
+  }
+
+  getProductionTableRows(ctx) {
+    const c = ctx.proformaComputed;
+    if (!c) return [];
+    const MONTHS = 60;
+    const YEARS = 5;
+    const src = c.outlook;
+    const prod = c.production;
+    const rows = [];
+
+    const yearlySum = (arr) => Array.from({ length: YEARS }, (_, y) => {
+      let s = 0;
+      for (let m = y * 12; m < (y + 1) * 12; m++) s += (arr[m] || 0);
+      return s;
+    });
+
+    // Interleave monthly data with a Y{n} Total cell after every 12 months.
+    // Mirrors getDisplayData(); keeps the production table column-aligned
+    // with the Outlook table when both have monthly + totals visible.
+    const interleave = (data, yearlyData) => {
+      const out = [];
+      for (let i = 0; i < data.length; i++) {
+        out.push({ val: data[i], isTotal: false });
+        if ((i + 1) % 12 === 0) {
+          const yi = Math.floor(i / 12);
+          out.push({ val: yearlyData ? yearlyData[yi] : 0, isTotal: true });
+        }
+      }
+      return out;
+    };
+
+    const add = (label, data, yearlyData, opts = {}) => {
+      rows.push({ label, data, yearlyData, displayData: interleave(data, yearlyData), ...opts });
+    };
+
+    const zeros = new Array(MONTHS).fill(0);
+    const zerosY = new Array(YEARS).fill(0);
+
+    add('PRODUCTION', zeros, zerosY, { category: true, key: 'prodHeader' });
+    (prod.machineTimelines || []).forEach((mt, i) => {
+      add(mt.name, mt.monthlyKg, yearlySum(mt.monthlyKg), { child: true, parentKey: 'prodHeader', key: 'mt_' + i, isKg: true });
+    });
+    add('Total Graphene', prod.monthlyGrapheneKg, yearlySum(prod.monthlyGrapheneKg), { bold: true, key: 'totalGraphene', isKg: true });
+
+    add('INPUTS', zeros, zerosY, { category: true, key: 'inputsHeader' });
+    add('Hemp consumed', prod.monthlyHempKg, yearlySum(prod.monthlyHempKg), { child: true, parentKey: 'inputsHeader', key: 'hempKg', isKg: true });
+    add('Hemp cost', src.cogsHemp, yearlySum(src.cogsHemp), { child: true, parentKey: 'inputsHeader', key: 'hempCost' });
+    add('Biochar cost', src.cogsBiochar, yearlySum(src.cogsBiochar), { child: true, parentKey: 'inputsHeader', key: 'biocharCost' });
+
+    add('COSTS', zeros, zerosY, { category: true, key: 'costsHeader' });
+    add('CapEx (machines)', src.capexMachinery, yearlySum(src.capexMachinery), { child: true, parentKey: 'costsHeader', key: 'capex' });
+    add('Manufacturing opex', src.cogsManufacturing, yearlySum(src.cogsManufacturing), { child: true, parentKey: 'costsHeader', key: 'mfgOpex' });
+
+    const costPerKg = Array.from({ length: MONTHS }, (_, m) => {
+      const kg = (prod.monthlyGrapheneKg[m] || 0);
+      return kg > 0 ? ((src.cogsManufacturing[m] || 0) + (src.cogsHemp[m] || 0) + (src.cogsBiochar[m] || 0)) / kg : null;
+    });
+    // Yearly cost/kg = sum(costs over year) / sum(kg over year) — NOT mean of
+    // monthly cost/kg, which would over-weight low-production months.
+    const costPerKgYearly = Array.from({ length: YEARS }, (_, y) => {
+      let kgSum = 0, costSum = 0;
+      for (let m = y * 12; m < (y + 1) * 12; m++) {
+        kgSum += (prod.monthlyGrapheneKg[m] || 0);
+        costSum += (src.cogsManufacturing[m] || 0) + (src.cogsHemp[m] || 0) + (src.cogsBiochar[m] || 0);
+      }
+      return kgSum > 0 ? costSum / kgSum : null;
+    });
+    add('Cost / kg', costPerKg, costPerKgYearly, { child: true, parentKey: 'costsHeader', key: 'costPerKg', isCostPerKg: true });
+
+    // INVENTORY: running balance of kilos. Sold is a flow (sum yearly);
+    // Available and Ending are stocks. Ending can go negative when planned
+    // sales outrun capacity — surfaced as red text, not clamped, so the
+    // shortfall is quantitative (the capacity-vs-demand chart is visual).
+    const demandKg = src.demandKgTotal || new Array(MONTHS).fill(0);
+    const kilosSold = demandKg.slice();
+    const kilosAvailable = new Array(MONTHS).fill(0);
+    const endingKilos = new Array(MONTHS).fill(0);
+    let prevEnding = 0;
+    for (let m = 0; m < MONTHS; m++) {
+      const produced = prod.monthlyGrapheneKg[m] || 0;
+      kilosAvailable[m] = prevEnding + produced;
+      endingKilos[m] = kilosAvailable[m] - (kilosSold[m] || 0);
+      prevEnding = endingKilos[m];
+    }
+    const kilosSoldYearly = yearlySum(kilosSold);
+    // Available yearly = carry-in + produced in year. Matches conventional
+    // inventory accounting (beginning + production = goods available).
+    const kilosAvailableYearly = Array.from({ length: YEARS }, (_, y) => {
+      const beginning = y === 0 ? 0 : endingKilos[y * 12 - 1];
+      let producedYear = 0;
+      for (let m = y * 12; m < (y + 1) * 12; m++) producedYear += (prod.monthlyGrapheneKg[m] || 0);
+      return beginning + producedYear;
+    });
+    // Ending yearly = end-of-December value (stock at year-end).
+    const endingKilosYearly = Array.from({ length: YEARS }, (_, y) => endingKilos[y * 12 + 11]);
+
+    add('INVENTORY', zeros, zerosY, { category: true, key: 'inventoryHeader' });
+    add('Kilos available', kilosAvailable, kilosAvailableYearly, { child: true, parentKey: 'inventoryHeader', key: 'kilosAvailable', isKg: true });
+    add('Kilos sold', kilosSold, kilosSoldYearly, { child: true, parentKey: 'inventoryHeader', key: 'kilosSold', isKg: true });
+    add('Ending kilos on hand', endingKilos, endingKilosYearly, { child: true, parentKey: 'inventoryHeader', key: 'endingKilos', isKg: true });
+
+    return rows;
   }
 
   // ── Charts ──

@@ -519,6 +519,7 @@ window.grapheneApp = function() {
     proformaLoading: false,
     proformaDirty: false,
     proformaCollapsed: {},
+    proformaProductionCollapsed: {},
     proformaSection: 'revenue',
     proformaSectionsReviewed: {},
     proformaAdvancedOpen: {},
@@ -5774,6 +5775,7 @@ window.grapheneApp = function() {
     removeProformaRevenueStream(streamId) { proformaService.removeRevenueStream(this, streamId); },
     toggleProformaRevenueStream(streamId) { proformaService.toggleRevenueStream(this, streamId); },
     setProformaStreamMarketMode(streamId, mode) { proformaService.setStreamMarketMode(this, streamId, mode); },
+    setProformaStreamDirectInput(streamId, input) { proformaService.setStreamDirectInput(this, streamId, input); },
     addProformaMarketSource(opts) { return proformaService.addMarketSource(this, opts); },
     removeProformaMarketSource(sourceId) { proformaService.removeMarketSource(this, sourceId); },
     countProformaStreamsLinkedToSource(sourceId) { return proformaService.countStreamsLinkedToSource(this, sourceId); },
@@ -5795,6 +5797,9 @@ window.grapheneApp = function() {
     getProformaColumns() { return proformaService.getColumnLabels(this); },
     getProformaDisplayColumns() { return proformaService.getDisplayColumns(this); },
     getProformaDisplayData(row) { return proformaService.getDisplayData(row, this); },
+    getProformaGanttRows() { return proformaService.getProductionGanttRows(this); },
+    getProformaProductionRows() { return proformaService.getProductionTableRows(this); },
+    getProformaSummary() { return proformaService.getSummary(this); },
     getStreamCommissionIncome(streamIndex, yr) {
       const stream = this.proformaAssumptions?.revenue?.streams?.[streamIndex];
       if (!stream) return '$0';

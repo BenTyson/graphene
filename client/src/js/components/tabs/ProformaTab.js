@@ -7,6 +7,7 @@ import { getOperationsSection } from './proforma/OperationsSection.js';
 import { getMachinesSection } from './proforma/MachinesSection.js';
 import { getCapitalSection } from './proforma/CapitalSection.js';
 import { getMarketsSection, getReferenceDataSection } from './proforma/TechnicalSection.js';
+import { getProductionTimelineHtml } from './proforma/ProductionTimeline.js';
 
 // Make formatters available for inline template expressions
 window._pfFmtC = formatCurrency;
@@ -158,7 +159,7 @@ export function getProformaTabHtml() {
 
           <!-- Sub-tab pills -->
           <div class="sticky top-0 z-30 bg-white/95 backdrop-blur -mx-4 px-4 flex border-b border-gray-200 mb-4 gap-1">
-            <template x-for="t in [{id:'assumptions',label:'Assumptions'},{id:'outlook',label:'Outlook'},{id:'charts',label:'Charts'},{id:'summary',label:'Summary'}]" :key="t.id">
+            <template x-for="t in [{id:'assumptions',label:'Assumptions'},{id:'production',label:'Production'},{id:'outlook',label:'Outlook'},{id:'charts',label:'Charts'},{id:'summary',label:'Summary'}]" :key="t.id">
               <button @click="proformaEditorTab = t.id; if(t.id === 'charts') $nextTick(() => renderProformaCharts())"
                       :class="proformaEditorTab === t.id ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'"
                       class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
@@ -196,6 +197,11 @@ export function getProformaTabHtml() {
               </summary>
               <div class="mt-6">${getReferenceDataSection()}</div>
             </details>
+          </div>
+
+          <!-- ─── PRODUCTION SUB-TAB ─── -->
+          <div x-show="proformaEditorTab === 'production'">
+            ${getProductionTimelineHtml()}
           </div>
 
           <!-- ─── OUTLOOK SUB-TAB ─── -->
@@ -311,13 +317,13 @@ function _outlookTable() {
       </div>
 
       <!-- Table -->
-      <div class="overflow-x-auto border border-gray-200 rounded-lg" x-show="proformaComputed">
+      <div class="overflow-auto border border-gray-200 rounded-lg max-h-[calc(100vh-260px)]" x-show="proformaComputed">
         <table class="text-xs">
-          <thead>
+          <thead class="sticky top-0 z-20">
             <!-- Year-group banner (monthly / quarterly only) -->
             <template x-if="proformaOutlookView !== 'yearly'">
               <tr class="bg-gray-100 border-b border-gray-300">
-                <th class="sticky left-0 bg-gray-100 z-10 px-3 py-1 border-r border-gray-200"></th>
+                <th class="sticky left-0 bg-gray-100 z-30 px-3 py-1 border-r border-gray-200"></th>
                 <template x-for="(yr, yi) in [0,1,2,3,4]" :key="yr">
                   <th :colspan="proformaOutlookView === 'monthly' ? 13 : 5"
                       class="py-1.5 px-3 text-center text-[11px] font-semibold text-gray-600 tracking-wide"
@@ -327,7 +333,7 @@ function _outlookTable() {
               </tr>
             </template>
             <tr class="bg-gray-50">
-              <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-44 min-w-[176px] border-r border-gray-200">Line Item</th>
+              <th class="sticky left-0 bg-gray-50 z-30 px-3 py-2 text-left text-gray-600 font-medium w-44 min-w-[176px] border-r border-gray-200">Line Item</th>
               <template x-for="(col, ci) in getProformaDisplayColumns()" :key="ci">
                 <th class="py-2 text-right font-medium whitespace-nowrap"
                     :class="col.isTotal ? 'px-3 min-w-[90px] bg-gray-100 text-gray-700 font-semibold border-x-2 border-gray-400' : {
@@ -343,16 +349,19 @@ function _outlookTable() {
           <tbody>
             <template x-for="(row, ri) in getProformaOutlookRows()" :key="proformaOutlookView + '_' + row.key">
               <tr x-show="!row.child || !proformaCollapsed[row.parentKey]"
-                  :class="{
-                    'border-t border-gray-300 bg-gray-50': row.bold || row.category,
-                    'border-t border-gray-100': !row.bold && !row.category && !row.child,
-                    'border-t border-gray-50': row.child,
-                    'cursor-pointer hover:bg-gray-100': row.category
-                  }"
+                  :class="[
+                    row.bgRow,
+                    row.child ? 'border-t border-gray-100/60' : 'border-t border-gray-300',
+                    row.category ? 'cursor-pointer hover:brightness-95' : ''
+                  ]"
                   @click="row.category && (proformaCollapsed[row.key] = !proformaCollapsed[row.key])">
                 <td class="sticky left-0 z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200"
                     :class="[
-                      row.bold ? 'bg-gray-50 text-gray-900 font-semibold' : row.child ? 'bg-white text-gray-500 pl-8' : row.category ? 'bg-gray-50 text-gray-700 font-medium' : 'bg-white text-gray-700',
+                      row.bgLabel,
+                      row.bold ? 'text-gray-900 font-semibold'
+                        : row.category ? 'text-gray-700 font-medium'
+                        : row.child ? 'text-gray-600 pl-8'
+                        : 'text-gray-700'
                     ]">
                   <span class="flex items-center gap-1">
                     <template x-if="row.category">
@@ -367,10 +376,10 @@ function _outlookTable() {
                   <td class="py-1.5 text-right whitespace-nowrap font-mono"
                       :class="item.isTotal ? [
                         'px-3 border-x-2 border-gray-400 font-semibold',
-                        (row.bold || row.category) ? 'bg-gray-300' : 'bg-gray-100',
+                        row.bgTotal,
                         row.percent ? 'text-gray-600' : item.val < 0 ? 'text-red-600' : (item.val > 0 && row.bold ? 'text-green-700' : 'text-gray-800')
                       ] : [
-                        row.percent ? 'text-gray-600' : row.child ? (item.val < 0 ? 'text-red-400' : 'text-gray-500') : (item.val < 0 ? 'text-red-600' : (item.val > 0 && row.bold ? 'text-green-700' : 'text-gray-700')),
+                        row.percent ? 'text-gray-600' : row.child ? (item.val < 0 ? 'text-red-500' : 'text-gray-600') : (item.val < 0 ? 'text-red-600' : (item.val > 0 && row.bold ? 'text-green-700' : 'text-gray-800')),
                         proformaOutlookView === 'yearly' ? 'px-4' : proformaOutlookView === 'quarterly' ? 'px-3' : 'px-2',
                         (row.bold || row.category) ? 'font-semibold' : ''
                       ]">
@@ -394,61 +403,187 @@ function _outlookTable() {
 // SUMMARY VIEW
 // ═══════════════════════════════════════════════════════════════
 function _summaryView() {
+  // Section header row in the yearly table. Tinted bg matches the section's role.
+  const sectionRow = (label, bgClass) => `
+    <tr class="border-t border-gray-300">
+      <td colspan="6" class="${bgClass} px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-800" x-text="'${label}'"></td>
+    </tr>
+  `;
+
+  // Currency row — one value per year, x-text expression takes the array.
+  const currencyRow = (label, expr, opts = {}) => {
+    const { bold = false, indent = false, sign = false } = opts;
+    return `
+      <tr class="border-t border-gray-100">
+        <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 ${bold ? 'font-semibold text-gray-900' : 'text-gray-700'} ${indent ? 'pl-6 text-gray-600' : ''}">${sign ? '<span class="text-gray-400 mr-1">−</span>' : ''}${label}</td>
+        <template x-for="(v, i) in (${expr} || [])" :key="i">
+          <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono ${bold ? 'font-semibold' : ''}"
+              :class="(v == null || v === 0) ? 'text-gray-300' : (v < 0 ? 'text-red-600' : 'text-gray-800')">
+            <span x-text="(v == null) ? '—' : window._pfFmtC(v, true)"></span>
+          </td>
+        </template>
+      </tr>
+    `;
+  };
+
+  // Number row (kg or unitless integer).
+  const numRow = (label, expr, opts = {}) => {
+    const { unit = '', bold = false, indent = false } = opts;
+    return `
+      <tr class="border-t border-gray-100">
+        <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 ${bold ? 'font-semibold text-gray-900' : 'text-gray-700'} ${indent ? 'pl-6 text-gray-600' : ''}">${label}</td>
+        <template x-for="(v, i) in (${expr} || [])" :key="i">
+          <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono ${bold ? 'font-semibold' : ''}"
+              :class="(v == null || v === 0) ? 'text-gray-300' : (v < 0 ? 'text-red-600' : 'text-gray-800')">
+            <span x-text="v == null ? '—' : Math.round(v).toLocaleString()${unit ? ` + ' ${unit}'` : ''}"></span>
+          </td>
+        </template>
+      </tr>
+    `;
+  };
+
+  // Per-kilo $ row (small numbers, integer-rounded, em-dash for null).
+  const perKgRow = (label, expr) => `
+    <tr class="border-t border-gray-100">
+      <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 font-semibold text-gray-900">${label}</td>
+      <template x-for="(v, i) in (${expr} || [])" :key="i">
+        <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono font-semibold"
+            :class="v == null ? 'text-gray-300' : 'text-gray-800'">
+          <span x-text="v == null ? 'N/A' : '$' + Math.round(v).toLocaleString()"></span>
+        </td>
+      </template>
+    </tr>
+  `;
+
+  // Headline P&L: clean striped table. Label column sits one shade darker
+  // than the data row it belongs to so the eye keeps the row together.
+  const headlineRow = (label, expr, idx, opts = {}) => {
+    const { pct = false } = opts;
+    const isEven = idx % 2 === 0;
+    const dataBg = isEven ? 'bg-white' : 'bg-gray-50';
+    const labelBg = isEven ? 'bg-gray-100' : 'bg-gray-200';
+    const valueFmt = pct
+      ? `(v == null ? 'N/A' : (v * 100).toFixed(2) + '%')`
+      : `(v == null ? 'N/A' : window._pfFmtC(v, true))`;
+    return `
+      <tr class="border-b border-gray-200">
+        <td class="${labelBg} px-3 py-2 font-semibold text-[11px] uppercase tracking-wider text-gray-800 whitespace-nowrap">${label}</td>
+        <template x-for="(v, i) in (${expr} || [])" :key="i">
+          <td class="${dataBg} px-3 py-2 text-right font-mono font-semibold"
+              :class="(v == null) ? 'text-gray-400' : (v < 0 ? 'text-red-600' : 'text-gray-900')">
+            <span x-text="${valueFmt}"></span>
+          </td>
+        </template>
+      </tr>
+    `;
+  };
+  const headlineTable = `
+    <div class="mb-6 overflow-x-auto rounded-lg border border-gray-200" x-data="{ S: getProformaSummary() }" x-effect="S = getProformaSummary()">
+      <table class="text-xs w-full border-collapse">
+        <thead>
+          <tr>
+            <th class="bg-white px-3 py-2 w-56 min-w-[224px] border-b border-gray-200"></th>
+            <template x-for="(yr, yi) in (S?.years || [])" :key="yi">
+              <th class="bg-white px-3 py-2 text-right text-xs font-semibold text-gray-900 border-b border-gray-200"
+                  x-text="yi === 0 ? 'Year 0 (Pre)' : ('Year ' + yi)"></th>
+            </template>
+          </tr>
+        </thead>
+        <tbody>
+          ${headlineRow('Revenue',                'S?.headline?.revenue',          0)}
+          ${headlineRow('COGS',                   'S?.headline?.cogs',             1)}
+          ${headlineRow('Gross',                  'S?.headline?.gross',            2)}
+          ${headlineRow('Gross Margin',           'S?.headline?.grossMarginPct',   3, { pct: true })}
+          ${headlineRow('OPEX',                   'S?.headline?.opex',             4)}
+          ${headlineRow('Net Income Pre-Tax',     'S?.headline?.netIncome',        5)}
+          ${headlineRow('Net Operating Margin',   'S?.headline?.netOpMarginPct',   6, { pct: true })}
+        </tbody>
+      </table>
+    </div>
+  `;
+
   return `
     <div x-show="proformaComputed">
-      <!-- Key Metrics Cards -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Break-Even Month</p>
-          <p class="text-lg font-semibold text-gray-900" x-text="proformaComputed.metrics.breakEvenMonth >= 0 ? 'Month ' + proformaComputed.metrics.breakEvenMonth : 'N/A'"></p>
-        </div>
-        <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Peak Cash Need</p>
-          <p class="text-lg font-semibold text-red-600" x-text="window._pfFmtC(proformaComputed.metrics.peakCashNeed, true)"></p>
-        </div>
-        <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y4 Revenue Run Rate</p>
-          <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(proformaComputed.metrics.y4Revenue, true)"></p>
-        </div>
-        <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Y4 EBITDA Margin</p>
-          <p class="text-lg font-semibold" :class="proformaComputed.metrics.y4EbitdaMargin >= 0 ? 'text-green-700' : 'text-red-600'"
-             x-text="window._pfFmtP(proformaComputed.metrics.y4EbitdaMargin)"></p>
-        </div>
-        <div class="border border-gray-200 rounded-lg p-3">
-          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Total CapEx</p>
-          <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(proformaComputed.metrics.totalCapex, true)"></p>
-        </div>
-      </div>
-
-      <!-- Quarterly Summary Table -->
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">Quarterly Summary</h3>
-      <div class="overflow-x-auto border border-gray-200 rounded-lg">
+      ${headlineTable}
+      <div class="overflow-x-auto border border-gray-200 rounded-lg" x-data="{ S: getProformaSummary() }" x-effect="S = getProformaSummary()">
         <table class="text-xs w-full">
           <thead>
             <tr class="bg-gray-50">
-              <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-40 border-r border-gray-200">Metric</th>
-              <template x-for="q in 20" :key="q">
-                <th class="px-2 py-2 text-right text-gray-500 font-medium whitespace-nowrap" x-text="'Y' + Math.floor((q-1)/4) + ' Q' + ((q-1)%4+1)"></th>
+              <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-56 min-w-[224px] border-r border-gray-200">Line</th>
+              <template x-for="(yr, yi) in (S?.years || [])" :key="yi">
+                <th class="px-3 py-2 text-right text-gray-500 font-medium whitespace-nowrap min-w-[120px]" x-text="yr"></th>
               </template>
             </tr>
           </thead>
           <tbody>
-            <template x-for="row in [{label:'Revenue',key:'revenue'},{label:'COGS',key:'cogs'},{label:'Gross Margin',key:'grossMargin'},{label:'OPEX',key:'opex'},{label:'EBITDA',key:'ebitda'},{label:'Cash Flow',key:'cashFlow'},{label:'Cumulative Cash',key:'cumulativeCash'}]" :key="row.key">
+            ${sectionRow('Metrics', 'bg-slate-100')}
+            ${perKgRow('Avg. Price per Kilo', 'S?.metrics?.avgPricePerKg')}
+            ${perKgRow('Avg. Cost per Kilo',  'S?.metrics?.avgCostPerKg')}
+            ${numRow  ('Total Kilos Produced', 'S?.metrics?.kgProducedByYear', { bold: true })}
+
+            ${sectionRow('Sales', 'bg-blue-50')}
+            <template x-for="(row, ri) in (S?.sales || [])" :key="ri">
               <tr class="border-t border-gray-100">
-                <td class="sticky left-0 bg-white z-10 px-3 py-1.5 text-gray-700 font-medium whitespace-nowrap border-r border-gray-200" x-text="row.label"></td>
-                <template x-for="(val, vi) in proformaComputed.quarterly[row.key]" :key="vi">
-                  <td class="px-2 py-1.5 text-right whitespace-nowrap font-mono"
-                      :class="val < 0 ? 'text-red-600' : 'text-gray-700'">
-                    <span x-text="window._pfFmtC(val, true)"></span>
+                <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 text-gray-700">
+                  <span class="text-gray-400 mr-1">Sales kg:</span><span x-text="row.label"></span>
+                </td>
+                <template x-for="(v, i) in row.data" :key="i">
+                  <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono"
+                      :class="(v == null || v === 0) ? 'text-gray-300' : 'text-gray-800'">
+                    <span x-text="Math.round(v || 0).toLocaleString()"></span>
                   </td>
                 </template>
               </tr>
             </template>
+
+            ${sectionRow('CapEx &amp; OpEx', 'bg-rose-50')}
+            ${currencyRow('Total CAPEX', 'S?.capexOpex?.capex', { bold: true })}
+            ${currencyRow('Total OPEX',  'S?.capexOpex?.opex',  { bold: true })}
+            ${currencyRow('Salary &amp; Benefits', 'S?.capexOpex?.salaryBenefits', { indent: true, sign: true })}
+            ${currencyRow('Legal',                 'S?.capexOpex?.legal',          { indent: true, sign: true })}
+            ${currencyRow('Royalty &amp; Commission', 'S?.capexOpex?.royaltyCommission', { indent: true, sign: true })}
+            ${currencyRow('Other',                 'S?.capexOpex?.otherOpex',      { indent: true, sign: true })}
+            ${numRow     ('Total FTEs',            'S?.capexOpex?.fteByYear',      { bold: true })}
+
+            ${sectionRow('Cash Flow', 'bg-violet-100')}
+            ${currencyRow('Cash Burn',             'S?.cashFlow?.cumulativeCash', { bold: true })}
+            ${currencyRow('CAPEX',                 'S?.cashFlow?.capex',          { indent: true, sign: true })}
+            ${currencyRow('Operating Cash Flow',   'S?.cashFlow?.opex',           { indent: true, sign: true })}
+            <tr class="border-t border-gray-100">
+              <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 text-gray-700">Opening Cash + Commitments</td>
+              <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono text-gray-800"
+                  x-text="window._pfFmtC(S?.cashFlow?.openingCash || 0, true)"></td>
+              <td colspan="4"></td>
+            </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Cash Needs — single-figure summary block -->
+      <div class="mt-6">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Cash Needs</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" x-data="{ S: getProformaSummary() }" x-effect="S = getProformaSummary()">
+          <div class="border border-emerald-200 rounded-lg p-3 bg-emerald-50">
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Total Cash to Break Even</p>
+            <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(S?.cashNeeds?.totalCashToBreakEven || 0, true)"></p>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-3">
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 mb-1">CapEx Cash to Break Even</p>
+            <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(S?.cashNeeds?.capexToBreakEven || 0, true)"></p>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-3">
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 mb-1">OpEx Cash to Break Even</p>
+            <p class="text-lg font-semibold text-gray-900" x-text="window._pfFmtC(S?.cashNeeds?.opexToBreakEven || 0, true)"></p>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-3">
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Break Even</p>
+            <p class="text-lg font-semibold text-gray-900"
+               x-text="(S?.cashNeeds?.breakEvenMonth >= 0) ? 'Month ' + S.cashNeeds.breakEvenMonth : 'Not reached'"></p>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div x-show="!proformaComputed" class="text-center py-12 text-gray-400 text-sm">
       No computed data available.
     </div>
