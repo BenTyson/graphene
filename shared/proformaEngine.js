@@ -278,12 +278,21 @@ function computeRevenue(revenueAssumptions, techRef) {
         const pricePerKg = pricing['year' + year] || pricing.year1 || 0;
         yearRevenue = yearKg * pricePerKg;
       } else if (market.mode === 'direct') {
-        const rev = market.revenueByYear || {};
-        const directRevenue = rev['year' + year] || 0;
-        // Direct-$ mode has no kg input — derive implied kg from price if set.
         const pricing = stream.pricing || {};
         const pricePerKg = pricing['year' + year] || pricing.year1 || 0;
-        yearKg = pricePerKg > 0 ? directRevenue / pricePerKg : 0;
+        const directInput = market.directInput === 'kg' ? 'kg' : 'revenue';
+        let directRevenue;
+        if (directInput === 'kg') {
+          // kg-driven: user enters kilos sold, revenue = kg × price.
+          const kgY = market.kgByYear || {};
+          yearKg = kgY['year' + year] || 0;
+          directRevenue = yearKg * pricePerKg;
+        } else {
+          // $-driven: user enters revenue, derive kg from price if set.
+          const rev = market.revenueByYear || {};
+          directRevenue = rev['year' + year] || 0;
+          yearKg = pricePerKg > 0 ? directRevenue / pricePerKg : 0;
+        }
         // Commission income: rate × deal value flowing through a third party.
         // No kg component — it's a fee, not a product sale.
         let commissionRevenue = 0;
