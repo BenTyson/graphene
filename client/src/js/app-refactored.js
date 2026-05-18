@@ -53,6 +53,7 @@ import { getAddToPipelineModalHtml } from './components/modals/AddToPipelineModa
 import { getContactDetailPanelHtml } from './components/modals/ContactDetailPanel.js';
 import { getProformaTabHtml } from './components/tabs/ProformaTab.js';
 import proformaService from './services/ProformaService.js';
+import { explainCell as explainProformaCell, findUnregisteredOutlookKeys as findUnregisteredProformaKeys } from '@shared/proformaExplain.js';
 import { getEmailAdminTabHtml } from './components/tabs/EmailAdminTab.js';
 import { getEmailPreferencesModalHtml } from './components/modals/EmailPreferencesModal.js';
 import emailService from './services/EmailService.js';
@@ -526,6 +527,9 @@ window.grapheneApp = function() {
     proformaMachineHover: null,
     proformaStaffingYear: 'year0',
     proformaMarketSources: [],
+    // Outlook cell explainer: double-click a cell to see how it was calculated.
+    proformaExplainer: null, // { rowKey, periodIndex, view, label, anchor: {top,left,width,height} }
+    proformaExplainerStack: [], // back-stack so drilling into a part is reversible
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -5800,6 +5804,94 @@ window.grapheneApp = function() {
     getProformaGanttRows() { return proformaService.getProductionGanttRows(this); },
     getProformaProductionRows() { return proformaService.getProductionTableRows(this); },
     getProformaSummary() { return proformaService.getSummary(this); },
+
+    // ── Outlook cell explainer ──
+    // Called from @dblclick on each Outlook cell. The label arg is the row's
+    // user-facing label so the panel header reads naturally even though we
+    // key off rowKey internally.
+    // Translate a (row, displayColumnIndex) pair from the rendered table into
+    // a clean (view, periodIndex) tuple. Total cells (Y0 Total, Y1 Total …)
+    // in monthly/quarterly views collapse to a yearly period in the explainer.
+    openProformaExplainerFromCell(row, displayIndex, isTotal, event) {
+      const view = this.proformaOutlookView;
+      let targetView = view;
+      let periodIndex;
+      if (view === 'yearly') {
+        periodIndex = displayIndex;
+      } else {
+        // monthly: blocks of 13 (12 months + 1 total). quarterly: blocks of 5.
+        const block = view === 'monthly' ? 13 : 5;
+        const yearIdx = Math.floor(displayIndex / block);
+        if (isTotal) {
+          targetView = 'yearly';
+          periodIndex = yearIdx;
+        } else {
+          periodIndex = displayIndex - yearIdx;
+        }
+      }
+      this._openProformaExplainerInternal(row.key, periodIndex, row.label, targetView, event);
+    },
+    _openProformaExplainerInternal(rowKey, periodIndex, label, view, event) {
+      let anchor = null;
+      if (event && event.currentTarget) {
+        const r = event.currentTarget.getBoundingClientRect();
+        anchor = { top: r.top, left: r.left, width: r.width, height: r.height };
+      }
+      this.proformaExplainerStack = [];
+      this.proformaExplainer = { rowKey, periodIndex, label, view, anchor };
+      if (window.getSelection) {
+        try { window.getSelection().removeAllRanges(); } catch (e) { /* ignore */ }
+      }
+    },
+    closeProformaExplainer() {
+      this.proformaExplainer = null;
+      this.proformaExplainerStack = [];
+    },
+    drillProformaExplainer(rowKey, label) {
+      if (!this.proformaExplainer) return;
+      this.proformaExplainerStack.push({ ...this.proformaExplainer });
+      this.proformaExplainer = {
+        ...this.proformaExplainer,
+        rowKey,
+        label: label || rowKey
+      };
+    },
+    backProformaExplainer() {
+      const prev = this.proformaExplainerStack.pop();
+      if (prev) this.proformaExplainer = prev;
+    },
+    getProformaExplain() {
+      const e = this.proformaExplainer;
+      if (!e) return null;
+      return explainProformaCell({
+        computed: this.proformaComputed,
+        assumptions: this.proformaAssumptions,
+        rowKey: e.rowKey,
+        periodIndex: e.periodIndex,
+        view: e.view,
+        label: e.label
+      });
+    },
+    // Helper used by the panel template for inline value formatting.
+    // Jump from a leaf-input row in the explainer to the matching journey pill
+    // in the Assumptions editor. Closes the panel so the section isn't obscured.
+    jumpToProformaSection(section) {
+      if (!section) return;
+      this.proformaEditorTab = 'assumptions';
+      this.proformaSection = section;
+      this.closeProformaExplainer();
+    },
+    formatProformaExplainValue(val, format) {
+      if (val === '—' || val == null) return val ?? '—';
+      if (typeof val !== 'number') return val;
+      if (format === 'percent') return (val * 100).toFixed(2) + '%';
+      if (format === 'kg') return Math.round(val).toLocaleString() + ' kg';
+      if (format === 'count') return Math.round(val).toLocaleString();
+      if (format === 'pricePerKg') return '$' + val.toFixed(2) + '/kg';
+      if (format === 'multiplier') return val.toFixed(2) + '×';
+      if (format === 'none') return String(val);
+      return window._pfFmtC(val, true);
+    },
     getStreamCommissionIncome(streamIndex, yr) {
       const stream = this.proformaAssumptions?.revenue?.streams?.[streamIndex];
       if (!stream) return '$0';

@@ -240,7 +240,158 @@ export function getProformaTabHtml() {
       </template>
 
       ${_fullscreenChartModal()}
+      ${_explainerPanel()}
     </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OUTLOOK CELL EXPLAINER
+// Floating panel anchored near the double-clicked cell. Shows the
+// formula, each input's current value at that period, optional leaf
+// inputs (raw assumptions), and a monthly breakdown for aggregated
+// cells. Each "part" with a `key` is clickable → drills in.
+// ═══════════════════════════════════════════════════════════════
+function _explainerPanel() {
+  return `
+    <template x-if="proformaExplainer">
+      <div x-data="{ panelStyle: '' }"
+           x-init="
+             $nextTick(() => {
+               const anchor = proformaExplainer.anchor;
+               const W = 440, MARGIN = 12;
+               const vw = window.innerWidth, vh = window.innerHeight;
+               let top, left;
+               if (anchor) {
+                 top = anchor.top + anchor.height + 8;
+                 left = anchor.left + anchor.width / 2 - W / 2;
+                 if (left + W > vw - MARGIN) left = vw - W - MARGIN;
+                 if (left < MARGIN) left = MARGIN;
+                 // Flip above the cell if the panel would run off the bottom.
+                 const estH = Math.min(520, vh - 2 * MARGIN);
+                 if (top + estH > vh - MARGIN) top = Math.max(MARGIN, anchor.top - estH - 8);
+               } else {
+                 top = 100;
+                 left = vw / 2 - W / 2;
+               }
+               panelStyle = 'top:' + top + 'px; left:' + left + 'px; width:' + W + 'px;';
+             })
+           ">
+        <!-- Click-away backdrop (invisible) -->
+        <div class="fixed inset-0 z-40"
+             @click="closeProformaExplainer()"
+             @keydown.escape.window="closeProformaExplainer()"></div>
+
+        <!-- Panel -->
+        <div class="fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-[80vh] overflow-hidden flex flex-col"
+             :style="panelStyle"
+             x-data="{ exp: getProformaExplain(), showMonthly: false }"
+             x-effect="exp = getProformaExplain()">
+          <template x-if="exp">
+            <div class="flex flex-col min-h-0">
+              <!-- Header -->
+              <div class="px-4 py-3 border-b border-gray-200 flex items-start gap-2 bg-gray-50">
+                <button x-show="proformaExplainerStack.length > 0"
+                        @click="backProformaExplainer()"
+                        class="p-1 text-gray-400 hover:text-gray-900 rounded shrink-0"
+                        title="Back">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[10px] uppercase tracking-wide text-gray-500" x-text="exp.periodLabel + ' · ' + exp.view"></div>
+                  <div class="text-sm font-semibold text-gray-900 truncate" x-text="exp.title"></div>
+                  <div class="text-lg font-mono mt-0.5"
+                       :class="exp.value < 0 ? 'text-red-600' : 'text-gray-900'"
+                       x-text="formatProformaExplainValue(exp.value, exp.format)"></div>
+                </div>
+                <button @click="closeProformaExplainer()"
+                        class="p-1 text-gray-400 hover:text-gray-900 rounded shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Body (scrolls) -->
+              <div class="overflow-y-auto px-4 py-3 text-xs text-gray-700 space-y-3 min-h-0">
+                <!-- Formula -->
+                <div>
+                  <div class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Formula</div>
+                  <div class="font-mono text-[12px] text-gray-800 leading-snug" x-text="exp.formula"></div>
+                </div>
+
+                <!-- Parts -->
+                <div x-show="exp.parts && exp.parts.length">
+                  <div class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Inputs at this period</div>
+                  <div class="border border-gray-100 rounded divide-y divide-gray-100">
+                    <template x-for="(p, pi) in exp.parts" :key="pi">
+                      <div class="flex items-center gap-2 px-2.5 py-1.5"
+                           :class="p.key ? 'cursor-pointer hover:bg-gray-50' : ''"
+                           @click="p.key && drillProformaExplainer(p.key, p.label)">
+                        <span class="text-gray-400 font-mono w-4 shrink-0 text-center" x-text="pi === 0 ? '' : (exp.parts[pi-1].op || '+')"></span>
+                        <span class="flex-1 truncate text-gray-700" x-text="p.label"></span>
+                        <span class="font-mono text-gray-900 shrink-0"
+                              x-text="formatProformaExplainValue(p.value, p.format || (typeof p.value === 'number' ? exp.format : null))"></span>
+                        <svg x-show="p.key" class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Leaf inputs (raw assumptions). Rows with a section deep-link
+                     to the matching journey pill on the Assumptions tab. -->
+                <div x-show="exp.leafInputs && exp.leafInputs.length">
+                  <div class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Source assumptions</div>
+                  <div class="border border-gray-100 rounded divide-y divide-gray-100">
+                    <template x-for="(li, ii) in exp.leafInputs" :key="ii">
+                      <div class="flex items-center gap-2 px-2.5 py-1.5"
+                           :class="li.section ? 'cursor-pointer hover:bg-gray-50' : ''"
+                           @click="li.section && jumpToProformaSection(li.section)">
+                        <span class="flex-1 text-gray-600" x-text="li.label"></span>
+                        <span class="font-mono text-gray-900 shrink-0 text-right" x-text="li.value"></span>
+                        <svg x-show="li.section" class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Monthly breakdown (aggregated views only) -->
+                <div x-show="exp.monthly && exp.monthly.values.length">
+                  <button @click="showMonthly = !showMonthly"
+                          class="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-500 hover:text-gray-900">
+                    <svg :class="showMonthly ? 'rotate-90' : ''" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <span>Monthly breakdown</span>
+                    <span class="text-gray-400 normal-case tracking-normal" x-text="'(' + exp.monthly.values.length + ' months)'"></span>
+                  </button>
+                  <div x-show="showMonthly" class="mt-2 border border-gray-100 rounded divide-y divide-gray-100">
+                    <template x-for="(v, mi) in exp.monthly.values" :key="mi">
+                      <div class="flex items-center gap-2 px-2.5 py-1 text-[11px]">
+                        <span class="text-gray-500 w-14 shrink-0" x-text="exp.monthly.labels[mi]"></span>
+                        <span class="flex-1"></span>
+                        <span class="font-mono text-gray-800 shrink-0"
+                              :class="v < 0 ? 'text-red-600' : ''"
+                              x-text="formatProformaExplainValue(v, exp.format)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Note -->
+                <div x-show="exp.note" class="text-[11px] text-gray-500 italic border-l-2 border-gray-200 pl-2" x-text="exp.note"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
   `;
 }
 
@@ -373,7 +524,8 @@ function _outlookTable() {
                   </span>
                 </td>
                 <template x-for="(item, vi) in getProformaDisplayData(row)" :key="vi">
-                  <td class="py-1.5 text-right whitespace-nowrap font-mono"
+                  <td class="py-1.5 text-right whitespace-nowrap font-mono select-none hover:outline hover:outline-1 hover:outline-gray-400/60"
+                      @dblclick.stop="openProformaExplainerFromCell(row, vi, item.isTotal, $event)"
                       :class="item.isTotal ? [
                         'px-3 border-x-2 border-gray-400 font-semibold',
                         row.bgTotal,
