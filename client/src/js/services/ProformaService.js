@@ -1,5 +1,6 @@
 import API from './api.js';
 import { calculateProforma } from '@shared/proformaEngine.js';
+import { findUnregisteredOutlookKeys } from '@shared/proformaExplain.js';
 import {
   getDefaultAssumptions,
   migrateAssumptions,
@@ -299,6 +300,17 @@ class ProformaService {
     try {
       ctx.proformaComputed = calculateProforma(ctx.proformaAssumptions);
       ctx.proformaDirty = true;
+      // Drift guard: if assembleOutlook gained a new row that isn't in the
+      // explainer FORMULAS registry, the cell explainer will fall back to
+      // "no explainer registered." Warn once per scenario so it doesn't get
+      // missed in review. (Runs in dev only; harmless in prod.)
+      if (!this._explainDriftWarned) {
+        const missing = findUnregisteredOutlookKeys(ctx.proformaComputed);
+        if (missing.length) {
+          console.warn('[proforma] Outlook keys missing from explainer registry:', missing);
+          this._explainDriftWarned = true;
+        }
+      }
     } catch (e) {
       console.error('Proforma recompute error', e);
     }
