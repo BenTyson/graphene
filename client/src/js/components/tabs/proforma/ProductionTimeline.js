@@ -100,7 +100,7 @@ export function getProductionTimelineHtml() {
                             : row.child ? 'bg-white text-gray-500 pl-8'
                             : row.category ? 'bg-gray-50 text-gray-700 font-medium'
                             : 'bg-white text-gray-700'">
-                  <span class="flex items-center gap-1">
+                  <span class="flex items-center gap-1.5">
                     <template x-if="row.category">
                       <svg :class="proformaProductionCollapsed[row.key] ? '' : 'rotate-90'"
                            class="w-3 h-3 text-gray-400 transition-transform"
@@ -109,6 +109,10 @@ export function getProductionTimelineHtml() {
                       </svg>
                     </template>
                     <span x-text="row.label"></span>
+                    <!-- Unit chip identifies kg rows once; cells stay numeric. -->
+                    <template x-if="row.isKg">
+                      <span class="text-[9px] uppercase tracking-wide px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">kg</span>
+                    </template>
                   </span>
                 </td>
                 <template x-for="(item, vi) in row.displayData" :key="vi">
@@ -130,7 +134,7 @@ export function getProductionTimelineHtml() {
                       <span x-text="item.val == null ? '—' : '$' + Math.round(item.val).toLocaleString()"></span>
                     </template>
                     <template x-if="row.isKg">
-                      <span x-text="Math.abs(item.val || 0) < 1 ? '' : Math.round(item.val).toLocaleString() + ' kg'"></span>
+                      <span x-text="Math.abs(item.val || 0) < 1 ? '' : Math.round(item.val).toLocaleString()"></span>
                     </template>
                     <template x-if="!row.isCostPerKg && !row.isKg && !row.category">
                       <span x-text="(item.val == null || item.val === 0) ? '' : window._pfFmtC(item.val, item.isTotal)"></span>
