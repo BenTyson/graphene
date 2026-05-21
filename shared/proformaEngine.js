@@ -409,8 +409,10 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     uofaRoyalty: new Array(MONTHS_TOTAL).fill(0),
     salesCommission: new Array(MONTHS_TOTAL).fill(0),
     businessInsurance: new Array(MONTHS_TOTAL).fill(0),
+    contingency: new Array(MONTHS_TOTAL).fill(0),
     total: new Array(MONTHS_TOTAL).fill(0)
   };
+  const contingencyPct = typeof opex.contingencyPct === 'number' ? opex.contingencyPct : 0;
 
   const staffYears = Array.from({ length: YEARS_TOTAL }, (_, y) => opex.staffing['year' + y]);
   const legalYears = Array.from({ length: YEARS_TOTAL }, (_, y) => 'year' + y);
@@ -475,10 +477,13 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     // O28: 100000, Q28: 100000 -- paid twice in Year 1? Actually looking at data:
     // O28=100000, P28=0, Q28=100000 -- this seems like a quirk. For now, single annual payment.
 
-    // Total OPEX
-    monthly.total[m] = monthly.staffing[m] + monthly.benefits[m] +
+    // Total OPEX: base subtotal + flat contingency uplift (% of base).
+    // Contingency is computed off the base so doubling-up is impossible.
+    const baseOpex = monthly.staffing[m] + monthly.benefits[m] +
       monthly.generalOverhead[m] + monthly.rnd[m] + monthly.legal[m] +
       monthly.uofaRoyalty[m] + monthly.salesCommission[m] + monthly.businessInsurance[m];
+    monthly.contingency[m] = baseOpex * contingencyPct;
+    monthly.total[m] = baseOpex + monthly.contingency[m];
   }
 
   return monthly;
@@ -505,6 +510,7 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, str
     opexRoyalty: opex.uofaRoyalty,
     opexCommission: opex.salesCommission,
     opexInsurance: opex.businessInsurance,
+    opexContingency: opex.contingency,
     ebitda: new Array(MONTHS_TOTAL).fill(0),
     capex: new Array(MONTHS_TOTAL).fill(0),
     capexMachinery: production.monthlyCapex,

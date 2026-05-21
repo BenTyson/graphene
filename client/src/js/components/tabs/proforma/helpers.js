@@ -342,6 +342,10 @@ export const HELP = {
     help: 'Sales commission on gross margin. Starts Y1 Q2 (Month 15).',
     dependsOn: 'Sales-driven OPEX once revenue begins.'
   },
+  'opex.contingencyPct': {
+    help: 'Catch-all uplift applied on the sum of all other OPEX lines. A buffer for unplanned spend.',
+    dependsOn: 'Adds a Contingency line under OPEX; raises total OPEX, lowers EBITDA.'
+  },
   'opex.generalOverhead.base': {
     help: 'Annual baseline: T&E $100K + Internet $5K + Marketing $50K + Misc $15K.',
     dependsOn: 'General overhead line per year.'

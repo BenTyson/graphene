@@ -736,7 +736,8 @@ class ProformaService {
       { label: 'Legal', key: 'opexLegal', data: src.opexLegal, section: 'opex' },
       { label: 'Royalty', key: 'opexRoyalty', data: src.opexRoyalty, section: 'opex' },
       { label: 'Commission', key: 'opexCommission', data: src.opexCommission, section: 'opex' },
-      { label: 'Insurance', key: 'opexInsurance', data: src.opexInsurance, section: 'opex' }
+      { label: 'Insurance', key: 'opexInsurance', data: src.opexInsurance, section: 'opex' },
+      { label: 'Contingency', key: 'opexContingency', data: src.opexContingency, section: 'opex' }
     ]);
     add('EBITDA', 'ebitda', src.ebitda, { bold: true, section: 'ebitda' });
     add('CapEx', 'capex', src.capex, { category: true, section: 'capex' });
@@ -851,7 +852,8 @@ class ProformaService {
     const royaltyCommission = Array.from({ length: YEARS }, (_, yr) =>
       (y.opexRoyalty[yr] || 0) + (y.opexCommission[yr] || 0));
     const otherOpex = Array.from({ length: YEARS }, (_, yr) =>
-      (y.opexOverhead[yr] || 0) + (y.opexRnd[yr] || 0) + (y.opexInsurance[yr] || 0));
+      (y.opexOverhead[yr] || 0) + (y.opexRnd[yr] || 0) + (y.opexInsurance[yr] || 0)
+      + ((y.opexContingency && y.opexContingency[yr]) || 0));
 
     // Opening cash = startingCash + initialInvestment (Y0 only — it's a stock).
     const cap = ctx.proformaAssumptions?.capital || {};
@@ -1288,17 +1290,18 @@ class ProformaService {
       }
     });
 
-    // OPEX composition — eight-band stacked area. Hits eight palette
-    // slots; later wraps would collide visually so we cap labels here.
+    // OPEX composition — stacked area. Palette wraps past 8 bands; the
+    // contingency band sits last so it visually stacks on top of the base.
     const opexBands = [
-      { key: 'opexStaffing',   label: 'Staffing' },
-      { key: 'opexBenefits',   label: 'Benefits' },
-      { key: 'opexOverhead',   label: 'Overhead' },
-      { key: 'opexRnd',        label: 'R&D' },
-      { key: 'opexLegal',      label: 'Legal' },
-      { key: 'opexRoyalty',    label: 'Royalty' },
-      { key: 'opexCommission', label: 'Commission' },
-      { key: 'opexInsurance',  label: 'Insurance' }
+      { key: 'opexStaffing',    label: 'Staffing' },
+      { key: 'opexBenefits',    label: 'Benefits' },
+      { key: 'opexOverhead',    label: 'Overhead' },
+      { key: 'opexRnd',         label: 'R&D' },
+      { key: 'opexLegal',       label: 'Legal' },
+      { key: 'opexRoyalty',     label: 'Royalty' },
+      { key: 'opexCommission',  label: 'Commission' },
+      { key: 'opexInsurance',   label: 'Insurance' },
+      { key: 'opexContingency', label: 'Contingency' }
     ];
     this._renderChart('proforma-chart-opex-composition', {
       type: 'line',

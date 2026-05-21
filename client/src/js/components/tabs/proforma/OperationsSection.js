@@ -155,7 +155,9 @@ export function getOperationsSection() {
     { label: 'UofA royalty', path: 'proformaAssumptions.opex.uofaRoyaltyPct',
       unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.uofaRoyaltyPct'] },
     { label: 'Sales commission', path: 'proformaAssumptions.opex.salesCommissionPct',
-      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.salesCommissionPct'] }
+      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.salesCommissionPct'] },
+    { label: 'Contingency', path: 'proformaAssumptions.opex.contingencyPct',
+      unit: '%', format: 'fraction-percent', step: 0.5, ...HELP['opex.contingencyPct'] }
   ];
 
   return `
