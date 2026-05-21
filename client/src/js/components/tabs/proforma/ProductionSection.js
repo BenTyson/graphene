@@ -21,62 +21,116 @@ export function getProductionSection() {
   const kilns = [
     { label: 'Pilot kiln feed rate', path: 'proformaAssumptions.production.smallKilnCuFtPerHour',
       unit: 'cu ft / hr', step: 0.5,
-      indicator: `proformaComputed ? '→ ' + proformaComputed.production.pilotMonthlyByPhase[0].toFixed(1) + ' kg/mo (Phase 1)' : ''`,
+      indicator: `proformaComputed ? '→ ' + proformaComputed.production.pilotMonthlyGrid[1][0].toFixed(1) + ' kg/mo (Y1 default)' : ''`,
       ...HELP['production.smallKilnCuFtPerHour'] },
     { label: 'Broderick kiln feed rate', path: 'proformaAssumptions.production.largeKilnCuFtPerHour',
       unit: 'cu ft / hr', step: 1,
-      indicator: `proformaComputed ? '→ ' + proformaComputed.production.broderickMonthlyByPhase[2].toFixed(1) + ' kg/mo (Phase 3)' : ''`,
+      indicator: `proformaComputed ? '→ ' + proformaComputed.production.broderickMonthlyGrid[3][3].toFixed(1) + ' kg/mo (Y3 Q4)' : ''`,
       ...HELP['production.largeKilnCuFtPerHour'] }
   ];
 
-  const phaseGrid = (kilnType, label) => `
+  // One yearly row with collapsible quarter overrides under each year.
+  // `expanded` is a local Alpine-data flag per row.
+  const yearRow = (kilnType) => `
+    <template x-for="(year, yi) in proformaAssumptions.production.scheduleByMachineType.${kilnType}" :key="yi">
+      <div class="border border-gray-100 rounded-lg" x-data="{ open: false }">
+        <div class="grid grid-cols-12 items-center gap-3 px-3 py-2">
+          <div class="col-span-1 text-xs font-semibold text-gray-700" x-text="'Y' + yi"></div>
+          <div class="col-span-3">
+            <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-0.5">Hrs / day</label>
+            <input type="number"
+                   :value="year.hoursPerDay"
+                   @input="year.hoursPerDay = +$event.target.value; proformaRecompute()"
+                   class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+          </div>
+          <div class="col-span-3">
+            <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-0.5">Days / mo</label>
+            <input type="number"
+                   :value="year.daysPerMonth"
+                   @input="year.daysPerMonth = +$event.target.value; proformaRecompute()"
+                   class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+          </div>
+          <div class="col-span-3 text-[11px] text-gray-500 font-mono">
+            <span x-text="'= ' + ((year.hoursPerDay || 0) * (year.daysPerMonth || 0)) + ' hrs/mo'"></span>
+            <span class="ml-2 text-gray-400"
+                  x-show="(year.quarters || []).some(q => q !== null)"
+                  x-text="'· ' + (year.quarters || []).filter(q => q !== null).length + ' Q override' + ((year.quarters || []).filter(q => q !== null).length === 1 ? '' : 's')"></span>
+          </div>
+          <div class="col-span-2 text-right">
+            <button type="button" @click="open = !open"
+                    class="text-[10px] uppercase tracking-wide text-gray-500 hover:text-gray-900">
+              <span x-show="!open">+ quarters</span>
+              <span x-show="open" x-cloak>− quarters</span>
+            </button>
+          </div>
+        </div>
+        <div x-show="open" x-cloak x-collapse class="border-t border-gray-100 bg-gray-50/60 px-3 py-2">
+          <div class="grid grid-cols-4 gap-2">
+            <template x-for="qi in 4" :key="qi">
+              <div class="bg-white border border-gray-100 rounded p-2">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="text-[10px] font-semibold text-gray-600" x-text="'Q' + qi"></div>
+                  <button type="button"
+                          x-show="year.quarters && year.quarters[qi-1] !== null"
+                          @click="clearProformaScheduleQuarter('${kilnType}', yi, qi-1)"
+                          class="text-[9px] text-gray-400 hover:text-red-500">clear</button>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <input type="number"
+                           :value="year.quarters && year.quarters[qi-1] ? year.quarters[qi-1].hoursPerDay : ''"
+                           :placeholder="year.hoursPerDay"
+                           @input="setProformaScheduleQuarterField('${kilnType}', yi, qi-1, 'hoursPerDay', $event.target.value)"
+                           :class="(year.quarters && year.quarters[qi-1] !== null) ? 'font-semibold' : 'font-normal'"
+                           class="w-full text-xs border-gray-200 rounded px-1.5 py-1 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+                    <div class="text-[9px] text-gray-400 mt-0.5">hrs/day</div>
+                  </div>
+                  <div>
+                    <input type="number"
+                           :value="year.quarters && year.quarters[qi-1] ? year.quarters[qi-1].daysPerMonth : ''"
+                           :placeholder="year.daysPerMonth"
+                           @input="setProformaScheduleQuarterField('${kilnType}', yi, qi-1, 'daysPerMonth', $event.target.value)"
+                           :class="(year.quarters && year.quarters[qi-1] !== null) ? 'font-semibold' : 'font-normal'"
+                           class="w-full text-xs border-gray-200 rounded px-1.5 py-1 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+                    <div class="text-[9px] text-gray-400 mt-0.5">days/mo</div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+          <p class="text-[10px] text-gray-500 leading-snug mt-2">
+            Blank = inherit the yearly default. Type into either field to override that quarter — bold cells indicate active overrides.
+          </p>
+        </div>
+      </div>
+    </template>
+  `;
+
+  const kilnBlock = (kilnType, label) => `
     <div>
       <div class="flex items-center justify-between mb-2">
         <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-700">${label}</h4>
         ${kilnType === 'broderick' ? `
           <button type="button"
-                  @click="proformaAssumptions.production.phasesByMachineType.broderick = proformaAssumptions.production.phasesByMachineType.pilot.map(p => ({ ...p })); proformaRecompute()"
+                  @click="copyProformaPilotScheduleToBroderick()"
                   class="text-[10px] uppercase tracking-wide text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline">
             Copy from pilot
           </button>
         ` : ''}
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <template x-for="(phase, pi) in proformaAssumptions.production.phasesByMachineType.${kilnType}" :key="pi">
-          <div class="border border-gray-100 rounded-lg p-3">
-            <div class="text-xs font-semibold text-gray-600 mb-2"
-                 x-text="'Phase ' + (pi+1) + ' (Mo ' + (pi === 0 ? '0-23' : pi === 1 ? '24-35' : '36-59') + ')'"></div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Hrs / day</label>
-                <input type="number"
-                       :value="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay"
-                       @input="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay = +$event.target.value; proformaRecompute()"
-                       class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
-              </div>
-              <div>
-                <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Days / mo</label>
-                <input type="number"
-                       :value="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth"
-                       @input="proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth = +$event.target.value; proformaRecompute()"
-                       class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
-              </div>
-            </div>
-            <span class="block text-[10px] text-gray-400 font-mono mt-1.5"
-                  x-text="'= ' + (proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].hoursPerDay * proformaAssumptions.production.phasesByMachineType.${kilnType}[pi].daysPerMonth) + ' hrs/mo'"></span>
-          </div>
-        </template>
+      <div class="space-y-1.5">
+        ${yearRow(kilnType)}
       </div>
     </div>
   `;
 
   const phaseSchedule = `
     <div class="space-y-5">
-      ${phaseGrid('pilot', 'Pilot kilns')}
-      ${phaseGrid('broderick', 'Broderick kilns')}
+      ${kilnBlock('pilot', 'Pilot kilns')}
+      ${kilnBlock('broderick', 'Broderick kilns')}
     </div>
     <p class="text-[11px] text-gray-500 leading-snug mt-4">
-      Hours × days per phase sets each kiln type's monthly run-time. Feeds monthly production (kg) and labor/maintenance op cost. Phase indices match machine-level phase overrides on the Machines tab.
+      Per-kiln-type schedules drive monthly production (kg) and labor/maintenance op cost. Yearly defaults apply across all four quarters; expand a year to override any individual quarter.
     </p>
   `;
 
@@ -104,10 +158,7 @@ export function getProductionSection() {
       <div class="space-y-6">
         ${card('Process chemistry', formGrid(chemistry.map(f => numInput(f.label, f.path, f)).join('')))}
         ${card('Kiln throughput', formGrid(kilns.map(f => numInput(f.label, f.path, f)).join(''), { cols: 2 }))}
-        ${card('Operating schedule by phase',
-          phaseSchedule,
-          { subtitle: 'Phase 1 = initial ramp, Phase 3 = full-rate operations.' }
-        )}
+        ${card('Operating schedule by year', phaseSchedule)}
         ${card('Cost efficiency by year', efficiencyGrid)}
       </div>
     </section>

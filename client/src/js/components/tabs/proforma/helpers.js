@@ -325,8 +325,8 @@ export const HELP = {
     dependsOn: 'Early-year OPEX, pre-revenue cash burn.'
   },
   'manufacturing.biocharCostByPhase': {
-    help: 'Biochar cost per kg at each phase. Drops as we scale hemp sourcing.',
-    dependsOn: 'COGS by phase, gross margin.'
+    help: 'Biochar cost per kg by year. Drops as we scale hemp sourcing. Expand a year to override individual quarters.',
+    dependsOn: 'Monthly COGS, gross margin.'
   },
 
   // ── Operations / OPEX ──

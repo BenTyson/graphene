@@ -1,11 +1,4 @@
-import { MONTHS_TOTAL, YEARS_TOTAL, QUARTERS_TOTAL, PHASE_BOUNDARIES, validateAssumptions, migrateAssumptions } from './proformaDefaults.js';
-
-// Determine which phase index (0, 1, 2) a month falls in
-function getGlobalPhase(month) {
-  if (month < PHASE_BOUNDARIES[1]) return 0; // Phase 1: months 0-23
-  if (month < PHASE_BOUNDARIES[2]) return 1; // Phase 2: months 24-35
-  return 2;                                   // Phase 3: months 36+
-}
+import { MONTHS_TOTAL, YEARS_TOTAL, QUARTERS_TOTAL, validateAssumptions, migrateAssumptions } from './proformaDefaults.js';
 
 // Which year (0..YEARS_TOTAL-1) a month falls in
 function getYear(month) {
@@ -15,6 +8,31 @@ function getYear(month) {
 // Which quarter within a year (0-3)
 function getQuarterInYear(month) {
   return Math.floor((month % 12) / 3);
+}
+
+// Resolve the effective {hoursPerDay, daysPerMonth} for a given year+quarter
+// from a scheduleByMachineType entry. Quarter override wins; otherwise falls
+// back to the yearly default. Missing entries collapse to zeros.
+function resolveScheduleCell(scheduleByYear, year, quarter) {
+  const entry = scheduleByYear && scheduleByYear[year];
+  if (!entry) return { hoursPerDay: 0, daysPerMonth: 0 };
+  const qOverride = Array.isArray(entry.quarters) ? entry.quarters[quarter] : null;
+  if (qOverride && typeof qOverride.hoursPerDay === 'number' && typeof qOverride.daysPerMonth === 'number') {
+    return { hoursPerDay: qOverride.hoursPerDay, daysPerMonth: qOverride.daysPerMonth };
+  }
+  return {
+    hoursPerDay: entry.hoursPerDay || 0,
+    daysPerMonth: entry.daysPerMonth || 0
+  };
+}
+
+// Resolve effective biochar $/kg for a year+quarter.
+function resolveBiocharCostCell(biocharByYear, year, quarter) {
+  const entry = biocharByYear && biocharByYear[year];
+  if (!entry) return 0;
+  const qOverride = Array.isArray(entry.quarters) ? entry.quarters[quarter] : null;
+  if (typeof qOverride === 'number') return qOverride;
+  return typeof entry.perKilo === 'number' ? entry.perKilo : 0;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -114,32 +132,47 @@ function computeProduction(machines, prod, mfg) {
   const pilotRatePerHourKg = graphenePerHourKg(p.smallKilnCuFtPerHour);
   const broderickRatePerHourKg = graphenePerHourKg(p.largeKilnCuFtPerHour);
 
-  // Each kiln type runs on its own schedule (hoursPerDay × daysPerMonth per
-  // phase). Production rate AND op cost both follow the matching schedule —
-  // labor/maintenance scale with that machine type's monthly shifts.
-  const pilotPhases = p.phasesByMachineType.pilot;
-  const broderickPhases = p.phasesByMachineType.broderick;
-
-  const pilotMonthlyByPhase = pilotPhases.map(ph =>
-    pilotRatePerHourKg * ph.hoursPerDay * ph.daysPerMonth
-  );
-  const broderickMonthlyByPhase = broderickPhases.map(ph =>
-    broderickRatePerHourKg * ph.hoursPerDay * ph.daysPerMonth
-  );
+  // Each kiln type runs on its own per-year schedule, with optional per-quarter
+  // overrides. Production rate AND op cost both follow the resolved cell —
+  // labor/maintenance scale with that quarter's monthly shifts.
+  const pilotSchedule = p.scheduleByMachineType.pilot;
+  const broderickSchedule = p.scheduleByMachineType.broderick;
 
   const totalFteMonthlyCost = mfg.fteRoles.reduce((sum, r) => sum + r.count * r.monthlyCost, 0);
   const costPerShift = totalFteMonthlyCost / mfg.shiftsPerMonth;
 
-  const buildBaseCostByPhase = phasesArr => phasesArr.map(ph => {
-    const shifts = (ph.hoursPerDay / 8) * ph.daysPerMonth;
-    const laborCost = shifts * costPerShift;
-    const maintenance = laborCost * mfg.maintenanceContingencyPct;
-    return laborCost + maintenance;
-  });
-  const baseCostByPhase = {
-    pilot: buildBaseCostByPhase(pilotPhases),
-    broderick: buildBaseCostByPhase(broderickPhases)
+  // Pre-compute the 5×4 production-rate and op-cost grids per kiln type so
+  // overrides and the per-month loop are cheap lookups.
+  const buildRateGrid = (schedule, ratePerHourKg) => {
+    const grid = new Array(YEARS_TOTAL);
+    for (let y = 0; y < YEARS_TOTAL; y++) {
+      grid[y] = new Array(4);
+      for (let q = 0; q < 4; q++) {
+        const cell = resolveScheduleCell(schedule, y, q);
+        grid[y][q] = ratePerHourKg * cell.hoursPerDay * cell.daysPerMonth;
+      }
+    }
+    return grid;
   };
+  const buildCostGrid = schedule => {
+    const grid = new Array(YEARS_TOTAL);
+    for (let y = 0; y < YEARS_TOTAL; y++) {
+      grid[y] = new Array(4);
+      for (let q = 0; q < 4; q++) {
+        const cell = resolveScheduleCell(schedule, y, q);
+        const shifts = (cell.hoursPerDay / 8) * cell.daysPerMonth;
+        const laborCost = shifts * costPerShift;
+        const maintenance = laborCost * mfg.maintenanceContingencyPct;
+        grid[y][q] = laborCost + maintenance;
+      }
+    }
+    return grid;
+  };
+
+  const pilotMonthlyGrid = buildRateGrid(pilotSchedule, pilotRatePerHourKg);
+  const broderickMonthlyGrid = buildRateGrid(broderickSchedule, broderickRatePerHourKg);
+  const pilotCostGrid = buildCostGrid(pilotSchedule);
+  const broderickCostGrid = buildCostGrid(broderickSchedule);
 
   // Initialize monthly arrays
   const monthlyGrapheneKg = new Array(MONTHS_TOTAL).fill(0);
@@ -159,8 +192,10 @@ function computeProduction(machines, prod, mfg) {
     };
 
     const isBroderick = machine.type === 'broderick';
-    const rateByPhase = isBroderick ? broderickMonthlyByPhase : pilotMonthlyByPhase;
-    const costByPhase = isBroderick ? baseCostByPhase.broderick : baseCostByPhase.pilot;
+    const rateGrid = isBroderick ? broderickMonthlyGrid : pilotMonthlyGrid;
+    const costGrid = isBroderick ? broderickCostGrid : pilotCostGrid;
+    const prodOverride = machine.productionScheduleOverride || { year: null, quarter: null };
+    const costOverride = machine.costScheduleOverride || { year: null, quarter: null };
 
     // CapEx payments
     for (const payment of machine.payments) {
@@ -183,23 +218,21 @@ function computeProduction(machines, prod, mfg) {
 
     // Production phase
     for (let m = machine.productionStartMonth; m < MONTHS_TOTAL; m++) {
-      const globalPhase = getGlobalPhase(m);
       const year = getYear(m);
+      const quarter = getQuarterInYear(m);
 
-      // Production kg
-      const prodPhase = machine.productionPhaseOverride != null
-        ? machine.productionPhaseOverride
-        : globalPhase;
-      const kg = rateByPhase[prodPhase];
+      // Production kg: pinned by override or follows the timeline.
+      const prodY = prodOverride.year != null ? prodOverride.year : year;
+      const prodQ = prodOverride.quarter != null ? prodOverride.quarter : quarter;
+      const kg = rateGrid[prodY][prodQ];
       timeline.monthlyKg[m] = kg;
       monthlyGrapheneKg[m] += kg;
 
       // Operating cost
-      const costPhase = machine.costPhaseOverride != null
-        ? machine.costPhaseOverride
-        : globalPhase;
+      const costY = costOverride.year != null ? costOverride.year : year;
+      const costQ = costOverride.quarter != null ? costOverride.quarter : quarter;
       const efficiency = p.efficiencyByYear[year] || p.efficiencyByYear[p.efficiencyByYear.length - 1];
-      const opCost = costByPhase[costPhase] * efficiency;
+      const opCost = costGrid[costY][costQ] * efficiency;
       timeline.monthlyOpCost[m] = opCost;
       monthlyManufacturingCost[m] += opCost;
     }
@@ -211,11 +244,19 @@ function computeProduction(machines, prod, mfg) {
   for (let m = 0; m < MONTHS_TOTAL; m++) {
     monthlyHempKg[m] = monthlyGrapheneKg[m] * hempRatioMultiplier;
 
-    // Biochar cost: graphene_kg / yield * cost_per_kg_for_phase
-    const globalPhase = getGlobalPhase(m);
+    // Biochar cost: graphene_kg / yield * cost_per_kg_for_year_quarter
+    const year = getYear(m);
+    const quarter = getQuarterInYear(m);
     const biocharKg = monthlyGrapheneKg[m] / p.grapheneYieldPercent;
-    monthlyBiocharCost[m] = biocharKg * mfg.biocharCostPerKiloByPhase[globalPhase];
+    monthlyBiocharCost[m] = biocharKg * resolveBiocharCostCell(mfg.biocharCostByYear, year, quarter);
   }
+
+  // Backwards-compat output: previous consumers read [Phase 1, Phase 2, Phase 3]
+  // arrays of kg/mo. We surface equivalents pulled from the new grid:
+  // Phase 1 ≈ Y1Q0 (steady ramp), Phase 2 ≈ Y2Q0, Phase 3 ≈ Y3Q3 (full rate).
+  // New consumers should use pilotMonthlyGrid / broderickMonthlyGrid directly.
+  const pilotMonthlyByPhase = [pilotMonthlyGrid[1][0], pilotMonthlyGrid[2][0], pilotMonthlyGrid[3][3]];
+  const broderickMonthlyByPhase = [broderickMonthlyGrid[1][0], broderickMonthlyGrid[2][0], broderickMonthlyGrid[3][3]];
 
   return {
     monthlyGrapheneKg,
@@ -225,6 +266,8 @@ function computeProduction(machines, prod, mfg) {
     monthlyBiocharCost,
     machineTimelines,
     hempRatioMultiplier,
+    pilotMonthlyGrid,
+    broderickMonthlyGrid,
     pilotMonthlyByPhase,
     broderickMonthlyByPhase
   };
@@ -668,6 +711,8 @@ export function calculateProforma(assumptions) {
         monthlyCapex: mt.monthlyCapex
       })),
       hempRatioMultiplier: production.hempRatioMultiplier,
+      pilotMonthlyGrid: production.pilotMonthlyGrid,
+      broderickMonthlyGrid: production.broderickMonthlyGrid,
       pilotMonthlyByPhase: production.pilotMonthlyByPhase,
       broderickMonthlyByPhase: production.broderickMonthlyByPhase
     },
