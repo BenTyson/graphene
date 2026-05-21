@@ -397,6 +397,89 @@ class ProformaService {
     this.recompute(ctx);
   }
 
+  // ── Schedule quarter overrides (Production tab) ─────────────────
+  setScheduleQuarterField(ctx, kilnType, yearIdx, quarterIdx, field, rawValue) {
+    const sched = ctx.proformaAssumptions?.production?.scheduleByMachineType?.[kilnType];
+    if (!sched || !sched[yearIdx]) return;
+    const year = sched[yearIdx];
+    const yearly = { hoursPerDay: year.hoursPerDay || 0, daysPerMonth: year.daysPerMonth || 0 };
+    if (!Array.isArray(year.quarters) || year.quarters.length !== 4) {
+      year.quarters = [null, null, null, null];
+    }
+    const isEmpty = rawValue === '' || rawValue == null || Number.isNaN(+rawValue);
+    let cur = year.quarters[quarterIdx];
+    if (isEmpty) {
+      // Clearing one field: if both fields would now equal yearly default, drop
+      // the override entirely; otherwise keep the override with the inherited
+      // value backfilled for the cleared field.
+      if (!cur) return; // nothing to clear
+      const other = field === 'hoursPerDay' ? 'daysPerMonth' : 'hoursPerDay';
+      cur = { ...cur, [field]: yearly[field] };
+      if (cur.hoursPerDay === yearly.hoursPerDay && cur.daysPerMonth === yearly.daysPerMonth) {
+        year.quarters[quarterIdx] = null;
+      } else {
+        year.quarters[quarterIdx] = cur;
+      }
+    } else {
+      if (!cur) cur = { ...yearly };
+      cur = { ...cur, [field]: +rawValue };
+      year.quarters[quarterIdx] = cur;
+    }
+    this.recompute(ctx);
+  }
+
+  clearScheduleQuarter(ctx, kilnType, yearIdx, quarterIdx) {
+    const sched = ctx.proformaAssumptions?.production?.scheduleByMachineType?.[kilnType];
+    if (!sched || !sched[yearIdx]) return;
+    if (!Array.isArray(sched[yearIdx].quarters) || sched[yearIdx].quarters.length !== 4) {
+      sched[yearIdx].quarters = [null, null, null, null];
+    }
+    sched[yearIdx].quarters[quarterIdx] = null;
+    this.recompute(ctx);
+  }
+
+  copyPilotScheduleToBroderick(ctx) {
+    const sbm = ctx.proformaAssumptions?.production?.scheduleByMachineType;
+    if (!sbm?.pilot) return;
+    sbm.broderick = sbm.pilot.map(y => ({
+      hoursPerDay: y.hoursPerDay,
+      daysPerMonth: y.daysPerMonth,
+      quarters: (y.quarters || [null, null, null, null]).map(q =>
+        q ? { hoursPerDay: q.hoursPerDay, daysPerMonth: q.daysPerMonth } : null)
+    }));
+    this.recompute(ctx);
+  }
+
+  // ── Biochar cost quarter overrides (Costs tab) ──────────────────
+  setBiocharQuarter(ctx, yearIdx, quarterIdx, rawValue) {
+    const arr = ctx.proformaAssumptions?.manufacturing?.biocharCostByYear;
+    if (!arr || !arr[yearIdx]) return;
+    const year = arr[yearIdx];
+    if (!Array.isArray(year.quarters) || year.quarters.length !== 4) {
+      year.quarters = [null, null, null, null];
+    }
+    const isEmpty = rawValue === '' || rawValue == null || Number.isNaN(+rawValue);
+    if (isEmpty) {
+      year.quarters[quarterIdx] = null;
+    } else {
+      const v = +rawValue;
+      // If override matches yearly default, drop it so the cell reverts to
+      // inheritance — keeps the schema minimal.
+      year.quarters[quarterIdx] = (v === year.perKilo) ? null : v;
+    }
+    this.recompute(ctx);
+  }
+
+  clearBiocharQuarter(ctx, yearIdx, quarterIdx) {
+    const arr = ctx.proformaAssumptions?.manufacturing?.biocharCostByYear;
+    if (!arr || !arr[yearIdx]) return;
+    if (!Array.isArray(arr[yearIdx].quarters) || arr[yearIdx].quarters.length !== 4) {
+      arr[yearIdx].quarters = [null, null, null, null];
+    }
+    arr[yearIdx].quarters[quarterIdx] = null;
+    this.recompute(ctx);
+  }
+
   // FTE role management
   addFteRole(ctx) {
     ctx.proformaAssumptions.manufacturing.fteRoles.push({ name: 'New Role', count: 1, monthlyCost: 15000 });

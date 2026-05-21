@@ -7,8 +7,22 @@ export const MONTHS_TOTAL = 60;
 export const YEARS_TOTAL = MONTHS_TOTAL / 12;       // 5
 export const QUARTERS_TOTAL = MONTHS_TOTAL / 3;     // 20
 
-// Global phase boundaries (month indices where phases change)
-export const PHASE_BOUNDARIES = [0, 24, 36]; // Phase 1: 0-23, Phase 2: 24-35, Phase 3: 36-59
+// Phase 1 covered months 0-23, Phase 2 = 24-35, Phase 3 = 36-59. Retained as
+// a constant for migrations only; the engine now resolves schedules by
+// {year, quarter} directly rather than through global phase boundaries.
+export const LEGACY_PHASE_BOUNDARIES = [0, 24, 36];
+
+function _emptyQuarters() {
+  return [null, null, null, null];
+}
+
+function _yearSchedule(hoursPerDay, daysPerMonth) {
+  return { hoursPerDay, daysPerMonth, quarters: _emptyQuarters() };
+}
+
+function _yearBiocharCost(perKilo) {
+  return { perKilo, quarters: _emptyQuarters() };
+}
 
 // ── Built-in revenue stream factories ─────────────────────────────
 // Each stream is self-contained: pricing, market source, ramp, qDist.
@@ -116,20 +130,25 @@ export function getDefaultAssumptions() {
       smallKilnCuFtPerHour: 4,   // Pilot
       largeKilnCuFtPerHour: 118, // Broderick
 
-      // Operating parameters by phase [Phase 1, Phase 2, Phase 3], split
-      // by kiln type so pilot and broderick can run on independent schedules.
-      // Each array MUST have exactly 3 entries — phase indices line up with
-      // the global PHASE_BOUNDARIES timeline and machine-level phase overrides.
-      phasesByMachineType: {
+      // Operating schedule per kiln type, indexed by calendar year (Y0..Y4).
+      // Each year carries a yearly default {hoursPerDay, daysPerMonth} plus a
+      // `quarters` array of four optional overrides — null means "inherit the
+      // yearly default", a non-null entry pins that quarter's hours/days.
+      // Length MUST equal YEARS_TOTAL.
+      scheduleByMachineType: {
         pilot: [
-          { hoursPerDay: 15, daysPerMonth: 20 },
-          { hoursPerDay: 23, daysPerMonth: 24 },
-          { hoursPerDay: 23, daysPerMonth: 28 }
+          _yearSchedule(15, 20), // Y0
+          _yearSchedule(15, 20), // Y1
+          _yearSchedule(23, 24), // Y2
+          _yearSchedule(23, 28), // Y3
+          _yearSchedule(23, 28)  // Y4
         ],
         broderick: [
-          { hoursPerDay: 15, daysPerMonth: 20 },
-          { hoursPerDay: 23, daysPerMonth: 24 },
-          { hoursPerDay: 23, daysPerMonth: 28 }
+          _yearSchedule(15, 20),
+          _yearSchedule(15, 20),
+          _yearSchedule(23, 24),
+          _yearSchedule(23, 28),
+          _yearSchedule(23, 28)
         ]
       },
 
@@ -149,8 +168,8 @@ export function getDefaultAssumptions() {
           { month: 5, pct: 0.25 },
           { month: 8, pct: 0.05 }
         ],
-        productionPhaseOverride: null,
-        costPhaseOverride: null
+        productionScheduleOverride: { year: null, quarter: null },
+        costScheduleOverride: { year: null, quarter: null }
       },
       {
         name: 'Pilot 2', type: 'pilot',
@@ -163,8 +182,8 @@ export function getDefaultAssumptions() {
           { month: 12, pct: 0.25 },
           { month: 15, pct: 0.05 }
         ],
-        productionPhaseOverride: null,
-        costPhaseOverride: null
+        productionScheduleOverride: { year: null, quarter: null },
+        costScheduleOverride: { year: null, quarter: null }
       },
       {
         name: 'Pilot 3', type: 'pilot',
@@ -177,8 +196,8 @@ export function getDefaultAssumptions() {
           { month: 12, pct: 0.25 },
           { month: 15, pct: 0.05 }
         ],
-        productionPhaseOverride: null,
-        costPhaseOverride: null
+        productionScheduleOverride: { year: null, quarter: null },
+        costScheduleOverride: { year: null, quarter: null }
       },
       {
         name: 'Pilot 4', type: 'pilot',
@@ -191,8 +210,8 @@ export function getDefaultAssumptions() {
           { month: 15, pct: 0.25 },
           { month: 18, pct: 0.05 }
         ],
-        productionPhaseOverride: null,
-        costPhaseOverride: null
+        productionScheduleOverride: { year: null, quarter: null },
+        costScheduleOverride: { year: null, quarter: null }
       },
       {
         name: 'Broderick 1', type: 'broderick',
@@ -206,8 +225,11 @@ export function getDefaultAssumptions() {
           { month: 35, pct: 0.10 },
           { month: 36, pct: 0.05 }
         ],
-        productionPhaseOverride: 2, // Always Phase 3 production (index 2)
-        costPhaseOverride: 0        // Always Phase 1 costs (index 0) - new machine
+        // Broderick runs at full-rate production from day one (pinned to
+        // Y3 schedule) but op-cost stays at Y0 ramp level — single new
+        // machine, not a full team yet.
+        productionScheduleOverride: { year: 3, quarter: null },
+        costScheduleOverride: { year: 0, quarter: null }
       }
     ],
 
@@ -221,8 +243,16 @@ export function getDefaultAssumptions() {
       shiftsPerMonth: 20,
       maintenanceContingencyPct: 0.05,
       validationPhaseMonthly: 80000,
-      // Biochar cost per kilo by phase [Phase 1, Phase 2, Phase 3]
-      biocharCostPerKiloByPhase: [1.50, 1.25, 1.00]
+      // Biochar cost per kilo by calendar year (Y0..Y4). Same shape as the
+      // operating schedule: each entry is {perKilo, quarters:[n|null × 4]}
+      // where a non-null quarter overrides the year's default for that Q.
+      biocharCostByYear: [
+        _yearBiocharCost(1.50), // Y0
+        _yearBiocharCost(1.50), // Y1
+        _yearBiocharCost(1.25), // Y2
+        _yearBiocharCost(1.00), // Y3
+        _yearBiocharCost(1.00)  // Y4
+      ]
     },
 
     revenue: {
@@ -448,30 +478,142 @@ export function migrateAssumptions(a) {
     }
   }
 
-  // Split single production.phases[] into per-kiln-type schedules so pilot
-  // and broderick can run independently. Old blobs only have `phases`; deep
-  // clone it into both buckets so future edits to one type don't mutate the
-  // other through a shared reference.
-  if (a.production && !a.production.phasesByMachineType) {
+  // ── Phase → year/quarter migration ────────────────────────────────
+  // Legacy schedules had 3 phases mapped to month ranges:
+  //   Phase 1 (idx 0) = months  0-23 → Y0, Y1
+  //   Phase 2 (idx 1) = months 24-35 → Y2
+  //   Phase 3 (idx 2) = months 36-59 → Y3, Y4
+  // The new shape: 5 yearly entries (Y0..Y4) each with optional per-quarter
+  // overrides. Older blobs may carry `production.phases[]` (very old),
+  // `production.phasesByMachineType.{pilot,broderick}` (recent legacy), or
+  // already the new `scheduleByMachineType` (no-op). All are handled here.
+  const _phaseToYear = [0, 2, 3]; // legacy phase idx → starting year
+  const _yearToPhase = y => (y >= 3 ? 2 : y === 2 ? 1 : 0);
+
+  const _phaseEntryToYears = phaseArr => {
+    const safe = i => ({
+      hoursPerDay: typeof phaseArr[i]?.hoursPerDay === 'number' ? phaseArr[i].hoursPerDay : 0,
+      daysPerMonth: typeof phaseArr[i]?.daysPerMonth === 'number' ? phaseArr[i].daysPerMonth : 0
+    });
+    const p0 = safe(0), p1 = safe(1), p2 = safe(2);
+    return [
+      { ...p0, quarters: _emptyQuarters() }, // Y0
+      { ...p0, quarters: _emptyQuarters() }, // Y1
+      { ...p1, quarters: _emptyQuarters() }, // Y2
+      { ...p2, quarters: _emptyQuarters() }, // Y3
+      { ...p2, quarters: _emptyQuarters() }  // Y4
+    ];
+  };
+
+  if (a.production && !a.production.scheduleByMachineType) {
     const fallback = [
       { hoursPerDay: 15, daysPerMonth: 20 },
       { hoursPerDay: 23, daysPerMonth: 24 },
       { hoursPerDay: 23, daysPerMonth: 28 }
     ];
-    const legacy = Array.isArray(a.production.phases) && a.production.phases.length === 3
-      ? a.production.phases
-      : fallback;
-    const clone = arr => arr.map(p => ({
-      hoursPerDay: typeof p?.hoursPerDay === 'number' ? p.hoursPerDay : 0,
-      daysPerMonth: typeof p?.daysPerMonth === 'number' ? p.daysPerMonth : 0
-    }));
-    a.production.phasesByMachineType = {
-      pilot: clone(legacy),
-      broderick: clone(legacy)
+    let pilotPhases = fallback, broderickPhases = fallback;
+    if (a.production.phasesByMachineType) {
+      const pbm = a.production.phasesByMachineType;
+      if (Array.isArray(pbm.pilot) && pbm.pilot.length === 3) pilotPhases = pbm.pilot;
+      if (Array.isArray(pbm.broderick) && pbm.broderick.length === 3) broderickPhases = pbm.broderick;
+    } else if (Array.isArray(a.production.phases) && a.production.phases.length === 3) {
+      pilotPhases = a.production.phases;
+      broderickPhases = a.production.phases;
+    }
+    a.production.scheduleByMachineType = {
+      pilot: _phaseEntryToYears(pilotPhases),
+      broderick: _phaseEntryToYears(broderickPhases)
     };
+  } else if (a.production && a.production.scheduleByMachineType) {
+    // Already-new shape: make sure each kiln type has YEARS_TOTAL entries
+    // (extends short arrays by flat-lining the last year) and that every
+    // entry has a `quarters` array of length 4.
+    const sbm = a.production.scheduleByMachineType;
+    for (const kt of ['pilot', 'broderick']) {
+      if (!Array.isArray(sbm[kt])) sbm[kt] = [];
+      while (sbm[kt].length < YEARS_TOTAL) {
+        const last = sbm[kt][sbm[kt].length - 1] || { hoursPerDay: 0, daysPerMonth: 0 };
+        sbm[kt].push({ hoursPerDay: last.hoursPerDay, daysPerMonth: last.daysPerMonth, quarters: _emptyQuarters() });
+      }
+      sbm[kt] = sbm[kt].slice(0, YEARS_TOTAL).map(entry => ({
+        hoursPerDay: typeof entry?.hoursPerDay === 'number' ? entry.hoursPerDay : 0,
+        daysPerMonth: typeof entry?.daysPerMonth === 'number' ? entry.daysPerMonth : 0,
+        quarters: Array.isArray(entry?.quarters) && entry.quarters.length === 4
+          ? entry.quarters.map(q =>
+              q && typeof q.hoursPerDay === 'number' && typeof q.daysPerMonth === 'number'
+                ? { hoursPerDay: q.hoursPerDay, daysPerMonth: q.daysPerMonth }
+                : null)
+          : _emptyQuarters()
+      }));
+    }
   }
-  if (a.production && a.production.phases) {
+  if (a.production) {
     delete a.production.phases;
+    delete a.production.phasesByMachineType;
+  }
+
+  // Biochar cost: 3-entry phase array → 5-entry year array with quarters.
+  if (a.manufacturing && !a.manufacturing.biocharCostByYear) {
+    const legacy = Array.isArray(a.manufacturing.biocharCostPerKiloByPhase)
+      && a.manufacturing.biocharCostPerKiloByPhase.length === 3
+      ? a.manufacturing.biocharCostPerKiloByPhase
+      : [1.50, 1.25, 1.00];
+    a.manufacturing.biocharCostByYear = [
+      { perKilo: +legacy[0] || 0, quarters: _emptyQuarters() },
+      { perKilo: +legacy[0] || 0, quarters: _emptyQuarters() },
+      { perKilo: +legacy[1] || 0, quarters: _emptyQuarters() },
+      { perKilo: +legacy[2] || 0, quarters: _emptyQuarters() },
+      { perKilo: +legacy[2] || 0, quarters: _emptyQuarters() }
+    ];
+  } else if (a.manufacturing && Array.isArray(a.manufacturing.biocharCostByYear)) {
+    const arr = a.manufacturing.biocharCostByYear;
+    while (arr.length < YEARS_TOTAL) {
+      const last = arr[arr.length - 1] || { perKilo: 0 };
+      arr.push({ perKilo: last.perKilo || 0, quarters: _emptyQuarters() });
+    }
+    a.manufacturing.biocharCostByYear = arr.slice(0, YEARS_TOTAL).map(entry => ({
+      perKilo: typeof entry?.perKilo === 'number' ? entry.perKilo : 0,
+      quarters: Array.isArray(entry?.quarters) && entry.quarters.length === 4
+        ? entry.quarters.map(q => (typeof q === 'number' ? q : null))
+        : _emptyQuarters()
+    }));
+  }
+  if (a.manufacturing) {
+    delete a.manufacturing.biocharCostPerKiloByPhase;
+  }
+
+  // Per-machine phase overrides → schedule overrides.
+  if (Array.isArray(a.machines)) {
+    for (const machine of a.machines) {
+      if (!machine) continue;
+      if (!machine.productionScheduleOverride) {
+        const legacy = machine.productionPhaseOverride;
+        machine.productionScheduleOverride = (typeof legacy === 'number')
+          ? { year: _phaseToYear[legacy] ?? null, quarter: null }
+          : { year: null, quarter: null };
+      } else {
+        // Normalize new shape so year/quarter are always present
+        const o = machine.productionScheduleOverride;
+        machine.productionScheduleOverride = {
+          year: typeof o?.year === 'number' ? o.year : null,
+          quarter: typeof o?.quarter === 'number' ? o.quarter : null
+        };
+      }
+      if (!machine.costScheduleOverride) {
+        const legacy = machine.costPhaseOverride;
+        machine.costScheduleOverride = (typeof legacy === 'number')
+          ? { year: _phaseToYear[legacy] ?? null, quarter: null }
+          : { year: null, quarter: null };
+      } else {
+        const o = machine.costScheduleOverride;
+        machine.costScheduleOverride = {
+          year: typeof o?.year === 'number' ? o.year : null,
+          quarter: typeof o?.quarter === 'number' ? o.quarter : null
+        };
+      }
+      delete machine.productionPhaseOverride;
+      delete machine.costPhaseOverride;
+    }
   }
 
   // Horizon extension Y0..Y3 -> Y0..Y4: hybrid rule.
@@ -574,15 +716,15 @@ export function validateAssumptions(a) {
     if (typeof a.production.grapheneYieldPercent !== 'number' || a.production.grapheneYieldPercent <= 0 || a.production.grapheneYieldPercent > 1) {
       errors.push('grapheneYieldPercent must be between 0 and 1');
     }
-    const pbm = a.production.phasesByMachineType;
-    if (!pbm || typeof pbm !== 'object') {
-      errors.push('production.phasesByMachineType must exist (run migration)');
+    const sbm = a.production.scheduleByMachineType;
+    if (!sbm || typeof sbm !== 'object') {
+      errors.push('production.scheduleByMachineType must exist (run migration)');
     } else {
-      if (!Array.isArray(pbm.pilot) || pbm.pilot.length !== 3) {
-        errors.push('production.phasesByMachineType.pilot must have exactly 3 entries');
+      if (!Array.isArray(sbm.pilot) || sbm.pilot.length !== YEARS_TOTAL) {
+        errors.push(`production.scheduleByMachineType.pilot must have exactly ${YEARS_TOTAL} entries`);
       }
-      if (!Array.isArray(pbm.broderick) || pbm.broderick.length !== 3) {
-        errors.push('production.phasesByMachineType.broderick must have exactly 3 entries');
+      if (!Array.isArray(sbm.broderick) || sbm.broderick.length !== YEARS_TOTAL) {
+        errors.push(`production.scheduleByMachineType.broderick must have exactly ${YEARS_TOTAL} entries`);
       }
     }
   }

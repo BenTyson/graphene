@@ -261,26 +261,76 @@ function _machineCard() {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Production phase override</label>
-              <select :value="machine.productionPhaseOverride ?? ''"
-                      @change="proformaAssumptions.machines[mi].productionPhaseOverride = $event.target.value === '' ? null : +$event.target.value; proformaRecompute()"
-                      class="w-full text-xs border-gray-200 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
-                <option value="">Auto (follows global phase)</option>
-                <option value="0">Phase 1</option>
-                <option value="1">Phase 2</option>
-                <option value="2">Phase 3</option>
-              </select>
+              <label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Production schedule override</label>
+              <div class="grid grid-cols-2 gap-2">
+                <select :value="machine.productionScheduleOverride?.year ?? ''"
+                        @change="
+                          if (!proformaAssumptions.machines[mi].productionScheduleOverride) proformaAssumptions.machines[mi].productionScheduleOverride = { year: null, quarter: null };
+                          const v = $event.target.value;
+                          proformaAssumptions.machines[mi].productionScheduleOverride.year = v === '' ? null : +v;
+                          if (v === '') proformaAssumptions.machines[mi].productionScheduleOverride.quarter = null;
+                          proformaRecompute();
+                        "
+                        class="w-full text-xs border-gray-200 rounded-md px-2 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+                  <option value="">Auto year</option>
+                  <option value="0">Y0</option>
+                  <option value="1">Y1</option>
+                  <option value="2">Y2</option>
+                  <option value="3">Y3</option>
+                  <option value="4">Y4</option>
+                </select>
+                <select :value="machine.productionScheduleOverride?.quarter ?? ''"
+                        :disabled="machine.productionScheduleOverride?.year == null"
+                        @change="
+                          if (!proformaAssumptions.machines[mi].productionScheduleOverride) proformaAssumptions.machines[mi].productionScheduleOverride = { year: null, quarter: null };
+                          const v = $event.target.value;
+                          proformaAssumptions.machines[mi].productionScheduleOverride.quarter = v === '' ? null : +v;
+                          proformaRecompute();
+                        "
+                        class="w-full text-xs border-gray-200 rounded-md px-2 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">Auto Q</option>
+                  <option value="0">Q1</option>
+                  <option value="1">Q2</option>
+                  <option value="2">Q3</option>
+                  <option value="3">Q4</option>
+                </select>
+              </div>
             </div>
             <div>
-              <label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Cost phase override</label>
-              <select :value="machine.costPhaseOverride ?? ''"
-                      @change="proformaAssumptions.machines[mi].costPhaseOverride = $event.target.value === '' ? null : +$event.target.value; proformaRecompute()"
-                      class="w-full text-xs border-gray-200 rounded-md px-2.5 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
-                <option value="">Auto (follows global phase)</option>
-                <option value="0">Phase 1</option>
-                <option value="1">Phase 2</option>
-                <option value="2">Phase 3</option>
-              </select>
+              <label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Cost schedule override</label>
+              <div class="grid grid-cols-2 gap-2">
+                <select :value="machine.costScheduleOverride?.year ?? ''"
+                        @change="
+                          if (!proformaAssumptions.machines[mi].costScheduleOverride) proformaAssumptions.machines[mi].costScheduleOverride = { year: null, quarter: null };
+                          const v = $event.target.value;
+                          proformaAssumptions.machines[mi].costScheduleOverride.year = v === '' ? null : +v;
+                          if (v === '') proformaAssumptions.machines[mi].costScheduleOverride.quarter = null;
+                          proformaRecompute();
+                        "
+                        class="w-full text-xs border-gray-200 rounded-md px-2 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900">
+                  <option value="">Auto year</option>
+                  <option value="0">Y0</option>
+                  <option value="1">Y1</option>
+                  <option value="2">Y2</option>
+                  <option value="3">Y3</option>
+                  <option value="4">Y4</option>
+                </select>
+                <select :value="machine.costScheduleOverride?.quarter ?? ''"
+                        :disabled="machine.costScheduleOverride?.year == null"
+                        @change="
+                          if (!proformaAssumptions.machines[mi].costScheduleOverride) proformaAssumptions.machines[mi].costScheduleOverride = { year: null, quarter: null };
+                          const v = $event.target.value;
+                          proformaAssumptions.machines[mi].costScheduleOverride.quarter = v === '' ? null : +v;
+                          proformaRecompute();
+                        "
+                        class="w-full text-xs border-gray-200 rounded-md px-2 py-1.5 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">Auto Q</option>
+                  <option value="0">Q1</option>
+                  <option value="1">Q2</option>
+                  <option value="2">Q3</option>
+                  <option value="3">Q4</option>
+                </select>
+              </div>
             </div>
           </div>
       </div>

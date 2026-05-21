@@ -111,17 +111,60 @@ function _fteRolesTable() {
 }
 
 function _biocharByPhaseBlock() {
-  return card('Biochar cost by phase', `
-    <div class="grid grid-cols-3 gap-3">
-      <template x-for="(bc, bci) in proformaAssumptions.manufacturing.biocharCostPerKiloByPhase" :key="bci">
-        <div>
-          <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1" x-text="'Phase ' + (bci+1)"></label>
-          <div class="relative">
-            <input type="number" step="0.01"
-                   :value="proformaAssumptions.manufacturing.biocharCostPerKiloByPhase[bci]"
-                   @input="proformaAssumptions.manufacturing.biocharCostPerKiloByPhase[bci] = +$event.target.value; proformaRecompute()"
-                   class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 pr-10 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">$/kg</span>
+  return card('Biochar cost by year', `
+    <div class="space-y-1.5">
+      <template x-for="(bc, bci) in proformaAssumptions.manufacturing.biocharCostByYear" :key="bci">
+        <div class="border border-gray-100 rounded-lg" x-data="{ open: false }">
+          <div class="grid grid-cols-12 items-center gap-3 px-3 py-2">
+            <div class="col-span-1 text-xs font-semibold text-gray-700" x-text="'Y' + bci"></div>
+            <div class="col-span-5">
+              <div class="relative">
+                <input type="number" step="0.01"
+                       :value="bc.perKilo"
+                       @input="bc.perKilo = +$event.target.value; proformaRecompute()"
+                       class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 pr-10 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">$/kg</span>
+              </div>
+            </div>
+            <div class="col-span-4 text-[11px] text-gray-500 font-mono">
+              <span class="text-gray-400"
+                    x-show="(bc.quarters || []).some(q => q !== null)"
+                    x-text="(bc.quarters || []).filter(q => q !== null).length + ' Q override' + ((bc.quarters || []).filter(q => q !== null).length === 1 ? '' : 's')"></span>
+            </div>
+            <div class="col-span-2 text-right">
+              <button type="button" @click="open = !open"
+                      class="text-[10px] uppercase tracking-wide text-gray-500 hover:text-gray-900">
+                <span x-show="!open">+ quarters</span>
+                <span x-show="open" x-cloak>− quarters</span>
+              </button>
+            </div>
+          </div>
+          <div x-show="open" x-cloak x-collapse class="border-t border-gray-100 bg-gray-50/60 px-3 py-2">
+            <div class="grid grid-cols-4 gap-2">
+              <template x-for="qi in 4" :key="qi">
+                <div class="bg-white border border-gray-100 rounded p-2">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <div class="text-[10px] font-semibold text-gray-600" x-text="'Q' + qi"></div>
+                    <button type="button"
+                            x-show="bc.quarters && bc.quarters[qi-1] !== null"
+                            @click="clearProformaBiocharQuarter(bci, qi-1)"
+                            class="text-[9px] text-gray-400 hover:text-red-500">clear</button>
+                  </div>
+                  <div class="relative">
+                    <input type="number" step="0.01"
+                           :value="bc.quarters && bc.quarters[qi-1] !== null ? bc.quarters[qi-1] : ''"
+                           :placeholder="bc.perKilo"
+                           @input="setProformaBiocharQuarter(bci, qi-1, $event.target.value)"
+                           :class="(bc.quarters && bc.quarters[qi-1] !== null) ? 'font-semibold' : 'font-normal'"
+                           class="w-full text-xs border-gray-200 rounded px-1.5 py-1 pr-8 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+                    <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">$/kg</span>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p class="text-[10px] text-gray-500 leading-snug mt-2">
+              Blank = inherit the yearly $/kg. Bold cells indicate active overrides.
+            </p>
           </div>
         </div>
       </template>

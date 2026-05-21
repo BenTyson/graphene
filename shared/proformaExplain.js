@@ -188,14 +188,17 @@ const FORMULAS = {
     const mfg = assumptions?.manufacturing || {};
     return {
       format: 'currency',
-      formula: '(graphene_kg ÷ grapheneYieldPct) × biocharCostPerKilo[phase]',
+      formula: '(graphene_kg ÷ grapheneYieldPct) × biocharCostPerKilo[year,quarter]',
       parts: [
         { key: null, label: 'Graphene produced (kg)', value: grapheneKg, op: '÷', format: 'kg' },
         { key: null, label: 'Graphene yield %', value: `${((p.grapheneYieldPercent || 0) * 100).toFixed(2)}%`, op: '×' },
         { key: null, label: 'Implied biochar consumed (kg)', value: biocharKg, op: '', format: 'kg' }
       ],
       leafInputs: [
-        { label: 'Biochar $/kg by phase', value: (mfg.biocharCostPerKiloByPhase || []).map((v, i) => `P${i + 1}: $${v}`).join(' · '), section: 'costs' }
+        { label: 'Biochar $/kg by year', value: (mfg.biocharCostByYear || []).map((y, i) => {
+          const overrides = Array.isArray(y?.quarters) ? y.quarters.filter(q => q !== null).length : 0;
+          return `Y${i}: $${y?.perKilo ?? 0}${overrides ? ` (${overrides} Q override${overrides === 1 ? '' : 's'})` : ''}`;
+        }).join(' · '), section: 'costs' }
       ]
     };
   },

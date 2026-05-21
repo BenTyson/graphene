@@ -5795,6 +5795,21 @@ window.grapheneApp = function() {
     toggleProformaSalaryMode(yearKey, role) { proformaService.toggleSalaryMode(this, yearKey, role); },
     addProformaMachinePayment(mi) { proformaService.addMachinePayment(this, mi); },
     removeProformaMachinePayment(mi, pi) { proformaService.removeMachinePayment(this, mi, pi); },
+    setProformaScheduleQuarterField(kilnType, yearIdx, quarterIdx, field, rawValue) {
+      proformaService.setScheduleQuarterField(this, kilnType, yearIdx, quarterIdx, field, rawValue);
+    },
+    clearProformaScheduleQuarter(kilnType, yearIdx, quarterIdx) {
+      proformaService.clearScheduleQuarter(this, kilnType, yearIdx, quarterIdx);
+    },
+    copyProformaPilotScheduleToBroderick() {
+      proformaService.copyPilotScheduleToBroderick(this);
+    },
+    setProformaBiocharQuarter(yearIdx, quarterIdx, rawValue) {
+      proformaService.setBiocharQuarter(this, yearIdx, quarterIdx, rawValue);
+    },
+    clearProformaBiocharQuarter(yearIdx, quarterIdx) {
+      proformaService.clearBiocharQuarter(this, yearIdx, quarterIdx);
+    },
     addProformaFteRole() { proformaService.addFteRole(this); },
     removeProformaFteRole(index) { proformaService.removeFteRole(this, index); },
     getProformaOutlookRows() { return proformaService.getOutlookRows(this); },
