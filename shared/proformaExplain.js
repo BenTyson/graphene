@@ -238,7 +238,8 @@ const FORMULAS = {
       ['opexLegal', 'Legal'],
       ['opexRoyalty', 'Royalty'],
       ['opexCommission', 'Commission'],
-      ['opexInsurance', 'Insurance']
+      ['opexInsurance', 'Insurance'],
+      ['opexContingency', 'Contingency']
     ];
     return {
       format: 'currency',
@@ -430,6 +431,20 @@ const FORMULAS = {
       formula: 'Lump-sum at month 0 of each year',
       parts: payments.map((p, i) => ({ key: null, label: p.label, value: p.value, op: i === payments.length - 1 ? '' : '+' })),
       note: payments.length === 0 ? 'No insurance payment in this period.' : null
+    };
+  },
+
+  opexContingency: (ctx) => {
+    const pct = ctx.assumptions?.opex?.contingencyPct || 0;
+    const contingency = readCell(ctx.computed, ctx.view, 'opexContingency', ctx.periodIndex);
+    const base = pct > 0 ? contingency / pct : 0;
+    return {
+      format: 'currency',
+      formula: 'base OPEX × contingencyPct',
+      parts: [
+        { key: null, label: 'Base OPEX (Σ other lines)', value: base, op: '×' },
+        { key: null, label: 'Contingency %', value: `${(pct * 100).toFixed(2)}%`, op: '' }
+      ]
     };
   },
 

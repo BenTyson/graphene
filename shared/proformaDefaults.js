@@ -307,7 +307,10 @@ export function getDefaultAssumptions() {
       businessInsurance: [50000, 100000, 150000, 200000, 200000], // Year 0..4 (annual, paid once)
 
       uofaRoyaltyPct: 0.06,
-      salesCommissionPct: 0.055
+      salesCommissionPct: 0.055,
+      // Catch-all contingency applied as a % uplift on the sum of all other
+      // OPEX line items. Default 0 keeps existing scenarios unchanged.
+      contingencyPct: 0
     },
 
     rnd: {
@@ -626,6 +629,7 @@ export function migrateAssumptions(a) {
     while (a.production.efficiencyByYear.length < YEARS_TOTAL) a.production.efficiencyByYear.push(last);
   }
   if (a.opex) {
+    if (typeof a.opex.contingencyPct !== 'number') a.opex.contingencyPct = 0;
     if (a.opex.staffing && a.opex.staffing.year3 && !a.opex.staffing.year4) {
       a.opex.staffing.year4 = JSON.parse(JSON.stringify(a.opex.staffing.year3));
     }
