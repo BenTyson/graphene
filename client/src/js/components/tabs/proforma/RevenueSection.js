@@ -244,12 +244,55 @@ function _captureBlock() {
   `;
 }
 
-// ③ Timing — start month + an Advanced (single-purpose) accordion for
+// ③ Processing premium — % uplift on the per-kg fully-loaded raw cost
+// (hemp + biochar + manufacturing) for kg sold via this stream. Models
+// a downstream post-processing step (e.g. GO conversion). Lives outside
+// the Capture block because it applies in both linked and direct modes.
+// Implied $/kg indicator uses the most recent computed cogs+production
+// to translate the % into "what does this currently work out to".
+function _processingPremiumBlock() {
+  const pctPath = `${SBASE}.processingPremiumPct`;
+  // Implied $/kg = (Y4 baseRawCost / Y4 totalKg) × pct — shown as a
+  // stable single-year reference so users can sanity-check the assumption
+  // without it flickering month-by-month.
+  const impliedExpr = `
+    (() => {
+      if (!proformaComputed?.yearly) return '—';
+      const y = proformaComputed.yearly;
+      const baseCost = (y.cogsManufacturing?.[4] || 0) + (y.cogsHemp?.[4] || 0) + (y.cogsBiochar?.[4] || 0);
+      const kg = (proformaComputed.production?.monthlyGrapheneKg || []).slice(48, 60).reduce((a, b) => a + (b || 0), 0);
+      const pct = ${pctPath} || 0;
+      if (kg <= 0 || pct <= 0) return '—';
+      return '≈ $' + (baseCost / kg * pct).toFixed(2) + '/kg @ Y4 rates';
+    })()
+  `;
+  return `
+    <section>
+      <header class="flex items-baseline gap-2 mb-2">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">3</span>
+        <h4 class="text-sm font-semibold text-gray-800">Processing premium</h4>
+        <span class="text-[11px] text-gray-400">Downstream post-processing cost as a % uplift on raw $/kg</span>
+      </header>
+      <div class="grid grid-cols-2 gap-3 items-end">
+        <div>
+          ${numInput('Premium', pctPath, { unit: '%', format: 'fraction-percent', step: 1 })}
+        </div>
+        <div class="text-[11px] text-gray-500 font-mono pb-2"
+             x-text="${impliedExpr}"></div>
+      </div>
+      <p class="text-[11px] text-gray-500 leading-snug mt-2">
+        Set 0 for streams that ship as raw powder. Applied to <strong x-text="(${SBASE}.year4?.marketSharePct || ${SBASE}.market?.kgByYear?.year4 || 0) > 0 || ${SBASE}.processingPremiumPct > 0 ? 'every kg sold via this stream' : 'kg once this stream has sales'"></strong>.
+      </p>
+    </section>
+  `;
+}
+
+// ④ Timing — start month + an Advanced (single-purpose) accordion for
 // the qDist quarterly shape. This is the only "Advanced" left in the
 // stream card, and it owns one self-contained thing.
 function _timingBlock() {
   const stateKey = `proformaAdvancedOpen['stream_qdist_' + ${SBASE}.id]`;
-  const numLinked = `${SBASE}.market.mode === 'linked' ? 3 : 2`;
+  const numLinked = `${SBASE}.market.mode === 'linked' ? 4 : 3`;
   return `
     <section>
       <header class="flex items-baseline gap-2 mb-2">
@@ -347,6 +390,7 @@ function _streamCard() {
            :class="${isEnabled} ? '' : 'opacity-50'">
         ${_sourceBlock()}
         ${_captureBlock()}
+        ${_processingPremiumBlock()}
         ${_timingBlock()}
       </div>
     </article>

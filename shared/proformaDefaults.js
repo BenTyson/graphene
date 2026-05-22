@@ -42,7 +42,11 @@ function _supercapStream() {
     year1: { marketSharePct: 0.03, qDist: [0.10, 0.20, 0.30, 0.40] },
     year2: { marketSharePct: 0.06, qDist: [0.23, 0.24, 0.26, 0.27] },
     year3: { marketSharePct: 0.09, qDist: [0.20, 0.24, 0.26, 0.30] },
-    year4: { marketSharePct: 0.12, qDist: [0.22, 0.24, 0.26, 0.28] }
+    year4: { marketSharePct: 0.12, qDist: [0.22, 0.24, 0.26, 0.28] },
+    // % uplift on the per-kg fully-loaded cost of raw graphene (hemp +
+    // biochar + manufacturing) for kg flowing through this stream's
+    // downstream processing step. 0 = no extra processing cost.
+    processingPremiumPct: 0
   };
 }
 
@@ -59,7 +63,8 @@ function _carbonBlackStream() {
     year1: { marketSharePct: 0.0025, qDist: [0.00, 0.20, 0.30, 0.50] },
     year2: { marketSharePct: 0.005, qDist: [0.20, 0.23, 0.25, 0.27] },
     year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] },
-    year4: { marketSharePct: 0.012, qDist: [0.20, 0.23, 0.25, 0.27] }
+    year4: { marketSharePct: 0.012, qDist: [0.20, 0.23, 0.25, 0.27] },
+    processingPremiumPct: 0
   };
 }
 
@@ -79,7 +84,11 @@ function _grapheneOxideStream() {
     year1: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
     year2: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
     year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
-    year4: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] }
+    year4: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
+    // GO requires a separate post-processing step after raw powder is
+    // produced. 30% is a rough placeholder until reagent / labor data
+    // for the GO step firms up.
+    processingPremiumPct: 0.30
   };
 }
 
@@ -467,6 +476,10 @@ export function migrateAssumptions(a) {
     a.revenue.streams.forEach((s, i) => {
       if (typeof s.order !== 'number') s.order = i;
       if (typeof s.enabled !== 'boolean') s.enabled = true;
+      if (typeof s.processingPremiumPct !== 'number') {
+        // GO needs a downstream processing step; other streams ship direct.
+        s.processingPremiumPct = s.id === 'grapheneOxideStream' ? 0.30 : 0;
+      }
     });
     a.revenue.streams.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
 
