@@ -376,7 +376,7 @@ function computeRevenue(revenueAssumptions, techRef) {
 // ──────────────────────────────────────────────────────────────
 // Layer 4: COGS
 // ──────────────────────────────────────────────────────────────
-function computeCOGS(cogsAssumptions, production) {
+function computeCOGS(cogsAssumptions, production, revenue, streams) {
   const modeledHempCostPerKilo =
     (cogsAssumptions.hempCostPerKilo * (1 + cogsAssumptions.hempContingencyPct)) +
     cogsAssumptions.hempShippingPerKilo;
@@ -385,12 +385,37 @@ function computeCOGS(cogsAssumptions, production) {
     manufacturing: production.monthlyManufacturingCost,
     hemp: new Array(MONTHS_TOTAL).fill(0),
     biochar: production.monthlyBiocharCost,
+    // Per-stream post-processing premium: kg sold via stream s, multiplied
+    // by the per-kg fully-loaded raw-graphene cost (hemp + biochar + mfg),
+    // multiplied by the stream's processingPremiumPct. Aggregates across
+    // streams into one COGS line. Zero when no stream has a premium set or
+    // no kg are sold through such a stream.
+    processingPremium: new Array(MONTHS_TOTAL).fill(0),
     total: new Array(MONTHS_TOTAL).fill(0)
   };
 
+  const totalKg = production.monthlyGrapheneKg;
+  const kgByStream = (revenue && revenue.kgByStream) || {};
+  const streamList = Array.isArray(streams) ? streams : [];
+
   for (let m = 0; m < MONTHS_TOTAL; m++) {
     monthly.hemp[m] = production.monthlyHempKg[m] * modeledHempCostPerKilo;
-    monthly.total[m] = monthly.manufacturing[m] + monthly.hemp[m] + monthly.biochar[m];
+
+    const baseRawCost = monthly.manufacturing[m] + monthly.hemp[m] + monthly.biochar[m];
+    if (totalKg[m] > 0 && streamList.length > 0) {
+      const baseCostPerKg = baseRawCost / totalKg[m];
+      let premiumSum = 0;
+      for (const s of streamList) {
+        const pct = (s && typeof s.processingPremiumPct === 'number') ? s.processingPremiumPct : 0;
+        if (pct === 0) continue;
+        const kgStripe = kgByStream[s.id];
+        if (!Array.isArray(kgStripe)) continue;
+        premiumSum += (kgStripe[m] || 0) * baseCostPerKg * pct;
+      }
+      monthly.processingPremium[m] = premiumSum;
+    }
+
+    monthly.total[m] = baseRawCost + monthly.processingPremium[m];
   }
 
   return monthly;
@@ -499,6 +524,7 @@ function assembleOutlook(revenue, cogs, opex, production, capital, capexLab, str
     cogsManufacturing: cogs.manufacturing,
     cogsHemp: cogs.hemp,
     cogsBiochar: cogs.biochar,
+    cogsProcessingPremium: cogs.processingPremium,
     grossMargin: new Array(MONTHS_TOTAL).fill(0),
     grossMarginPct: new Array(MONTHS_TOTAL).fill(0),
     opex: opex.total,
@@ -669,7 +695,7 @@ export function calculateProforma(assumptions) {
   const revenue = computeRevenue(assumptions.revenue, techRef);
 
   // Layer 4: COGS
-  const cogs = computeCOGS(assumptions.cogs, production);
+  const cogs = computeCOGS(assumptions.cogs, production, revenue, assumptions.revenue?.streams);
 
   // Preliminary gross margin (needed for OPEX royalty/commission calculation)
   const grossMarginMonthly = new Array(MONTHS_TOTAL).fill(0);

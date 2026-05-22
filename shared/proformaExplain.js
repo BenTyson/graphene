@@ -118,11 +118,12 @@ const FORMULAS = {
   // ── COGS ──
   cogs: (ctx) => ({
     format: 'currency',
-    formula: 'Manufacturing + Hemp + Biochar',
+    formula: 'Manufacturing + Hemp + Biochar + Processing premium',
     parts: [
       { key: 'cogsManufacturing', label: 'Manufacturing', value: readCell(ctx.computed, ctx.view, 'cogsManufacturing', ctx.periodIndex), op: '+' },
       { key: 'cogsHemp', label: 'Hemp', value: readCell(ctx.computed, ctx.view, 'cogsHemp', ctx.periodIndex), op: '+' },
-      { key: 'cogsBiochar', label: 'Biochar', value: readCell(ctx.computed, ctx.view, 'cogsBiochar', ctx.periodIndex), op: '' }
+      { key: 'cogsBiochar', label: 'Biochar', value: readCell(ctx.computed, ctx.view, 'cogsBiochar', ctx.periodIndex), op: '+' },
+      { key: 'cogsProcessingPremium', label: 'Processing premium', value: readCell(ctx.computed, ctx.view, 'cogsProcessingPremium', ctx.periodIndex), op: '' }
     ]
   }),
 
@@ -174,6 +175,54 @@ const FORMULAS = {
         { label: 'Hemp cost per kilo', value: `$${(cogs.hempCostPerKilo || 0).toFixed(2)}`, section: 'costs' },
         { label: 'Hemp contingency %', value: `${((cogs.hempContingencyPct || 0) * 100).toFixed(1)}%`, section: 'costs' },
         { label: 'Hemp shipping per kilo', value: `$${(cogs.hempShippingPerKilo || 0).toFixed(2)}`, section: 'costs' }
+      ]
+    };
+  },
+
+  cogsProcessingPremium: (ctx) => {
+    const { computed, assumptions, view, periodIndex } = ctx;
+    const [a, b] = periodMonthRange(view, periodIndex);
+    const streams = assumptions?.revenue?.streams || [];
+    const kgByStream = computed.revenue?.kgByStream || {};
+    const totalKg = computed.production?.monthlyGrapheneKg || [];
+    const mfg = computed.cogs?.manufacturing || [];
+    const hemp = computed.cogs?.hemp || [];
+    const biochar = computed.cogs?.biochar || [];
+
+    // Aggregate base raw cost & per-stream kg + premium $ over the period.
+    let periodBaseCost = 0, periodKg = 0;
+    for (let m = a; m < b; m++) {
+      periodBaseCost += (mfg[m] || 0) + (hemp[m] || 0) + (biochar[m] || 0);
+      periodKg += totalKg[m] || 0;
+    }
+    const baseCostPerKg = periodKg > 0 ? periodBaseCost / periodKg : 0;
+
+    const streamRows = [];
+    for (const s of streams) {
+      const pct = (s && typeof s.processingPremiumPct === 'number') ? s.processingPremiumPct : 0;
+      if (pct === 0) continue;
+      const kgStripe = kgByStream[s.id] || [];
+      let kg = 0;
+      for (let m = a; m < b; m++) kg += kgStripe[m] || 0;
+      if (kg === 0) continue;
+      streamRows.push({
+        label: `${s.name}: ${kg.toFixed(0)} kg × $${baseCostPerKg.toFixed(2)}/kg × ${(pct * 100).toFixed(1)}%`,
+        value: kg * baseCostPerKg * pct
+      });
+    }
+
+    return {
+      format: 'currency',
+      formula: 'Σ (streamKg × base $/kg × processingPremiumPct)',
+      parts: streamRows.length
+        ? streamRows.map((r, i) => ({ key: null, label: r.label, value: r.value, op: i === streamRows.length - 1 ? '' : '+' }))
+        : [{ key: null, label: 'No streams with a non-zero processing premium have kg sold this period', value: 0, op: '' }],
+      leafInputs: [
+        { label: 'Base raw $/kg this period', value: `$${baseCostPerKg.toFixed(2)}`, section: 'costs' },
+        { label: 'Premiums by stream', value: streams
+            .filter(s => (s.processingPremiumPct || 0) > 0)
+            .map(s => `${s.name}: ${((s.processingPremiumPct || 0) * 100).toFixed(1)}%`)
+            .join(' · ') || 'none', section: 'revenue' }
       ]
     };
   },

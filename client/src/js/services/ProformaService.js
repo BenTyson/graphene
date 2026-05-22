@@ -723,7 +723,8 @@ class ProformaService {
     addChildren('cogs', [
       { label: 'Manufacturing', key: 'cogsManufacturing', data: src.cogsManufacturing, section: 'cogs' },
       { label: 'Hemp', key: 'cogsHemp', data: src.cogsHemp, section: 'cogs' },
-      { label: 'Biochar', key: 'cogsBiochar', data: src.cogsBiochar, section: 'cogs' }
+      { label: 'Biochar', key: 'cogsBiochar', data: src.cogsBiochar, section: 'cogs' },
+      { label: 'Processing premium', key: 'cogsProcessingPremium', data: src.cogsProcessingPremium, section: 'cogs' }
     ]);
     add('Gross Margin', 'grossMargin', src.grossMargin, { bold: true, section: 'margin' });
     add('Gross Margin %', 'grossMarginPct', src.grossMarginPct, { percent: true, section: 'margin' });
@@ -1266,9 +1267,10 @@ class ProformaService {
     // COGS composition — three-band stacked area showing where the
     // unit cost actually lives over time.
     const cogsBands = [
-      { key: 'cogsManufacturing', label: 'Manufacturing', color: PALETTE.cogs },
-      { key: 'cogsHemp',          label: 'Hemp',          color: PALETTE.opex },
-      { key: 'cogsBiochar',       label: 'Biochar',       color: STREAM_COLORS[2] }
+      { key: 'cogsManufacturing',     label: 'Manufacturing',       color: PALETTE.cogs },
+      { key: 'cogsHemp',              label: 'Hemp',                color: PALETTE.opex },
+      { key: 'cogsBiochar',           label: 'Biochar',             color: STREAM_COLORS[2] },
+      { key: 'cogsProcessingPremium', label: 'Processing premium',  color: STREAM_COLORS[3] }
     ];
     this._renderChart('proforma-chart-cogs-composition', {
       type: 'line',
