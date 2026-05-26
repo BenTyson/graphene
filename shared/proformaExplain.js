@@ -189,7 +189,15 @@ const FORMULAS = {
     const hemp = computed.cogs?.hemp || [];
     const biochar = computed.cogs?.biochar || [];
 
-    // Aggregate base raw cost & per-stream kg + premium $ over the period.
+    // Per-year pct resolver: tolerates scalar / object / missing shapes.
+    const resolve = (s, year) => {
+      const p = s && s.processingPremiumPct;
+      if (typeof p === 'number') return p;
+      if (p && typeof p === 'object') return p['year' + year] || 0;
+      return 0;
+    };
+
+    // Aggregate base raw cost over the period (for the indicator).
     let periodBaseCost = 0, periodKg = 0;
     for (let m = a; m < b; m++) {
       periodBaseCost += (mfg[m] || 0) + (hemp[m] || 0) + (biochar[m] || 0);
@@ -197,32 +205,52 @@ const FORMULAS = {
     }
     const baseCostPerKg = periodKg > 0 ? periodBaseCost / periodKg : 0;
 
+    // Per-stream rows: rebuild the engine's sum per stream over the period,
+    // resolving the year-specific pct each month.
     const streamRows = [];
     for (const s of streams) {
-      const pct = (s && typeof s.processingPremiumPct === 'number') ? s.processingPremiumPct : 0;
-      if (pct === 0) continue;
       const kgStripe = kgByStream[s.id] || [];
-      let kg = 0;
-      for (let m = a; m < b; m++) kg += kgStripe[m] || 0;
-      if (kg === 0) continue;
+      let streamPremium = 0, streamKg = 0;
+      const pctsUsed = new Set();
+      for (let m = a; m < b; m++) {
+        const kg = kgStripe[m] || 0;
+        if (kg === 0) continue;
+        const y = yearOfMonth(m);
+        const pct = resolve(s, y);
+        if (pct === 0) continue;
+        const monthBaseKg = totalKg[m] || 0;
+        const monthBaseCost = (mfg[m] || 0) + (hemp[m] || 0) + (biochar[m] || 0);
+        const monthBasePerKg = monthBaseKg > 0 ? monthBaseCost / monthBaseKg : 0;
+        streamPremium += kg * monthBasePerKg * pct;
+        streamKg += kg;
+        pctsUsed.add((pct * 100).toFixed(1) + '%');
+      }
+      if (streamPremium === 0) continue;
       streamRows.push({
-        label: `${s.name}: ${kg.toFixed(0)} kg × $${baseCostPerKg.toFixed(2)}/kg × ${(pct * 100).toFixed(1)}%`,
-        value: kg * baseCostPerKg * pct
+        label: `${s.name}: ${streamKg.toFixed(0)} kg @ ${[...pctsUsed].join('/')}`,
+        value: streamPremium
       });
     }
 
     return {
       format: 'currency',
-      formula: 'Σ (streamKg × base $/kg × processingPremiumPct)',
+      formula: 'Σ (streamKg × monthly base $/kg × year-resolved processingPremiumPct)',
       parts: streamRows.length
         ? streamRows.map((r, i) => ({ key: null, label: r.label, value: r.value, op: i === streamRows.length - 1 ? '' : '+' }))
         : [{ key: null, label: 'No streams with a non-zero processing premium have kg sold this period', value: 0, op: '' }],
       leafInputs: [
         { label: 'Base raw $/kg this period', value: `$${baseCostPerKg.toFixed(2)}`, section: 'costs' },
-        { label: 'Premiums by stream', value: streams
-            .filter(s => (s.processingPremiumPct || 0) > 0)
-            .map(s => `${s.name}: ${((s.processingPremiumPct || 0) * 100).toFixed(1)}%`)
-            .join(' · ') || 'none', section: 'revenue' }
+        { label: 'Premiums by stream (Y0–Y4)', value: streams.map(s => {
+            const p = s.processingPremiumPct;
+            if (!p) return null;
+            const vals = (typeof p === 'object')
+              ? [0,1,2,3,4].map(y => ((p['year' + y] || 0) * 100).toFixed(1) + '%').join('/')
+              : `${(p * 100).toFixed(1)}% (flat)`;
+            const isNonZero = (typeof p === 'object')
+              ? [0,1,2,3,4].some(y => (p['year' + y] || 0) > 0)
+              : (p > 0);
+            return isNonZero ? `${s.name}: ${vals}` : null;
+          }).filter(Boolean).join(' · ') || 'none', section: 'revenue' }
       ]
     };
   },
@@ -484,15 +512,36 @@ const FORMULAS = {
   },
 
   opexContingency: (ctx) => {
-    const pct = ctx.assumptions?.opex?.contingencyPct || 0;
-    const contingency = readCell(ctx.computed, ctx.view, 'opexContingency', ctx.periodIndex);
-    const base = pct > 0 ? contingency / pct : 0;
+    const { assumptions, computed, view, periodIndex } = ctx;
+    const [a, b] = periodMonthRange(view, periodIndex);
+    const cPct = assumptions?.opex?.contingencyPct;
+    const pctByYear = Array.isArray(cPct) ? cPct : (typeof cPct === 'number' ? [cPct, cPct, cPct, cPct, cPct] : [0, 0, 0, 0, 0]);
+
+    // Sum base OPEX & contingency over the period, year-by-year (a period
+    // can span multiple years in the yearly view but normally won't here).
+    let periodBase = 0;
+    let periodContingency = 0;
+    const yearsHit = new Set();
+    for (let m = a; m < b; m++) {
+      const y = yearOfMonth(m);
+      yearsHit.add(y);
+      const monthBase = (computed.opex?.staffing?.[m] || 0) + (computed.opex?.benefits?.[m] || 0)
+        + (computed.opex?.generalOverhead?.[m] || 0) + (computed.opex?.rnd?.[m] || 0)
+        + (computed.opex?.legal?.[m] || 0) + (computed.opex?.uofaRoyalty?.[m] || 0)
+        + (computed.opex?.salesCommission?.[m] || 0) + (computed.opex?.businessInsurance?.[m] || 0);
+      periodBase += monthBase;
+      periodContingency += monthBase * (pctByYear[y] || 0);
+    }
+    const yearsLabel = [...yearsHit].sort().map(y => `Y${y}: ${((pctByYear[y] || 0) * 100).toFixed(2)}%`).join(' · ');
     return {
       format: 'currency',
-      formula: 'base OPEX × contingencyPct',
+      formula: 'Σ (monthly base OPEX × year-resolved contingencyPct)',
       parts: [
-        { key: null, label: 'Base OPEX (Σ other lines)', value: base, op: '×' },
-        { key: null, label: 'Contingency %', value: `${(pct * 100).toFixed(2)}%`, op: '' }
+        { key: null, label: 'Base OPEX over period', value: periodBase, op: '×' },
+        { key: null, label: 'Year-resolved contingency %', value: yearsLabel || '0%', op: '' }
+      ],
+      leafInputs: [
+        { label: 'Contingency by year', value: pctByYear.map((p, y) => `Y${y}: ${(p * 100).toFixed(2)}%`).join(' · '), section: 'opex' }
       ]
     };
   },
