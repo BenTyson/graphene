@@ -251,38 +251,48 @@ function _captureBlock() {
 // Implied $/kg indicator uses the most recent computed cogs+production
 // to translate the % into "what does this currently work out to".
 function _processingPremiumBlock() {
-  const pctPath = `${SBASE}.processingPremiumPct`;
-  // Implied $/kg = (Y4 baseRawCost / Y4 totalKg) × pct — shown as a
-  // stable single-year reference so users can sanity-check the assumption
-  // without it flickering month-by-month.
+  const pctBase = `${SBASE}.processingPremiumPct`;
+  // Implied $/kg @ Y4 — sanity-check what the Y4 % currently translates to
+  // in dollars. Stable single-year reference; doesn't flicker month-by-month.
   const impliedExpr = `
     (() => {
       if (!proformaComputed?.yearly) return '—';
       const y = proformaComputed.yearly;
       const baseCost = (y.cogsManufacturing?.[4] || 0) + (y.cogsHemp?.[4] || 0) + (y.cogsBiochar?.[4] || 0);
       const kg = (proformaComputed.production?.monthlyGrapheneKg || []).slice(48, 60).reduce((a, b) => a + (b || 0), 0);
-      const pct = ${pctPath} || 0;
+      const p = ${pctBase};
+      const pct = (p && typeof p === 'object') ? (p.year4 || 0) : (typeof p === 'number' ? p : 0);
       if (kg <= 0 || pct <= 0) return '—';
       return '≈ $' + (baseCost / kg * pct).toFixed(2) + '/kg @ Y4 rates';
     })()
   `;
+  // 5-cell Y0..Y4 grid. Each cell binds to ${pctBase}.year{N}. We render
+  // a custom input (instead of numInput) so the grid stays compact and
+  // labels match the Production-tab efficiencyByYear pattern.
+  const yearCells = ['year0', 'year1', 'year2', 'year3', 'year4'].map((yr, i) => `
+    <div>
+      <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">Y${i}</label>
+      <div class="relative">
+        <input type="number" step="1"
+               :value="((${pctBase}.${yr} || 0) * 100).toFixed(2)"
+               @input="${pctBase}.${yr} = (+$event.target.value) / 100; proformaRecompute()"
+               class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 pr-7 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">%</span>
+      </div>
+    </div>
+  `).join('');
   return `
     <section>
       <header class="flex items-baseline gap-2 mb-2">
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[10px] font-semibold">3</span>
-        <h4 class="text-sm font-semibold text-gray-800">Processing premium</h4>
+        <h4 class="text-sm font-semibold text-gray-800">Processing premium by year</h4>
         <span class="text-[11px] text-gray-400">Downstream post-processing cost as a % uplift on raw $/kg</span>
       </header>
-      <div class="grid grid-cols-2 gap-3 items-end">
-        <div>
-          ${numInput('Premium', pctPath, { unit: '%', format: 'fraction-percent', step: 1 })}
-        </div>
-        <div class="text-[11px] text-gray-500 font-mono pb-2"
-             x-text="${impliedExpr}"></div>
+      <div class="grid grid-cols-5 gap-3">${yearCells}</div>
+      <div class="mt-2 flex items-center justify-end">
+        <span class="text-[11px] text-gray-500 font-mono shrink-0"
+              x-text="${impliedExpr}"></span>
       </div>
-      <p class="text-[11px] text-gray-500 leading-snug mt-2">
-        Set 0 for streams that ship as raw powder. Applied to <strong x-text="(${SBASE}.year4?.marketSharePct || ${SBASE}.market?.kgByYear?.year4 || 0) > 0 || ${SBASE}.processingPremiumPct > 0 ? 'every kg sold via this stream' : 'kg once this stream has sales'"></strong>.
-      </p>
     </section>
   `;
 }

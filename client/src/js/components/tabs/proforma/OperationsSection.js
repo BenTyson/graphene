@@ -155,10 +155,28 @@ export function getOperationsSection() {
     { label: 'UofA royalty', path: 'proformaAssumptions.opex.uofaRoyaltyPct',
       unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.uofaRoyaltyPct'] },
     { label: 'Sales commission', path: 'proformaAssumptions.opex.salesCommissionPct',
-      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.salesCommissionPct'] },
-    { label: 'Contingency', path: 'proformaAssumptions.opex.contingencyPct',
-      unit: '%', format: 'fraction-percent', step: 0.5, ...HELP['opex.contingencyPct'] }
+      unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.salesCommissionPct'] }
   ];
+
+  // OPEX contingency: 5-cell Y0-Y4 grid (% of base OPEX). Lives in its
+  // own card so the per-year mental model is obvious and matches the
+  // shape of `efficiencyByYear` on the Production tab.
+  const contingencyGrid = `
+    <div class="grid grid-cols-5 gap-3">
+      <template x-for="(pct, yi) in proformaAssumptions.opex.contingencyPct" :key="yi">
+        <div>
+          <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1" x-text="'Y' + yi"></label>
+          <div class="relative">
+            <input type="number" step="0.5"
+                   :value="(proformaAssumptions.opex.contingencyPct[yi] * 100).toFixed(2)"
+                   @input="proformaAssumptions.opex.contingencyPct[yi] = (+$event.target.value) / 100; proformaRecompute()"
+                   class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 pr-8 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">%</span>
+          </div>
+        </div>
+      </template>
+    </div>
+  `;
 
   return `
     <section class="max-w-5xl">
@@ -168,6 +186,8 @@ export function getOperationsSection() {
         ${_staffingTable()}
 
         ${card('Rates & percentages', formGrid(percentages.map(f => numInput(f.label, f.path, f)).join('')))}
+
+        ${card('OPEX contingency by year', contingencyGrid, { subtitle: '% uplift on the sum of all other OPEX lines, per year.' })}
 
         ${_overheadBlock()}
 

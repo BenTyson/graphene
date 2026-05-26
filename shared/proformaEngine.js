@@ -398,15 +398,25 @@ function computeCOGS(cogsAssumptions, production, revenue, streams) {
   const kgByStream = (revenue && revenue.kgByStream) || {};
   const streamList = Array.isArray(streams) ? streams : [];
 
+  // Resolve a stream's processingPremiumPct for a given year. Tolerates
+  // legacy scalar and missing-object shapes so unmigrated blobs still run.
+  const resolveStreamPremium = (stream, year) => {
+    const p = stream && stream.processingPremiumPct;
+    if (typeof p === 'number') return p;
+    if (p && typeof p === 'object') return p['year' + year] || 0;
+    return 0;
+  };
+
   for (let m = 0; m < MONTHS_TOTAL; m++) {
     monthly.hemp[m] = production.monthlyHempKg[m] * modeledHempCostPerKilo;
 
     const baseRawCost = monthly.manufacturing[m] + monthly.hemp[m] + monthly.biochar[m];
     if (totalKg[m] > 0 && streamList.length > 0) {
       const baseCostPerKg = baseRawCost / totalKg[m];
+      const year = getYear(m);
       let premiumSum = 0;
       for (const s of streamList) {
-        const pct = (s && typeof s.processingPremiumPct === 'number') ? s.processingPremiumPct : 0;
+        const pct = resolveStreamPremium(s, year);
         if (pct === 0) continue;
         const kgStripe = kgByStream[s.id];
         if (!Array.isArray(kgStripe)) continue;
@@ -437,7 +447,14 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     contingency: new Array(MONTHS_TOTAL).fill(0),
     total: new Array(MONTHS_TOTAL).fill(0)
   };
-  const contingencyPct = typeof opex.contingencyPct === 'number' ? opex.contingencyPct : 0;
+  // Yearly contingencyPct — resolves per-month via getYear(m). Tolerates
+  // legacy scalar shape so an unmigrated blob still computes sanely.
+  const contingencyByYear = (() => {
+    const c = opex.contingencyPct;
+    if (Array.isArray(c)) return c;
+    if (typeof c === 'number') return [c, c, c, c, c];
+    return [0, 0, 0, 0, 0];
+  })();
 
   const staffYears = Array.from({ length: YEARS_TOTAL }, (_, y) => opex.staffing['year' + y]);
   const legalYears = Array.from({ length: YEARS_TOTAL }, (_, y) => 'year' + y);
@@ -502,12 +519,14 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     // O28: 100000, Q28: 100000 -- paid twice in Year 1? Actually looking at data:
     // O28=100000, P28=0, Q28=100000 -- this seems like a quirk. For now, single annual payment.
 
-    // Total OPEX: base subtotal + flat contingency uplift (% of base).
-    // Contingency is computed off the base so doubling-up is impossible.
+    // Total OPEX: base subtotal + year-resolved contingency uplift (% of
+    // base). Contingency is computed off the base so doubling-up is
+    // impossible.
     const baseOpex = monthly.staffing[m] + monthly.benefits[m] +
       monthly.generalOverhead[m] + monthly.rnd[m] + monthly.legal[m] +
       monthly.uofaRoyalty[m] + monthly.salesCommission[m] + monthly.businessInsurance[m];
-    monthly.contingency[m] = baseOpex * contingencyPct;
+    const pct = contingencyByYear[year] || 0;
+    monthly.contingency[m] = baseOpex * pct;
     monthly.total[m] = baseOpex + monthly.contingency[m];
   }
 

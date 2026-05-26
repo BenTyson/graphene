@@ -45,8 +45,8 @@ function _supercapStream() {
     year4: { marketSharePct: 0.12, qDist: [0.22, 0.24, 0.26, 0.28] },
     // % uplift on the per-kg fully-loaded cost of raw graphene (hemp +
     // biochar + manufacturing) for kg flowing through this stream's
-    // downstream processing step. 0 = no extra processing cost.
-    processingPremiumPct: 0
+    // downstream processing step, controlled per year. 0 = no extra cost.
+    processingPremiumPct: { year0: 0, year1: 0, year2: 0, year3: 0, year4: 0 }
   };
 }
 
@@ -64,7 +64,7 @@ function _carbonBlackStream() {
     year2: { marketSharePct: 0.005, qDist: [0.20, 0.23, 0.25, 0.27] },
     year3: { marketSharePct: 0.009, qDist: [0.20, 0.23, 0.25, 0.27] },
     year4: { marketSharePct: 0.012, qDist: [0.20, 0.23, 0.25, 0.27] },
-    processingPremiumPct: 0
+    processingPremiumPct: { year0: 0, year1: 0, year2: 0, year3: 0, year4: 0 }
   };
 }
 
@@ -86,9 +86,9 @@ function _grapheneOxideStream() {
     year3: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
     year4: { marketSharePct: 0, qDist: [0.25, 0.25, 0.25, 0.25] },
     // GO requires a separate post-processing step after raw powder is
-    // produced. 30% is a rough placeholder until reagent / labor data
-    // for the GO step firms up.
-    processingPremiumPct: 0.30
+    // produced. 30% across all years is a rough placeholder until reagent
+    // / labor data for the GO step firms up — edit per year as data lands.
+    processingPremiumPct: { year0: 0.30, year1: 0.30, year2: 0.30, year3: 0.30, year4: 0.30 }
   };
 }
 
@@ -318,8 +318,9 @@ export function getDefaultAssumptions() {
       uofaRoyaltyPct: 0.06,
       salesCommissionPct: 0.055,
       // Catch-all contingency applied as a % uplift on the sum of all other
-      // OPEX line items. Default 0 keeps existing scenarios unchanged.
-      contingencyPct: 0
+      // OPEX line items, controlled per year (Y0..Y4). Default zeros keep
+      // existing scenarios unchanged.
+      contingencyPct: [0, 0, 0, 0, 0]
     },
 
     rnd: {
@@ -476,9 +477,27 @@ export function migrateAssumptions(a) {
     a.revenue.streams.forEach((s, i) => {
       if (typeof s.order !== 'number') s.order = i;
       if (typeof s.enabled !== 'boolean') s.enabled = true;
-      if (typeof s.processingPremiumPct !== 'number') {
-        // GO needs a downstream processing step; other streams ship direct.
-        s.processingPremiumPct = s.id === 'grapheneOxideStream' ? 0.30 : 0;
+      // processingPremiumPct: scalar | undefined | object → {year0..year4}
+      const defaultPct = s.id === 'grapheneOxideStream' ? 0.30 : 0;
+      const p = s.processingPremiumPct;
+      if (typeof p === 'number') {
+        // Old scalar shape: broadcast across all years.
+        s.processingPremiumPct = { year0: p, year1: p, year2: p, year3: p, year4: p };
+      } else if (!p || typeof p !== 'object') {
+        s.processingPremiumPct = { year0: defaultPct, year1: defaultPct, year2: defaultPct, year3: defaultPct, year4: defaultPct };
+      } else {
+        // Already an object — backfill any missing year keys with the
+        // nearest defined value (Y4 falls back to Y3 → Y2 → ... → default).
+        const fallback = (yIdx) => {
+          for (let j = yIdx; j >= 0; j--) {
+            const v = p['year' + j];
+            if (typeof v === 'number') return v;
+          }
+          return defaultPct;
+        };
+        for (let y = 0; y < YEARS_TOTAL; y++) {
+          if (typeof p['year' + y] !== 'number') p['year' + y] = fallback(y);
+        }
       }
     });
     a.revenue.streams.sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
@@ -642,7 +661,19 @@ export function migrateAssumptions(a) {
     while (a.production.efficiencyByYear.length < YEARS_TOTAL) a.production.efficiencyByYear.push(last);
   }
   if (a.opex) {
-    if (typeof a.opex.contingencyPct !== 'number') a.opex.contingencyPct = 0;
+    // contingencyPct: scalar | undefined | array → 5-elem array
+    const c = a.opex.contingencyPct;
+    if (typeof c === 'number') {
+      a.opex.contingencyPct = [c, c, c, c, c];
+    } else if (!Array.isArray(c)) {
+      a.opex.contingencyPct = [0, 0, 0, 0, 0];
+    } else if (c.length < YEARS_TOTAL) {
+      // Short array (e.g. user-truncated or future-proofing): repeat last
+      const last = c[c.length - 1] ?? 0;
+      while (a.opex.contingencyPct.length < YEARS_TOTAL) a.opex.contingencyPct.push(last);
+    } else if (c.length > YEARS_TOTAL) {
+      a.opex.contingencyPct = c.slice(0, YEARS_TOTAL);
+    }
     if (a.opex.staffing && a.opex.staffing.year3 && !a.opex.staffing.year4) {
       a.opex.staffing.year4 = JSON.parse(JSON.stringify(a.opex.staffing.year3));
     }
