@@ -297,7 +297,9 @@ export function getDefaultAssumptions() {
           executive:   { count: [7, 7, 7, 7], salary: 150000 }
         }
       },
-      benefitsPct: 0.40,
+      // Benefits as a % of staffing salary, per year (Y0..Y4). Same shape
+      // as contingencyPct — edit each year independently.
+      benefitsPct: [0.40, 0.40, 0.40, 0.40, 0.40],
 
       legal: {
         patent:    { year0: [30000, 6000, 6000, 6000], year1: [20000, 6000, 20000, 6000],
@@ -673,6 +675,19 @@ export function migrateAssumptions(a) {
       while (a.opex.contingencyPct.length < YEARS_TOTAL) a.opex.contingencyPct.push(last);
     } else if (c.length > YEARS_TOTAL) {
       a.opex.contingencyPct = c.slice(0, YEARS_TOTAL);
+    }
+    // benefitsPct: scalar | undefined | array → 5-elem array (same rules
+    // as contingencyPct). Older scenarios stored a single number.
+    const b = a.opex.benefitsPct;
+    if (typeof b === 'number') {
+      a.opex.benefitsPct = [b, b, b, b, b];
+    } else if (!Array.isArray(b)) {
+      a.opex.benefitsPct = [0.40, 0.40, 0.40, 0.40, 0.40];
+    } else if (b.length < YEARS_TOTAL) {
+      const last = b[b.length - 1] ?? 0.40;
+      while (a.opex.benefitsPct.length < YEARS_TOTAL) a.opex.benefitsPct.push(last);
+    } else if (b.length > YEARS_TOTAL) {
+      a.opex.benefitsPct = b.slice(0, YEARS_TOTAL);
     }
     if (a.opex.staffing && a.opex.staffing.year3 && !a.opex.staffing.year4) {
       a.opex.staffing.year4 = JSON.parse(JSON.stringify(a.opex.staffing.year3));
