@@ -455,6 +455,13 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
     if (typeof c === 'number') return [c, c, c, c, c];
     return [0, 0, 0, 0, 0];
   })();
+  // Same shape rules for benefitsPct.
+  const benefitsByYear = (() => {
+    const b = opex.benefitsPct;
+    if (Array.isArray(b)) return b;
+    if (typeof b === 'number') return [b, b, b, b, b];
+    return [0.40, 0.40, 0.40, 0.40, 0.40];
+  })();
 
   const staffYears = Array.from({ length: YEARS_TOTAL }, (_, y) => opex.staffing['year' + y]);
   const legalYears = Array.from({ length: YEARS_TOTAL }, (_, y) => 'year' + y);
@@ -477,8 +484,8 @@ function computeOPEX(opex, rnd, grossMarginMonthly) {
       monthly.staffing[m] = staffTotal / 3;
     }
 
-    // Benefits
-    monthly.benefits[m] = monthly.staffing[m] * opex.benefitsPct;
+    // Benefits — year-resolved % of staffing.
+    monthly.benefits[m] = monthly.staffing[m] * (benefitsByYear[year] || 0);
     // Benefits start in Year 0 Q2 M3 (month 2) per spreadsheet -- first 2 months have no benefits
     if (m < 2) monthly.benefits[m] = 0;
 

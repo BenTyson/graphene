@@ -368,13 +368,21 @@ const FORMULAS = {
   opexBenefits: (ctx) => {
     const { computed, assumptions, view, periodIndex } = ctx;
     const staff = readCell(computed, view, 'opexStaffing', periodIndex);
-    const pct = assumptions?.opex?.benefitsPct || 0;
+    const bPct = assumptions?.opex?.benefitsPct;
+    const pctByYear = Array.isArray(bPct) ? bPct : (typeof bPct === 'number' ? [bPct, bPct, bPct, bPct, bPct] : [0, 0, 0, 0, 0]);
+    const [a, b] = periodMonthRange(view, periodIndex);
+    const yearsHit = new Set();
+    for (let m = a; m < b; m++) yearsHit.add(yearOfMonth(m));
+    const yearsLabel = [...yearsHit].sort().map(y => `Y${y}: ${((pctByYear[y] || 0) * 100).toFixed(1)}%`).join(' · ');
     return {
       format: 'currency',
-      formula: 'staffing × benefitsPct  (zero in months 0–1)',
+      formula: 'staffing × year-resolved benefitsPct  (zero in months 0–1)',
       parts: [
         { key: 'opexStaffing', label: 'Staffing', value: staff, op: '×' },
-        { key: null, label: 'Benefits %', value: `${(pct * 100).toFixed(1)}%`, op: '' }
+        { key: null, label: 'Benefits %', value: yearsLabel || '0%', op: '' }
+      ],
+      leafInputs: [
+        { label: 'Benefits by year', value: pctByYear.map((p, y) => `Y${y}: ${(p * 100).toFixed(1)}%`).join(' · '), section: 'opex' }
       ]
     };
   },

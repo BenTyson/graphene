@@ -150,26 +150,24 @@ function _insuranceBlock() {
 
 export function getOperationsSection() {
   const percentages = [
-    { label: 'Benefits', path: 'proformaAssumptions.opex.benefitsPct',
-      unit: '%', format: 'fraction-percent', step: 1, ...HELP['opex.benefitsPct'] },
     { label: 'UofA royalty', path: 'proformaAssumptions.opex.uofaRoyaltyPct',
       unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.uofaRoyaltyPct'] },
     { label: 'Sales commission', path: 'proformaAssumptions.opex.salesCommissionPct',
       unit: '%', format: 'fraction-percent', step: 0.1, ...HELP['opex.salesCommissionPct'] }
   ];
 
-  // OPEX contingency: 5-cell Y0-Y4 grid (% of base OPEX). Lives in its
-  // own card so the per-year mental model is obvious and matches the
-  // shape of `efficiencyByYear` on the Production tab.
-  const contingencyGrid = `
+  // Shared 5-cell Y0-Y4 grid generator. `path` is the Alpine-bindable
+  // array path (e.g. 'proformaAssumptions.opex.benefitsPct'). `step`
+  // controls the increment in the % UI.
+  const yearlyPctGrid = (path, step = 1) => `
     <div class="grid grid-cols-5 gap-3">
-      <template x-for="(pct, yi) in proformaAssumptions.opex.contingencyPct" :key="yi">
+      <template x-for="(pct, yi) in ${path}" :key="yi">
         <div>
           <label class="block text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1" x-text="'Y' + yi"></label>
           <div class="relative">
-            <input type="number" step="0.5"
-                   :value="(proformaAssumptions.opex.contingencyPct[yi] * 100).toFixed(2)"
-                   @input="proformaAssumptions.opex.contingencyPct[yi] = (+$event.target.value) / 100; proformaRecompute()"
+            <input type="number" step="${step}"
+                   :value="(${path}[yi] * 100).toFixed(2)"
+                   @input="${path}[yi] = (+$event.target.value) / 100; proformaRecompute()"
                    class="w-full text-sm border-gray-300 rounded-md px-2.5 py-1.5 pr-8 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-mono tabular-nums">
             <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">%</span>
           </div>
@@ -177,6 +175,9 @@ export function getOperationsSection() {
       </template>
     </div>
   `;
+
+  const benefitsGrid = yearlyPctGrid('proformaAssumptions.opex.benefitsPct', 1);
+  const contingencyGrid = yearlyPctGrid('proformaAssumptions.opex.contingencyPct', 0.5);
 
   return `
     <section class="max-w-5xl">
@@ -186,6 +187,8 @@ export function getOperationsSection() {
         ${_staffingTable()}
 
         ${card('Rates & percentages', formGrid(percentages.map(f => numInput(f.label, f.path, f)).join('')))}
+
+        ${card('Benefits by year', benefitsGrid, { subtitle: '% of staffing salary applied as employee benefits, per year.' })}
 
         ${card('OPEX contingency by year', contingencyGrid, { subtitle: '% uplift on the sum of all other OPEX lines, per year.' })}
 
