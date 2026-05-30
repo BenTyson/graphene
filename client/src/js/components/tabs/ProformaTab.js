@@ -655,6 +655,25 @@ function _summaryView() {
   `;
 
   return `
+    <div id="proforma-summary-printable">
+
+      <!-- Print-only title: hidden on screen, visible when printing -->
+      <div class="proforma-print-header" style="display:none; margin-bottom:16px;">
+        <h2 style="font-size:16px; font-weight:700; margin:0 0 2px;" x-text="proformaScenario?.name + ' — Financial Summary'"></h2>
+        <p style="font-size:10px; color:#666; margin:0;" x-text="'Generated ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })"></p>
+      </div>
+
+      <!-- Export button: visible on screen only -->
+      <div class="proforma-export-btn flex items-center justify-end mb-3">
+        <button @click="printProformaSummary()"
+                class="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+          </svg>
+          Export PDF
+        </button>
+      </div>
+
     <div x-show="proformaComputed">
       ${headlineTable}
       <div class="overflow-x-auto border border-gray-200 rounded-lg" x-data="{ S: getProformaSummary() }" x-effect="S = getProformaSummary()">
@@ -698,9 +717,8 @@ function _summaryView() {
             ${numRow     ('Total FTEs',            'S?.capexOpex?.fteByYear',      { bold: true })}
 
             ${sectionRow('Cash Flow', 'bg-violet-100')}
-            ${currencyRow('Cash Burn',             'S?.cashFlow?.cumulativeCash', { bold: true })}
+            ${currencyRow('Cumulative Cash Flow',   'S?.cashFlow?.cumulativeCash', { bold: true })}
             ${currencyRow('CAPEX',                 'S?.cashFlow?.capex',          { indent: true, sign: true })}
-            ${currencyRow('Operating Cash Flow',   'S?.cashFlow?.opex',           { indent: true, sign: true })}
             <tr class="border-t border-gray-100">
               <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 text-gray-700">Opening Cash + Commitments</td>
               <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono text-gray-800"
@@ -738,6 +756,8 @@ function _summaryView() {
 
     <div x-show="!proformaComputed" class="text-center py-12 text-gray-400 text-sm">
       No computed data available.
+    </div>
+
     </div>
   `;
 }

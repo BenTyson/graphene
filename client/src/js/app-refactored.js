@@ -5770,6 +5770,11 @@ window.grapheneApp = function() {
     async saveProformaScenario() { await proformaService.saveScenario(this); },
     proformaRecompute() { proformaService.recompute(this); },
     proformaBackToList() { proformaService.backToList(this); },
+    printProformaSummary() {
+      document.body.classList.add('printing-proforma-summary');
+      window.print();
+      document.body.classList.remove('printing-proforma-summary');
+    },
     proformaMarkDirty() { proformaService.markDirty(this); },
     addProformaMachine() { proformaService.addMachine(this); },
     removeProformaMachine(index) { proformaService.removeMachine(this, index); },
