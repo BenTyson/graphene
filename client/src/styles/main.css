@@ -359,3 +359,45 @@
     flex-shrink: 0;
   }
 }
+
+/* ─── Proforma Summary PDF export ─────────────────────────────── */
+@media print {
+  @page { size: A4 landscape; margin: 15mm; }
+
+  /* Hide everything on the page */
+  body.printing-proforma-summary * { visibility: hidden; }
+
+  /* Show only the summary printable region and all its children */
+  body.printing-proforma-summary #proforma-summary-printable,
+  body.printing-proforma-summary #proforma-summary-printable * { visibility: visible; }
+
+  /* Position the printable region at the top-left of the page */
+  body.printing-proforma-summary #proforma-summary-printable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+  }
+
+  /* Un-stick sticky cells so they render in normal flow */
+  body.printing-proforma-summary #proforma-summary-printable .sticky {
+    position: static !important;
+  }
+
+  /* Remove scrollable container constraints so tables print in full */
+  body.printing-proforma-summary #proforma-summary-printable .overflow-x-auto,
+  body.printing-proforma-summary #proforma-summary-printable .overflow-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Hide the export button itself when printing */
+  body.printing-proforma-summary .proforma-export-btn { display: none !important; }
+
+  /* Show the print-only title header */
+  body.printing-proforma-summary .proforma-print-header { display: block !important; }
+
+  /* Allow background colors to render (tables use tinted section rows) */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
