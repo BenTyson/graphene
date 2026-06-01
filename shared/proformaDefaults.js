@@ -112,6 +112,36 @@ function _defaultCustomSources() {
   ];
 }
 
+// Prior-year actuals (use of funds), entered by hand from a real P&L.
+// This is DISPLAY-ONLY data — it does NOT flow through calculateProforma();
+// it surfaces as a leading "actual" column on the Summary tab. Each line
+// rolls into a Summary bucket: revenue | cogs | opexSalaryBenefits |
+// opexLegal | opexRoyaltyCommission | opex (other) | capex. Net income =
+// revenue − cogs − opex (capex is a balance-sheet use, not a P&L expense).
+// Seeded with HGraphene's actual 2025 P&L; edit on the "2025 Actual" pill.
+function _defaultHistorical() {
+  return {
+    enabled: true,
+    periodLabel: '2025 Actual',
+    lines: [
+      { label: 'Services',                amount: -2236.13,  bucket: 'revenue' },
+      { label: 'Uncategorized Income',    amount: 28.73,     bucket: 'revenue' },
+      { label: 'Interest earned',         amount: 68.83,     bucket: 'revenue' },
+      { label: 'Contractor Services',     amount: 641573.41, bucket: 'opex' },
+      { label: 'Legal',                   amount: 55000,     bucket: 'opexLegal' },
+      { label: 'Debt Interest',           amount: 30000,     bucket: 'opex' },
+      { label: 'Expense Reimbursement',   amount: 10745.66,  bucket: 'opex' },
+      { label: 'Travel',                  amount: 11502.36,  bucket: 'opex' },
+      { label: 'Monthly Tech Services',   amount: 2411.26,   bucket: 'opex' },
+      { label: 'Conference',              amount: 1000,      bucket: 'opex' },
+      { label: 'Travel Meal',             amount: 773.84,    bucket: 'opex' },
+      { label: 'Advertising & marketing', amount: 66.60,     bucket: 'opex' },
+      { label: 'Uncategorized Expense',   amount: 127.66,    bucket: 'opex' },
+      { label: 'General business expenses', amount: 20,      bucket: 'opex' }
+    ]
+  };
+}
+
 export function getDefaultAssumptions() {
   return {
     version: 2,
@@ -354,6 +384,8 @@ export function getDefaultAssumptions() {
       initialInvestment: 550000, // B36 in OUTLOOK
       raises: [] // { month: N, amount: N }
     },
+
+    historical: _defaultHistorical(),
 
     technical: {
       evBattery: {
@@ -752,6 +784,22 @@ export function migrateAssumptions(a) {
         s.commission.rateByYear = { year1: r, year2: r, year3: r, year4: r };
         delete s.commission.rate;
       }
+    }
+  }
+
+  // Prior-year actuals block (display-only "2025 Actual" column on Summary).
+  // Add-only and idempotent. The 2025 P&L is a company-wide fact, identical
+  // across every scenario, so seed the real lines onto any scenario that
+  // predates the feature (or has an empty list) rather than a blank stub —
+  // that way opening an existing scenario shows the column with no re-typing.
+  // Hand-entered lines are never overwritten.
+  if (!a.historical || typeof a.historical !== 'object') {
+    a.historical = _defaultHistorical();
+  } else {
+    if (typeof a.historical.enabled !== 'boolean') a.historical.enabled = true;
+    if (typeof a.historical.periodLabel !== 'string') a.historical.periodLabel = '2025 Actual';
+    if (!Array.isArray(a.historical.lines) || a.historical.lines.length === 0) {
+      a.historical.lines = _defaultHistorical().lines;
     }
   }
 

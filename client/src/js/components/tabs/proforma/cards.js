@@ -13,7 +13,8 @@ export const JOURNEY_SECTIONS = [
   { id: 'costs',      label: 'Costs',      headline: `proformaComputed?.yearly?.grossMarginPct ? window._pfFmtP(proformaComputed.yearly.grossMarginPct[proformaComputed.yearly.grossMarginPct.length - 1]) + ' Y4 margin' : '--'` },
   { id: 'operations', label: 'Operations', headline: `proformaComputed ? window._pfFmtP(proformaComputed.metrics.y4EbitdaMargin) + ' EBITDA' : '--'` },
   { id: 'machines',   label: 'Machines',   headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.totalCapex, true) + ' CapEx' : '--'` },
-  { id: 'capital',    label: 'Capital',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.peakCashNeed, true) + ' peak need' : '--'` }
+  { id: 'capital',    label: 'Capital',    headline: `proformaComputed ? window._pfFmtC(proformaComputed.metrics.peakCashNeed, true) + ' peak need' : '--'` },
+  { id: 'historical', label: '2025 Actual', headline: `proformaAssumptions?.historical?.enabled ? (proformaHistoricalNet() != null ? window._pfFmtC(proformaHistoricalNet(), true) + ' net' : '--') : 'off'` }
 ];
 
 export function metricsAndNav() {

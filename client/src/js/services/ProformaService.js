@@ -505,6 +505,42 @@ class ProformaService {
     this.recompute(ctx);
   }
 
+  // ── Prior-year actuals (historical "use of funds" column) ──
+
+  _ensureHistorical(ctx) {
+    if (!ctx.proformaAssumptions.historical || typeof ctx.proformaAssumptions.historical !== 'object') {
+      ctx.proformaAssumptions.historical = { enabled: false, periodLabel: '2025 Actual', lines: [] };
+    }
+    if (!Array.isArray(ctx.proformaAssumptions.historical.lines)) {
+      ctx.proformaAssumptions.historical.lines = [];
+    }
+    return ctx.proformaAssumptions.historical;
+  }
+
+  addHistoricalLine(ctx) {
+    const h = this._ensureHistorical(ctx);
+    h.lines.push({ label: 'New line', amount: 0, bucket: 'opex' });
+    this.recompute(ctx);
+  }
+
+  removeHistoricalLine(ctx, index) {
+    const h = this._ensureHistorical(ctx);
+    h.lines.splice(index, 1);
+    this.recompute(ctx);
+  }
+
+  toggleHistorical(ctx) {
+    const h = this._ensureHistorical(ctx);
+    h.enabled = !h.enabled;
+    this.recompute(ctx);
+  }
+
+  // Live net of the entered lines, for the journey-pill headline.
+  historicalNet(ctx) {
+    const col = this._computeHistoricalColumn(ctx);
+    return col ? col.net : null;
+  }
+
   // ── Market source management ──
 
   // Catalog of global market sources surfaced in the linked-source
@@ -805,6 +841,35 @@ class ProformaService {
 
   // ── Summary view (yearly snapshot) ──
 
+  // Roll the hand-entered prior-year P&L lines into a single column of
+  // Summary-bucket totals. Returns null when disabled/empty so the rest
+  // of getSummary stays on its 5-year shape. Display-only — never feeds
+  // the engine. Net = revenue − cogs − opex (capex is not a P&L expense).
+  _computeHistoricalColumn(ctx) {
+    const h = ctx.proformaAssumptions?.historical;
+    if (!h || !h.enabled || !Array.isArray(h.lines) || h.lines.length === 0) return null;
+    const sum = (bucket) => h.lines
+      .filter(l => l && l.bucket === bucket)
+      .reduce((s, l) => s + (Number(l.amount) || 0), 0);
+    const revenue = sum('revenue');
+    const cogs = sum('cogs');
+    const gross = revenue - cogs;
+    const salaryBenefits = sum('opexSalaryBenefits');
+    const legal = sum('opexLegal');
+    const royaltyCommission = sum('opexRoyaltyCommission');
+    const other = sum('opex');
+    const opex = salaryBenefits + legal + royaltyCommission + other;
+    const capex = sum('capex');
+    const net = gross - opex;
+    return {
+      label: h.periodLabel || 'Actual',
+      revenue, cogs, gross,
+      grossMarginPct: revenue > 0 ? gross / revenue : null,
+      netOpMarginPct: revenue > 0 ? net / revenue : null,
+      salaryBenefits, legal, royaltyCommission, other, opex, capex, net
+    };
+  }
+
   getSummary(ctx) {
     const c = ctx.proformaComputed;
     if (!c) return null;
@@ -880,36 +945,47 @@ class ProformaService {
     const netOpMarginPctY = Array.from({ length: YEARS }, (_, yr) =>
       y.revenue[yr] > 0 ? y.ebitda[yr] / y.revenue[yr] : null);
 
+    // Prior-year actuals: prepend one leading column when enabled. `lead`
+    // returns a NEW array (never mutates engine arrays, some of which are
+    // shared references like y.capex). Projection-only rows (production
+    // metrics, per-stream sales, FTEs, cumulative cash) get a null lead so
+    // they render as "—" in the actual column.
+    const hist = this._computeHistoricalColumn(ctx);
+    const lead = (arr, v) => hist ? [v, ...(arr || [])] : (arr || []);
+    const yearLabels = Array.from({ length: YEARS }, (_, yr) =>
+      yr === 0 ? 'Year 0 (Pre)' : ('Year ' + yr));
+
     return {
-      years: Array.from({ length: YEARS }, (_, yr) => 'Y' + yr),
+      years: lead(yearLabels, hist?.label),
+      hasHistorical: !!hist,
       headline: {
-        revenue: y.revenue.slice(),
-        cogs: y.cogs.slice(),
-        gross: y.grossMargin.slice(),
-        grossMarginPct: grossMarginPctY,
-        opex: y.opex.slice(),
-        netIncome: y.ebitda.slice(),
-        netOpMarginPct: netOpMarginPctY
+        revenue: lead(y.revenue.slice(), hist?.revenue),
+        cogs: lead(y.cogs.slice(), hist?.cogs),
+        gross: lead(y.grossMargin.slice(), hist?.gross),
+        grossMarginPct: lead(grossMarginPctY, hist?.grossMarginPct ?? null),
+        opex: lead(y.opex.slice(), hist?.opex),
+        netIncome: lead(y.ebitda.slice(), hist?.net),
+        netOpMarginPct: lead(netOpMarginPctY, hist?.netOpMarginPct ?? null)
       },
       metrics: {
-        avgPricePerKg,
-        avgCostPerKg,
-        kgProducedByYear
+        avgPricePerKg: lead(avgPricePerKg, null),
+        avgCostPerKg: lead(avgCostPerKg, null),
+        kgProducedByYear: lead(kgProducedByYear, null)
       },
-      sales: salesRows,
+      sales: salesRows.map(r => ({ label: r.label, data: lead(r.data, null) })),
       capexOpex: {
-        capex: y.capex,
-        opex: y.opex,
-        salaryBenefits,
-        legal: y.opexLegal,
-        royaltyCommission,
-        otherOpex,
-        fteByYear
+        capex: lead(y.capex, hist?.capex),
+        opex: lead(y.opex, hist?.opex),
+        salaryBenefits: lead(salaryBenefits, hist?.salaryBenefits),
+        legal: lead(y.opexLegal, hist?.legal),
+        royaltyCommission: lead(royaltyCommission, hist?.royaltyCommission),
+        otherOpex: lead(otherOpex, hist?.other),
+        fteByYear: lead(fteByYear, null)
       },
       cashFlow: {
-        cumulativeCash: y.cumulativeCash,
-        capex: y.capex,
-        opex: y.opex,
+        cumulativeCash: lead(y.cumulativeCash, null),
+        capex: lead(y.capex, hist?.capex),
+        opex: lead(y.opex, hist?.opex),
         openingCash
       },
       cashNeeds: {
