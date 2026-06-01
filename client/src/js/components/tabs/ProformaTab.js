@@ -7,6 +7,7 @@ import { getOperationsSection } from './proforma/OperationsSection.js';
 import { getMachinesSection } from './proforma/MachinesSection.js';
 import { getCapitalSection } from './proforma/CapitalSection.js';
 import { getMarketsSection, getReferenceDataSection } from './proforma/TechnicalSection.js';
+import { getHistoricalSection } from './proforma/HistoricalSection.js';
 import { getProductionTimelineHtml } from './proforma/ProductionTimeline.js';
 
 // Make formatters available for inline template expressions
@@ -184,6 +185,7 @@ export function getProformaTabHtml() {
               <div x-show="proformaSection === 'operations'">${getOperationsSection()}</div>
               <div x-show="proformaSection === 'machines'">${getMachinesSection()}</div>
               <div x-show="proformaSection === 'capital'">${getCapitalSection()}</div>
+              <div x-show="proformaSection === 'historical'">${getHistoricalSection()}</div>
             </div>
 
             <!-- Reference data accordion: Markets section only -->
@@ -558,7 +560,7 @@ function _summaryView() {
   // Section header row in the yearly table. Tinted bg matches the section's role.
   const sectionRow = (label, bgClass) => `
     <tr class="border-t border-gray-300">
-      <td colspan="6" class="${bgClass} px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-800" x-text="'${label}'"></td>
+      <td colspan="20" class="${bgClass} px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-800" x-text="'${label}'"></td>
     </tr>
   `;
 
@@ -636,8 +638,9 @@ function _summaryView() {
           <tr>
             <th class="bg-white px-3 py-2 w-56 min-w-[224px] border-b border-gray-200"></th>
             <template x-for="(yr, yi) in (S?.years || [])" :key="yi">
-              <th class="bg-white px-3 py-2 text-right text-xs font-semibold text-gray-900 border-b border-gray-200"
-                  x-text="yi === 0 ? 'Year 0 (Pre)' : ('Year ' + yi)"></th>
+              <th class="px-3 py-2 text-right text-xs font-semibold border-b border-gray-200 whitespace-nowrap"
+                  :class="(S?.hasHistorical && yi === 0) ? 'bg-amber-50 text-amber-800' : 'bg-white text-gray-900'"
+                  x-text="yr"></th>
             </template>
           </tr>
         </thead>
@@ -682,7 +685,9 @@ function _summaryView() {
             <tr class="bg-gray-50">
               <th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left text-gray-600 font-medium w-56 min-w-[224px] border-r border-gray-200">Line</th>
               <template x-for="(yr, yi) in (S?.years || [])" :key="yi">
-                <th class="px-3 py-2 text-right text-gray-500 font-medium whitespace-nowrap min-w-[120px]" x-text="yr"></th>
+                <th class="px-3 py-2 text-right font-medium whitespace-nowrap min-w-[120px]"
+                    :class="(S?.hasHistorical && yi === 0) ? 'bg-amber-50 text-amber-800' : 'text-gray-500'"
+                    x-text="yr"></th>
               </template>
             </tr>
           </thead>
@@ -721,9 +726,12 @@ function _summaryView() {
             ${currencyRow('CAPEX',                 'S?.cashFlow?.capex',          { indent: true, sign: true })}
             <tr class="border-t border-gray-100">
               <td class="sticky left-0 bg-white z-10 px-3 py-1.5 whitespace-nowrap border-r border-gray-200 text-gray-700">Opening Cash + Commitments</td>
+              <template x-if="S?.hasHistorical">
+                <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono text-gray-300">—</td>
+              </template>
               <td class="px-3 py-1.5 text-right whitespace-nowrap font-mono text-gray-800"
                   x-text="window._pfFmtC(S?.cashFlow?.openingCash || 0, true)"></td>
-              <td colspan="4"></td>
+              <td colspan="20"></td>
             </tr>
           </tbody>
         </table>
