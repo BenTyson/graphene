@@ -1,6 +1,6 @@
 # Build: Investor Proforma Sharing
 
-**Status:** 🟡 In progress — Phase 2 complete, next Phase 3 (hgdeck)
+**Status:** 🟡 In progress — Phase 3 complete, next Phase 4 (polish, optional)
 **Owner:** (rolling — any agent picks up the next unchecked phase)
 **Spans two repos:** `graphene` (primary, Phases 0–2) + sibling `hgdeck` (Phase 3)
 
@@ -249,3 +249,31 @@ CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
     View token → `locked:true`, Save + name input disabled, direct `PUT` via the
     view token → 403, app-level save is a no-op. Masters never appear. Next:
     Phase 3 (hgdeck permission + deck link).
+- **2026-06-02** — ✅ **Phase 3 complete (hgdeck permission + assignment + deck
+  link).** Done in the sibling `hgdeck` repo on branch
+  `feat/investor-proforma-sharing` (commit `feat(proforma-share): phase 3 …`).
+  Verified in-browser against the live hgdeck preview server.
+  - **Schema** (`seed.js`): two idempotent `ALTER TABLE users ADD COLUMN IF NOT
+    EXISTS` migrations — `show_proforma BOOLEAN DEFAULT false` (opt-in, unlike
+    the existing `show_*` flags which default true) and `proforma_embed_url TEXT`.
+  - **API** (`server.js`): both columns added to the admin investor list SELECT
+    (~L172), the create RETURNING, and the investor PUT (body destructure +
+    update builder; empty URL string normalizes to `NULL`) + its RETURNING.
+    `/api/me` now exposes camelCase `showProforma` (strict `=== true`, defaults
+    false) and `proformaEmbedUrl` (defaults null).
+  - **Admin UI** (`views/admin.html`): new "Proforma" column = the existing
+    `toggle-switch` (PUTs `show_proforma` to `/api/admin/investors/:id`) + a
+    `.proforma-url-input` URL field that PUTs `proforma_embed_url` on change.
+    New `toggleProforma()` / `saveProformaUrl()` handlers mirror the existing
+    `toggleDecks`/`toggleDocuments` pattern (optimistic update + revert-on-error).
+  - **Deck** (`static/index.html` + `static/js/main.js`): a gated
+    `#navProformaBtn` "Open Proforma" link in the top nav (`target="_blank"`,
+    hidden by default). `main.js` reveals it and sets `href` ONLY when
+    `me.showProforma === true && me.proformaEmbedUrl` — mirrors the existing
+    section-hiding-by-flag block.
+  - **Acceptance verified in-browser:** admin toggled proforma on + pasted a
+    graphene share URL for a test investor (persisted via re-fetch); that
+    investor's deck showed an "Open Proforma" button (`target=_blank`, href = the
+    share URL); flag off → button hidden; create defaults `show_proforma:false`/
+    null URL (opt-in confirmed). No console errors. Test user cleaned up.
+    Next: Phase 4 (polish/safety, optional).
