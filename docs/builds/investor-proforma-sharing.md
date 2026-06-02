@@ -1,0 +1,159 @@
+# Build: Investor Proforma Sharing
+
+**Status:** 🟡 In progress — Phase 0
+**Owner:** (rolling — any agent picks up the next unchecked phase)
+**Spans two repos:** `graphene` (primary, Phases 0–2) + sibling `hgdeck` (Phase 3)
+
+> **Read this first, then do exactly one phase, update the Status Log at the
+> bottom, and commit.** One phase = one commit. Do not merge to `staging`/`main`
+> until a phase's acceptance criteria pass.
+
+---
+
+## Goal
+
+Let an **hgdeck** investor (who logs into the deck, NOT graphene) open a single,
+isolated proforma **variant** they can **view or edit**, without:
+- being able to touch our master scenarios, and
+- seeing the graphene sidebar / SPA chrome.
+
+## Locked decisions (do not re-litigate)
+
+1. **Graphene hosts the proforma.** The engine/editor stay in graphene — we do
+   NOT fork them into hgdeck. (CLAUDE.md: the engine is shared client+server and
+   must not drift.)
+2. **A variant is a CLONE, never a master.** Sharing snapshots a master into a
+   new `ProformaScenario` row. The investor only ever touches the clone.
+3. **Access is by share token, not a graphene login.** A token grants one
+   variant + one mode (`view`|`edit`). Token rides in the URL.
+4. **Link-out MVP, not iframe.** The deck opens the embed page in a new tab on
+   `admin.hgraphene.com`. Because that's *same-origin* to graphene's API, there
+   is NO cross-origin/iframe/CSP/cookie work. (Iframe is a possible future
+   upgrade, explicitly out of scope now.)
+5. **Chrome-less = a separate page entry**, not CSS-hiding the SPA. New Vite
+   entry mounts only the proforma editor/summary.
+
+## The master-safety invariant (the thing that must never break)
+
+> A share token can only ever READ or WRITE the single variant row it points at.
+> It can never reach a master scenario — not via PUT, not via DELETE, not via id
+> substitution. Enforced server-side in the token middleware/routes, independent
+> of the existing `requireSuperAdmin` admin routes.
+
+---
+
+## Architecture
+
+```
+hgdeck (express-session, own DB)            graphene (JWT SPA, Prisma)
+─────────────────────────────              ───────────────────────────────
+users.show_proforma (bool)                 ProformaScenario (master rows)
+users.proforma_embed_url (text) ──link──▶   ProformaScenario (variant clones)
+  shown as "Open Proforma" button           ProformaShare { token, variantId, mode }
+  in deck when show_proforma=true            ├─ POST /scenarios/:id/share  (admin, JWT) → clone+token
+                                             ├─ GET  /proforma/share/:token (token auth) → variant+computed
+                                             └─ PUT  /proforma/share/:token (token auth, edit only) → write variant
+                                            proforma-embed.html  (chrome-less Vite entry, reads ?token=)
+```
+
+- **View mode reuses the existing `locked` rendering path** — a view-only variant
+  renders exactly like a locked scenario (inputs disabled, Save hidden). Big reuse.
+- The token routes live in their OWN router, separate from the `requireSuperAdmin`
+  proforma routes, so existing guards are never weakened.
+
+### Key files (from exploration)
+
+**graphene**
+- `prisma/schema.prisma` — `ProformaScenario` model (`assumptions` JSON, `locked`,
+  `createdById`). Add `ProformaShare` + variant flag here.
+- `server/routes/proforma.js` — all routes currently `authenticateToken,
+  requireSuperAdmin`. PUT checks `locked` (line ~127); **DELETE does NOT** — harden.
+- `server/routes/auth.js` — JWT Bearer middleware. Token path is separate from this.
+- `client/index.html` + `client/src/js/app-refactored.js` — SPA bootstrap; proforma
+  rendered via `getProformaTabHtml()` gated on `activeTab==='proforma'`. Depends on
+  Alpine state (`proformaScenario/Computed/Assumptions`, `proformaView`,
+  `proformaEditorTab`, `proformaSection`) + window globals (`_pfFmtC`, `_pfFmtP`)
+  + `proformaService`.
+- `client/src/js/services/ProformaService.js` — load/save/compute/clone logic.
+- `client/src/js/services/api.js` — `proformaAPI` client.
+- `vite.config.js` — single entry today; needs multi-entry for the embed page.
+
+**hgdeck**
+- `seed.js` — idempotent `ALTER TABLE users ADD COLUMN IF NOT EXISTS ...` pattern.
+- `server.js` — `/api/me` (line ~301), admin investor list/PUT (line ~169/218).
+- `views/admin.html` — per-investor toggle pattern (`toggle-switch`, PUTs to
+  `/api/admin/investors/:id`).
+- `static/js/main.js` — reads `/api/me`, hides sections by flag (line ~13).
+- `static/index.html` — monolithic deck; PDF iframe precedent via `/view`.
+
+---
+
+## Phases
+
+### Phase 0 — Spike: chrome-less mount  *(THROWAWAY CODE)*
+De-risk the only real unknown: can the proforma editor render outside the SPA shell?
+- Build a bare `proforma-embed.html` + minimal bootstrap that mounts the proforma
+  editor/summary against a minimal Alpine context + `proformaService`, loading ONE
+  existing scenario by id using normal auth (no token yet).
+- **Acceptance:** the editor + summary render and recompute on a page with NO
+  sidebar/header, driven only by proforma state. Document in the Status Log exactly
+  what global state/services had to be provided. **This code is a spike — Phase 2
+  rewrites it properly. Do not build the token path on top of the throwaway.**
+
+### Phase 1 — Graphene: variant + token data model & API
+- Prisma: add `ProformaShare { id, token (unique), scenarioId, mode, createdById,
+  createdAt, revoked }`; flag variant clones (e.g. `isVariant Boolean` + optional
+  `parentId`). `npx prisma db push`.
+- `POST /api/proforma/scenarios/:id/share` (admin/JWT): clone master → variant row,
+  create token+mode, return embed URL.
+- Token middleware + `GET/PUT /api/proforma/share/:token` (PUT edit-only; writes
+  ONLY the variant; recompute). Reject any non-variant / master / revoked target.
+- Harden DELETE on the admin proforma router (the unguarded `locked` gap).
+- List + revoke shares (admin).
+- **Acceptance:** can create a share from a master (master row unchanged); GET
+  returns variant+computed; PUT in edit mode mutates ONLY the variant; PUT in view
+  mode and any attempt to reach a master returns 403. Verified with a script.
+
+### Phase 2 — Graphene: the embed page (production)
+- Real `proforma-embed.html` Vite entry reading `?token=`; calls token API; mounts
+  editor/summary; view→locked rendering, edit→Save writes variant.
+- Multi-entry Vite build config; confirm prod build emits both entries.
+- **Acceptance:** opening `/proforma-embed.html?token=…` shows the variant
+  chrome-less; edit-mode Save persists to the variant and survives reload; view-mode
+  is fully read-only. Masters never appear.
+
+### Phase 3 — hgdeck: permission + assignment + deck link
+- `seed.js`: `show_proforma BOOLEAN DEFAULT false`, `proforma_embed_url TEXT`.
+  (NOTE: default **false** — opt-in, unlike the existing `show_*` flags.)
+- `server.js`: include both in investor list + PUT + `/api/me` (camelCase
+  `showProforma`, `proformaEmbedUrl`).
+- `views/admin.html`: a Proforma toggle + a URL field per investor.
+- `static/index.html` + `static/js/main.js`: a gated "Open Proforma" link/section.
+- **Acceptance:** admin can toggle proforma on for an investor and paste a share
+  URL; that investor sees an "Open Proforma" button that opens the variant in a new
+  tab; investors without the flag see nothing.
+
+### Phase 4 — Polish & safety (optional / later)
+- Share expiry + `lastAccessedAt` audit; ensure variants never pollute master
+  lists/counts; optional `?theme=deck` styling. Iframe upgrade if ever wanted.
+
+---
+
+## Open questions / gotchas
+- **Unguarded DELETE** on `server/routes/proforma.js` — fold the `locked`/variant
+  guard in during Phase 1.
+- Where variants surface in the admin scenario list — filter them out or group
+  under "Shared variants" so they don't clutter masters.
+- Token format: use a long random (e.g. 32-byte base64url), store as unique.
+
+## Working rhythm
+1. Read this doc. 2. Do the next unchecked phase. 3. Update the Status Log.
+4. Commit `feat(proforma-share): phase N — <summary>`. 5. Add durable facts to
+CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
+
+---
+
+## Status Log
+- **2026-06-02** — Doc created. Decisions locked (graphene-hosted variant,
+  link-out MVP). Feature branch `feat/investor-proforma-sharing` cut from `staging`.
+  Next: Phase 0 spike.
