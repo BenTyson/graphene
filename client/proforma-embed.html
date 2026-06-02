@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proforma — Embed Spike</title>
+  <link rel="stylesheet" href="/src/styles/main.css">
+  <!-- PHASE 0 SPIKE PAGE — THROWAWAY. No sidebar, no header, no auth wrapper. -->
+</head>
+<body class="bg-white">
+  <!--
+    Reuse the full grapheneApp() object (it already carries every proforma
+    method + state field), but render ONLY the proforma markup. No sidebar
+    markup exists on this page at all — chrome-less by construction, not by
+    CSS hiding. Seed one scenario locally so the mount works without login.
+  -->
+  <div class="p-6 max-w-[1400px] mx-auto"
+       x-data="grapheneApp()"
+       x-init="activeTab = 'proforma'; window.__proformaSpikeSeed($data)">
+    <div class="mb-4 px-3 py-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
+      Phase 0 spike — chrome-less proforma mount. Local default scenario, not persisted.
+    </div>
+    <div x-html="getProformaTabHtml()"></div>
+  </div>
+
+  <!-- Chart.js (charts sub-tab) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <!-- App module: defines window.grapheneApp + window.getProformaTabHtml + window._pfFmtC -->
+  <script type="module" src="/src/js/services/LoggingService.js"></script>
+  <script type="module" src="/src/js/app-refactored.js"></script>
+  <!-- Spike seed helper: defines window.__proformaSpikeSeed -->
+  <script type="module" src="/src/js/proforma-embed-spike.js"></script>
+
+  <!-- Alpine plugins + core (defer; run after the modules above) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

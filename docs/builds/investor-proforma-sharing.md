@@ -157,3 +157,27 @@ CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
 - **2026-06-02** — Doc created. Decisions locked (graphene-hosted variant,
   link-out MVP). Feature branch `feat/investor-proforma-sharing` cut from `staging`.
   Next: Phase 0 spike.
+- **2026-06-02** — ✅ **Phase 0 complete (mount proven).** Files: `client/proforma-embed.html`
+  + `client/src/js/proforma-embed-spike.js` (BOTH throwaway). Verified the full
+  chrome-less mount chain via the live module graph: `window.grapheneApp()` is
+  callable outside the SPA shell; `getProformaTabHtml()` renders editor+summary
+  with NO sidebar markup; seeding a scenario LOCALLY from `getDefaultAssumptions()`
+  + `calculateProforma()` (no auth/API) yields `proformaComputed` (5 yrs) + reseeded
+  market sources (3); the delegate `getProformaSummary()` computes against seeded
+  state and returns the full summary. Conclusion: the standalone mount works.
+  - **Findings for Phase 2:**
+    1. **Build a SLIM Alpine factory** (proforma state + delegates only) — do NOT
+       reuse the full `grapheneApp()`. It pulls the whole SPA; its `init()` fires
+       auth-dependent loaders (loadMCBs/loadSystemTags) that error without a token.
+       The spike sidesteps this only because the embed page never calls `init()`.
+    2. Required state to seed: `proformaScenario`, `proformaAssumptions`,
+       `proformaComputed`, `proformaView='editor'`, `proformaEditorTab`,
+       `proformaDirty=false`, then `proformaService._reseedMarketSources(ctx)`.
+       Plus `activeTab='proforma'` for the `x-show` root (slim factory can drop the
+       `activeTab` gate entirely).
+    3. Globals the template needs: `window._pfFmtC`/`_pfFmtP` (set on import of
+       ProformaTab.js), Chart.js CDN (charts sub-tab only).
+    4. View mode = render scenario as `locked` (reuse existing disable/hide path).
+  - **Spike is throwaway** — Phase 2 rewrites the entry against the token API +
+    slim factory. Delete `proforma-embed-spike.js` and rebuild `proforma-embed.html`
+    then. Next: Phase 1 (data model + token API).
