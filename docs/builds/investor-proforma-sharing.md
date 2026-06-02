@@ -1,6 +1,6 @@
 # Build: Investor Proforma Sharing
 
-**Status:** 🟡 In progress — Phase 0
+**Status:** 🟡 In progress — Phase 1 complete, next Phase 2
 **Owner:** (rolling — any agent picks up the next unchecked phase)
 **Spans two repos:** `graphene` (primary, Phases 0–2) + sibling `hgdeck` (Phase 3)
 
@@ -181,3 +181,32 @@ CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
   - **Spike is throwaway** — Phase 2 rewrites the entry against the token API +
     slim factory. Delete `proforma-embed-spike.js` and rebuild `proforma-embed.html`
     then. Next: Phase 1 (data model + token API).
+- **2026-06-02** — ✅ **Phase 1 complete (data model + token API).** Verified by
+  `scripts/verify-proforma-share.js` (25/25 checks against the acceptance criteria).
+  - **Schema** (`prisma/schema.prisma`, `prisma db push`): new `ProformaShare`
+    `{ id, token @unique, scenarioId→variant (onDelete: Cascade), mode 'view'|'edit',
+    revoked, createdById, createdAt, updatedAt }`. `ProformaScenario` gained
+    `isVariant Boolean @default(false)` + self-relation `parentId`/`parent`/`variants`
+    (onDelete: SetNull) + `shares[]`. `User` gained `proformaShares[]`.
+  - **Admin router** (`server/routes/proforma.js`, still `requireSuperAdmin`):
+    `POST /scenarios/:id/share` clones master→variant (snapshots `assumptions`,
+    sets `isVariant`+`parentId`, mints a 32-byte base64url token) and returns
+    `{ share, variant, embedUrl }`; refuses to share a variant. `GET
+    /scenarios/:id/shares` lists a master's shares; `POST /shares/:shareId/revoke`
+    soft-revokes. `GET /scenarios` now filters `isVariant:false` so variants never
+    clutter the master list. **DELETE hardened**: now 403s on `locked` (mirrors PUT).
+  - **Token router** (`server/routes/proformaShare.js`, NO superadmin guard),
+    mounted at `/api/proforma/share` **before** `/api/proforma` in `index.js` so it
+    never hits `requireSuperAdmin`. `authenticateShareToken` resolves `:token`→its
+    variant; rejects missing/revoked (404) and any non-variant target (403 — the
+    master-safety backstop). `GET /:token` returns `{ scenario, computed, mode }`;
+    `PUT /:token` is edit-mode-only (else 403), validates assumptions, and writes
+    **only** `req.scenario.id` (derived from the token — no scenario id is ever
+    accepted from URL/body, so id-substitution is impossible). Master-safety
+    invariant holds: a token can only read/write its own variant clone.
+  - **Verification**: `node scripts/verify-proforma-share.js` boots both real
+    routers in-process with the real auth middleware + a minted SUPER_ADMIN JWT.
+    Confirms: share leaves master unchanged; GET returns variant+computed; edit-PUT
+    mutates only the variant (master untouched); view-PUT→403; master-pointing token
+    GET/PUT→403; revoked token→404; admin route w/o JWT→401; variants excluded from
+    list; locked DELETE→403. Next: Phase 2 (production embed page).

@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import asyncHandler from 'express-async-handler';
 import { authenticateToken, requireSuperAdmin } from './auth.js';
 import { calculateProforma } from '../../shared/proformaEngine.js';
@@ -31,7 +32,10 @@ router.get('/scenarios', asyncHandler(async (req, res) => {
     });
   }
 
+  // Variant clones (shared with investors) are excluded — they are not master
+  // scenarios and must never clutter the admin list.
   const scenarios = await prisma.proformaScenario.findMany({
+    where: { isVariant: false },
     select: {
       id: true,
       name: true,
@@ -158,6 +162,10 @@ router.delete('/scenarios/:id', asyncHandler(async (req, res) => {
   if (!existing) {
     return res.status(404).json({ error: 'Scenario not found' });
   }
+  // Mirror the PUT guard: a locked scenario cannot be deleted.
+  if (existing.locked) {
+    return res.status(403).json({ error: 'Scenario is locked' });
+  }
 
   await prisma.proformaScenario.delete({ where: { id: req.params.id } });
   res.json({ success: true });
@@ -177,6 +185,95 @@ router.post('/compute', asyncHandler(async (req, res) => {
 
   const computed = calculateProforma(assumptions);
   res.json({ computed });
+}));
+
+// ---------------------------------------------------------------------------
+// Sharing (admin/JWT side). The investor-facing token routes live in a SEPARATE
+// router (server/routes/proformaShare.js) with NO requireSuperAdmin guard.
+// ---------------------------------------------------------------------------
+
+// POST /api/proforma/scenarios/:id/share - Clone a master into an isolated
+// variant and mint a share token. The master row is never modified.
+router.post('/scenarios/:id/share', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const mode = req.body?.mode || 'view';
+
+  if (!['view', 'edit'].includes(mode)) {
+    return res.status(400).json({ error: "mode must be 'view' or 'edit'" });
+  }
+
+  const master = await prisma.proformaScenario.findUnique({
+    where: { id: req.params.id }
+  });
+  if (!master) {
+    return res.status(404).json({ error: 'Scenario not found' });
+  }
+  // Only masters can be shared — never re-share a variant clone.
+  if (master.isVariant) {
+    return res.status(400).json({ error: 'Cannot share a variant; share a master scenario.' });
+  }
+
+  // Snapshot the master's assumptions into a brand-new variant row. The clone is
+  // the ONLY thing the token will ever touch.
+  const variant = await prisma.proformaScenario.create({
+    data: {
+      name: `${master.name} (shared)`,
+      description: master.description,
+      assumptions: master.assumptions,
+      isVariant: true,
+      parentId: master.id,
+      locked: false,
+      createdById: req.user.userId
+    }
+  });
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const share = await prisma.proformaShare.create({
+    data: {
+      token,
+      scenarioId: variant.id,
+      mode,
+      createdById: req.user.userId
+    }
+  });
+
+  const embedUrl = `${req.protocol}://${req.get('host')}/proforma-embed.html?token=${token}`;
+  res.status(201).json({ share, variant: { id: variant.id, name: variant.name }, embedUrl });
+}));
+
+// GET /api/proforma/scenarios/:id/shares - List share tokens for a master.
+router.get('/scenarios/:id/shares', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const shares = await prisma.proformaShare.findMany({
+    where: { scenario: { parentId: req.params.id } },
+    select: {
+      id: true,
+      token: true,
+      mode: true,
+      revoked: true,
+      createdAt: true,
+      scenarioId: true,
+      scenario: { select: { id: true, name: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(shares);
+}));
+
+// POST /api/proforma/shares/:shareId/revoke - Revoke a share token.
+router.post('/shares/:shareId/revoke', asyncHandler(async (req, res) => {
+  const { prisma } = req.app.locals;
+  const existing = await prisma.proformaShare.findUnique({
+    where: { id: req.params.shareId }
+  });
+  if (!existing) {
+    return res.status(404).json({ error: 'Share not found' });
+  }
+  const share = await prisma.proformaShare.update({
+    where: { id: req.params.shareId },
+    data: { revoked: true }
+  });
+  res.json({ id: share.id, revoked: share.revoked });
 }));
 
 export default router;

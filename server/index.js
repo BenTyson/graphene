@@ -35,6 +35,7 @@ import goalRoutes from './routes/goals.js';
 import tagRoutes from './routes/tags.js';
 import pipelineRoutes from './routes/pipeline.js';
 import proformaRoutes from './routes/proforma.js';
+import proformaShareRoutes from './routes/proformaShare.js';
 import emailRoutes from './routes/email.js';
 import emailCronRoutes from './routes/emailCron.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -202,6 +203,9 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/pipeline', pipelineRoutes);
+// Token routes must be registered BEFORE the superadmin-guarded proforma router
+// so /api/proforma/share/:token is handled here and never hits requireSuperAdmin.
+app.use('/api/proforma/share', proformaShareRoutes);
 app.use('/api/proforma', proformaRoutes);
 app.use('/api/email/cron', emailCronRoutes);
 app.use('/api/email', emailRoutes);
