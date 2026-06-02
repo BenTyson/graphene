@@ -1,6 +1,6 @@
 # Build: Investor Proforma Sharing
 
-**Status:** 🟡 In progress — Phase 1 complete, next Phase 2
+**Status:** 🟡 In progress — Phase 2 complete, next Phase 3 (hgdeck)
 **Owner:** (rolling — any agent picks up the next unchecked phase)
 **Spans two repos:** `graphene` (primary, Phases 0–2) + sibling `hgdeck` (Phase 3)
 
@@ -210,3 +210,42 @@ CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
     mutates only the variant (master untouched); view-PUT→403; master-pointing token
     GET/PUT→403; revoked token→404; admin route w/o JWT→401; variants excluded from
     list; locked DELETE→403. Next: Phase 2 (production embed page).
+- **2026-06-02** — ✅ **Phase 2 complete (production embed page).** Verified in the
+  browser against real minted view + edit tokens.
+  - **Spike deleted.** `client/src/js/proforma-embed-spike.js` removed;
+    `client/proforma-embed.html` rebuilt from scratch against the token API +
+    slim factory (NOT the spike, NOT the full `grapheneApp()`).
+  - **Slim Alpine factory** (`client/src/js/proforma-embed.js`,
+    `window.proformaEmbedApp`): proforma state + delegates ONLY. Confirmed
+    `window.grapheneApp` is `undefined` on the page, so no auth-dependent SPA
+    loaders fire. Imports `getProformaTabHtml` (which sets `window._pfFmtC/_pfFmtP`
+    and pulls in every section module's `window._pf*` helpers); Chart.js + Alpine
+    plugins via CDN. Alpine auto-runs `init()` → reads `?token=` → `GET
+    /api/proforma/share/:token` (the TOKEN router, not `requireSuperAdmin`) →
+    seeds `proformaScenario/Assumptions/Computed`, `proformaView='editor'`,
+    `proformaEditorTab='summary'`, `_reseedMarketSources`. View mode flags the
+    scenario `locked:true` to reuse the editor's existing disable/hide path; edit
+    mode `Save` PUTs `{ assumptions }` to the same token (writes only the variant).
+    The list/create/delete/lock delegates are intentionally omitted; the editor's
+    back-arrow is an inert no-op (no list to return to).
+  - **Multi-entry Vite** (`vite.config.js`): added
+    `build.rollupOptions.input = { index, 'proforma-embed' }`. `npm run build`
+    emits BOTH `dist/index.html` AND `dist/proforma-embed.html` (+ a ~7.8 kB
+    `proforma-embed` chunk that shares the `ProformaService` chunk). Express
+    serves the embed page via `express.static(dist)` (before the SPA catch-all),
+    so the share-route `embedUrl` (`/proforma-embed.html?token=…`) resolves in prod.
+  - **🔧 Phase 1 gap fixed (required for the embed to work):** the global `/api`
+    write-guard in `server/index.js` (skips GET, but JWT-guards all POST/PUT/DELETE)
+    intercepted the token `PUT` *before* it reached the token router → 401 "Access
+    token required". The Phase 1 verify script never caught this because it mounts
+    the routers WITHOUT that global middleware. Fix: added `/proforma/share` to the
+    guard's skip-list (alongside `/auth`, `/users`, `/email/cron`) so the share
+    router does its own token auth. GET was unaffected (already skipped). Master
+    safety is unchanged — the token router still rejects view-PUT (403),
+    master-pointing tokens (403), and revoked tokens (404).
+  - **Acceptance verified in-browser:** edit token → chrome-less editor, no
+    sidebar/header; editing an assumption + Save persists to the variant
+    (confirmed via an independent `GET` — `isVariant:true`, master untouched).
+    View token → `locked:true`, Save + name input disabled, direct `PUT` via the
+    view token → 403, app-level save is a no-op. Masters never appear. Next:
+    Phase 3 (hgdeck permission + deck link).

@@ -153,8 +153,12 @@ app.use('/news-images', (req, res, next) => {
 // Global middleware to restrict THIRD_PARTY users from mutating data
 // This applies to POST, PUT, DELETE requests on /api/* routes (except auth and users)
 app.use('/api', (req, res, next) => {
-  // Skip routes that handle their own authentication
-  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron')) {
+  // Skip routes that handle their own authentication. The proforma share
+  // router (/api/proforma/share/:token) authenticates by share token, not JWT,
+  // and must reach its own handler for mutating (PUT) requests — otherwise the
+  // global JWT/edit-access guard would 401 a valid investor edit before the
+  // token middleware ever runs.
+  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron') || req.path.startsWith('/proforma/share')) {
     return next();
   }
 

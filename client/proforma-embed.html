@@ -3,37 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proforma — Embed Spike</title>
+  <title>Proforma</title>
   <link rel="stylesheet" href="/src/styles/main.css">
-  <!-- PHASE 0 SPIKE PAGE — THROWAWAY. No sidebar, no header, no auth wrapper. -->
+  <!--
+    Chrome-less proforma embed (Phase 2). No sidebar, no header, no SPA shell:
+    the page mounts ONLY the proforma editor/summary, driven by a slim Alpine
+    factory that reads ?token= and loads a single shared variant. Master
+    scenarios are never reachable from here.
+  -->
 </head>
 <body class="bg-white">
-  <!--
-    Reuse the full grapheneApp() object (it already carries every proforma
-    method + state field), but render ONLY the proforma markup. No sidebar
-    markup exists on this page at all — chrome-less by construction, not by
-    CSS hiding. Seed one scenario locally so the mount works without login.
-  -->
-  <div class="p-6 max-w-[1400px] mx-auto"
-       x-data="grapheneApp()"
-       x-init="activeTab = 'proforma'; window.__proformaSpikeSeed($data)">
-    <div class="mb-4 px-3 py-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
-      Phase 0 spike — chrome-less proforma mount. Local default scenario, not persisted.
+  <div class="p-4 sm:p-6 max-w-[1400px] mx-auto" x-data="proformaEmbedApp()" x-cloak>
+
+    <!-- Loading -->
+    <div x-show="!embedReady && !embedError" class="text-center py-24 text-gray-400 text-sm">
+      Loading proforma…
     </div>
-    <div x-html="getProformaTabHtml()"></div>
+
+    <!-- Error -->
+    <div x-show="embedError" class="max-w-md mx-auto mt-24 text-center">
+      <div class="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700"
+           x-text="embedError"></div>
+    </div>
+
+    <!-- Editor / summary (rendered once the variant has loaded) -->
+    <div x-show="embedReady" x-html="getProformaTabHtml()"></div>
   </div>
 
   <!-- Chart.js (charts sub-tab) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
-  <!-- App module: defines window.grapheneApp + window.getProformaTabHtml + window._pfFmtC -->
-  <script type="module" src="/src/js/services/LoggingService.js"></script>
-  <script type="module" src="/src/js/app-refactored.js"></script>
-  <!-- Spike seed helper: defines window.__proformaSpikeSeed -->
-  <script type="module" src="/src/js/proforma-embed-spike.js"></script>
+  <!-- Embed module: defines window.proformaEmbedApp + sets window._pfFmtC/_pfFmtP -->
+  <script type="module" src="/src/js/proforma-embed.js"></script>
 
-  <!-- Alpine plugins + core (defer; run after the modules above) -->
+  <!-- Alpine plugins + core (defer; run after the module above) -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
