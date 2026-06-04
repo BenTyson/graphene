@@ -5,7 +5,14 @@ export default defineConfig({
   root: './client',
   build: {
     outDir: '../dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      // Multi-entry: the main SPA shell + the chrome-less proforma embed page.
+      input: {
+        index: path.resolve(__dirname, 'client/index.html'),
+        'proforma-embed': path.resolve(__dirname, 'client/proforma-embed.html')
+      }
+    }
   },
   resolve: {
     alias: {
