@@ -880,6 +880,7 @@ model User {
   contactAttachments ContactAttachment[] @relation("ContactAttachmentUploader")
 
   proformaScenarios ProformaScenario[] @relation("ProformaCreator")
+  proformaShares    ProformaShare[]    @relation("ProformaShareCreator")
 
   emailPreferences UserEmailPreferences? @relation("UserEmailPrefs")
   emailLogs        EmailLog[]            @relation("UserEmailLog")
@@ -897,13 +898,40 @@ model ProformaScenario {
   assumptions Json
   isDefault   Boolean  @default(false) @map("is_default")
   locked      Boolean  @default(false)
+  isVariant   Boolean  @default(false) @map("is_variant")
+  parentId    String?  @map("parent_id")
   createdById String   @map("created_by_id")
   createdBy   User     @relation("ProformaCreator", fields: [createdById], references: [id])
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  parent   ProformaScenario?  @relation("ScenarioVariants", fields: [parentId], references: [id], onDelete: SetNull)
+  variants ProformaScenario[] @relation("ScenarioVariants")
+  shares   ProformaShare[]    @relation("ShareVariant")
+
   @@index([createdById])
+  @@index([isVariant])
+  @@index([parentId])
   @@map("proforma_scenarios")
+}
+
+// A share token grants access to exactly ONE variant clone in one mode.
+// The token can never reach a master scenario (enforced in the token routes).
+model ProformaShare {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  scenarioId  String   @map("scenario_id") // always points at a variant clone
+  scenario    ProformaScenario @relation("ShareVariant", fields: [scenarioId], references: [id], onDelete: Cascade)
+  mode        String   @default("view") // "view" | "edit"
+  revoked     Boolean  @default(false)
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("ProformaShareCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([token])
+  @@index([scenarioId])
+  @@map("proforma_shares")
 }
 
 model CharacterizationReference {

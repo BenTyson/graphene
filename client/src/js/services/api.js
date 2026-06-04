@@ -1417,6 +1417,25 @@ export const proformaAPI = {
   compute: (assumptions) => {
     const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
     return fetch(`${API_BASE}/proforma/compute`, { method: 'POST', headers, body: JSON.stringify({ assumptions }) }).then(handleResponse);
+  },
+
+  // ── Investor sharing ──
+  // Mint an isolated variant clone of a master + a share token. mode: 'view'|'edit'.
+  createShare: (id, mode) => {
+    const headers = { 'Content-Type': 'application/json', ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}/share`, { method: 'POST', headers, body: JSON.stringify({ mode }) }).then(handleResponse);
+  },
+
+  // List share tokens minted from a master.
+  getShares: (id) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/scenarios/${id}/shares`, { headers }).then(handleResponse);
+  },
+
+  // Soft-revoke a share token (the variant row is kept).
+  revokeShare: (shareId) => {
+    const headers = { ...window.authService?.getAuthHeader() };
+    return fetch(`${API_BASE}/proforma/shares/${shareId}/revoke`, { method: 'POST', headers }).then(handleResponse);
   }
 };
 

@@ -530,6 +530,9 @@ window.grapheneApp = function() {
     // Outlook cell explainer: double-click a cell to see how it was calculated.
     proformaExplainer: null, // { rowKey, periodIndex, view, label, anchor: {top,left,width,height} }
     proformaExplainerStack: [], // back-stack so drilling into a part is reversible
+    // Investor sharing: modal holds { scenarioId, scenarioName, shares[], loading, creating, error, copiedToken }
+    proformaShareModal: null,
+    proformaShareMode: 'view',
 
     // Current authenticated user (reactive)
     currentUser: null,
@@ -5933,6 +5936,14 @@ window.grapheneApp = function() {
       this.proformaFullscreenChart = null;
     },
     getProformaTabHtml() { return getProformaTabHtml(); },
+
+    // ── Proforma investor sharing ──
+    async openProformaShareModal(scenario) { await proformaService.openShareModal(this, scenario); },
+    closeProformaShareModal() { proformaService.closeShareModal(this); },
+    async createProformaShare(mode) { await proformaService.createShare(this, mode); },
+    async revokeProformaShare(shareId) { await proformaService.revokeShare(this, shareId); },
+    async copyProformaShareUrl(token) { await proformaService.copyShareUrl(this, token); },
+    proformaShareEmbedUrl(token) { return proformaService.shareEmbedUrl(token); },
 
     // Redirect restricted users away from tabs they can't access
     enforceThirdPartyRestrictions() {

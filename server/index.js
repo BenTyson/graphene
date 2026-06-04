@@ -35,6 +35,7 @@ import goalRoutes from './routes/goals.js';
 import tagRoutes from './routes/tags.js';
 import pipelineRoutes from './routes/pipeline.js';
 import proformaRoutes from './routes/proforma.js';
+import proformaShareRoutes from './routes/proformaShare.js';
 import emailRoutes from './routes/email.js';
 import emailCronRoutes from './routes/emailCron.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -152,8 +153,12 @@ app.use('/news-images', (req, res, next) => {
 // Global middleware to restrict THIRD_PARTY users from mutating data
 // This applies to POST, PUT, DELETE requests on /api/* routes (except auth and users)
 app.use('/api', (req, res, next) => {
-  // Skip routes that handle their own authentication
-  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron')) {
+  // Skip routes that handle their own authentication. The proforma share
+  // router (/api/proforma/share/:token) authenticates by share token, not JWT,
+  // and must reach its own handler for mutating (PUT) requests — otherwise the
+  // global JWT/edit-access guard would 401 a valid investor edit before the
+  // token middleware ever runs.
+  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron') || req.path.startsWith('/proforma/share')) {
     return next();
   }
 
@@ -202,6 +207,9 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/pipeline', pipelineRoutes);
+// Token routes must be registered BEFORE the superadmin-guarded proforma router
+// so /api/proforma/share/:token is handled here and never hits requireSuperAdmin.
+app.use('/api/proforma/share', proformaShareRoutes);
 app.use('/api/proforma', proformaRoutes);
 app.use('/api/email/cron', emailCronRoutes);
 app.use('/api/email', emailRoutes);
