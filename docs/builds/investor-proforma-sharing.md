@@ -249,6 +249,22 @@ CLAUDE.md ONLY once a phase lands (the plan lives here, not in CLAUDE.md).
     View token → `locked:true`, Save + name input disabled, direct `PUT` via the
     view token → 403, app-level save is a no-op. Masters never appear. Next:
     Phase 3 (hgdeck permission + deck link).
+- **2026-06-04** — ✅ **Admin Share UI shipped (graphene)** — fills the Phase 1
+  "list + revoke shares (admin)" gap that the API had but no UI exposed. A link
+  icon on each proforma scenario card (list view) opens a centered **Share
+  modal**: pick View-only / Editable, "Create link" mints a token (auto-copied to
+  clipboard), and active links list with per-link Copy + Revoke. Wiring:
+  `proformaAPI.createShare/getShares/revokeShare` (api.js) → `ProformaService`
+  `openShareModal/loadShares/createShare/revokeShare/copyShareUrl/shareEmbedUrl`
+  → `app-refactored.js` delegates (`openProformaShareModal` etc.) + state
+  `proformaShareModal`/`proformaShareMode` → `_shareModal()` in `ProformaTab.js`.
+  URLs are reconstructed client-side as `${location.origin}/proforma-embed.html?token=`
+  so a link minted on staging points at staging, prod at prod. The modal is
+  guarded by `<template x-if="proformaShareModal">` so it never evaluates on the
+  embed page (slim factory has no share state); the Share button lives only in
+  the list view, which the embed never renders. Verified in-browser: mint
+  view+edit, auto-copy, revoke (token→404), and each token resolves to a VARIANT
+  (isVariant:true, id≠master). No new server code — reuses the Phase 1 endpoints.
 - **2026-06-02** — ✅ **Phase 3 complete (hgdeck permission + assignment + deck
   link).** Done in the sibling `hgdeck` repo on branch
   `feat/investor-proforma-sharing` (commit `feat(proforma-share): phase 3 …`).

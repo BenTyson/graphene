@@ -80,6 +80,13 @@ export function getProformaTabHtml() {
                     <p class="text-xs text-gray-500 mt-1" x-text="s.description || 'No description'"></p>
                   </div>
                   <div class="flex items-center gap-1 ml-2 shrink-0">
+                    <button @click.stop="openProformaShareModal(s)"
+                            class="p-1 text-gray-400 hover:text-gray-600"
+                            title="Share with an investor">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                      </svg>
+                    </button>
                     <button @click.stop="toggleProformaLock(s.id)"
                             class="p-1 text-gray-400 hover:text-gray-600"
                             :title="s.locked ? 'Unlock scenario' : 'Lock scenario'">
@@ -243,7 +250,116 @@ export function getProformaTabHtml() {
 
       ${_fullscreenChartModal()}
       ${_explainerPanel()}
+      ${_shareModal()}
     </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARE MODAL (investor sharing)
+// Mint a view/edit link an investor can open without a graphene login.
+// Each link is an isolated variant clone — masters are never exposed.
+// Guarded by <template x-if="proformaShareModal"> so it never evaluates on
+// the chrome-less embed page (whose slim factory has no share state).
+// ═══════════════════════════════════════════════════════════════
+function _shareModal() {
+  return `
+    <template x-if="proformaShareModal">
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+           @keydown.escape.window="closeProformaShareModal()">
+        <div class="absolute inset-0 bg-black/40" @click="closeProformaShareModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col">
+          <!-- Header -->
+          <div class="flex items-start justify-between px-5 py-4 border-b border-gray-200">
+            <div class="min-w-0">
+              <h3 class="text-base font-semibold text-gray-900">Share proforma</h3>
+              <p class="text-xs text-gray-500 mt-0.5 truncate">
+                <span x-text="proformaShareModal.scenarioName"></span>
+              </p>
+            </div>
+            <button @click="closeProformaShareModal()" class="p-1 text-gray-400 hover:text-gray-900 rounded shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="px-5 py-4 overflow-y-auto space-y-5">
+            <p class="text-xs text-gray-500 leading-relaxed">
+              Each link opens an isolated copy of this scenario in a chrome-less page — no graphene
+              login required. The shared copy is a snapshot; your master is never touched.
+              Paste the link into the investor's Proforma field in the deck admin.
+            </p>
+
+            <!-- Create new link -->
+            <div class="border border-gray-200 rounded-lg p-3">
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-xs font-medium text-gray-600">New link:</span>
+                <div class="flex rounded-md border border-gray-300 overflow-hidden">
+                  <template x-for="opt in [{id:'view',label:'View only'},{id:'edit',label:'Editable'}]" :key="opt.id">
+                    <button @click="proformaShareMode = opt.id"
+                            :class="proformaShareMode === opt.id ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                            class="px-3 py-1.5 text-xs font-medium transition-colors"
+                            x-text="opt.label"></button>
+                  </template>
+                </div>
+                <button @click="createProformaShare(proformaShareMode)"
+                        :disabled="proformaShareModal.creating"
+                        class="ml-auto px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                  <span x-show="!proformaShareModal.creating">Create link</span>
+                  <span x-show="proformaShareModal.creating">Creating…</span>
+                </button>
+              </div>
+              <p class="text-[11px] text-gray-400 mt-2">
+                <span x-show="proformaShareMode === 'view'">Investor can view all tabs but cannot change any inputs.</span>
+                <span x-show="proformaShareMode === 'edit'">Investor can change assumptions and save — into their own copy only.</span>
+              </p>
+            </div>
+
+            <!-- Error -->
+            <div x-show="proformaShareModal.error"
+                 class="px-3 py-2 rounded bg-red-50 border border-red-200 text-xs text-red-700"
+                 x-text="proformaShareModal.error"></div>
+
+            <!-- Existing links -->
+            <div>
+              <div class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Active links</div>
+              <div x-show="proformaShareModal.loading" class="text-sm text-gray-400 py-4 text-center">Loading…</div>
+              <div x-show="!proformaShareModal.loading && proformaShareModal.shares.length === 0"
+                   class="text-sm text-gray-400 py-4 text-center">No active links yet.</div>
+              <div class="space-y-2" x-show="!proformaShareModal.loading && proformaShareModal.shares.length > 0">
+                <template x-for="sh in proformaShareModal.shares" :key="sh.id">
+                  <div class="border border-gray-200 rounded-lg p-3">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded uppercase"
+                            :class="sh.mode === 'edit' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'"
+                            x-text="sh.mode === 'edit' ? 'Editable' : 'View only'"></span>
+                      <span class="text-[11px] text-gray-400" x-text="window.formatDateSafe ? window.formatDateSafe(sh.createdAt) : ''"></span>
+                      <button @click="revokeProformaShare(sh.id)"
+                              class="ml-auto text-[11px] text-gray-400 hover:text-red-600 font-medium">
+                        Revoke
+                      </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="text" readonly
+                             :value="proformaShareEmbedUrl(sh.token)"
+                             @focus="$event.target.select()"
+                             class="flex-1 min-w-0 text-xs font-mono text-gray-600 bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+                      <button @click="copyProformaShareUrl(sh.token)"
+                              class="px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors shrink-0"
+                              :class="proformaShareModal.copiedToken === sh.token ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">
+                        <span x-text="proformaShareModal.copiedToken === sh.token ? 'Copied!' : 'Copy'"></span>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
   `;
 }
 

@@ -264,6 +264,106 @@ class ProformaService {
     }
   }
 
+  // ── Investor sharing ──
+
+  // Build the chrome-less embed URL for a token, rooted at the current origin
+  // (so a link minted on staging points at staging, prod at prod, etc.).
+  shareEmbedUrl(token) {
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
+    return `${origin}/proforma-embed.html?token=${token}`;
+  }
+
+  async openShareModal(ctx, scenario) {
+    if (!scenario) return;
+    ctx.proformaShareModal = {
+      scenarioId: scenario.id,
+      scenarioName: scenario.name,
+      shares: [],
+      loading: true,
+      creating: false,
+      error: null,
+      copiedToken: null
+    };
+    ctx.proformaShareMode = 'view';
+    await this.loadShares(ctx);
+  }
+
+  closeShareModal(ctx) {
+    ctx.proformaShareModal = null;
+  }
+
+  async loadShares(ctx) {
+    const m = ctx.proformaShareModal;
+    if (!m) return;
+    m.loading = true;
+    m.error = null;
+    try {
+      const shares = await API.proforma.getShares(m.scenarioId);
+      // Active links only — revoked tokens are dead and just add noise.
+      m.shares = (shares || []).filter(s => !s.revoked);
+    } catch (e) {
+      console.error('Failed to load shares', e);
+      m.error = 'Could not load existing links.';
+    } finally {
+      m.loading = false;
+    }
+  }
+
+  async createShare(ctx, mode) {
+    const m = ctx.proformaShareModal;
+    if (!m || m.creating) return;
+    m.creating = true;
+    m.error = null;
+    try {
+      const result = await API.proforma.createShare(m.scenarioId, mode === 'edit' ? 'edit' : 'view');
+      if (result?.share) {
+        m.shares.unshift({ ...result.share, scenario: result.variant });
+        // Auto-copy the freshly-minted link so the admin can paste it straight away.
+        await this.copyShareUrl(ctx, result.share.token);
+      }
+    } catch (e) {
+      console.error('Failed to create share', e);
+      m.error = 'Could not create the link.';
+    } finally {
+      m.creating = false;
+    }
+  }
+
+  async revokeShare(ctx, shareId) {
+    const m = ctx.proformaShareModal;
+    if (!m) return;
+    if (!confirm('Revoke this link? Anyone holding it will lose access immediately.')) return;
+    try {
+      await API.proforma.revokeShare(shareId);
+      m.shares = m.shares.filter(s => s.id !== shareId);
+    } catch (e) {
+      console.error('Failed to revoke share', e);
+      m.error = 'Could not revoke the link.';
+    }
+  }
+
+  async copyShareUrl(ctx, token) {
+    const m = ctx.proformaShareModal;
+    const url = this.shareEmbedUrl(token);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      // Clipboard API can be blocked (insecure context / permissions); fall back.
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e2) { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+    if (m) {
+      m.copiedToken = token;
+      setTimeout(() => { if (ctx.proformaShareModal === m && m.copiedToken === token) m.copiedToken = null; }, 2000);
+    }
+  }
+
   // ── Editor ──
 
   async saveScenario(ctx) {
