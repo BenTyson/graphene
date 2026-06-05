@@ -177,12 +177,17 @@ export function getProformaTabHtml() {
           </div>
 
           <!-- ─── ASSUMPTIONS SUB-TAB ─── -->
-          <div x-show="proformaEditorTab === 'assumptions'"
-               :class="proformaScenario.locked ? 'opacity-60 pointer-events-none' : ''">
+          <div x-show="proformaEditorTab === 'assumptions'">
 
-            <!-- Sticky combined header: metric tiles + journey bar -->
+            <!-- Sticky combined header: metric tiles + journey bar.
+                 Kept OUTSIDE the lock wrapper so a view-only (locked) viewer can
+                 still click through the assumption sections to read the data —
+                 only editing the inputs below is blocked. -->
             ${metricsAndNav()}
 
+            <!-- Editable content. The lock disables interaction here only, never
+                 the section navigation above. -->
+            <div :class="proformaScenario.locked ? 'opacity-60 pointer-events-none' : ''">
             <!-- Active section -->
             <div class="min-w-0">
               <div x-show="proformaSection === 'revenue'">${getRevenueSection()}</div>
@@ -206,6 +211,7 @@ export function getProformaTabHtml() {
               </summary>
               <div class="mt-6">${getReferenceDataSection()}</div>
             </details>
+            </div>
           </div>
 
           <!-- ─── PRODUCTION SUB-TAB ─── -->
