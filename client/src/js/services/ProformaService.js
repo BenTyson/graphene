@@ -261,7 +261,7 @@ class ProformaService {
     if (!name) return;
     ctx.proformaLoading = true;
     try {
-      const { scenario } = await API.proforma.get(id);
+      const { scenario } = await API.proforma.getScenario(id);
       await API.proforma.create({
         name,
         description: scenario.description || null,
