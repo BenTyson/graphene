@@ -251,6 +251,30 @@ class ProformaService {
     }
   }
 
+  // Duplicate any existing master scenario from the list view. The list
+  // payload omits `assumptions`, so fetch the full scenario first, then create
+  // a fresh unlocked copy. Stays in list view (doesn't open the editor).
+  async duplicateScenario(ctx, id) {
+    const source = ctx.proformaScenarios.find(s => s.id === id);
+    const suggested = (source ? source.name : 'Scenario').replace(/\s*\(copy\)\s*$/i, '') + ' (copy)';
+    const name = prompt('New scenario name:', suggested);
+    if (!name) return;
+    ctx.proformaLoading = true;
+    try {
+      const { scenario } = await API.proforma.get(id);
+      await API.proforma.create({
+        name,
+        description: scenario.description || null,
+        assumptions: JSON.parse(JSON.stringify(scenario.assumptions))
+      });
+      await this.loadScenarios(ctx);
+    } catch (e) {
+      console.error('Failed to duplicate scenario', e);
+    } finally {
+      ctx.proformaLoading = false;
+    }
+  }
+
   async deleteScenario(ctx, id) {
     if (!confirm('Delete this scenario? This cannot be undone.')) return;
     try {

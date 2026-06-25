@@ -5770,6 +5770,7 @@ window.grapheneApp = function() {
     async resetProformaToBaseline() { await proformaService.resetToBaseline(this); },
     async toggleProformaLock(id) { await proformaService.toggleLock(this, id); },
     async deleteProformaScenario(id) { await proformaService.deleteScenario(this, id); },
+    async duplicateProformaScenario(id) { await proformaService.duplicateScenario(this, id); },
     async saveProformaScenario() { await proformaService.saveScenario(this); },
     proformaRecompute() { proformaService.recompute(this); },
     proformaBackToList() { proformaService.backToList(this); },
