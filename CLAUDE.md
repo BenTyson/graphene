@@ -1,5 +1,35 @@
 # Graphene Production Control System
 
+## STOP — read this first if you are an agent session
+
+This project runs a **command-center operating model**. One session plans, spawns, merges, and
+rules; all work happens in **chips** — focused agent sessions, each with one scoped job, each in
+its own git worktree.
+
+**If you were given a chip name, or you are working in a `chip/*` branch or a worktree under
+`../graphene-chips/`, you are a chip. Read [`CHIP-PROTOCOL.md`](CHIP-PROTOCOL.md) completely
+before you touch anything.** It is the contract, and it constrains what you may write far more
+than the rest of this file does.
+
+The four documents, in precedence order:
+
+| Document | What it is |
+|---|---|
+| [`DECISIONS.md`](DECISIONS.md) | Numbered rulings. **Overrides every spec, doc, and comment in this repo — including this file.** |
+| [`CHIP-PROTOCOL.md`](CHIP-PROTOCOL.md) | The rules every chip follows. Living document. |
+| [`ROADMAP.md`](ROADMAP.md) | Waves of chips, what each owns, status, model tier. |
+| [`notes/`](notes/) | One file per chip. Chips write here; nobody else does. |
+
+Three rules that catch most sessions out, even if you read nothing else:
+
+1. **You write only the files your spawn prompt names.** Not "just this one small fix" elsewhere.
+2. **`client/src/js/app-refactored.js` and `client/index.html` are off-limits to chips.** They are
+   shared wiring files (D-001). Draft your state, delegate methods, nav entry, and mount `<div>`
+   into your notes file; the Integrator applies them.
+3. **Chips never commit, never push, and never spawn other chips** (D-002).
+
+Everything below is project reference material. It is *not* a licence to edit any of it.
+
 ## What This Is
 Internal admin dashboard for tracking the full material pipeline:
 Biochar -> Graphene -> CompoundBatch / Micronization -> MCB -> Tests -> Shipments
