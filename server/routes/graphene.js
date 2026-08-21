@@ -8,6 +8,100 @@ import AIInsightsService from '../services/AIInsightsService.js';
 
 const router = express.Router();
 
+/**
+ * Build the Prisma `where` clause for a graphene list request.
+ *
+ * Shared by GET / and GET /export/csv so a CSV export always contains exactly
+ * the rows the user is looking at. Conditions are composed with AND rather than
+ * assigned onto a single object, so a species filter can't clobber the OR
+ * clause produced by a search term.
+ *
+ * @param {import('express').Request} req
+ * @returns {object} Prisma where clause
+ */
+function buildGrapheneWhere(req) {
+  const { filters, search } = buildQueryOptions(req, 'graphene');
+  const conditions = [];
+
+  const filterWhere = buildFilterWhere('graphene', filters, search);
+  if (Object.keys(filterWhere).length > 0) {
+    conditions.push(filterWhere);
+  }
+
+  // Species filter
+  const speciesFilter = req.query.species;
+  if (speciesFilter === 'species1') {
+    // Species 1: Only KOH (no NaOH in base2Type)
+    conditions.push({ OR: [{ base2Type: null }, { base2Type: { not: 'NaOH' } }] });
+  } else if (speciesFilter === 'species2') {
+    // Species 2: Has both KOH and NaOH (base2Type is NaOH)
+    conditions.push({ base2Type: 'NaOH' });
+  }
+  // 'all' or undefined = no additional filtering
+
+  // Tested filters (AND logic - must have all selected test types)
+  const testedFilters = req.query['tested[]'] || req.query.tested;
+  if (testedFilters) {
+    const selected = Array.isArray(testedFilters) ? testedFilters : [testedFilters];
+    selected.forEach(testType => {
+      if (testType === 'bet') {
+        conditions.push({ betTests: { some: {} } });
+      } else if (testType === 'conductivity') {
+        conditions.push({ conductivityTests: { some: {} } });
+      } else if (testType === 'raman') {
+        conditions.push({ ramanTests: { some: {} } });
+      }
+    });
+  }
+
+  if (conditions.length === 0) return {};
+  if (conditions.length === 1) return conditions[0];
+  return { AND: conditions };
+}
+
+// Columns the graphene table can be sorted by, mapped to whether the column is
+// nullable. Nullable columns sort nulls last so the CSV order matches the
+// client-side sort in applySortingToGraphene(); Prisma rejects `nulls` on
+// non-nullable columns, so they must be listed as false.
+const GRAPHENE_SORT_FIELDS = {
+  createdAt: false,
+  experimentNumber: false,
+  experimentDate: true,
+  testOrder: true,
+  oven: true,
+  quantity: true,
+  biocharExperiment: true,
+  grindingCount: true,
+  tempRate: true,
+  tempMax: true,
+  time: true,
+  volumeMl: true,
+  output: true,
+  species: true
+};
+
+/**
+ * Build the orderBy for the CSV export from the table's current sort.
+ * Unknown columns fall back to the default (newest first) rather than throwing.
+ *
+ * @param {{ sortBy: string, order: 'asc'|'desc' }} sort
+ * @returns {object|object[]} Prisma orderBy clause
+ */
+function buildGrapheneExportOrderBy(sort) {
+  const field = sort.sortBy === 'chronological' ? 'experimentDate' : sort.sortBy;
+
+  if (!(field in GRAPHENE_SORT_FIELDS)) {
+    return { createdAt: 'desc' };
+  }
+
+  const primary = GRAPHENE_SORT_FIELDS[field]
+    ? { [field]: { sort: sort.order, nulls: 'last' } }
+    : { [field]: sort.order };
+
+  return field === 'createdAt' ? primary : [primary, { createdAt: 'desc' }];
+}
+
+
 // Configure file upload middleware for SEM reports
 const upload = createFileUploadMiddleware('sem-reports', {
   allowedTypes: ['application/pdf'],
@@ -24,41 +118,10 @@ router.get('/', asyncHandler(async (req, res) => {
   try {
     // Parse request parameters using the new query helpers
     const queryOptions = buildQueryOptions(req, tableName);
-    const { filters, search, pagination, sort } = queryOptions;
-    
-    // Build enhanced where clause using the filter system
-    const where = buildFilterWhere(tableName, filters, search);
+    const { filters, pagination, sort } = queryOptions;
 
-    // Apply species filter if provided
-    const speciesFilter = req.query.species;
-    if (speciesFilter === 'species1') {
-      // Species 1: Only KOH (no NaOH in base2Type)
-      where.OR = [
-        { base2Type: null },
-        { base2Type: { not: 'NaOH' } }
-      ];
-    } else if (speciesFilter === 'species2') {
-      // Species 2: Has both KOH and NaOH (base2Type is NaOH)
-      where.base2Type = 'NaOH';
-    }
-    // 'all' or undefined = no additional filtering
-
-    // Apply tested filters if provided (AND logic - must have all selected test types)
-    const testedFilters = req.query['tested[]'] || req.query.tested;
-    if (testedFilters) {
-      const filters = Array.isArray(testedFilters) ? testedFilters : [testedFilters];
-
-      // Add AND conditions for each selected test type
-      filters.forEach(testType => {
-        if (testType === 'bet') {
-          where.betTests = { some: {} };
-        } else if (testType === 'conductivity') {
-          where.conductivityTests = { some: {} };
-        } else if (testType === 'raman') {
-          where.ramanTests = { some: {} };
-        }
-      });
-    }
+    // Build enhanced where clause using the shared filter builder
+    const where = buildGrapheneWhere(req);
 
     // Build enhanced order by clause
     const sortMappings = {
@@ -651,11 +714,21 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Export to CSV
+// Accepts the same search/species/tested/sort query params as GET / so the file
+// contains exactly the rows currently shown in the table. With no params it
+// exports every record.
 router.get('/export/csv', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  
+
+  const where = buildGrapheneWhere(req);
+  const { sort } = buildQueryOptions(req, 'graphene');
+
+  // Mirror the table's current sort
+  const orderBy = buildGrapheneExportOrderBy(sort);
+
   const graphenes = await prisma.graphene.findMany({
-    orderBy: { createdAt: 'desc' },
+    where,
+    orderBy,
     include: { biocharLotRef: true }
   });
   

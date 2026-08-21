@@ -21,6 +21,20 @@ const jsonRequest = (url, method, data) => {
   }).then(handleResponse);
 };
 
+// Helper for CSV downloads
+// Uses a transient <a download> rather than window.open so the browser never
+// opens (and potentially popup-blocks) a blank tab just to trigger the file.
+// `params` is an optional URLSearchParams of filters to scope the export.
+const downloadCSV = (path, params) => {
+  const query = params ? params.toString() : '';
+  const link = document.createElement('a');
+  link.href = `${API_BASE}${path}${query ? `?${query}` : ''}`;
+  link.download = ''; // let the server's Content-Disposition name the file
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 // Biochar API endpoints
 export const biocharAPI = {
   // Get all biochar records with optional search
@@ -61,7 +75,7 @@ export const biocharAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/biochar/export/csv`, '_blank');
+    downloadCSV('/biochar/export/csv');
   },
 
   // Get related graphene and BET data for a biochar experiment
@@ -158,9 +172,11 @@ export const grapheneAPI = {
     return fetch(`${API_BASE}/graphene/${id}`, { method: 'DELETE' }).then(handleResponse);
   },
 
-  // Export to CSV
-  exportCSV: () => {
-    window.open(`${API_BASE}/graphene/export/csv`, '_blank');
+  // Export to CSV. `params` (URLSearchParams) scopes the export to the
+  // currently-filtered view — the server applies the same where-clause it
+  // uses for GET /api/graphene.
+  exportCSV: (params) => {
+    downloadCSV('/graphene/export/csv', params);
   },
 
   // Get related biochar and BET data for a graphene experiment
@@ -233,7 +249,7 @@ export const betAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/bet/export/csv`, '_blank');
+    downloadCSV('/bet/export/csv');
   }
 };
 
@@ -301,7 +317,7 @@ export const conductivityAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/conductivity/export/csv`, '_blank');
+    downloadCSV('/conductivity/export/csv');
   }
 };
 
@@ -369,7 +385,7 @@ export const temAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/tem/export/csv`, '_blank');
+    downloadCSV('/tem/export/csv');
   }
 };
 
@@ -437,7 +453,7 @@ export const particleSizeAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/particle-size/export/csv`, '_blank');
+    downloadCSV('/particle-size/export/csv');
   }
 };
 
@@ -509,7 +525,7 @@ export const xrdAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/xrd/export/csv`, '_blank');
+    downloadCSV('/xrd/export/csv');
   }
 };
 
@@ -581,7 +597,7 @@ export const xpsAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/xps/export/csv`, '_blank');
+    downloadCSV('/xps/export/csv');
   }
 };
 
@@ -649,7 +665,7 @@ export const ramanAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/raman/export/csv`, '_blank');
+    downloadCSV('/raman/export/csv');
   }
 };
 
@@ -901,7 +917,7 @@ export const compoundBatchAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/compound-batches/export/csv`, '_blank');
+    downloadCSV('/compound-batches/export/csv');
   },
 
   // Get related test data for a compound batch
@@ -988,7 +1004,7 @@ export const micronizationAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/micronization/export/csv`, '_blank');
+    downloadCSV('/micronization/export/csv');
   },
 
   // Get micronizations for specific graphene experiment
@@ -1036,7 +1052,7 @@ export const mcbAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/mcb/export/csv`, '_blank');
+    downloadCSV('/mcb/export/csv');
   }
 };
 
@@ -1069,7 +1085,7 @@ export const shipmentAPI = {
 
   // Export to CSV
   exportCSV: () => {
-    window.open(`${API_BASE}/shipments/export/csv`, '_blank');
+    downloadCSV('/shipments/export/csv');
   },
 
   // Get shipments for specific graphene experiment

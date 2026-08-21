@@ -1281,25 +1281,39 @@ window.grapheneApp = function() {
       }
     },
     
+    // Builds the query params describing the graphene view currently on screen
+    // (search + species + tested filters + sort). Shared by loadGrapheneRecords()
+    // and the CSV export so the export always matches what the user is looking at.
+    buildGrapheneQueryParams() {
+      const params = new URLSearchParams();
+
+      if (this.grapheneSearch) {
+        params.append('search', this.grapheneSearch);
+      }
+
+      if (this.grapheneSpeciesFilter) {
+        params.append('species', this.grapheneSpeciesFilter);
+      }
+
+      // Add tested filters if any selected
+      if (this.grapheneTestedFilters && this.grapheneTestedFilters.length > 0) {
+        this.grapheneTestedFilters.forEach(testType => {
+          params.append('tested[]', testType);
+        });
+      }
+
+      if (this.grapheneSortColumn) {
+        params.append('sortBy', this.grapheneSortColumn);
+        params.append('order', this.grapheneSortDirection || 'asc');
+      }
+
+      return params;
+    },
+
     async loadGrapheneRecords() {
       try {
         // Build query parameters
-        const params = new URLSearchParams();
-
-        if (this.grapheneSearch) {
-          params.append('search', this.grapheneSearch);
-        }
-
-        if (this.grapheneSpeciesFilter) {
-          params.append('species', this.grapheneSpeciesFilter);
-        }
-
-        // Add tested filters if any selected
-        if (this.grapheneTestedFilters && this.grapheneTestedFilters.length > 0) {
-          this.grapheneTestedFilters.forEach(testType => {
-            params.append('tested[]', testType);
-          });
-        }
+        const params = this.buildGrapheneQueryParams();
 
         params.append('limit', '500'); // Request all records
 
@@ -2284,7 +2298,8 @@ window.grapheneApp = function() {
       if (type === 'biochar') {
         API.biochar.exportCSV();
       } else if (type === 'graphene') {
-        API.graphene.exportCSV();
+        // Scope the export to the filters currently applied to the table
+        API.graphene.exportCSV(this.buildGrapheneQueryParams());
       } else if (type === 'bet' || type === 'test-bet') {
         API.bet.exportCSV();
       } else if (type === 'conductivity' || type === 'test-conductivity') {
@@ -2307,6 +2322,8 @@ window.grapheneApp = function() {
         API.micronization.exportCSV();
       } else if (type === 'mcb') {
         API.mcb.exportCSV();
+      } else if (type === 'users') {
+        this.exportUsersCSV();
       }
     },
     
@@ -4920,23 +4937,21 @@ window.grapheneApp = function() {
       }
     },
 
-    async exportData(type) {
-      if (type === 'users') {
-        try {
-          const csvContent = this.generateUserCSV();
-          const blob = new Blob([csvContent], { type: 'text/csv' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        } catch (error) {
-          console.error('Error exporting users:', error);
-          alert('Failed to export users');
-        }
+    exportUsersCSV() {
+      try {
+        const csvContent = this.generateUserCSV();
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error exporting users:', error);
+        alert('Failed to export users');
       }
     },
 
