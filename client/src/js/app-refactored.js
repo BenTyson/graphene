@@ -101,6 +101,8 @@ import './components/tabs/TestResultsXRDTab.js';
 import './components/tabs/TestResultsXPSTab.js';
 import './components/tabs/SEMReportsTab.js';
 import './components/tabs/UpdateReportsTab.js';
+import './data/testMatrix.js';
+import './components/tabs/TestMatrixTab.js';
 import './components/tabs/AnalysisTab.js';
 import './components/analysis/CharacterizationComparison.js';
 import { getSummaryToggleHtml, shouldShowSummaryToggle, formatSummaryWithSections, getSimplifiedTitle } from './components/SummaryToggle.js';
@@ -194,6 +196,11 @@ window.grapheneApp = function() {
     sidebarAnalyticsOpen: false,
     sidebarTestResultsOpen: false,
 
+    // Test Matrix tab state
+    testMatrixSearch: '',
+    testMatrixIndustryFilter: '',
+    testMatrixMaterialFilter: '',
+
     // Email admin tab state
     emailAdminSection: 'settings',
     emailSettings: null,
@@ -246,7 +253,7 @@ window.grapheneApp = function() {
       // Handle path-based normal tab navigation
       if (path && path !== '/') {
         const tabName = path.slice(1); // Remove leading /
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-matrix', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
 
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Setting initial tab from path: ${tabName}`);
@@ -258,7 +265,7 @@ window.grapheneApp = function() {
       // Handle legacy hash-based navigation (for backward compatibility)
       if (hash && hash !== '#') {
         const tabName = hash.slice(1); // Remove #
-        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
+        const validTabs = ['dashboard', 'graphene', 'biochar', 'compound-batches', 'micronization', 'shipments', 'analysis', 'ai-insights', 'news', 'user-management', 'email-admin', 'tasks', 'goals', 'pipeline', 'proforma', 'test-matrix', 'test-bet', 'test-conductivity', 'test-raman', 'test-tem', 'test-particle-size', 'test-xrd', 'test-xps', 'test-sem', 'test-updates'];
         
         if (validTabs.includes(tabName)) {
           console.log(`[Navigation] Converting legacy hash navigation to path: ${tabName}`);
@@ -6032,6 +6039,69 @@ window.grapheneApp = function() {
       return this.activeTab.startsWith('test-');
     },
 
+    // --- Test Matrix helpers ---------------------------------------------
+    getTestMatrixTests() {
+      return window.TEST_MATRIX_TESTS || [];
+    },
+    getTestMatrixTestGroups() {
+      return window.TEST_MATRIX_TEST_GROUPS || [];
+    },
+    getTestMatrixLevels() {
+      return window.TEST_MATRIX_LEVELS || [];
+    },
+    getTestMatrixIndustries() {
+      const apps = window.TEST_MATRIX_APPLICATIONS || [];
+      return [...new Set(apps.map((a) => a.industry).filter(Boolean))].sort();
+    },
+    getTestMatrixMaterials() {
+      const apps = window.TEST_MATRIX_APPLICATIONS || [];
+      return [...new Set(apps.map((a) => a.material).filter(Boolean))].sort();
+    },
+    getTestMatrixApplications() {
+      const apps = window.TEST_MATRIX_APPLICATIONS || [];
+      const q = (this.testMatrixSearch || '').trim().toLowerCase();
+      return apps.filter((a) => {
+        if (this.testMatrixIndustryFilter && a.industry !== this.testMatrixIndustryFilter) return false;
+        if (this.testMatrixMaterialFilter && a.material !== this.testMatrixMaterialFilter) return false;
+        if (q) {
+          const hay = `${a.application} ${a.material} ${a.industry} ${a.notes || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    },
+    getTestMatrixCell(app, testId) {
+      return (app && app.req && app.req[testId]) || null;
+    },
+    getTestMatrixCellClass(level) {
+      const l = (window.TEST_MATRIX_LEVEL_BY_ID || {})[level];
+      return l ? l.cellClass : 'bg-white text-gray-400 border-gray-200';
+    },
+    getTestMatrixLevelShort(level) {
+      const l = (window.TEST_MATRIX_LEVEL_BY_ID || {})[level];
+      return l ? l.short : '';
+    },
+    getTestMatrixCellTooltip(app, test, cell) {
+      const l = (window.TEST_MATRIX_LEVEL_BY_ID || {})[cell.level];
+      const parts = [`${test.full} — ${l ? l.label : cell.level}`];
+      if (cell.target) parts.push(`Target: ${cell.target}`);
+      if (cell.note) parts.push(cell.note);
+      return parts.join('\n');
+    },
+    getTestMatrixRowStat(app) {
+      const req = (app && app.req) || {};
+      const entries = Object.values(req);
+      return {
+        total: entries.length,
+        required: entries.filter((c) => c.level === 'required').length,
+      };
+    },
+    resetTestMatrixFilters() {
+      this.testMatrixSearch = '';
+      this.testMatrixIndustryFilter = '';
+      this.testMatrixMaterialFilter = '';
+    },
+
     getPageTitle() {
       const titles = {
         'dashboard': 'Dashboard',
@@ -6041,6 +6111,7 @@ window.grapheneApp = function() {
         'ai-insights': 'Insights', 'tasks': 'Tasks', 'goals': 'Goals', 'pipeline': 'Pipeline', 'proforma': 'Proforma',
         'user-management': 'User Management',
         'email-admin': 'Email',
+        'test-matrix': 'Test Matrix',
         'test-bet': 'BET', 'test-conductivity': 'Conductivity',
         'test-raman': 'RAMAN', 'test-tem': 'TEM',
         'test-particle-size': 'Particle Size', 'test-xrd': 'XRD',

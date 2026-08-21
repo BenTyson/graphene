@@ -223,6 +223,20 @@
             </div>
 
             <div x-show="sidebarExpanded ? sidebarTestResultsOpen : true" x-collapse class="space-y-0.5">
+              <!-- Test Matrix -->
+              <div class="group relative">
+                <button @click="sidebarNavigate('test-matrix')"
+                        :class="activeTab === 'test-matrix' ? 'sidebar-nav-active' : 'sidebar-nav-inactive'"
+                        class="sidebar-nav-item">
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6zM3.75 9h16.5M3.75 15h16.5M9 3.75v16.5M15 3.75v16.5"/>
+                  </svg>
+                  <span x-show="sidebarExpanded" x-transition.opacity.duration.150ms class="ml-3 hidden lg:inline">Test Matrix</span>
+                  <span class="ml-3 lg:hidden">Test Matrix</span>
+                </button>
+                <span x-show="!sidebarExpanded" class="sidebar-tooltip hidden lg:block">Test Matrix</span>
+              </div>
+
               <!-- BET -->
               <div class="group relative">
                 <button @click="sidebarNavigate('test-bet')"
@@ -521,6 +535,9 @@
         <div x-show="activeTab.startsWith('test-')" x-cloak class="shrink-0 border-b border-gray-100 bg-gray-50/80">
           <!-- Desktop: horizontal scrollable pills -->
           <nav class="hidden lg:flex items-center space-x-1 px-6 py-2 overflow-x-auto">
+            <button @click="switchTab('test-matrix')"
+                    :class="activeTab === 'test-matrix' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">Test Matrix</button>
             <button @click="switchTab('test-bet')"
                     :class="activeTab === 'test-bet' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent'"
                     class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap">BET</button>
@@ -551,6 +568,9 @@
           </nav>
           <!-- Mobile: grid layout -->
           <nav class="lg:hidden grid grid-cols-3 gap-1.5 p-3">
+            <button @click="switchTab('test-matrix')"
+                    :class="activeTab === 'test-matrix' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
+                    class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">Test Matrix</button>
             <button @click="switchTab('test-bet')"
                     :class="activeTab === 'test-bet' ? 'bg-white text-gray-900 shadow-sm border-gray-200' : 'text-gray-600 hover:bg-gray-100 border-transparent'"
                     class="px-2 py-2 text-xs font-medium rounded-md border transition-colors touch-target">BET</button>
@@ -605,6 +625,7 @@
               <div x-html="getPipelineTabHtml()"></div>
               <div x-html="getProformaTabHtml()"></div>
               <div x-html="getEmailAdminTabHtml()"></div>
+              <div x-html="getTestMatrixTabHtml()"></div>
               <div x-html="getBETTabHtml()"></div>
               <div x-html="getConductivityTabHtml()"></div>
               <div x-html="getRAMANTabHtml()"></div>
