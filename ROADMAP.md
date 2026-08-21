@@ -149,12 +149,22 @@ depend on Wave 1 findings.
 
 | Candidate | Subsystem | Why | Likely model |
 |---|---|---|---|
-| **Filter-aware exports for the other 12 tabs** | server routes + `api.js` | The Graphene fix established the pattern (shared `where`-builder + params from the client). Biochar, shipments, micronization, MCB, compound batches and the 7 test tabs all still export everything regardless of filters. Parallelizes well — one chip per route cluster, disjoint files. | opus |
+| **Search-aware exports for the other 12 tabs** | server routes (12 files) | **Re-scoped after measurement, 2026-08-21.** Originally written as a feature wave by generalizing from Graphene. Graphene is in fact the *only* tab with filters beyond a search box — the other 12 have a single `<x>Search` field each. All 12 export routes contain zero `req.query` references, so each ignores its tab's search term. That makes this ~12 one-parameter changes: mechanical cleanup, not a feature build. See note below on the client half. | sonnet |
 | **Local dev database that works** | `docker-compose.yml`, seed scripts | Unblocks D-005 option 1 and removes production from every chip's blast radius. | opus |
 | **Docs truth pass** | `docs/**` | 45 doc files, ~15,600 lines, with a full duplicate set under `docs/archive/`. At least one doc describes a Graphene filter panel that isn't rendered. Must be Integrator-lane or run alone. | sonnet after an opus audit |
 | **`app-refactored.js` decomposition** | client core | The bottleneck behind D-001. MOVE work — serialized, runs alone, one domain at a time into `services/`. | opus |
 | **Investor-facing number provenance** | proforma | The share-token embed puts computed financials in front of outside readers. This is the repo's highest-risk output and the *public factual copy* rule applies: every displayed figure needs a Confident/Verify fact table. | fable |
 | **Route-level auth consistency** | server routes | Follow-on from W1-AUTH-GUARD: per-route role enforcement rather than one global guard. Depends on its findings. | opus |
+
+### Note on the export wave's shape
+
+The server half parallelizes perfectly — 12 disjoint route files, one small change each. The
+**client half does not**: all 13 `exportCSV` helpers live in `client/src/js/services/api.js`, and
+all 34 `load*Records()` functions live in `app-refactored.js`. Both are shared files, so the client
+side is either drafted wiring applied by the Integrator, or — better for a wave this size — a
+single chip that owns `api.js` and `app-refactored.js` outright under §8 and runs after the server
+chips land. Do not fan out client-side export work across chips.
+
 
 ---
 
@@ -177,3 +187,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | Command-center model established. Wave 0 opened. D-005 and D-006 raised as open rulings. |
 | 2026-08-21 | D-005, D-006 ruled. Wave 1 finalised at 6 chips + Integrator. Test Matrix split into research/writing chips under D-008. |
 | 2026-08-21 | Wave 0 committed on `staging`. Awaiting human push before Wave 1 spawns. |
+| 2026-08-21 | Export wave re-scoped from "feature" to "cleanup" after measuring filter state across tabs. Graphene is the only tab with non-search filters. |
