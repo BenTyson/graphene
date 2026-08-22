@@ -387,3 +387,87 @@ two others and resolved them by following §0's rule that tables win).
 consumer can trust it without re-deriving, hand-maintained summary counts are a liability. Either
 the counts get computed from the tables, or they are omitted. Fold into the
 `test-matrix-research` skill.
+
+---
+
+## D-014 — Rulings on all 26 unsourced Test Matrix cells
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Delegated to the Command Center by the user**
+
+The user delegated these to the Command Center's judgement. **This is engineering judgement about
+failure mechanisms, not evidence.** None of these rows gains a source by being ruled on, and the
+lab should review anything marked `judgement` below before it is quoted to a customer.
+
+### The policy, applied uniformly
+
+1. **No borrowed number ever ships as a target.** All five proposed numbers came from a different
+   material or duty. The benchmark may appear in the `note`, explicitly attributed to the material
+   it actually belongs to, so the science team can see what "good" looks like without anyone
+   mistaking it for our spec.
+2. **`recommended`** where the failure mechanism is standard practice in that industry even with no
+   graphene-specific paper behind it.
+3. **`optional`** where the test is informative but gates nothing.
+4. **Dropped** where the stated justification is "general quality metric" or "material fingerprint"
+   with no failure mode attached. That is padding, and padding is what makes a matrix untrustworthy.
+5. **Every judgement-based cell says so in its note.** This preserves what D-008 protects: a reader
+   can still tell which requirements have a standard behind them and which are our call. Without
+   this, ruling on 26 unsourced rows would quietly destroy the Confident/Verify distinction that
+   the whole research/writing split exists to create.
+
+### Group A — the five borrowed numbers: level ships, number does not
+
+| Row | Test | Ruling |
+|---|---|---|
+| Cement | xps | Keep `required`. **No target.** Note: typical Hummers-route GO measures C/O 1.8–2.5 — reference range for orientation, not an acceptance spec. |
+| Supercapacitor | purity | Keep level. **No target.** Note: Fe drives self-discharge; Kuraray YP-50F (an *activated carbon*, not our material) specs ash ≤0.3% / Fe ≤18 ppm as a reference point. |
+| Battery additive | particle-size | Keep level. **No target.** Note: oversize grit causes coating defects; Super P (a *carbon black*) specs ≤5 ppm >45 µm as a reference point. |
+| Water treatment | zeta | Keep `recommended`. **No target.** Note: ±30 mV is a colloidal-stability heuristic, not a membrane acceptance spec. |
+| Lubricants | particle-size | Keep `recommended`. **No target.** Note: one controlled study found <10 µm mean improved friction/wear — single study, not an industry spec. |
+
+### Group B — the two business questions, resolved without needing the business answer
+
+Both were framed as "we cannot decide until we know what we are selling." Both dissolve once you
+separate *run the test* from *set the spec* — the test is right either way; only the target depends
+on the answer.
+
+| Row | Test | Ruling |
+|---|---|---|
+| Carbon capture | moisture | `recommended`, **no target direction**. Water competes for physisorption sites in dry-mode capture but is the working fluid in moisture-swing capture. Measure it regardless; set the direction when the capture mode is fixed. |
+| Coatings | zeta | `recommended`, **scoped in the note to waterborne formulations**. Dispersion is the documented failure mode; solvent-borne epoxy dispersions are not zeta-governed. |
+
+### Group C — the nineteen judgement calls
+
+**Kept at `recommended` — sound mechanism, standard industry practice:**
+- Composites / moisture — hygroscopic filler causes voids and hydrolytic degradation in polyamide
+  and PET melt processing. Strongest item in the group.
+- Supercapacitor / moisture — water narrows the organic-electrolyte voltage window. Transfers
+  cleanly from Li-ion practice because both are organic-electrolyte systems.
+- Lubricants / purity — you are selling a friction reducer; abrasive inorganic ash does the
+  opposite. The mechanism is self-evident.
+- Lubricants / tga — thermal stability at operating temperature is a real duty requirement for a
+  grease or oil additive.
+
+**Downgraded to `optional` — informative, gates nothing:**
+- Cement / elemental and Carbon capture / elemental — bulk C/O duplicates surface XPS, which
+  already ships on both rows.
+- Supercapacitor / particle-size — film uniformity is second-order beside moisture and purity.
+- Battery additive / tga — the volatiles-to-TGA mapping is loose, as the research chip said itself.
+- Water treatment / particle-size — flake size to nanochannel length is plausible but unpinned.
+
+**Kept at `optional` as proposed:**
+- Battery additive / sem (aggregation drives the percolation network, but SEM as a gate is
+  qualitative) · Composites / ftir (functionalised grades only) · Coatings / xrd (stacking state
+  predicts barrier tortuosity) · Coatings / ftir · Water treatment / ftir · Lubricants / moisture
+
+**Dropped entirely:**
+- Carbon capture / raman — "material fingerprint" with no failure mode.
+- Composites / bet — "general quality metric" with no failure mode.
+
+**Targets confirmed absent, not replaced:**
+- Carbon capture / bet — one sourced sorbent reached 1.354 mmol/g at only 107 m²/g, so no numeric
+  floor is defensible. The removed `'high m²/g'` stays removed.
+- Supercapacitor / bet — powder BET overstates accessible-in-electrode area for rGO. The EDLC
+  activated-carbon benchmark (~1600 m²/g, YP-50F) belongs in the note as context only.
+
+### Net effect
+24 of 26 cells ship, all without numeric targets; 2 dropped. Five proposed numbers eliminated —
+these were the values most likely to reach a customer, and not one of them survived.
