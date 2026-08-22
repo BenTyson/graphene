@@ -23,7 +23,22 @@
     </div>
 
     <!-- Main Application -->
-    <div x-show="isAuthenticated && !isLoading" x-cloak x-data="grapheneApp()" x-init="init(); updateCurrentUser()" class="flex h-screen overflow-hidden">
+    <!--
+      GATED WITH x-if, NOT x-show. Alpine initialises an x-show-hidden element like
+      any other, so with x-show this div's x-init ran at page load while the user was
+      still looking at the login form — firing 82 unauthenticated /api requests across
+      27 endpoints (measured; see notes/W2-AUTH-CLIENT.md M1) plus a burst of console
+      errors from bindings evaluating against null data (M2). Harmless-looking today;
+      once every /api GET requires a JWT (DECISIONS.md D-006) it is 82 x 401 on the
+      login screen. x-if genuinely defers: the element does not exist, so nothing
+      inside it initialises, until isAuthenticated flips.
+
+      The <script> tags that used to sit inside this div had to move below the
+      closing </template>: a <template>'s content is inert, so scripts inside one are
+      never executed.
+    -->
+    <template x-if="isAuthenticated && !isLoading">
+    <div x-data="grapheneApp()" x-init="init(); updateCurrentUser()" class="flex h-screen overflow-hidden">
 
       <!-- Mobile Sidebar Backdrop -->
       <div x-show="sidebarOpen" x-cloak
@@ -1331,33 +1346,44 @@
 
   </div>
 
+    </div> <!-- End Main Application -->
+    </template>
+  </div> <!-- End Auth Wrapper -->
+
+  <!--
+    Script tags moved out of the Main Application div, which is now an x-if
+    <template>. Template content is inert — scripts inside one never execute — so
+    leaving them there would have taken Chart.js, Alpine and the app entry point
+    down with the gate. Load order is unchanged: they are still the last thing in
+    <body>, still in the same relative order, and the Alpine CDN is still after the
+    app-refactored.js module script.
+  -->
+
   <!-- Chart.js for interactive charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
   <!-- Chart.js date adapter for time scales -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  
+
   <!-- Marked.js for markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
   <!-- SortableJS for Kanban drag-and-drop -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  
+
   <!-- LoggingService - Load first to be available globally -->
   <script type="module" src="/src/js/services/LoggingService.js"></script>
-  
+
   <!-- Main App Entry Point - Load modules first -->
   <script type="module" src="/src/js/app-refactored.js"></script>
-  
+
   <!-- Alpine.js Collapse plugin for sidebar groups -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 
   <!-- Alpine.js Intersect plugin -->
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
-  
+
   <!-- Alpine.js - loaded after modules -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    </div> <!-- End Main Application -->
-  </div> <!-- End Auth Wrapper -->
   
   <!-- Optimization Testing Scripts removed to prevent 404 errors -->
 </body>

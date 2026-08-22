@@ -1,6 +1,14 @@
 // Main Application Module - Refactored Version
 // Uses modular components for better maintainability
 
+// MUST STAY THE FIRST IMPORT. Installs the Authorization-header wrapper on
+// window.fetch. ES module dependencies evaluate depth-first in import order, so
+// being first is what guarantees the wrapper is in place before any other module
+// body runs — services/AuthService.js fires GET /api/auth/me at import time — and
+// well before Alpine (a later <script defer>) triggers the first data load.
+// See services/authFetch.js and DECISIONS.md D-011.
+import './services/installAuthFetch.js';
+
 import API from './services/api.js';
 import kanbanService from './services/KanbanService.js';
 import taskService from './services/TaskService.js';

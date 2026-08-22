@@ -1,5 +1,21 @@
 // Centralized API Service Module
 // Handles all HTTP requests to the backend
+//
+// AUTHENTICATION: none of the `fetch` calls in this file set an Authorization
+// header, and they do not need to. `services/authFetch.js` wraps `window.fetch`
+// once and attaches the header to every same-origin /api request that has a token
+// available. See that file for why one wrapper replaces 219 call-site edits.
+//
+// The single exception is `downloadCSV` below — it used to trigger the download
+// with an `<a download href>`, and an anchor navigation cannot carry a header, so
+// no fetch wrapper can reach it. It is fetch-to-blob now and asks authFetch for the
+// header explicitly.
+
+// Importing this module has NO side effects; the wrapper is installed from
+// services/installAuthFetch.js, which only app-refactored.js imports. That keeps
+// the wrapper out of the proforma-embed entry, which reaches this file via
+// ProformaService.js.
+import { getAuthHeader } from './authFetch.js';
 
 const API_BASE = '/api';
 
@@ -21,18 +37,92 @@ const jsonRequest = (url, method, data) => {
   }).then(handleResponse);
 };
 
-// Helper for CSV downloads
-// Uses a transient <a download> rather than window.open so the browser never
-// opens (and potentially popup-blocks) a blank tab just to trigger the file.
-// `params` is an optional URLSearchParams of filters to scope the export.
-const downloadCSV = (path, params) => {
+// Parse the download filename out of a Content-Disposition header.
+// All 13 export routes send the simple quoted form
+// (`attachment; filename="biochar_export.csv"`); the RFC 5987 `filename*=` form is
+// handled too, and preferred when present, so a future route that sends it works.
+const filenameFromContentDisposition = (header) => {
+  if (!header) return null;
+  const star = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      return decodeURIComponent(star[2].trim());
+    } catch (_e) {
+      /* fall through to the plain form */
+    }
+  }
+  const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(header);
+  if (plain) return (plain[2] !== undefined ? plain[2] : plain[1]).trim();
+  return null;
+};
+
+// Helper for CSV downloads.
+//
+// This CANNOT be an `<a download href>` navigation any more. An anchor navigation
+// carries no request headers, so it cannot send `Authorization` — and after
+// W1-AUTH-GUARD lands, every /api GET needs one, which would turn all 13 exports
+// into 401s. (The `<a download>` version was correct against the server as it
+// stands today; it is incompatible with the server as it is about to stand. See
+// DECISIONS.md D-011.)
+//
+// So: fetch with the auth header, take the body as a Blob, and trigger the save
+// from an object URL. Behaviour preserved from the anchor version:
+//   - the server's Content-Disposition still names the file (parsed and applied
+//     to `link.download`, since a blob: URL has no headers to name it from);
+//   - `params` is still an optional URLSearchParams scoping the export to the
+//     current filters (only grapheneAPI.exportCSV passes one);
+//   - still no popup-blocker exposure — no window.open, no new tab, and the click
+//     happens on an anchor this function created, exactly as before.
+//
+// Errors were silent before (the browser would just save the server's error body
+// as a .csv). They now surface, because a failed export that looks like a
+// successful one is how this outage stayed invisible for eight months.
+//
+// Returns a Promise. Callers (app-refactored.js `exportData`) are fire-and-forget;
+// the promise never rejects, so there is no unhandled rejection.
+const downloadCSV = async (path, params) => {
   const query = params ? params.toString() : '';
-  const link = document.createElement('a');
-  link.href = `${API_BASE}${path}${query ? `?${query}` : ''}`;
-  link.download = ''; // let the server's Content-Disposition name the file
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const url = `${API_BASE}${path}${query ? `?${query}` : ''}`;
+  let objectUrl = null;
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { ...getAuthHeader() }
+    });
+
+    if (!response.ok) {
+      const detail = await response
+        .clone()
+        .json()
+        .then((body) => body.error || body.message)
+        .catch(() => null);
+      throw new Error(detail || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const fallback = `${path.split('/').filter(Boolean)[0] || 'data'}_export.csv`;
+    const filename =
+      filenameFromContentDisposition(response.headers.get('Content-Disposition')) || fallback;
+
+    objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return true;
+  } catch (error) {
+    console.error(`CSV export failed for ${url}:`, error);
+    // eslint-disable-next-line no-alert -- matches the app's existing error style
+    alert(`Export failed: ${error.message}`);
+    return false;
+  } finally {
+    // Revoked on a timeout, not immediately: Chrome and Safari read the blob
+    // asynchronously after the synthetic click, and revoking in the same tick
+    // cancels the download.
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  }
 };
 
 // Biochar API endpoints
