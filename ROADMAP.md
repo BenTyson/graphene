@@ -50,7 +50,7 @@ collide with later.
 | 0.1 | Commit the Graphene CSV export fix (`services/api.js`, `app-refactored.js`, `server/routes/graphene.js`) | Command Center | **committed** `68b7eb7` |
 | 0.2 | Commit the Test Matrix **wiring** as-is — it is already complete and building (D-008); only the data is unfinished | Command Center | **committed** `27f1f22` |
 | 0.3 | Commit the four command-center documents + `notes/` | Command Center | **committed** — the commit that introduced this file |
-| 0.4 | Push `staging`, verify on the staging Railway environment | human | **blocked on human** |
+| 0.4 | Push `staging`, verify on the staging Railway environment | human | **done** — `origin/staging` at `06b6035` |
 | 0.5 | Merge `staging` → `main` so chips fork from current code | human | blocked on 0.4 |
 
 All three commits verified reachable from `staging` by ancestry (`git branch --contains`), not by
@@ -72,11 +72,11 @@ W1-MATRIX-WRITE waits on W1-MATRIX-RESEARCH; the Integrator runs alone, last.
 
 | Chip | Job | Owns | Lane | Model | Status |
 |---|---|---|---|---|---|
-| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | ready |
-| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | ready |
-| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | ready |
-| **W1-MATRIX-RESEARCH** | Source every Test Matrix cell; produce a verified fact file. Writes no app code | `notes/W1-MATRIX-RESEARCH.md`, `notes/facts/test-matrix-facts.md` | B | **fable** | ready |
-| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | ready |
+| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | **running** |
+| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **running** |
+| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **running** |
+| **W1-MATRIX-RESEARCH** | Source every Test Matrix cell; produce a verified fact file. Writes no app code | `notes/W1-MATRIX-RESEARCH.md`, `notes/facts/test-matrix-facts.md` | B | **fable** | **running** |
+| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **running** |
 | **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | blocked on W1-MATRIX-RESEARCH |
 | **W1-INTEGRATOR** | Merge drafted doc entries, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md`, `DECISIONS.md` (bookkeeping only) | B | **opus** | runs last |
 
@@ -188,3 +188,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | D-005, D-006 ruled. Wave 1 finalised at 6 chips + Integrator. Test Matrix split into research/writing chips under D-008. |
 | 2026-08-21 | Wave 0 committed on `staging`. Awaiting human push before Wave 1 spawns. |
 | 2026-08-21 | Export wave re-scoped from "feature" to "cleanup" after measuring filter state across tabs. Graphene is the only tab with non-search filters. |
+| 2026-08-21 | D-003 amended: worktree provisioning is the harness's job, not a hand-rolled path. Wave 1 spawned — 5 chips concurrent (3× opus, 1× fable, 1× sonnet). |
