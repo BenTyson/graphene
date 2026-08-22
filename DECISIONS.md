@@ -60,14 +60,16 @@ it never knew existed.
 
 ---
 
-## D-003 — Chips branch off `staging`, in worktrees outside the repo
+## D-003 — Chips branch off `staging`, in isolated worktrees
 **Status:** ACTIVE · **Date:** 2026-08-21 · **Scope:** all chips
 **Supersedes** the "NEVER create additional feature branches" rule in
 `docs/session-start/GIT-WORKFLOW.md` for chip work only.
 
 - Base branch: `staging`. Never `main`.
-- Branch name: `chip/<wave>-<chip-name>`, e.g. `chip/w1-auth-get-guard`.
-- Worktree path: `../graphene-chips/<chip-name>/`, outside the repo directory.
+- **The harness provisions the worktree.** A chip does not create it, does not create or switch
+  branches, and does not need to know where it lives. You are already in the right place. Run
+  `git status` if you want to confirm; otherwise ignore git entirely.
+- Chips leave work **uncommitted** (D-002). The Command Center collects it.
 - Merge target: `staging`. `staging` → `main` stays a human-approved step.
 
 **Reasoning.** `GIT-WORKFLOW.md` forbids feature branches because ad-hoc branches were previously
@@ -79,6 +81,13 @@ so; until then, this ruling governs.
 **Rejected: worktrees inside the repo** (`./worktrees/<name>`). Vite's `root: './client'`, the
 Tailwind content globs, and `nodemon` would all walk into sibling worktrees, producing phantom
 rebuilds and cross-chip file watching.
+
+**Amended 2026-08-21, before Wave 1 spawned.** The original ruling had chips working in
+`../graphene-chips/<chip-name>/`, created by hand. The harness provisions isolated worktrees
+itself, so hand-rolling them would be fragile and would leave this ruling describing a mechanism
+nobody uses — and chips read D-003 directly. Worktree mechanics are now the harness's job. What
+still binds a chip is unchanged: fork from `staging`, never create or switch branches, never
+commit.
 
 ---
 
