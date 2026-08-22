@@ -217,9 +217,17 @@ until the research chip sources them. Auditing what is already there ranks above
 both `validTabs` arrays (`app-refactored.js:256,268`), the sidebar and both subtab pill rows are in
 `client/index.html`, `getTestMatrixTabHtml()` is mounted at `client/index.html:628`, and 11
 `getTestMatrix*` helpers exist. `npm run build` passes with the tab included. What is unfinished is
-the **data**: 25 tests and 8 application rows across 7 industries. Because
-`client/src/js/data/testMatrix.js` is a self-contained data module, a chip can own it outright and
-draft no wiring at all.
+the **data**. Because `client/src/js/data/testMatrix.js` is a self-contained data module, a chip can
+own it outright and draft no wiring at all.
+
+**Corrected 2026-08-21 by W1-MATRIX-RESEARCH — this ruling originally said "25 tests" and it was
+wrong.** `TEST_MATRIX_TESTS` defines **14** tests (`testMatrix.js:57-79`), not 25. The Command
+Center's original count matched every `id:` in the file rather than only those inside the tests
+array. Verified independently before accepting the correction: 14 test ids, 8 application rows, so
+the cell space is **112**, of which **17 were populated**. The error mattered — a chip trusting the
+ruling over the repo would have misreported coverage by roughly 2×, which is precisely the failure
+mode CHIP-PROTOCOL.md §6 *trust the repo over the notes* exists to catch. The chip caught it and
+was right.
 
 ---
 
