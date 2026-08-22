@@ -102,6 +102,188 @@ function buildGrapheneExportOrderBy(sort) {
 }
 
 
+/**
+ * Quote one CSV field per RFC 4180.
+ *
+ * Every value in the export goes through here. The previous implementation quoted
+ * roughly half its fields by hand, so any unquoted value containing a comma silently
+ * shifted every later column in that row. The export now carries five free-text
+ * narrative fields, which is exactly where embedded newlines live, so escaping is no
+ * longer optional anywhere.
+ *
+ * Quotes only when the value needs it (comma, double quote, CR, LF, or leading/
+ * trailing whitespace) rather than always, so numeric columns stay unquoted and the
+ * file reads and diffs cleanly. That predicate is the complete RFC 4180 set.
+ *
+ * Handles the four shapes this route produces uniformly:
+ *   null / undefined -> empty
+ *   Date             -> ISO 8601
+ *   Prisma Decimal   -> its decimal literal (String() calls toString(), not valueOf())
+ *   string[]         -> comma-joined inside one quoted field
+ *
+ * @param {*} value
+ * @returns {string} the field, escaped and quoted if required
+ */
+function csvField(value) {
+  if (value === null || value === undefined) return '';
+
+  let s;
+  if (value instanceof Date) {
+    s = value.toISOString();
+  } else if (Array.isArray(value)) {
+    s = value.join(', ');
+  } else {
+    s = String(value);
+  }
+
+  if (s === '') return '';
+  if (/[",\r\n]/.test(s) || s !== s.trim()) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+/**
+ * Join one record's fields into a CSV line.
+ * @param {Array<*>} fields
+ * @returns {string}
+ */
+function csvRow(fields) {
+  return fields.map(csvField).join(',');
+}
+
+/**
+ * The CSV export mirrors the two-row grouped header of the desktop Graphene table
+ * (client/src/js/components/tabs/GrapheneTab.js) so the file reads like the screen:
+ * row 1 is the group band, row 2 the sub-labels, row 3 onward the data.
+ *
+ * Entries are [groupLabel, subLabel]. A `rowspan=2` column in the table carries its
+ * label on row 1 and an empty row 2, matching how the table shows it once across both
+ * rows. A grouped column repeats '' as its group label on every cell after the first,
+ * which is the CSV equivalent of `colspan`.
+ *
+ * Three cells in the table are display composites — one visual column holding two
+ * values, the second rendered in grey (`24g + 6g`, `KOH + NaOH`, `EXP` / `LOT: n`,
+ * experiment number + title note). Each becomes sibling sub-columns here rather than a
+ * concatenated display string: the whole point of the change was to make the secondary
+ * base filterable and pivotable, which a string like "24g + 6g" is not.
+ *
+ * The table's `Actions` column is omitted — it is buttons, not data.
+ *
+ * Consequence, accepted deliberately: with two header rows, row 1 is not the header
+ * row, so `pandas.read_csv()` defaults and other naive parsers misread the file. That
+ * is a trade of machine-readability for human readability, and it is intentional.
+ */
+const GRAPHENE_CSV_COLUMNS = [
+  ['Order', ''],
+  ['Exp #', 'Exp'],
+  ['', 'Note'],
+  ['Date', ''],
+  ['Oven', ''],
+  ['Qty (g)', ''],
+  ['Biochar', 'Exp'],
+  ['', 'Lot'],
+  ['Base', 'Amt'],
+  ['', 'Amt 2'],
+  ['', 'Type'],
+  ['', 'Type 2'],
+  ['', 'NaOH%'],
+  ['', 'Conc%'],
+  ['', 'Conc% 2'],
+  ['Grinding', 'Method'],
+  ['', '# Grinds'],
+  ['', 'Time'],
+  ['', 'Freq'],
+  ['Homog.', ''],
+  ['Gas', ''],
+  ['Temperature', 'Rate'],
+  ['', 'Max'],
+  ['', 'Time'],
+  ['Wash', 'Amt'],
+  ['', 'Sol.'],
+  ['', 'Conc%'],
+  ['', 'Water'],
+  ['Drying', 'Temp'],
+  ['', 'Atm.'],
+  ['', 'Press.'],
+  ['Results', 'Vol(ml)'],
+  ['', 'Dens.'],
+  ['', 'Out(g)'],
+  ['', 'Out%'],
+  ['Species', ''],
+  ['Appearance', ''],
+  ['Record', 'Team'],
+  ['', 'SEM'],
+  ['', 'Created'],
+  ['', 'Updated'],
+  ['Notes', 'Comments'],
+  ['', 'Objective'],
+  ['', 'Details'],
+  ['', 'Result'],
+  ['', 'Conclusion'],
+  ['', 'Rec. Action']
+];
+
+/**
+ * NaOH share of the total base charge, as the Graphene table computes it.
+ *
+ * Reproduces client/src/js/components/tabs/GrapheneTab.js exactly, including the two
+ * edge cases that are easy to lose: a zero total base returns '0%', and NaOH as the
+ * *primary* base with no secondary returns '100%' rather than a computed figure. A
+ * derived column that disagrees with the screen is worse than no column, because a
+ * reader reconciling the two has no way to tell which is wrong.
+ *
+ * `parseFloat` on a Prisma Decimal stringifies it first, giving the same number the
+ * browser gets from the JSON-serialised string.
+ *
+ * @param {object} g graphene record
+ * @returns {string} e.g. '20.0%'
+ */
+function grapheneNaohPercent(g) {
+  const baseAmt = parseFloat(g.baseAmount) || 0;
+  const base2Amt = parseFloat(g.base2Amount) || 0;
+  const totalBase = baseAmt + base2Amt;
+  if (totalBase === 0) return '0%';
+  if (g.base2Type === 'NaOH') {
+    return ((base2Amt / totalBase) * 100).toFixed(1) + '%';
+  } else if (g.baseType === 'NaOH') {
+    return base2Amt > 0 ? ((baseAmt / totalBase) * 100).toFixed(1) + '%' : '100%';
+  }
+  return '0%';
+}
+
+/**
+ * Yield as a percentage of input, as the Graphene table computes it.
+ * Reproduces calculateOutputPercentage in client/src/js/utils/formatters.js.
+ *
+ * @param {object} g graphene record
+ * @returns {string} e.g. '12.5%', or '' when either side is missing
+ */
+function grapheneOutputPercent(g) {
+  if (g.quantity && g.output && g.quantity > 0) {
+    return ((g.output / g.quantity) * 100).toFixed(1) + '%';
+  }
+  return '';
+}
+
+/**
+ * Date-only rendering for the CSV.
+ *
+ * The table shows `Unknown` for a missing or epoch date (formatDateSafe in
+ * app-refactored.js). The CSV emits an empty cell instead: a literal 'Unknown' in a
+ * date column is unsortable and unfilterable, and an empty cell is exactly what a
+ * spreadsheet reads as "no date".
+ *
+ * @param {Date|null|undefined} d
+ * @returns {string} YYYY-MM-DD, or ''
+ */
+function csvDateOnly(d) {
+  if (!d) return '';
+  const t = d.getTime();
+  if (Number.isNaN(t)) return '';
+  return d.toISOString().slice(0, 10);
+}
+
 // Configure file upload middleware for SEM reports
 const upload = createFileUploadMiddleware('sem-reports', {
   allowedTypes: ['application/pdf'],
@@ -729,57 +911,80 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
   const graphenes = await prisma.graphene.findMany({
     where,
     orderBy,
-    include: { biocharLotRef: true }
+    include: {
+      biocharLotRef: true,
+      // Presence only — a record can carry a SEM report either on the legacy
+      // semReportPath column or through this join table, and reporting 'No' for the
+      // latter would be wrong.
+      semReports: { select: { id: true } }
+    }
   });
-  
-  const headers = [
-    'Experiment #', 'Title Note', 'Oven', 'Quantity (g)', 'Biochar Experiment', 'Base Amount (g)',
-    'Base Type', 'Base Concentration (%)', 'Grinding Method', '# of Grinds', 'Grinding Time (min)', 'Grinding Frequency (Hz)', 'Homogeneous',
-    'Gas', 'Temp Rate', 'Temp Max (°C)', 'Time (min)', 'Wash Amount (g)',
-    'Wash Solution', 'Wash Concentration (%)', 'Wash Water', 'Drying Temp (°C)', 'Drying Atmosphere', 'Drying Pressure',
-    'Volume (ml)', 'Density (ml/g)', 'Species', 'Appearance Tags', 'Output (g)', 'Comments', 'Created At'
-  ];
-  
-  let csv = headers.join(',') + '\n';
-  
+
+  // Record separator is CRLF per RFC 4180. With five free-text narrative fields now in
+  // the export, a bare LF inside a quoted value is likely; using CRLF between records
+  // keeps the two unambiguous even for a parser that handles quoting sloppily.
+  const EOL = '\r\n';
+
+  let csv = csvRow(GRAPHENE_CSV_COLUMNS.map(c => c[0])) + EOL;
+  csv += csvRow(GRAPHENE_CSV_COLUMNS.map(c => c[1])) + EOL;
+
   graphenes.forEach(g => {
     const row = [
+      g.testOrder,
       g.experimentNumber,
-      g.titleNote || '',
-      g.oven || '',
-      g.quantity || '',
-      g.biocharExperiment || '',
-      g.baseAmount || '',
-      g.baseType || '',
-      g.baseConcentration || '',
-      g.grindingMethod || '',
-      g.grindingCount || '',
-      g.grindingTime || '',
-      g.grindingFrequency || '',
-      g.homogeneous !== null ? (g.homogeneous ? 'Yes' : 'No') : '',
-      g.gas || '',
-      `"${(g.tempRate || '').replace(/"/g, '""')}"`,
-      g.tempMax || '',
-      g.time || '',
-      g.washAmount || '',
-      `"${(g.washSolution || '').replace(/"/g, '""')}"`,
-      g.washConcentration || '',
-      `"${(g.washWater || '').replace(/"/g, '""')}"`,
-      g.dryingTemp || '',
-      `"${(g.dryingAtmosphere || '').replace(/"/g, '""')}"`,
-      `"${(g.dryingPressure || '').replace(/"/g, '""')}"`,
-      g.volumeMl || '',
+      g.titleNote,
+      csvDateOnly(g.experimentDate),
+      g.oven,
+      g.quantity,
+      g.biocharExperiment,
+      g.biocharLotNumber,
+      g.baseAmount,
+      g.base2Amount,
+      g.baseType,
+      g.base2Type,
+      grapheneNaohPercent(g),
+      g.baseConcentration,
+      g.base2Concentration,
+      g.grindingMethod,
+      g.grindingCount,
+      g.grindingTime,
+      g.grindingFrequency,
+      g.homogeneous !== null && g.homogeneous !== undefined ? (g.homogeneous ? 'Yes' : 'No') : '',
+      g.gas,
+      g.tempRate,
+      g.tempMax,
+      g.time,
+      g.washAmount,
+      g.washSolution,
+      g.washConcentration,
+      g.washWater,
+      g.dryingTemp,
+      g.dryingAtmosphere,
+      g.dryingPressure,
+      g.volumeMl,
+      // Density is derived here rather than read from the model's stored `density`
+      // column: the write path deletes that column ("Density is calculated, not
+      // stored"). Deliberate — do not "fix" it to read the column.
       (g.volumeMl && g.output) ? (g.volumeMl / g.output).toFixed(4) : '',
-      g.species || '',
-      `"${(g.appearanceTags || []).join(', ')}"`,
-      g.output || '',
-      `"${(g.comments || '').replace(/"/g, '""')}"`,
-      g.createdAt.toISOString()
+      g.output,
+      grapheneOutputPercent(g),
+      g.species,
+      g.appearanceTags,
+      g.researchTeam,
+      (g.semReportPath || (g.semReports && g.semReports.length > 0)) ? 'Yes' : 'No',
+      g.createdAt,
+      g.updatedAt,
+      g.comments,
+      g.objective,
+      g.experimentDetails,
+      g.result,
+      g.conclusion,
+      g.recommendedAction
     ];
-    csv += row.join(',') + '\n';
+    csv += csvRow(row) + EOL;
   });
-  
-  res.setHeader('Content-Type', 'text/csv');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="graphene_export.csv"');
   res.send(csv);
 }));
