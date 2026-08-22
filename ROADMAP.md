@@ -72,12 +72,12 @@ W1-MATRIX-WRITE waits on W1-MATRIX-RESEARCH; the Integrator runs alone, last.
 
 | Chip | Job | Owns | Lane | Model | Status |
 |---|---|---|---|---|---|
-| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | **aborted** — stale base |
-| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **aborted** — stale base |
-| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **aborted** — stale base |
+| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | **running** (re-run) |
+| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **running** (re-run) |
+| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **running** (re-run) |
 | **W1-MATRIX-RESEARCH** | Source every Test Matrix cell; produce a verified fact file. Writes no app code | `notes/W1-MATRIX-RESEARCH.md`, `notes/facts/test-matrix-facts.md` | B | **fable** | **delivered** — fact file + notes verified |
-| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **aborted** — env fault ×2 |
-| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | blocked on W1-MATRIX-RESEARCH |
+| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **running** (re-run) |
+| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | **running** — unblocked by fact file |
 | **W1-INTEGRATOR** | Merge drafted doc entries, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md`, `DECISIONS.md` (bookkeeping only) | B | **opus** | runs last |
 
 Five chips run concurrently. W1-MATRIX-WRITE is serialized behind W1-MATRIX-RESEARCH by the
@@ -192,3 +192,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | Wave 1 env fault: host machine slept, killing W1-MATRIX-RESEARCH and W1-RECON-DEAD at the write-up step. Both resumed with context intact. CHIP-PROTOCOL.md §5a added — write incrementally; Lane B notes-only chips should not get worktree isolation. |
 | 2026-08-21 | **Wave 1 aborted.** All five chips forked from `main` @ 3fd0b30, not `staging` — the harness forks worktrees from the default branch. Chips had no CHIP-PROTOCOL.md. Work salvaged as patches; D-009 written. Root cause is that `staging` → `main` was never merged. |
 | 2026-08-21 | W1-MATRIX-RESEARCH delivered despite the wave abort: 320-line fact file, 112 cells dispositioned, 41 Confident / 17 Verify. Caught a Command Center error — D-008 said 25 tests, the file has 14. Corrected. |
+| 2026-08-21 | Wave 1 re-spawned under D-010 — 5 chips in the main repo, no worktree isolation, base verified per D-009 before release. All five created their notes file as first action (§5a holding). Orphaned worktrees from the aborted run removed. |
