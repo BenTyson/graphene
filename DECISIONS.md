@@ -78,9 +78,8 @@ authority, tracked in `ROADMAP.md`, and deleted at merge. The original rule's *i
 untracked divergence — is preserved. `GIT-WORKFLOW.md` must be updated by the Integrator to say
 so; until then, this ruling governs.
 
-**Rejected: worktrees inside the repo** (`./worktrees/<name>`). Vite's `root: './client'`, the
-Tailwind content globs, and `nodemon` would all walk into sibling worktrees, producing phantom
-rebuilds and cross-chip file watching.
+**Rejected: worktrees inside the repo** (`./worktrees/<name>`) — *and this reasoning was partly
+wrong; see the correction below.*
 
 **Amended 2026-08-21, before Wave 1 spawned.** The original ruling had chips working in
 `../graphene-chips/<chip-name>/`, created by hand. The harness provisions isolated worktrees
@@ -88,6 +87,16 @@ itself, so hand-rolling them would be fragile and would leave this ruling descri
 nobody uses — and chips read D-003 directly. Worktree mechanics are now the harness's job. What
 still binds a chip is unchanged: fork from `staging`, never create or switch branches, never
 commit.
+
+**Corrected 2026-08-21, after Wave 1 spawned.** The harness places worktrees at
+`.claude/worktrees/agent-<id>/` — *inside* the repo, the layout this ruling had rejected. Measured
+rather than assumed: Tailwind's content globs are `./client/index.html` and `./client/src/**` and
+Vite's `root` is `./client`, so neither tool walks into `.claude/`. The predicted phantom-rebuild
+problem does not occur, and the original rejection overstated it. One real effect remains:
+`npm run server:dev` runs nodemon watching from the repo root, which does see chip file changes and
+will restart on them — so the Command Center should use `node server/index.js` directly rather than
+`npm run dev` while chips are in flight. `.claude/worktrees/` is now gitignored so a careless
+`git add -A` cannot commit five checkouts of the repo into itself.
 
 ---
 

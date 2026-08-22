@@ -7,6 +7,13 @@ This project runs a command-center model. One session (the Command Center) plans
 merges, and rules. All actual work happens in **chips**: focused agent sessions, each with one
 scoped job, each in its own git worktree. You are almost certainly a chip.
 
+> **Naming collision — be aware of it.** The IDE also calls its clickable background-task
+> suggestions "chips". Those are a different thing: a UI affordance that starts a fresh interactive
+> session. A *protocol chip* is spawned by the Command Center, runs on its own, and reports back
+> through its notes file — the human never clicks anything to start one. If a suggestion chip
+> appears in the UI proposing work already on the roadmap, it is stale: its prompt predates the
+> protocol and carries no owned-files list. The Command Center dismisses those.
+
 This document is **living**. Each wave's lessons get folded back into it by the Command Center.
 If a rule here cost you time or was wrong for this repo, say so in your Reflections — that is
 how this file got good.
@@ -272,6 +279,7 @@ Record new ones in Reflections so the next chip doesn't rediscover them.
 | **`prisma migrate dev` is broken** | Shadow-DB issues. The repo uses `prisma db push`. Chips run neither. |
 | **`prisma/migrations/` is gitignored** | There is no migration history to reason from. Schema archaeology means reading `schema.prisma` and the live DB. |
 | **Do not use `:3001` in a browser** | Express serves raw client files with no CSS processing in dev. Use the Vite port. |
+| **Agent worktrees live at `.claude/worktrees/`** | Inside the repo, not beside it. Gitignored. Tailwind's content globs are `./client/**` and Vite's root is `./client`, so neither walks into them — measured, not assumed. But `npm run server:dev` uses nodemon watching from the repo root, which *will* see chip file changes and restart. Prefer `PORT=<n> node server/index.js` over `npm run dev`. |
 | **zsh eats unquoted globs** | `grep --include=*.js` fails; quote it: `--include="*.js"`. |
 | **`uploads/` and `public/news-images/`** | Gitignored, written at runtime in dev. Don't commit, don't assume contents. |
 | **No test runner, no linter, no typechecker, no CI** | As of the first wave, `npm run build` and `node --check` are the only automated checks. Don't claim you ran tests. |

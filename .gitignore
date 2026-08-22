@@ -39,6 +39,9 @@ prisma/migrations/
 backups/
 logs/
 
+# Agent worktrees (harness-provisioned, see D-003)
+.claude/worktrees/
+
 # IDE
 .vscode/
 .idea/
