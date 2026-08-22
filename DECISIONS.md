@@ -220,3 +220,57 @@ both `validTabs` arrays (`app-refactored.js:256,268`), the sidebar and both subt
 the **data**: 25 tests and 8 application rows across 7 industries. Because
 `client/src/js/data/testMatrix.js` is a self-contained data module, a chip can own it outright and
 draft no wiring at all.
+
+---
+
+## D-009 — Verify the base a chip actually forked from, before the wave runs
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Scope:** Command Center
+**Written after Wave 1 was aborted for this exact failure.**
+
+Immediately after spawning, and before letting chips run, the Command Center must confirm what
+base they received:
+
+```
+git worktree list          # what commit is each chip actually on?
+```
+
+and confirm that `CHIP-PROTOCOL.md` and `DECISIONS.md` exist in that checkout. A chip whose first
+instruction is "read CHIP-PROTOCOL.md" and whose worktree has no such file is not running the
+protocol, whatever the roadmap says.
+
+**What happened.** Wave 1 spawned five chips. All five forked from `3fd0b30` — the tip of `main` —
+not from `staging` at `39f8f4a` where the work was. `main` was stale because merging `staging` →
+`main` was the one Wave 0 step deliberately left to the human, since it auto-deploys to production.
+The harness forks worktrees from the repository's default branch, not from the branch the spawning
+session has checked out.
+
+So every chip received a pre-Wave-0 checkout: no `CHIP-PROTOCOL.md`, no `DECISIONS.md`, no
+`ROADMAP.md`, no `notes/_TEMPLATE.md`, no Graphene export fix, no Test Matrix data module. Three of
+them worked for roughly 25 minutes against it and produced real changes that would have conflicted
+with Wave 0 on merge.
+
+**This was a Command Center failure, and specifically a failure to apply an existing rule.**
+CHIP-PROTOCOL.md §6 already says *verify by ancestry, never by silence*. That was applied to the
+main repository — clean tree, pushed, correct tip — and never to the thing that actually mattered,
+which is what the chips got. A successful spawn call printed no warning, and the silence was read
+as success. Same failure mode as the unmerged branch the rule was written about.
+
+**What saved it from being a total loss:** the *quote rulings, don't cite them* rule. Every spawn
+prompt pasted the full text of D-001, D-006, D-007 and D-008 inline rather than referencing them,
+so the chips had their governing rulings even though the file was absent from their checkout. That
+rule was written for stale worktree copies; it turned out to cover missing ones too.
+
+**Two ways to fix the base. Both work; they differ in what they cost.**
+
+1. **Merge `staging` → `main`.** Restores the intended layout and keeps worktree isolation. Cost:
+   `main` auto-deploys to admin.hgraphene.com, so this is a production deploy and therefore the
+   human's decision, not the Command Center's.
+2. **Spawn without worktree isolation**, chips working directly in the main repository on
+   `staging`. The Command Center controls and can verify the base absolutely. Cost: chips share one
+   working directory, so physical isolation is gone and **write-ownership becomes the only
+   protection** — which is what it always actually was; the worktree was belt-and-braces. Minor
+   friction: concurrent `npm run build` writes the same gitignored `dist/`.
+
+**Related, already established:** Lane B chips that only produce notes should never get worktree
+isolation regardless (see CHIP-PROTOCOL.md §5a) — they touch no source, and an unchanged worktree
+is auto-cleaned, destroying their only output.
