@@ -5,7 +5,8 @@ node_modules/
 
 # Production
 dist/
-dist-*/          # per-chip build outputs (see D-010)
+# per-chip build outputs (see D-010)
+dist-*/
 build/
 
 # Environment
