@@ -157,10 +157,11 @@ All 17 duplicate keys removed. Every removal site carries a one-line comment nam
 surviving definition lives and why, so the next reader doesn't re-add the duplicate
 (CHIP-PROTOCOL §7 prefers a tombstone to a silent deletion).
 
-**No method was renamed, no method moved, no unrelated code reformatted.** The only new public
-surface is nothing — key count went from 984+17 duplicate slots to 984 keys. §8 satisfied: every
-name another chip could anchor wiring against still resolves, and each now resolves to exactly one
-definition.
+**No method was renamed, no method moved, no unrelated code reformatted, and no key was added or
+removed from the object's public surface.** `Object.keys(window.grapheneApp()).length` is **984**
+after the change, and was 984 before — duplicates already collapsed at parse time, which is exactly
+why they were invisible. §8 satisfied: every name another chip could anchor wiring against still
+resolves, and each now resolves to exactly one definition instead of two.
 
 ### Per-pair result
 
@@ -334,3 +335,150 @@ None required for this chip's job. Two adjacent issues are written up as finding
 follow-up chips below rather than as handoff diffs, because each needs a decision, not a
 transcription.
 
+## Reflections
+
+| Severity | Finding | Where | Status |
+|---|---|---|---|
+| high | `init()` defined twice; the earlier one held the only calls to `initSidebarState()` and `handleInitialRoute()`. Deep links and reloads always landed on Dashboard; the saved sidebar collapse state was never restored | `client/src/js/app-refactored.js:230` (was) | **fixed here** |
+| high | `hasActiveFilters()` defined twice for two unrelated features. News won, so the AI Insights "active filters" row was driven by news filter state and never appeared | `app-refactored.js:4277` / `:4596` (was) | **fixed here** — merged into one tab-dispatching method |
+| high | News pagination could not advance: `nextNewsPage`/`previousNewsPage`/`goToNewsPage`/`loadMoreNews` were each defined twice, and the winning copies mutated the Alpine page number while `NewsService` owns it. **Not in the spawn prompt — found by esbuild** | `app-refactored.js:4497-4520` (was) | **fixed here** |
+| high | `shareArticle()` called `this.showNotification(...)`, which is not defined on the object → `TypeError` on the clipboard fallback (the real path on desktop Chrome, where `navigator.share` is absent) | `app-refactored.js:4754,4757` (was) | **fixed here** by keeping the guarded `NewsService` delegate |
+| medium | `showNotification()` is referenced but **never defined** on `grapheneApp()`. `toggleBookmark()` still calls it unguarded at two places, so bookmarking an article throws in both the success and error paths | `app-refactored.js:4711,4719` (in `toggleBookmark`, 4675) | left, why: not a duplicate key — outside the dedupe scope. Proposed as CHIP-NOTIFY-TOAST |
+| medium | `searchCompoundBatches()` fired one API request per keystroke (no debounce, unlike every sibling search method), so out-of-order responses could show stale rows | `app-refactored.js:2203` (was) | **fixed here** — 6 keystrokes now = 1 request |
+| medium | `AIInsightsTab.js` `hasActiveFilters()` is truthy with default state, because `analysisFilters.includeCompoundBatches` and `.includeMicronization` both default to `true`. Now that the AI branch is live, the "Active filters" row shows two chips on first load | `app-refactored.js` `analysisFilters` default | left, why: I restored the dead implementation verbatim; changing what "active" means is a product decision, not a dedupe |
+| medium | Every `emailSettingsForm.*` binding in `EmailAdminTab.js` throws `Cannot read properties of null` on first paint, because `emailSettingsForm` starts as `null` and the tab template is always in the DOM (mounted via `x-html`, gated only by `x-show`). ~20 console errors per page load | `EmailAdminTab.js` + `app-refactored.js` `emailSettingsForm: null` | left, why: not owned / not a duplicate. Proposed as CHIP-EMAILTAB-NULLGUARD |
+| medium | Restoring `handleInitialRoute()` makes `/news` reachable again — verified: navigating to `/news` sets `activeTab='news'` and renders the retired News tab. It has no sidebar entry by design (CLAUDE.md: "News Feed tab is hidden, code preserved") but it is in the route allowlist | `app-refactored.js:249,261` | left, why: needs a ruling — remove `'news'` from both allowlists, or accept it |
+| low | The 25-entry `validTabs` array is duplicated verbatim inside `handleInitialRoute()`, and `switchTab()` has no allowlist at all. Adding a tab means editing two literals correctly | `app-refactored.js:249` and `:261` | left, why: shared wiring surface; would move anchors. Proposed as CHIP-TABS-ALLOWLIST |
+| low | `client/src/js/app.js` and `client/src/js/app-original.js` are unreferenced (no import, no `<script src>`, no `x-data`) and contain older copies of `handleSemFileChange`, `closeSemModal`, `viewSemReport` — they polluted every grep I ran for this job | `client/src/js/` | left, why: not owned. W1-RECON-DEAD appears to own this ground |
+| low | `client/src/js/components/tabs/NewsTabFunctions.js` is unreferenced and defines a third copy of `refreshNewsFeed`/`shareArticle`/`hasActiveFilters` | `components/tabs/NewsTabFunctions.js` | left, why: not owned |
+| low | `client/index.html:1173` sets `semReportForm.semFiles` inline and skips PDF validation entirely, while `CRUDService.handleSemFileChange()` — which validates every file — has no caller | `client/index.html:1173`, `CRUDService.js:802` | left, why: not owned |
+| low | Six duplicate *data* keys (`compoundBatchRecords`, `compoundBatchSearch`, `expandedCompoundBatches`, `compoundBatchRelatedData`, `loadingCompoundBatchRelated`, `compoundBatches`) | `app-refactored.js` | **fixed here** — no runtime effect, but they made the esbuild signal noisy |
+| medium | 46 `/api/*` GETs across 17 endpoints fire at the **login screen**, before authentication: `client/index.html:26` puts `x-data="grapheneApp()" x-init="init()"` on an `x-show`-gated div, and Alpine initialises regardless of `x-show`. Directly relevant to W1-AUTH-GUARD | `client/index.html:26` | left, why: not owned. Proposed as CHIP-AUTH-INIT-GATE |
+| low | An Express process from the **aborted** Wave 1 run of this chip was still listening on port 3013, serving from a deleted worktree | port 3013, PID 35126 | **fixed here** — killed before starting mine |
+
+### What I saw outside my scope
+
+**The spawn prompt undercounted by 10.** It listed 7 method pairs; `esbuild` reports 17 duplicate
+keys — 11 method pairs and 6 data pairs. The four extra method pairs are the News pagination set,
+and they are not cosmetic: they are the reason News pagination doesn't work. The prompt's seven
+line numbers were all still exactly right, so the file had not drifted — the earlier measurement
+simply wasn't exhaustive. `npx esbuild <file> --outfile=/dev/null --log-limit=0` is a complete,
+zero-config detector; it took one command and needs no dependency (esbuild is already vendored
+under Vite). **W1-CHECK-SUITE should use it rather than writing a parser.**
+
+**This file has a systemic shape problem, and the duplicates are the symptom.** Every duplicate I
+resolved was one of three stories, and all three are structural:
+
+1. *A service extraction that was never finished.* `searchCompoundBatches`, `closeSemModal`,
+   `handleSemFileChange`, `refreshNewsFeed`, `shareArticle` and the News pagination set each exist
+   as an old inline body **and** a newer `Service.method(this)` delegate, sitting hundreds of lines
+   apart in the same literal. Someone added the delegate layer and left the originals in place.
+   The delegates are grouped near the top, the originals near the bottom, so ordering decided
+   which half of the migration is actually running — and it decided **inconsistently**: the
+   delegate won for `hasActiveFilters` but lost for `shareArticle`. Nobody chose that.
+2. *Two features colliding on a generic name.* `exportData` (already fixed) and `hasActiveFilters`.
+   With no modules there is no namespace, so "does any filter apply" is a global identifier. There
+   will be more of these; `formatDate`, `getActiveFilters`, `removeFilter` and `clearAllFilters`
+   are all currently single-owner but generically named.
+3. *Copy-paste state blocks.* The six data keys are the same five compound-batch fields declared in
+   two different "state" regions ~120 lines apart.
+
+**The service layer's state ownership is split down the middle.** `NewsService` keeps its own
+`newsCurrentPage`/`filteredNewsArticles`/`newsPageSize` and the Alpine object keeps *copies*, hand-
+synced by `Object.assign(this, NewsService.getNewsState())` in some methods and by three explicit
+field copies in others. That mismatch is exactly what broke pagination. Contrast `CRUDService`,
+which mutates `appContext` directly and holds no state — the pattern CLAUDE.md documents.
+`NewsService` (and `FilterService`, which also has a `getActiveFilters`) do not follow it.
+
+**`showNotification` does not exist.** Four call sites in `app-refactored.js` (two of which I
+removed) plus ten guarded ones in `NewsService`. The guarded ones silently no-op, which is why
+nobody noticed. There is no toast/notification system in this app at all.
+
+**A note for W1-AUTH-GUARD:** `client/index.html:26` is
+`x-data="grapheneApp()" x-init="init(); updateCurrentUser()"` on a div that is only `x-show`-gated
+by `isAuthenticated`. Alpine initialises the subtree regardless of `x-show`, so **`init()` runs its
+full 16-endpoint `Promise.all` before anyone has logged in.** Measured on the login screen via
+`performance.getEntriesByType('resource')`: **46 `/api/*` requests across 17 distinct endpoints**,
+with `/api/bet`, `/api/conductivity`, `/api/raman`, `/api/tem`, `/api/update-reports` and
+`/api/sem-reports` each hit 4 times (the rest twice) — so there is retry/duplication on top of the
+initial fan-out. Once GETs require a JWT those all become 401s on every unauthenticated page load.
+Nothing breaks (each loader catches and sets `[]`), but the console will be loud and it is 46
+wasted round-trips before a user has typed a password. Pre-existing — my change adds no loader
+calls. `x-if` instead of `x-show` on that div would fix the bulk of it; that is `client/index.html`,
+so it needs its own chip.
+
+### Risks in what I built
+
+1. **`hasActiveFilters()` dispatching on `activeTab` is the weakest thing here.** It is correct for
+   the two known call sites, but it makes a shared method's result depend on global UI state. If a
+   third caller appears, or if either tab is ever rendered while `activeTab` is something else
+   (e.g. `'data-page'`), it silently takes the AI branch. The clean fix is two differently-named
+   methods, which requires editing `AIInsightsTab.js` / `NewsTab.js` — both do-not-touch for me.
+   **This should be revisited by whoever next owns those two files.**
+2. **`init()` ordering.** I reasoned about the interaction with `setupDataPageRouting()` from the
+   code (`handleInitialRoute` early-returns on a data-page hash) and verified the plain-path cases
+   in the browser. What I could **not** verify is the combination *hash data-page route + logged-in
+   user + real data*, because that needs credentials and a live API. If a regression shows up, it
+   will be a URL like `/graphene#/data/graphene/GR-001`.
+3. **`init()` now runs three more things before auth is known.** `enforceThirdPartyRestrictions()`
+   still runs after (via `updateCurrentUser()` at the old position and again from `x-init`), and I
+   placed my calls deliberately before it so a restricted deep link gets corrected. I confirmed the
+   ordering by reading, not by logging in as a THIRD_PARTY user. **A THIRD_PARTY deep-linking to
+   `/tasks` is the case to spot-check at integration.**
+4. **The `searchCompoundBatches` debounce is a visible timing change.** Results now appear 300 ms
+   after typing stops rather than per keystroke. Intended, matches every sibling search, but it is
+   the change a user would most plausibly describe as "it got slower".
+5. **`updatePagination()` gained a line.** If any caller relied on `newsCurrentPage` *not* being
+   overwritten, it would now be. I found no such caller.
+
+### Proposed follow-up chips
+
+| Name | Job | Owns | Lane | Tier |
+|---|---|---|---|---|
+| `CHIP-NOTIFY-TOAST` | Add a real `showNotification(message, type)` to the app (or delete the ~14 call sites). Fix `toggleBookmark`'s two unguarded calls, which throw today | `client/src/js/app-refactored.js` (+ a small toast component) | A | sonnet |
+| `CHIP-EMAILTAB-NULLGUARD` | Stop `EmailAdminTab` throwing ~20 null-property errors on every page load before settings load | `client/src/js/components/tabs/EmailAdminTab.js` | A | sonnet |
+| `CHIP-NEWSSERVICE-STATE` | Make `NewsService` mutate `appContext` like `CRUDService` does instead of holding a shadow copy of pagination/filter state, removing the hand-sync entirely | `client/src/js/services/NewsService.js` + `app-refactored.js` news delegates | A | opus |
+| `CHIP-TABS-ALLOWLIST` | One `VALID_TABS` constant instead of two inline literals; decide whether `'news'` stays routable; make `switchTab()` validate | `client/src/js/utils/constants.js`, `app-refactored.js` | A | sonnet |
+| `CHIP-AUTH-INIT-GATE` | `x-if` instead of `x-show` on the `grapheneApp()` root so `init()` doesn't fire 16 API calls at the login screen. **Pairs with W1-AUTH-GUARD** | `client/index.html` | A | sonnet |
+| `CHIP-APP-DECOMPOSE` | The roadmap item. Split the 6,274-line literal into domain mixins. **MOVE work — must run alone** (CHIP-PROTOCOL §6/§8) | `client/src/js/app-refactored.js` + new files | A | opus |
+
+On `CHIP-APP-DECOMPOSE`, since §8 invites the proposal: the file is already ~40% delegate
+one-liners grouped by domain, so the natural seam is per-domain mixin objects
+(`newsMixin`, `compoundBatchMixin`, …) spread into the returned literal — `filterMixin` is already
+imported and does exactly this, so the pattern exists in-repo and needs no framework. That would
+have made all 17 duplicates impossible: a repeated key across two spread objects is still
+last-wins, but a repeated key *within* one 300-line mixin is visible to a human reviewer. It is
+MOVE work and would invalidate every anchor, so it must run alone, ideally right after a wave
+where nothing else has drafted wiring.
+
+### Harness improvements
+
+1. **The spawn prompt's list of pairs was presented as the job, and it was incomplete.** I nearly
+   stopped at seven. What saved it was the verification bar's separate sentence — "confirm zero
+   duplicate top-level method keys remain" — which forced a full measurement. Suggestion: when a
+   prompt enumerates instances of a defect, say explicitly whether the list is exhaustive or
+   indicative, and give the command that regenerates it. "Measure before choosing a threshold"
+   (§6) should probably generalise to "measure before trusting an enumeration."
+2. **Two chips measuring the same defect while one fixes it is fine, but only because the prompt
+   said so.** Being told up front that W1-CHECK-SUITE's baseline would move under it removed the
+   only real coordination anxiety. Worth keeping as a prompt convention.
+3. **`vite.config.js` hardcodes the proxy target to `localhost:3001`, and it isn't in anyone's
+   owned-files list.** Per-chip ports are assigned for Express and Vite, but a chip on port 3013
+   cannot make the browser reach its own server — every `/api` call 500s. §9's port-pair advice is
+   therefore only half a solution for any chip that needs the UI *with* data. Either give one chip
+   per wave ownership of `vite.config.js`, or read the target from `process.env.PORT`.
+4. **Aborted chips leave listeners behind.** Port 3013 was held by an Express from the aborted
+   Wave 1, running out of a worktree that no longer exists. A pre-wave `lsof -nP -iTCP -sTCP:LISTEN`
+   sweep by the Command Center would catch this. Add to §9.
+5. **The login gate is a real ceiling on Lane A verification.** D-005 gives read-only DB access,
+   but the UI is unreachable without credentials, and D-004/D-005 correctly forbid creating a user.
+   The `window.grapheneApp()` direct-instantiation trick works well and should be written into §4
+   as *the* technique for this repo — but a read-only seeded test account would be worth more than
+   any other single harness change for client-side chips.
+6. **Model tier: opus was right, and not because of the code volume.** The mechanical edit is
+   sonnet work. What needed the tier was deciding *which* of each pair survives: three of the
+   eleven pairs inverted on evidence found only by grepping template strings and checking whether
+   a method exists at all. `shareArticle` in particular looks like an obvious "delete the dead
+   delegate, keep the real implementation" until you notice the surviving implementation calls a
+   method that doesn't exist. A cheaper model following the prompt's framing ("the earlier is
+   silently dead") would very plausibly have kept the throwing version in four places.

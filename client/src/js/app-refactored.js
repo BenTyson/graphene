@@ -226,13 +226,6 @@ window.grapheneApp = function() {
     emailPrefsSuccess: false,
     emailTimezones: emailService.getTimezoneList(),
 
-    // Initialize app and handle initial route
-    init() {
-      this.initSidebarState();
-      this.handleInitialRoute();
-      this.autoExpandParentGroup(this.activeTab);
-    },
-    
     // Handle initial route from URL path and hash
     handleInitialRoute() {
       const hash = window.location.hash;
@@ -430,7 +423,7 @@ window.grapheneApp = function() {
     xpsRecords: [],
     updateReports: [],
     semReports: [],
-    compoundBatches: [],
+    // compoundBatches is a getter over compoundBatchRecords, defined further down.
     compoundBatchRecords: [],
     shipments: [],
     micronizations: [],
@@ -661,7 +654,6 @@ window.grapheneApp = function() {
     expandedRows: {},
     expandedBiocharRows: {},
     expandedGrapheneRows: {},
-    expandedCompoundBatches: {},
     biocharRelatedData: {},
     grapheneRelatedData: {},
     
@@ -673,14 +665,13 @@ window.grapheneApp = function() {
     
     // Tooltip state
     showTooltip: null,
-    compoundBatchRelatedData: {},
     loadingBiocharRelated: {},
     loadingGrapheneRelated: {},
-    loadingCompoundBatchRelated: {},
-    
+
     // Compound batch state
-    compoundBatchRecords: [],
-    compoundBatchSearch: '',
+    // (compoundBatchRecords / compoundBatchSearch / expandedCompoundBatches /
+    //  compoundBatchRelatedData / loadingCompoundBatchRelated are declared above,
+    //  with the other *Records, *Search and expansion-state groups.)
     compoundBatchSortColumn: 'batchNumber',
     compoundBatchSortOrder: 'asc',
     experimentSearchTerm: '',
@@ -1231,6 +1222,16 @@ window.grapheneApp = function() {
 
       // Setup data page routing
       this.setupDataPageRouting();
+
+      // Restore the persisted sidebar state and resolve the initial route.
+      // Must run before the dashboard preload below, so a deep link to a non-dashboard
+      // tab doesn't trigger a wasted dashboard fetch, and before updateCurrentUser(),
+      // so enforceThirdPartyRestrictions() can still correct a restricted deep link.
+      // handleInitialRoute() early-returns on a data-page hash, so it cannot fight
+      // setupDataPageRouting() above.
+      this.initSidebarState();
+      this.handleInitialRoute();
+      this.autoExpandParentGroup(this.activeTab);
 
       // Listen for auth:login event to update currentUser
       window.addEventListener('auth:login', (event) => {
@@ -2166,9 +2167,10 @@ window.grapheneApp = function() {
       CRUDService.closeSemModal(this);
     },
 
-    handleSemFileChange(event) {
-      CRUDService.handleSemFileChange(event, this);
-    },
+    // NOTE: handleSemFileChange() belongs to the Graphene modal (single PDF ->
+    // grapheneForm.semReportFile) and is defined further down. The multi-file
+    // SEM Reports variant, CRUDService.handleSemFileChange(), currently has no
+    // caller — client/index.html assigns semReportForm.semFiles inline instead.
 
     toggleSemGrapheneSelection(grapheneId) {
       CRUDService.toggleSemGrapheneSelection(grapheneId, this);
@@ -2200,9 +2202,7 @@ window.grapheneApp = function() {
       CRUDService.openCompoundBatchForm(this);
     },
 
-    async searchCompoundBatches() {
-      await CRUDService.searchCompoundBatches(this);
-    },
+    // searchCompoundBatches() lives with the other debounced search methods above.
 
     sortCompoundBatches(column) {
       CRUDService.sortCompoundBatches(column, this);
@@ -2402,10 +2402,7 @@ window.grapheneApp = function() {
       }
     },
     
-    closeSemModal() {
-      this.showSemModal = false;
-      this.currentSemPdf = null;
-    },
+    // closeSemModal() is defined once, above, as a CRUDService delegate.
 
     viewRamanPdf(ramanReportPath) {
       if (ramanReportPath) {
@@ -4273,10 +4270,17 @@ window.grapheneApp = function() {
     
     // AI Analysis Filter Methods
     
-    // Check if any filters are active
+    // Check if any filters are active.
+    // Two tabs bind x-show="hasActiveFilters()": AI Insights (AIInsightsTab.js:176,
+    // analysisFilters) and News (NewsTab.js:225, NewsService). They used to be two
+    // separate definitions of this key, so the News one silently won and the AI
+    // Insights chip row never appeared. Dispatch on whichever tab is on screen.
     hasActiveFilters() {
-      return this.analysisFilters.oven || 
-             this.analysisFilters.species || 
+      if (this.activeTab === 'news') {
+        return NewsService.hasActiveFilters();
+      }
+      return this.analysisFilters.oven ||
+             this.analysisFilters.species ||
              this.analysisFilters.timeRange ||
              this.analysisFilters.includeCompoundBatches ||
              this.analysisFilters.includeMicronization;
@@ -4445,9 +4449,9 @@ window.grapheneApp = function() {
       Object.assign(this, state);
     },
 
-    async refreshNewsFeed() {
-      await NewsService.refreshNewsFeed(this);
-    },
+    // refreshNewsFeed() is defined once, further down: it POSTs /api/news/refresh to pull
+    // from the external sources first, then re-reads the DB. NewsService.refreshNewsFeed()
+    // only did the re-read, so it now has no caller.
 
     filterNews() {
       NewsService.filterNews(this);
@@ -4468,6 +4472,8 @@ window.grapheneApp = function() {
       this.paginatedNewsArticles = state.paginatedNewsArticles;
       this.newsTotalPages = state.newsTotalPages;
       this.newsHasMorePages = state.newsHasMorePages;
+      // NewsService owns the current page; mirror it back so the page indicator tracks it.
+      this.newsCurrentPage = state.newsCurrentPage;
     },
 
     nextNewsPage() {
@@ -4494,32 +4500,9 @@ window.grapheneApp = function() {
       return NewsService.getNewsPageNumbers();
     },
 
-    nextNewsPage() {
-      if (this.newsCurrentPage < this.newsTotalPages) {
-        this.newsCurrentPage++;
-        this.updatePagination();
-      }
-    },
-
-    previousNewsPage() {
-      if (this.newsCurrentPage > 1) {
-        this.newsCurrentPage--;
-        this.updatePagination();
-      }
-    },
-
-    goToNewsPage(page) {
-      if (page >= 1 && page <= this.newsTotalPages) {
-        this.newsCurrentPage = page;
-        this.updatePagination();
-      }
-    },
-
-    loadMoreNews() {
-      if (this.newsHasMorePages && !this.newsLoading) {
-        this.nextNewsPage();
-      }
-    },
+    // nextNewsPage/previousNewsPage/goToNewsPage/loadMoreNews are defined once, above,
+    // as NewsService delegates. NewsService owns newsCurrentPage and applies the bounds
+    // checks itself (NewsService.js:202-227).
 
     async refreshNewsFeed() {
       console.log('🔄 Refreshing news feed...');
@@ -4593,9 +4576,8 @@ window.grapheneApp = function() {
       });
     },
 
-    hasActiveFilters() {
-      return NewsService.hasActiveFilters();
-    },
+    // hasActiveFilters() is defined once, in the AI Analysis filter block above;
+    // it dispatches to NewsService when the News tab is active.
 
     getActiveFilters() {
       return NewsService.getActiveFilters();
@@ -4741,23 +4723,9 @@ window.grapheneApp = function() {
       }
     },
 
-    shareArticle(article) {
-      if (navigator.share) {
-        navigator.share({
-          title: article.title,
-          text: article.summary,
-          url: article.url
-        });
-      } else {
-        // Fallback to copying URL to clipboard
-        navigator.clipboard.writeText(article.url).then(() => {
-          this.showNotification('Article URL copied to clipboard', 'success');
-        }).catch(err => {
-          console.error('Error copying to clipboard:', err);
-          this.showNotification('Could not copy URL', 'error');
-        });
-      }
-    },
+    // shareArticle() is defined once, above, as a NewsService delegate. This copy called
+    // this.showNotification() unguarded, and that method does not exist on this object, so
+    // the clipboard fallback threw. NewsService guards every showNotification call.
 
     // Summary system methods - these remain here as they use imported helpers
     toggleSummaryDisplay(articleId) {
