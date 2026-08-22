@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "Files that already failed `node --check` when the check suite was built, and that",
+    "W1-CHECK-SUITE was not authorised to fix (its brief forbids modifying any source file).",
+    "The syntax gate names them on every run but does not count them as failures, so that",
+    "`npm run check` passes on a clean tree and people actually run it.",
+    "",
+    "This list is one-way. Adding to it should require a ruling. Removing from it is free —",
+    "and the gate FAILS if a listed file starts parsing, which forces the stale entry to be",
+    "deleted rather than left to rot. The baseline can only ever shrink.",
+    "",
+    "Both current entries are unreferenced dead code, verified per CHIP-PROTOCOL.md §7 by",
+    "basename grep across .js/.html/.md: each file's only hits are its own declarations.",
+    "That is why `npm run build` passes despite them — vite never pulls them into a graph."
+  ],
+  "files": [
+    {
+      "path": "client/src/js/components/cards/NewsWidget.js",
+      "error": "SyntaxError: Invalid or unexpected token (line 156)",
+      "cause": "Backticks inside template literals are backslash-escaped (\\`/api/news/articles/\\${articleId}\\`), which is not valid JavaScript. Looks like the file was written through a shell heredoc, or pasted from somewhere that kept the escaping.",
+      "reachable": "no — grep by basename finds only its own definitions at lines 2, 104 and 183; its single global (window.newsWidgetFunctions) has no consumers anywhere in the repo",
+      "recordedBy": "W1-CHECK-SUITE",
+      "recordedOn": "2026-08-22"
+    },
+    {
+      "path": "graphene-news/backend/jobs/NewsScheduler.js",
+      "error": "SyntaxError: Invalid or unexpected token (line 44)",
+      "cause": "Same backslash-escaped backticks inside template literals.",
+      "reachable": "no — grep by basename finds only its own class declaration at line 5. Sibling modules in graphene-news ARE reached, via `await import()` from server/routes/news.js (7 call sites, all of ContentAcquisitionService.js), but this one is not.",
+      "recordedBy": "W1-CHECK-SUITE",
+      "recordedOn": "2026-08-22"
+    }
+  ]
+}
