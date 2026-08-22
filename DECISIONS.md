@@ -330,7 +330,13 @@ CHIP-PROTOCOL.md §5a.
 ---
 
 ## D-011 — The production write failure is confirmed; fixing it is Wave 2's first job
-**Status:** ACTIVE · **Date:** 2026-08-21 · **Severity: blocker**
+**Status:** RESOLVED 2026-08-22, confirmed in production by the user · **Severity: blocker**
+
+> **Closed.** Ben confirmed from a logged-in production session that a graphene record saves
+> successfully, and separately that the CSV export downloads. Those two actions together verify the
+> whole stack end to end — login, token injection on reads, the rewritten blob download, and the
+> write path that had been returning "Access token required" since 2025-12-04. That was the one
+> step no chip could reach, since none had credentials and D-005 forbade creating any.
 
 Confirmed by the user from a logged-in production session. Editing a record returns
 **"Failed to save record: Access token required"** — which is the literal string emitted by
