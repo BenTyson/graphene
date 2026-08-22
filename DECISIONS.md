@@ -326,3 +326,64 @@ the wave to drain.
 **Revisit trigger.** Once `main` is current, worktree isolation becomes available again and is
 preferable for Lane A chips. Lane B notes-only chips should stay un-isolated permanently — see
 CHIP-PROTOCOL.md §5a.
+
+---
+
+## D-011 — The production write failure is confirmed; fixing it is Wave 2's first job
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Severity: blocker**
+
+Confirmed by the user from a logged-in production session. Editing a record returns
+**"Failed to save record: Access token required"** — which is the literal string emitted by
+`authenticateToken` at `server/routes/auth.js:176`. Diagnosis closed: the client sends no
+`Authorization` header on writes, the server has required one since `b173a60` (2025-12-04), and
+every create/update on biochar, compound batches, MCBs, shipments, update reports and SEM reports
+has been failing since.
+
+**Consequences for sequencing.** The client-side token work is no longer a *cost* of the D-006 auth
+fix — it is the fix for a live outage, and it happens to unblock D-006 as a side effect. It takes
+priority over everything else on the roadmap.
+
+**Scope of that chip:** a token-injecting fetch layer in `client/src/js/services/api.js`; a
+blob-based replacement for `downloadCSV`, since `<a download href>` cannot carry a header and all
+13 CSV exports use it; and the `x-init` gate at `client/index.html:26`, which fires 46
+unauthenticated API calls at the login screen because Alpine initialises a div that is only
+`x-show`-hidden. Paste-ready blocks for the first two are in `notes/W1-AUTH-GUARD.md`.
+
+**Note the irony for the record:** the `<a download>` implementation of `downloadCSV` was written by
+the Command Center earlier the same day, as part of the Graphene CSV export fix. It is correct
+against today's server and incompatible with tomorrow's.
+
+---
+
+## D-012 — Delete `ProductionPulse.js` and correct the documentation
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Ruled by the user**
+
+The 313-line material-flow visualisation (hemp → graphene → stock) in the proforma Production
+section is unreferenced by any code and has not rendered since the journey-pill refactor. The user
+ruled: delete it, and fix the three places in `docs/features/PROFORMA-SYSTEM.md` (lines 23, 170,
+209) that claim it renders.
+
+The user hedged — "probably delete it" — so this is worth stating: **the file stays in git history
+and is recoverable with one command at any time.** Deleting it is not a one-way door, which is why
+it is safe to act on a hedged ruling here rather than spending a chip on rendering it first.
+
+Per CHIP-PROTOCOL.md §7, the deleting chip must still re-run the four-way search itself rather than
+inheriting W1-RECON-DEAD's conclusion.
+
+---
+
+## D-013 — The unsourced Test Matrix rows get individually ruled by the user
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Ruled by the user**
+
+The user will rule on each unsourced requirement rather than blanket-dropping or blanket-shipping
+them. Nothing ships until ruled.
+
+**Count correction: there are 26, not 17.** The fact file's §7 summary says "17 Verify items
+awaiting human ruling"; its own per-row tables contain 26. The tables are authoritative — this is
+the **third** place the file's summary prose has drifted from its own tables (W1-MATRIX-WRITE found
+two others and resolved them by following §0's rule that tables win).
+
+**Standing lesson for research chips:** in a document whose whole purpose is that a downstream
+consumer can trust it without re-deriving, hand-maintained summary counts are a liability. Either
+the counts get computed from the tables, or they are omitted. Fold into the
+`test-matrix-research` skill.
