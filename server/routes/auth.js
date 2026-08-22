@@ -173,15 +173,23 @@ export function authenticateToken(req, res, next) {
   if (!token) {
     return res.status(401).json({
       success: false,
-      error: 'Access token required'
+      error: 'Access token required',
+      code: 'TOKEN_MISSING'
     });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({
+      // 401, not 403. 403 means "authenticated but not permitted" — that is what
+      // requireEditAccess / requireSuperAdmin below return. A bad or expired token
+      // is an *authentication* failure, and now that reads require a token too
+      // (DECISIONS.md D-006) the client needs to be able to tell the two apart so
+      // an expired session re-prompts for login instead of surfacing as a
+      // permission error on every read.
+      return res.status(401).json({
         success: false,
-        error: 'Invalid or expired token'
+        error: 'Invalid or expired token',
+        code: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID'
       });
     }
 
