@@ -72,12 +72,12 @@ W1-MATRIX-WRITE waits on W1-MATRIX-RESEARCH; the Integrator runs alone, last.
 
 | Chip | Job | Owns | Lane | Model | Status |
 |---|---|---|---|---|---|
-| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | **running** (re-run) |
-| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **running** (re-run) |
-| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **running** (re-run) |
+| **W1-AUTH-GUARD** | Require auth on all `/api/*` GETs per D-006 | `server/index.js`, `server/routes/auth.js`, `notes/W1-AUTH-GUARD.md` | A | **opus** | **parked** — branch `chip/w1-auth-guard`, blocked |
+| **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **merged** — verified |
+| **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **merged** — verified |
 | **W1-MATRIX-RESEARCH** | Source every Test Matrix cell; produce a verified fact file. Writes no app code | `notes/W1-MATRIX-RESEARCH.md`, `notes/facts/test-matrix-facts.md` | B | **fable** | **delivered** — fact file + notes verified |
-| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **delivered** — verified |
-| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | **delivered** — verified |
+| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **merged** — verified |
+| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | **merged** — verified |
 | **W1-INTEGRATOR** | Merge drafted doc entries, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md`, `DECISIONS.md` (bookkeeping only) | B | **opus** | runs last |
 
 Five chips run concurrently. W1-MATRIX-WRITE is serialized behind W1-MATRIX-RESEARCH by the
@@ -147,6 +147,7 @@ currently have no recorded provenance — ranks above adding new ones.
 | # | Question | Raised by | Why it needs you |
 |---|---|---|---|
 | Q1 | **Was `ProductionPulse.js` dropped on purpose?** A 313-line material-flow visualisation (hemp → graphene → stock) in the proforma Production section. Verified unreferenced by any code — `ProductionSection.js:1` imports only `./helpers.js`. But `docs/features/PROFORMA-SYSTEM.md` names it in three places including line 170, which states it renders "between the section header and the Critical block". That doc describes the pre-journey-pills architecture, so this looks like a casualty of that refactor. Restore it, or delete it and correct the doc? | W1-RECON-DEAD | Investor-facing surface, and only you know whether the visualisation was wanted. |
+| Q3 | **Can you save a new biochar record in production right now?** Verified end-to-end that eleven write endpoints send no `Authorization` header while the server has required one on writes since `b173a60` (2025-12-04). `POST /api/biochar` and `/api/shipments` return 401 on production to a token-less request. If those buttons work for you, the client model is wrong somewhere and I need to know. | W1-AUTH-GUARD | Only you can confirm the symptom from a logged-in session. |
 | Q2 | The **17 Verify rows** in the Test Matrix fact file — requirements that could not be sourced to a standard. Parked, not shipped. | W1-MATRIX-RESEARCH | Each is a commitment to a customer if shipped. |
 
 ---
@@ -203,3 +204,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | W1-MATRIX-RESEARCH delivered despite the wave abort: 320-line fact file, 112 cells dispositioned, 41 Confident / 17 Verify. Caught a Command Center error — D-008 said 25 tests, the file has 14. Corrected. |
 | 2026-08-21 | Wave 1 re-spawned under D-010 — 5 chips in the main repo, no worktree isolation, base verified per D-009 before release. All five created their notes file as first action (§5a holding). Orphaned worktrees from the aborted run removed. |
 | 2026-08-21 | W1-MATRIX-WRITE and W1-RECON-DEAD delivered and independently verified. 41 matrix cells shipped, 0 invalid ids. Recon found ProductionPulse.js orphaned but documented as live — raised as Q1. Zero write-ownership violations across the wave so far. |
+| 2026-08-21 | **Wave 1 closed.** 4 of 5 merged to `staging` and independently verified; W1-AUTH-GUARD parked on `chip/w1-auth-guard` because it white-screens the app without client-side token injection. Dedupe found 17 duplicate keys, not the 7 briefed. Auth chip found production writes have been 401-ing since December. Zero write-ownership violations all wave. |
