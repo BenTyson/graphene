@@ -147,6 +147,7 @@ currently have no recorded provenance — ranks above adding new ones.
 | # | Question | Raised by | Why it needs you |
 |---|---|---|---|
 | Q1 | **Was `ProductionPulse.js` dropped on purpose?** A 313-line material-flow visualisation (hemp → graphene → stock) in the proforma Production section. Verified unreferenced by any code — `ProductionSection.js:1` imports only `./helpers.js`. But `docs/features/PROFORMA-SYSTEM.md` names it in three places including line 170, which states it renders "between the section header and the Critical block". That doc describes the pre-journey-pills architecture, so this looks like a casualty of that refactor. Restore it, or delete it and correct the doc? | W1-RECON-DEAD | Investor-facing surface, and only you know whether the visualisation was wanted. |
+| Q4 | **Safari CSV exports are untested.** The download now happens after an `await`, i.e. outside the user gesture. Chrome verified across all 7 exports; Safari is stricter. Symptom if wrong: click Export, nothing happens, no error. | W2-AUTH-CLIENT | Needs one person with Safari to click Export once. |
 | Q3 | **Can you save a new biochar record in production right now?** Verified end-to-end that eleven write endpoints send no `Authorization` header while the server has required one on writes since `b173a60` (2025-12-04). `POST /api/biochar` and `/api/shipments` return 401 on production to a token-less request. If those buttons work for you, the client model is wrong somewhere and I need to know. | W1-AUTH-GUARD | Only you can confirm the symptom from a logged-in session. |
 | Q2 | The **17 Verify rows** in the Test Matrix fact file — requirements that could not be sourced to a standard. Parked, not shipped. | W1-MATRIX-RESEARCH | Each is a commitment to a customer if shipped. |
 
@@ -159,10 +160,10 @@ release. Ports swept clean beforehand, per W1-APP-DEDUPE's recommendation.
 
 | Chip | Job | Owns | Lane | Model | Status |
 |---|---|---|---|---|---|
-| **W2-AUTH-CLIENT** | Fix the live production write outage (D-011): one token-injecting interception point, blob-based CSV download, login-screen `x-init` gate | `services/api.js`, `app-refactored.js` (§8), `client/index.html` (§8), new `services/` module | A | **opus** | running |
-| **W2-MATRIX-RULINGS** | Apply D-014's rulings to the Test Matrix — 24 cells ship, 2 dropped, no numeric targets | `data/testMatrix.js` | A | **sonnet** | running |
-| **W2-DEADCODE-PURGE** | Delete 6 confirmed-dead files per D-012, re-verifying each under §7 first; draft doc corrections | the 6 files (delete only) | A | **sonnet** | running |
-| **W2-INTEGRATOR** | Apply drafted doc corrections, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md` | B | **opus** | held until the three land |
+| **W2-AUTH-CLIENT** | Fix the live production write outage (D-011): one token-injecting interception point, blob-based CSV download, login-screen `x-init` gate | `services/api.js`, `app-refactored.js` (§8), `client/index.html` (§8), new `services/` module | A | **opus** | **merged** — verified with the server guard |
+| **W2-MATRIX-RULINGS** | Apply D-014's rulings to the Test Matrix — 24 cells ship, 2 dropped, no numeric targets | `data/testMatrix.js` | A | **sonnet** | **merged** — verified |
+| **W2-DEADCODE-PURGE** | Delete 6 confirmed-dead files per D-012, re-verifying each under §7 first; draft doc corrections | the 6 files (delete only) | A | **sonnet** | **merged** — verified |
+| **W2-INTEGRATOR** | Apply drafted doc corrections, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md` | B | **opus** | **ready** — doc debt from 2 waves waiting |
 
 **W2-AUTH-CLIENT is the wave.** The other two are cheap parallel cleanup that happen to be
 collision-free against it. If only one thing lands this wave, it is the outage fix.
@@ -226,3 +227,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | W1-MATRIX-WRITE and W1-RECON-DEAD delivered and independently verified. 41 matrix cells shipped, 0 invalid ids. Recon found ProductionPulse.js orphaned but documented as live — raised as Q1. Zero write-ownership violations across the wave so far. |
 | 2026-08-21 | **Wave 1 closed.** 4 of 5 merged to `staging` and independently verified; W1-AUTH-GUARD parked on `chip/w1-auth-guard` because it white-screens the app without client-side token injection. Dedupe found 17 duplicate keys, not the 7 briefed. Auth chip found production writes have been 401-ing since December. Zero write-ownership violations all wave. |
 | 2026-08-21 | **Wave 2 spawned.** 3 chips, base verified, ports swept. W2-AUTH-CLIENT carries the production outage fix; the parked `chip/w1-auth-guard` branch merges only once it lands. |
+| 2026-08-21 | **Wave 2 closed.** All 3 chips merged and verified. `chip/w1-auth-guard` merged on top of the client layer; the pair verified end-to-end — unauth GET 401, authed GET 200, THIRD_PARTY reads 200 / writes 403, share route 404-from-its-own-router with no JWT, filtered CSV export intact at 242/209/33. The production write outage is fixed in code. |
