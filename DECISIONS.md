@@ -471,3 +471,32 @@ on the answer.
 ### Net effect
 24 of 26 cells ship, all without numeric targets; 2 dropped. Five proposed numbers eliminated —
 these were the values most likely to reach a customer, and not one of them survived.
+
+### Corrected 2026-08-21 by W2-MATRIX-RULINGS — two defects in this ruling
+
+**(a) The arithmetic was wrong. The correct total is 58 cells, not 63.**
+This ruling stated `41 + 24 − 2 = 63`, which treats all 24 shipping rulings as net-new keys. They
+are not. Seven of the 26 items — Group A's five, plus the two "targets confirmed absent" entries —
+modify a test id that **already existed** in that row's `req` and was already counted in the 41.
+Only 19 were genuine new-key candidates, of which 17 shipped and 2 were dropped: `41 + 17 = 58`.
+Verified independently against the file.
+
+The chip was explicitly told not to adjust its work to hit the stated figure, and it did not; it
+reconciled honestly and recorded the discrepancy as a finding against this ruling. That is the
+correct behaviour and the reason the instruction was given.
+
+**(b) Group A's rows for `water-treatment / zeta` and `lubricants / particle-size` said "Keep
+`recommended`". Both already ship Confident at `required`.** The section header — *level ships,
+number does not* — is the correct instruction; the per-row wording contradicted it. Both remain
+`required`. The error came from reading the fact file's Verify tables, where only the *target* was
+in question, as though the *level* were also unsettled.
+
+**(c) One numeric target legitimately remains**, and it is not a Group A case:
+`water-treatment / xrd`, `d(001) ≈ 0.8 nm (dry)`, sourced to `[S15]` — direct graphene-oxide
+laminate literature about our own material rather than a benchmark borrowed from a different one.
+Rule 1 does not reach it. The two `Super P Li` values on the battery row **were** borrowed and have
+been moved from `target` into `note`, attributed — consistent with what this ruling already ordered
+for that same row's `particle-size` cell.
+
+**Basis is now visible in the product, per rule 5:** 17 cells carry `[D-014 judgement]` and 9 carry
+`[D-014 reference only, not spec]`. Confirmed present in the minified bundle, not just the source.
