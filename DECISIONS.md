@@ -50,8 +50,8 @@ roadmap item, not a reason to weaken the rule.
 ## D-002 — Chips never commit, never push, never spawn
 **Status:** ACTIVE · **Date:** 2026-08-21 · **Scope:** all chips
 
-Chips leave uncommitted changes in their worktree. The Command Center reviews, commits, and
-merges. The human pushes. Chips never create branches and never spawn other chips.
+Chips leave uncommitted changes in their worktree. The Command Center reviews, commits, merges,
+and — per D-015 — pushes. Chips never create branches and never spawn other chips.
 
 **Reasoning.** Push authority is the one thing that must stay with a person on a repo that
 auto-deploys to production on merge to `main`. Spawning is withheld because a chip cannot be given
@@ -500,3 +500,25 @@ for that same row's `particle-size` cell.
 
 **Basis is now visible in the product, per rule 5:** 17 cells carry `[D-014 judgement]` and 9 carry
 `[D-014 reference only, not spec]`. Confirmed present in the minified bundle, not just the source.
+
+---
+
+## D-015 — The Command Center pushes to `staging`; `main` still needs a human
+**Status:** ACTIVE · **Date:** 2026-08-22 · **Ruled by the user** · **Amends D-002 and D-003**
+
+The Command Center pushes `staging` itself rather than waiting on the human. The user's reasoning:
+a push that goes through the Command Center gets verified on the way — remote ancestry checked, the
+check suite run against what actually landed — where a human push is fire-and-forget.
+
+**`staging` → `main` remains the human's.** Merging to `main` auto-deploys to
+admin.hgraphene.com. That is an outward-facing, hard-to-reverse action on a production system, and
+pushing a branch is not the same kind of act as shipping to customers. The user has authorised the
+first, not the second.
+
+**What the Command Center must do on every push**, so this ruling earns the reasoning behind it:
+1. Working tree clean, `npm run check` green, no chips running.
+2. Push.
+3. **Verify by ancestry, not by silence** (CHIP-PROTOCOL.md §6) — confirm the commits are actually
+   reachable from the remote ref afterwards, rather than trusting that the command printed nothing.
+
+**Chips still never push, and never commit.** Unchanged.

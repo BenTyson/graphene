@@ -30,6 +30,36 @@ Three rules that catch most sessions out, even if you read nothing else:
 
 Everything below is project reference material. It is *not* a licence to edit any of it.
 
+## How to report to Ben
+
+**Lead with a TL;DR.** Any response reporting on work — a wave closing, a bug found, a decision
+needed — opens with a short block: what happened, what it means, what he has to do. Bold the
+verdict. Bullets, not paragraphs.
+
+Detail goes *below* the TL;DR, so it can be skipped. Do not make him read three screens of
+mechanism to find out whether something is broken.
+
+| Situation | Shape |
+|---|---|
+| Status check ("how are we looking") | TL;DR **only**. No detail section unless asked. |
+| Reporting completed work | TL;DR, then detail below it |
+| Something is broken | Severity in the first sentence, then what he must do |
+| A decision is needed | The question first, options second, reasoning last |
+| Direct question | Just answer it. No preamble, no TL;DR. |
+
+Rules that matter more than they look:
+
+- **Never introduce a filename, symbol, or identifier without a clause saying what it is.**
+  "`ProductionPulse.js`, a material-flow chart in the proforma" — not the bare filename.
+- **Say the number.** "82 requests → 0" beats "significantly reduced".
+- **Verdict before mechanism.** He needs to know *whether* before *why*.
+- Explain the mechanism when it changes what he'd decide. Otherwise leave it out — it is in the
+  commit message and in `notes/` if he wants it.
+- Don't hedge a verified result. If it was tested, say it works.
+
+The failure mode to avoid is technical thoroughness crowding out the answer. Being right in
+paragraph six is worse than being brief in paragraph one.
+
 ## What This Is
 Internal admin dashboard for tracking the full material pipeline:
 Biochar -> Graphene -> CompoundBatch / Micronization -> MCB -> Tests -> Shipments
