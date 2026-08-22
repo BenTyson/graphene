@@ -152,7 +152,27 @@ currently have no recorded provenance — ranks above adding new ones.
 
 ---
 
-## Wave 2 — Candidates (not yet scoped)
+## Wave 2 — Running
+
+Spawned 2026-08-21 under D-010 (main repo, no worktree isolation). Base verified per D-009 before
+release. Ports swept clean beforehand, per W1-APP-DEDUPE's recommendation.
+
+| Chip | Job | Owns | Lane | Model | Status |
+|---|---|---|---|---|---|
+| **W2-AUTH-CLIENT** | Fix the live production write outage (D-011): one token-injecting interception point, blob-based CSV download, login-screen `x-init` gate | `services/api.js`, `app-refactored.js` (§8), `client/index.html` (§8), new `services/` module | A | **opus** | running |
+| **W2-MATRIX-RULINGS** | Apply D-014's rulings to the Test Matrix — 24 cells ship, 2 dropped, no numeric targets | `data/testMatrix.js` | A | **sonnet** | running |
+| **W2-DEADCODE-PURGE** | Delete 6 confirmed-dead files per D-012, re-verifying each under §7 first; draft doc corrections | the 6 files (delete only) | A | **sonnet** | running |
+| **W2-INTEGRATOR** | Apply drafted doc corrections, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md` | B | **opus** | held until the three land |
+
+**W2-AUTH-CLIENT is the wave.** The other two are cheap parallel cleanup that happen to be
+collision-free against it. If only one thing lands this wave, it is the outage fix.
+
+Note W2-AUTH-CLIENT owns *two* shared wiring files under §8 — the only way a request-path fix can
+reach the whole app. No sibling drafts wiring into either this wave, so the §8 constraint holds.
+
+---
+
+## Wave 3 — Candidates (not yet scoped)
 
 Placed by subsystem so that the eventual wave is collision-free. None of these are ready; several
 depend on Wave 1 findings.
@@ -205,3 +225,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | Wave 1 re-spawned under D-010 — 5 chips in the main repo, no worktree isolation, base verified per D-009 before release. All five created their notes file as first action (§5a holding). Orphaned worktrees from the aborted run removed. |
 | 2026-08-21 | W1-MATRIX-WRITE and W1-RECON-DEAD delivered and independently verified. 41 matrix cells shipped, 0 invalid ids. Recon found ProductionPulse.js orphaned but documented as live — raised as Q1. Zero write-ownership violations across the wave so far. |
 | 2026-08-21 | **Wave 1 closed.** 4 of 5 merged to `staging` and independently verified; W1-AUTH-GUARD parked on `chip/w1-auth-guard` because it white-screens the app without client-side token injection. Dedupe found 17 duplicate keys, not the 7 briefed. Auth chip found production writes have been 401-ing since December. Zero write-ownership violations all wave. |
+| 2026-08-21 | **Wave 2 spawned.** 3 chips, base verified, ports swept. W2-AUTH-CLIENT carries the production outage fix; the parked `chip/w1-auth-guard` branch merges only once it lands. |
