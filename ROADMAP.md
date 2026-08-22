@@ -76,8 +76,8 @@ W1-MATRIX-WRITE waits on W1-MATRIX-RESEARCH; the Integrator runs alone, last.
 | **W1-CHECK-SUITE** | Build `npm run check`; establish the D-007 verification floor | `package.json`, `scripts/check/**` (new), `notes/W1-CHECK-SUITE.md` | A | **opus** | **running** (re-run) |
 | **W1-APP-DEDUPE** | Fix the 7 remaining shadowed duplicate method keys | `client/src/js/app-refactored.js`, `notes/W1-APP-DEDUPE.md` | A | **opus** | **running** (re-run) |
 | **W1-MATRIX-RESEARCH** | Source every Test Matrix cell; produce a verified fact file. Writes no app code | `notes/W1-MATRIX-RESEARCH.md`, `notes/facts/test-matrix-facts.md` | B | **fable** | **delivered** — fact file + notes verified |
-| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **running** (re-run) |
-| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | **running** — unblocked by fact file |
+| **W1-RECON-DEAD** | Gather dead-code evidence. Deletes nothing, concludes nothing | `notes/W1-RECON-DEAD.md` only | B | **sonnet** | **delivered** — verified |
+| **W1-MATRIX-WRITE** | Transcribe the fact file into the matrix data module | `client/src/js/data/testMatrix.js`, `notes/W1-MATRIX-WRITE.md` | A | **sonnet** | **delivered** — verified |
 | **W1-INTEGRATOR** | Merge drafted doc entries, reconcile docs against the repo | `docs/**`, `CLAUDE.md`, `README.md`, `DECISIONS.md` (bookkeeping only) | B | **opus** | runs last |
 
 Five chips run concurrently. W1-MATRIX-WRITE is serialized behind W1-MATRIX-RESEARCH by the
@@ -142,6 +142,15 @@ currently have no recorded provenance — ranks above adding new ones.
 
 ---
 
+## Open questions needing a human ruling
+
+| # | Question | Raised by | Why it needs you |
+|---|---|---|---|
+| Q1 | **Was `ProductionPulse.js` dropped on purpose?** A 313-line material-flow visualisation (hemp → graphene → stock) in the proforma Production section. Verified unreferenced by any code — `ProductionSection.js:1` imports only `./helpers.js`. But `docs/features/PROFORMA-SYSTEM.md` names it in three places including line 170, which states it renders "between the section header and the Critical block". That doc describes the pre-journey-pills architecture, so this looks like a casualty of that refactor. Restore it, or delete it and correct the doc? | W1-RECON-DEAD | Investor-facing surface, and only you know whether the visualisation was wanted. |
+| Q2 | The **17 Verify rows** in the Test Matrix fact file — requirements that could not be sourced to a standard. Parked, not shipped. | W1-MATRIX-RESEARCH | Each is a commitment to a customer if shipped. |
+
+---
+
 ## Wave 2 — Candidates (not yet scoped)
 
 Placed by subsystem so that the eventual wave is collision-free. None of these are ready; several
@@ -193,3 +202,4 @@ Chips report in Reflections if the work needed a different tier than assigned, i
 | 2026-08-21 | **Wave 1 aborted.** All five chips forked from `main` @ 3fd0b30, not `staging` — the harness forks worktrees from the default branch. Chips had no CHIP-PROTOCOL.md. Work salvaged as patches; D-009 written. Root cause is that `staging` → `main` was never merged. |
 | 2026-08-21 | W1-MATRIX-RESEARCH delivered despite the wave abort: 320-line fact file, 112 cells dispositioned, 41 Confident / 17 Verify. Caught a Command Center error — D-008 said 25 tests, the file has 14. Corrected. |
 | 2026-08-21 | Wave 1 re-spawned under D-010 — 5 chips in the main repo, no worktree isolation, base verified per D-009 before release. All five created their notes file as first action (§5a holding). Orphaned worktrees from the aborted run removed. |
+| 2026-08-21 | W1-MATRIX-WRITE and W1-RECON-DEAD delivered and independently verified. 41 matrix cells shipped, 0 invalid ids. Recon found ProductionPulse.js orphaned but documented as live — raised as Q1. Zero write-ownership violations across the wave so far. |
