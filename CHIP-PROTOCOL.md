@@ -27,6 +27,7 @@ how this file got good.
 3. Spawning another chip.
 4. Editing shared docs or shared wiring files (§3) directly.
 5. Skipping Reflections, or burying a blocker in prose instead of the findings table.
+6. Composing your whole notes file in one final action. Write it incrementally — see §5a.
 
 ---
 
@@ -191,6 +192,35 @@ in either direction.
 
 ---
 
+## 5a. Write early, write often — earned in Wave 1
+
+**Create your notes file within the first few minutes and append to it as you work.** Do not
+research or build for an hour and then compose the document in one final action.
+
+This is not a style preference. In Wave 1, two of five chips were killed by an environment fault —
+the host machine slept mid-response — and both died at exactly the same point: having finished
+their work and being about to write it up. Everything they had done existed only in their context.
+One of them lost its worktree entirely, because the harness auto-cleans a worktree that contains no
+changed files, and a chip that has written nothing has changed nothing.
+
+Both were recoverable only because they could be resumed. Assume you will not be.
+
+Practical shape:
+
+- Write the file skeleton first, with the section headings, before you have anything to put in them.
+- Append findings to the table as you find them, not at the end.
+- After any expensive step — a long search, a web-research pass, a measurement — save the result
+  immediately, even in rough form. Prose can be tidied later; a lost measurement has to be redone.
+- If you are partway through and something is incomplete, write it down as incomplete and say which
+  parts you did not reach. A partial notes file with honest gaps is worth far more than nothing.
+
+A corollary for the Command Center: **Lane B chips that only produce notes gain nothing from
+worktree isolation** — they touch no source, so there is nothing to isolate — and they are actively
+harmed by it, because the auto-clean destroys the vehicle for their only output. Spawn them against
+the main repo with a notes-only ownership list.
+
+---
+
 ## 6. Rules learned the hard way
 
 **Quote rulings, don't cite them.** If your prompt refers to a ruling, it pastes the actual text.
@@ -280,6 +310,8 @@ Record new ones in Reflections so the next chip doesn't rediscover them.
 | **`prisma/migrations/` is gitignored** | There is no migration history to reason from. Schema archaeology means reading `schema.prisma` and the live DB. |
 | **Do not use `:3001` in a browser** | Express serves raw client files with no CSS processing in dev. Use the Vite port. |
 | **Agent worktrees live at `.claude/worktrees/`** | Inside the repo, not beside it. Gitignored. Tailwind's content globs are `./client/**` and Vite's root is `./client`, so neither walks into them — measured, not assumed. But `npm run server:dev` uses nodemon watching from the repo root, which *will* see chip file changes and restart. Prefer `PORT=<n> node server/index.js` over `npm run dev`. |
+| **The host machine sleeping kills chips** | Two of five Wave 1 chips died this way, both at the write-up step. It presents as `API Error: Your computer went to sleep mid-response`. Nothing you can do about the cause; mitigate by writing incrementally (§5a). A killed chip can sometimes be resumed with its context intact — that is the Command Center's job, not yours. |
+| **An unchanged worktree is auto-cleaned** | A chip that has written no file has changed nothing, so its worktree is removed when it dies — taking any unsaved work's destination with it. Another reason to create your notes file early. |
 | **zsh eats unquoted globs** | `grep --include=*.js` fails; quote it: `--include="*.js"`. |
 | **`uploads/` and `public/news-images/`** | Gitignored, written at runtime in dev. Don't commit, don't assume contents. |
 | **No test runner, no linter, no typechecker, no CI** | As of the first wave, `npm run build` and `node --check` are the only automated checks. Don't claim you ran tests. |
