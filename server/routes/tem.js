@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -242,27 +243,34 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     orderBy: { createdAt: 'desc' }
   });
   
+  // Single header row: the TEM table's <thead> is flat — Test Date, Graphene Sample,
+  // Testing Lab, PDF Report, Actions (TestResultsTEMTab.js). No grouping to mirror.
+  //
+  // Two columns are new, both visible on screen and previously absent:
+  //  - `TEM Report`: the tab renders a View-PDF button whenever `temReportPath` is set
+  //    (TestResultsTEMTab.js:83). Emitted as Yes/No, matching how every other export in
+  //    this codebase reports a report's presence — the stored value is an internal path,
+  //    not a URL anyone can open from a spreadsheet.
+  //  - `Compound Batch`: the sample cell renders `grapheneSample || compoundBatchNumber`
+  //    (TestResultsTEMTab.js:78), so a TEM run on a compound batch exported a blank.
   const headers = [
-    'Test Date', 'Graphene Sample', 'Research Team', 'Testing Lab', 'Comments', 'Created At'
+    'Test Date', 'Graphene Sample', 'Compound Batch', 'Research Team', 'Testing Lab',
+    'TEM Report', 'Comments', 'Created At', 'Updated At'
   ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  temRecords.forEach(record => {
-    const row = [
-      record.testDate ? record.testDate.toISOString().split('T')[0] : '',
-      record.grapheneSample || '',
-      record.researchTeam || '',
-      record.testingLab || '',
-      `"${(record.comments || '').replace(/"/g, '""')}"`,
-      record.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="tem_export.csv"');
-  res.send(csv);
+
+  const rows = temRecords.map(record => [
+    csvDateOnly(record.testDate),
+    record.grapheneSample,
+    record.compoundBatchNumber,
+    record.researchTeam,
+    record.testingLab,
+    record.temReportPath ? 'Yes' : 'No',
+    record.comments,
+    record.createdAt,
+    record.updatedAt
+  ]);
+
+  sendCsv(res, 'tem_export.csv', headers, rows);
 }));
 
 export default router;

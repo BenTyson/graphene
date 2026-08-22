@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import path from 'path';
 import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
@@ -430,6 +431,14 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     }
   });
 
+  // Single header row. The XPS table's <thead> is flat and shows only a summary
+  // (Test Date, Sample, C-1s %, O-1s %, N-1s %, Testing Lab, Comments, Reports) —
+  // TestResultsXPSTab.js. There is no colspan band to mirror, so the natural
+  // element/error pairing below stays a flat label like 'C-1s Error' rather than
+  // becoming an invented two-row group the screen does not have.
+  //
+  // The non-ASCII labels ('CO₃ %', 'sp² %') are why the shared sendCsv sets
+  // charset=utf-8; before this change the response declared no charset at all.
   const headers = [
     'Test Date', 'Sample Type', 'Sample ID',
     'C-1s %', 'C-1s Error', 'Cl-2p %', 'Cl-2p Error',
@@ -439,12 +448,10 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     'C-C %', 'C-C Error', 'C-O %', 'C-O Error',
     'C=O %', 'C=O Error', 'CO₃ %', 'CO₃ Error',
     'O-C=O %', 'O-C=O Error', 'sp² %', 'sp² Error',
-    'Testing Lab', 'Number of Reports', 'Comments', 'Created At'
+    'Testing Lab', 'Number of Reports', 'Comments', 'Created At', 'Updated At'
   ];
 
-  let csv = headers.join(',') + '\n';
-
-  xpsRecords.forEach(r => {
+  const rows = xpsRecords.map(r => {
     // Determine sample type and ID
     let sampleType = '';
     let sampleId = '';
@@ -462,34 +469,32 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       sampleId = r.mcbNumber;
     }
 
-    const row = [
-      r.testDate ? r.testDate.toISOString().split('T')[0] : '',
+    return [
+      csvDateOnly(r.testDate),
       sampleType,
       sampleId,
-      r.c1s_percent || '', r.c1s_percent_error || '',
-      r.cl2p_percent || '', r.cl2p_percent_error || '',
-      r.mo3d_percent || '', r.mo3d_percent_error || '',
-      r.n1s_percent || '', r.n1s_percent_error || '',
-      r.o1s_percent || '', r.o1s_percent_error || '',
-      r.s2p_percent || '', r.s2p_percent_error || '',
-      r.si2p_percent || '', r.si2p_percent_error || '',
-      r.c1s_cc_percent || '', r.c1s_cc_error || '',
-      r.c1s_co_percent || '', r.c1s_co_error || '',
-      r.c1s_ceo_percent || '', r.c1s_ceo_error || '',
-      r.c1s_co3_percent || '', r.c1s_co3_error || '',
-      r.c1s_oceo_percent || '', r.c1s_oceo_error || '',
-      r.c1s_sp2_percent || '', r.c1s_sp2_error || '',
-      r.testingLab || '',
+      r.c1s_percent, r.c1s_percent_error,
+      r.cl2p_percent, r.cl2p_percent_error,
+      r.mo3d_percent, r.mo3d_percent_error,
+      r.n1s_percent, r.n1s_percent_error,
+      r.o1s_percent, r.o1s_percent_error,
+      r.s2p_percent, r.s2p_percent_error,
+      r.si2p_percent, r.si2p_percent_error,
+      r.c1s_cc_percent, r.c1s_cc_error,
+      r.c1s_co_percent, r.c1s_co_error,
+      r.c1s_ceo_percent, r.c1s_ceo_error,
+      r.c1s_co3_percent, r.c1s_co3_error,
+      r.c1s_oceo_percent, r.c1s_oceo_error,
+      r.c1s_sp2_percent, r.c1s_sp2_error,
+      r.testingLab,
       r.xpsReportPaths ? r.xpsReportPaths.length : 0,
-      `"${(r.comments || '').replace(/"/g, '""')}"`,
-      r.createdAt.toISOString()
+      r.comments,
+      r.createdAt,
+      r.updatedAt
     ];
-    csv += row.join(',') + '\n';
   });
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="xps_export.csv"');
-  res.send(csv);
+  sendCsv(res, 'xps_export.csv', headers, rows);
 }));
 
 export default router;

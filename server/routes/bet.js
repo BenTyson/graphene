@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import path from 'path';
 import { createFileUploadMiddleware, uploadFile, replaceFileInStorage, deleteFileFromStorage } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
@@ -232,33 +233,36 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     include: { grapheneRef: true }
   });
   
+  // Single header row: the BET table's <thead> is flat — no colspan band
+  // (client/src/js/components/tabs/TestResultsBETTab.js). A two-row grouped header
+  // here would be ceremony that breaks naive parsers for nothing.
+  //
+  // `Compound Batch` is new: the table's sample cell renders
+  // `grapheneSample || compoundBatchNumber` (TestResultsBETTab.js:75), so a BET run on
+  // a compound batch previously exported a blank sample. Split into two columns rather
+  // than coalesced, so each stays filterable.
   const headers = [
-    'Test Date', 'Graphene Sample', 'Mass (g)', 'Research Team', 'Testing Lab',
-    'Multipoint BET Area (m²/g)', 'Langmuir Surface Area (m²/g)', 
-    'BET Report', 'Comments', 'Created At'
+    'Test Date', 'Graphene Sample', 'Compound Batch', 'Mass (g)', 'Research Team', 'Testing Lab',
+    'Multipoint BET Area (m²/g)', 'Langmuir Surface Area (m²/g)',
+    'BET Report', 'Comments', 'Created At', 'Updated At'
   ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  betRecords.forEach(b => {
-    const row = [
-      b.testDate ? b.testDate.toISOString().split('T')[0] : '',
-      b.grapheneSample || '',
-      b.mass || '',
-      b.researchTeam || '',
-      b.testingLab || '',
-      b.multipointBetArea || '',
-      b.langmuirSurfaceArea || '',
-      b.betReportPath ? 'Yes' : 'No',
-      `"${(b.comments || '').replace(/"/g, '""')}"`,
-      b.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="bet_export.csv"');
-  res.send(csv);
+
+  const rows = betRecords.map(b => [
+    csvDateOnly(b.testDate),
+    b.grapheneSample,
+    b.compoundBatchNumber,
+    b.mass,
+    b.researchTeam,
+    b.testingLab,
+    b.multipointBetArea,
+    b.langmuirSurfaceArea,
+    b.betReportPath ? 'Yes' : 'No',
+    b.comments,
+    b.createdAt,
+    b.updatedAt
+  ]);
+
+  sendCsv(res, 'bet_export.csv', headers, rows);
 }));
 
 export default router;

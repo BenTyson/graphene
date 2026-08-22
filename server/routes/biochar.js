@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 
 const router = express.Router();
 
@@ -112,51 +113,92 @@ router.get('/:experimentNumber/related', asyncHandler(async (req, res) => {
   });
 }));
 
+/**
+ * Two-row grouped header, mirroring the Biochar table's own grouped <thead>
+ * (client/src/js/components/tabs/BiocharTab.js:~100-160): a group band of
+ * Basic Info(4) / Material(2) / Process(8) / Output(5) over per-column sub-labels,
+ * with `Lot #` as a rowspan=2 standalone. Entries are [groupLabel, subLabel]; '' as a
+ * group label is the CSV equivalent of colspan, and a rowspan=2 column carries its
+ * label on row 1 with an empty row 2, exactly as the table shows it once across both.
+ *
+ * The `Select` checkbox and `Actions` columns are omitted — they are controls, not data.
+ *
+ * The group boundaries are the table's, not mine: Wash and Drying sit under `Output`
+ * on screen, which reads oddly, but the export mirrors the screen rather than
+ * correcting it.
+ *
+ * Four columns are new to this export and are the reason this route was in scope —
+ * all four are rendered in the table and reached the CSV nowhere: `testOrder`,
+ * `experimentDate`, `lotNumber`, and (record-level, form-only) `researchTeam`.
+ */
+const BIOCHAR_CSV_COLUMNS = [
+  ['Basic Info', 'Order'],
+  ['', 'Exp #'],
+  ['', 'Date'],
+  ['', 'Reactor'],
+  ['Material', 'Raw Material'],
+  ['', 'Start (g)'],
+  ['Process', 'Acid Amt'],
+  ['', 'Acid %'],
+  ['', 'Molarity'],
+  ['', 'Acid Type'],
+  ['', 'Temp'],
+  ['', 'Time'],
+  ['', 'P Initial'],
+  ['', 'P Final'],
+  ['Output', 'Wash Amt'],
+  ['', 'Wash Med'],
+  ['', 'Drying'],
+  ['', 'Output (g)'],
+  ['', 'KFT %'],
+  ['Lot #', ''],
+  // Trailing groups for fields with no on-screen column of their own, following the
+  // graphene export's layout: short record facts first, free text last so the
+  // row-bloating columns sit to the right of everything a reader normally scans.
+  // `researchTeam` is on the model and in the add/edit form (BiocharTab.js:28) but has
+  // no table column; `comments` lives in the Actions-column tooltip (BiocharTab.js:178).
+  ['Record', 'Team'],
+  ['', 'Created'],
+  ['', 'Updated'],
+  ['Notes', 'Comments']
+];
+
 // Export to CSV - MUST BE BEFORE /:id route
 router.get('/export/csv', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
-  
+
   const biochars = await prisma.biochar.findMany({
     orderBy: { createdAt: 'desc' }
   });
-  
-  const headers = [
-    'Experiment #', 'Reactor', 'Raw Material', 'Starting Amount (g)', 'Acid Amount (g)', 'Acid Concentration (%)',
-    'Acid Molarity (M)', 'Acid Type', 'Temperature (°C)', 'Time (hr)',
-    'Pressure Initial (bar)', 'Pressure Final (bar)', 'Wash Amount (g)', 'Wash Medium',
-    'Output (g)', 'Drying Temp (°C)', 'KFT (%)', 'Comments', 'Created At'
-  ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  biochars.forEach(b => {
-    const row = [
-      b.experimentNumber,
-      b.reactor || '',
-      b.rawMaterial || '',
-      b.startingAmount || '',
-      b.acidAmount || '',
-      b.acidConcentration || '',
-      b.acidMolarity || '',
-      b.acidType || '',
-      b.temperature || '',
-      b.time || '',
-      b.pressureInitial || '',
-      b.pressureFinal || '',
-      b.washAmount || '',
-      b.washMedium || '',
-      b.output || '',
-      b.dryingTemp || '',
-      b.kftPercentage || '',
-      `"${(b.comments || '').replace(/"/g, '""')}"`,
-      b.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="biochar_export.csv"');
-  res.send(csv);
+
+  const rows = biochars.map(b => [
+    b.testOrder,
+    b.experimentNumber,
+    csvDateOnly(b.experimentDate),
+    b.reactor,
+    b.rawMaterial,
+    b.startingAmount,
+    b.acidAmount,
+    b.acidConcentration,
+    b.acidMolarity,
+    b.acidType,
+    b.temperature,
+    b.time,
+    b.pressureInitial,
+    b.pressureFinal,
+    b.washAmount,
+    b.washMedium,
+    b.dryingTemp,
+    b.output,
+    b.kftPercentage,
+    b.lotNumber,
+    b.researchTeam,
+    b.createdAt,
+    b.updatedAt,
+    b.comments
+  ]);
+
+  sendCsv(res, 'biochar_export.csv', BIOCHAR_CSV_COLUMNS, rows);
 }));
 
 // Get single biochar record

@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 
 const router = express.Router();
 
@@ -602,30 +603,32 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     }
   });
   
+  // Single header row: the Compound Batches table's <thead> is flat — Batch Number,
+  // Batch Name, Created Date, Total Output (g), Experiments, Description, Actions
+  // (client/src/js/components/tabs/CompoundBatchesTab.js). No grouping to mirror, and
+  // the column order already matches the screen.
+  //
+  // `Experiments` stays a single '; '-joined cell: it is a variable-length list, so it
+  // cannot become a fixed set of sibling columns, and the table renders it as one cell
+  // too. It was safe by luck before — the separator is a semicolon, not a comma — and
+  // is now quoted by the shared helper regardless.
   const headers = [
-    'Batch Number', 'Batch Name', 'Created Date', 'Total Output (g)', 
-    'Experiments', 'Description', 'Created At'
+    'Batch Number', 'Batch Name', 'Created Date', 'Total Output (g)',
+    'Experiments', 'Description', 'Created At', 'Updated At'
   ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  compoundBatches.forEach(batch => {
-    const experimentNumbers = batch.experiments.map(exp => exp.graphene.experimentNumber).join('; ');
-    const row = [
-      batch.batchNumber || '',
-      batch.batchName || '',
-      batch.createdDate ? batch.createdDate.toISOString().split('T')[0] : '',
-      batch.totalOutput || '',
-      experimentNumbers,
-      `"${(batch.description || '').replace(/"/g, '""')}"`,
-      batch.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="compound_batches_export.csv"');
-  res.send(csv);
+
+  const rows = compoundBatches.map(batch => [
+    batch.batchNumber,
+    batch.batchName,
+    csvDateOnly(batch.createdDate),
+    batch.totalOutput,
+    batch.experiments.map(exp => exp.graphene.experimentNumber).join('; '),
+    batch.description,
+    batch.createdAt,
+    batch.updatedAt
+  ]);
+
+  sendCsv(res, 'compound_batches_export.csv', headers, rows);
 }));
 
 export default router;

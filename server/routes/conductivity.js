@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import path from 'path';
 import { createFileUploadMiddleware, replaceFile, deleteFile } from '../utils/fileUpload.js';
 import AIInsightsService from '../services/AIInsightsService.js';
@@ -284,35 +285,36 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     include: { grapheneRef: true }
   });
   
+  // Single header row: the Conductivity table's <thead> is flat — no colspan band
+  // (client/src/js/components/tabs/TestResultsConductivityTab.js).
+  //
+  // `Compound Batch` is new: the table's sample cell renders
+  // `grapheneSample || compoundBatchNumber` (TestResultsConductivityTab.js:76), so a
+  // test run on a compound batch previously exported a blank sample.
   const headers = [
-    'Test Date', 'Graphene Sample', 'Name', 'Description',
-    'Conductivity 1kN (S/cm²)', 'Conductivity 8kN (S/cm²)', 
-    'Conductivity 12kN (S/cm²)', 'Conductivity 20kN (S/cm²)', 
-    'Report', 'Comments', 'Created At'
+    'Test Date', 'Graphene Sample', 'Compound Batch', 'Name', 'Description',
+    'Conductivity 1kN (S/cm²)', 'Conductivity 8kN (S/cm²)',
+    'Conductivity 12kN (S/cm²)', 'Conductivity 20kN (S/cm²)',
+    'Report', 'Comments', 'Created At', 'Updated At'
   ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  conductivityRecords.forEach(c => {
-    const row = [
-      c.testDate ? c.testDate.toISOString().split('T')[0] : '',
-      c.grapheneSample || '',
-      `"${(c.name || '').replace(/"/g, '""')}"`,
-      `"${(c.description || '').replace(/"/g, '""')}"`,
-      c.conductivity1kN || '',
-      c.conductivity8kN || '',
-      c.conductivity12kN || '',
-      c.conductivity20kN || '',
-      c.conductivityReportPath ? 'Yes' : 'No',
-      `"${(c.comments || '').replace(/"/g, '""')}"`,
-      c.createdAt.toISOString()
-    ];
-    csv += row.join(',') + '\n';
-  });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="conductivity_export.csv"');
-  res.send(csv);
+
+  const rows = conductivityRecords.map(c => [
+    csvDateOnly(c.testDate),
+    c.grapheneSample,
+    c.compoundBatchNumber,
+    c.name,
+    c.description,
+    c.conductivity1kN,
+    c.conductivity8kN,
+    c.conductivity12kN,
+    c.conductivity20kN,
+    c.conductivityReportPath ? 'Yes' : 'No',
+    c.comments,
+    c.createdAt,
+    c.updatedAt
+  ]);
+
+  sendCsv(res, 'conductivity_export.csv', headers, rows);
 }));
 
 export default router;

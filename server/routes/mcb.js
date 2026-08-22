@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 
 const router = express.Router();
 
@@ -390,37 +391,59 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
         include: {
           micronization: true
         }
+      },
+      // Needed for the derived Shipped / Available columns below, which the MCB table
+      // shows and this export did not carry.
+      shipments: {
+        select: { amountShipped: true }
       }
     }
   });
 
+  // Single header row: the MCB table's <thead> is flat — MCB Number, Combined Date,
+  // Location, Combined Batches, Total Amount (g), Available (g), Actions
+  // (client/src/js/components/tabs/MicronizationTab.js:208-230). No grouping to mirror.
+  //
+  // `Available (g)` is new and is derived, reproducing the server's own computation for
+  // the list endpoint at mcb.js:74-76 — the same value the table renders from
+  // `mcb.availableAmount` (MicronizationTab.js:266). `Shipped (g)` is exported alongside
+  // it so the subtraction is auditable inside the spreadsheet; without it a reader
+  // seeing Available < Total has no way to see why.
   const headers = [
-    'MCB #', 'Total Recovered Amount (g)', 'Location',
-    'Micronization Count', 'Component Micronizations', 'Combined Date', 'Created At'
+    'MCB #', 'Combined Date', 'Location', 'Micronization Count', 'Component Micronizations',
+    'Total Recovered Amount (g)', 'Shipped (g)', 'Available (g)',
+    'Comments', 'Created At', 'Updated At'
   ];
 
-  let csv = headers.join(',') + '\n';
-
-  mcbs.forEach(m => {
+  const rows = mcbs.map(m => {
     const componentMicronizations = m.micronizations
       .map(mic => mic.micronization.micronizationNumber)
       .join('; ');
 
-    const row = [
-      m.mcbNumber || '',
-      m.totalRecoveredAmount || '',
-      m.mcbLocation || '',
+    // Verbatim the list endpoint's formula (mcb.js:70-76): total minus the sum of every
+    // linked shipment's amountShipped, and null total means no available figure at all.
+    const totalShipped = m.shipments?.reduce(
+      (sum, s) => sum + (s.amountShipped ? Number(s.amountShipped) : 0), 0) || 0;
+    const availableAmount = m.totalRecoveredAmount
+      ? Number(m.totalRecoveredAmount) - totalShipped
+      : '';
+
+    return [
+      m.mcbNumber,
+      csvDateOnly(m.combinedDate),
+      m.mcbLocation,
       m.micronizations.length,
       componentMicronizations,
-      m.combinedDate ? new Date(m.combinedDate).toISOString() : '',
-      m.createdAt.toISOString()
+      m.totalRecoveredAmount,
+      totalShipped,
+      availableAmount,
+      m.comments,
+      m.createdAt,
+      m.updatedAt
     ];
-    csv += row.join(',') + '\n';
   });
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="mcb_export.csv"');
-  res.send(csv);
+  sendCsv(res, 'mcb_export.csv', headers, rows);
 }));
 
 export default router;

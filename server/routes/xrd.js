@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import path from 'path';
 import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
@@ -310,17 +311,23 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     }
   });
 
+  // Single header row: the XRD table's <thead> is flat — Test Date, Sample, Peak 1,
+  // Peak 2, Crystallite Size, Testing Lab, Comments, Reports (TestResultsXRDTab.js).
+  // No colspan band to mirror.
+  //
+  // `Peak 1 Assignment` / `Peak 2 Assignment` are free text and were emitted unquoted
+  // before this change — the closest of the latent escaping defects to going live,
+  // since a single comma typed into an assignment would have shifted every later
+  // column on that row. They now route through the shared csvField like everything else.
   const headers = [
     'Test Date', 'Sample Type', 'Sample ID',
     'Peak 1 Position (2θ)', 'Peak 1 Assignment',
     'Peak 2 Position (2θ)', 'Peak 2 Assignment',
     'Crystallite Size (nm)', 'Testing Lab',
-    'Number of Reports', 'Comments', 'Created At'
+    'Number of Reports', 'Comments', 'Created At', 'Updated At'
   ];
 
-  let csv = headers.join(',') + '\n';
-
-  xrdRecords.forEach(r => {
+  const rows = xrdRecords.map(r => {
     // Determine sample type and ID
     let sampleType = '';
     let sampleId = '';
@@ -338,26 +345,24 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       sampleId = r.mcbNumber;
     }
 
-    const row = [
-      r.testDate ? r.testDate.toISOString().split('T')[0] : '',
+    return [
+      csvDateOnly(r.testDate),
       sampleType,
       sampleId,
-      r.peak1_position || '',
-      r.peak1_assignment || '',
-      r.peak2_position || '',
-      r.peak2_assignment || '',
-      r.crystallite_size || '',
-      r.testingLab || '',
+      r.peak1_position,
+      r.peak1_assignment,
+      r.peak2_position,
+      r.peak2_assignment,
+      r.crystallite_size,
+      r.testingLab,
       r.xrdReportPaths ? r.xrdReportPaths.length : 0,
-      `"${(r.comments || '').replace(/"/g, '""')}"`,
-      r.createdAt.toISOString()
+      r.comments,
+      r.createdAt,
+      r.updatedAt
     ];
-    csv += row.join(',') + '\n';
   });
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="xrd_export.csv"');
-  res.send(csv);
+  sendCsv(res, 'xrd_export.csv', headers, rows);
 }));
 
 export default router;

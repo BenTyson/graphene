@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import path from 'path';
 import { createFileUploadMiddleware, uploadFile, replaceFileInStorage, deleteFileFromStorage } from '../utils/fileUpload.js';
 import { buildSearchQuery, buildOrderBy } from '../utils/queryHelpers.js';
@@ -275,15 +276,19 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     }
   });
 
+  // Single header row: the Particle Size table's <thead> is flat — no colspan band
+  // (client/src/js/components/tabs/TestResultsParticleSizeTab.js). The export is a
+  // superset of the table, which shows only D10/D50/D90 of the numeric columns.
+  //
+  // The Sample Type / Sample ID pair already splits the table's single Sample cell,
+  // which is the graphene composite rule applied before this chip existed. Left as is.
   const headers = [
     'Test Date', 'Sample Type', 'Sample ID', 'D10 (μm)', 'D50 (μm)', 'D90 (μm)',
     'Mean Size (μm)', 'Span Value', 'Testing Lab', 'Testing Method',
-    'Report', 'Comments', 'Created At'
+    'Report', 'Comments', 'Created At', 'Updated At'
   ];
 
-  let csv = headers.join(',') + '\n';
-
-  particleSizeRecords.forEach(r => {
+  const rows = particleSizeRecords.map(r => {
     // Determine sample type and ID
     let sampleType = '';
     let sampleId = '';
@@ -301,27 +306,25 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       sampleId = r.mcbNumber;
     }
 
-    const row = [
-      r.testDate ? r.testDate.toISOString().split('T')[0] : '',
+    return [
+      csvDateOnly(r.testDate),
       sampleType,
       sampleId,
-      r.d10 || '',
-      r.d50 || '',
-      r.d90 || '',
-      r.meanSize || '',
-      r.spanValue || '',
-      r.testingLab || '',
-      r.testingMethod || '',
+      r.d10,
+      r.d50,
+      r.d90,
+      r.meanSize,
+      r.spanValue,
+      r.testingLab,
+      r.testingMethod,
       r.particleSizeReportPath ? 'Yes' : 'No',
-      `"${(r.comments || '').replace(/"/g, '""')}"`,
-      r.createdAt.toISOString()
+      r.comments,
+      r.createdAt,
+      r.updatedAt
     ];
-    csv += row.join(',') + '\n';
   });
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="particle_size_export.csv"');
-  res.send(csv);
+  sendCsv(res, 'particle_size_export.csv', headers, rows);
 }));
 
 export default router;

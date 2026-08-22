@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -388,36 +389,55 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
     }
   });
   
+  // Single header row: the Micronization table's <thead> is flat — no colspan band
+  // (client/src/js/components/tabs/MicronizationTab.js:76-113).
+  //
+  // Column order mirrors that table exactly, which is why `Location` sits between SKU
+  // and Starting Amount. Two columns are new and are why this route was in scope —
+  // both are rendered on screen and reached the CSV nowhere:
+  //   `Location` -> micronizationLocation  (MicronizationTab.js:137)
+  //   `Dx50 (µm)` -> dx50                  (MicronizationTab.js:154)
+  //
+  // The table's Material Source cell is a display composite — a G/CB badge plus
+  // `grapheneSample || compoundBatchNumber` (MicronizationTab.js:134). Kept as the
+  // single coalesced `Material Source` the screen shows, and additionally split into
+  // its two sources so each is filterable, following the graphene export's rule that a
+  // composite becomes sibling columns rather than only a display string.
   const headers = [
-    'Micronization #', 'Date', 'Material Source', 'SKU', 'Starting Amount (g)', 
-    'Recovered Amount (g)', 'Recovery %', 'Grind Pressure (psi)', 'Report', 'Created At'
+    'Micronization #', 'Date', 'Material Source', 'Graphene Sample', 'Compound Batch',
+    'SKU', 'Location', 'Starting Amount (g)', 'Recovered Amount (g)', 'Recovery %',
+    'Grind Pressure (psi)', 'Dx50 (µm)', 'Report', 'Created At', 'Updated At'
   ];
-  
-  let csv = headers.join(',') + '\n';
-  
-  micronizations.forEach(m => {
-    const materialSource = m.grapheneSample || m.compoundBatchNumber || '';
-    const recoveryPercent = (m.startingMaterialAmount && m.recoveredAmount) ? 
-      ((Number(m.recoveredAmount) / Number(m.startingMaterialAmount)) * 100).toFixed(1) : '';
-    
-    const row = [
-      m.micronizationNumber || '',
-      m.date ? m.date.toISOString().split('T')[0] : '',
-      materialSource,
-      m.sku || '',
-      m.startingMaterialAmount || '',
-      m.recoveredAmount || '',
+
+  const rows = micronizations.map(m => {
+    // Reproduces the table's own expression verbatim (MicronizationTab.js:147-148):
+    //   (starting && recovered) ? ((recovered / starting * 100).toFixed(1) + '%') : '—'
+    // The CSV emits '' where the screen shows the em-dash placeholder, so an empty cell
+    // reads as "no value" in a spreadsheet rather than sorting as text.
+    const recoveryPercent = (m.startingMaterialAmount && m.recoveredAmount)
+      ? ((Number(m.recoveredAmount) / Number(m.startingMaterialAmount)) * 100).toFixed(1) + '%'
+      : '';
+
+    return [
+      m.micronizationNumber,
+      csvDateOnly(m.date),
+      m.grapheneSample || m.compoundBatchNumber || '',
+      m.grapheneSample,
+      m.compoundBatchNumber,
+      m.sku,
+      m.micronizationLocation,
+      m.startingMaterialAmount,
+      m.recoveredAmount,
       recoveryPercent,
-      m.grindPressure || '',
+      m.grindPressure,
+      m.dx50,
       m.micronizationReportPath ? 'Yes' : 'No',
-      m.createdAt.toISOString()
+      m.createdAt,
+      m.updatedAt
     ];
-    csv += row.join(',') + '\n';
   });
-  
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="micronization_export.csv"');
-  res.send(csv);
+
+  sendCsv(res, 'micronization_export.csv', headers, rows);
 }));
 
 // Get micronizations for specific graphene experiment

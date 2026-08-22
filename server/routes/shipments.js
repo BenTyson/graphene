@@ -1,5 +1,6 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import { csvDateOnly, sendCsv } from '../utils/csv.js';
 
 const router = express.Router();
 
@@ -280,6 +281,11 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Single header row: the Shipments table's <thead> is flat — Shipment #, From, To,
+    // Date, Amount, Material, Purpose, Status, Actions (ShipmentsTab.js). No colspan
+    // band to mirror. The export is a superset: it splits the table's single Material
+    // cell into Type / Reference / Species-Name, which is the graphene composite rule
+    // and predates this chip.
     const csvHeaders = [
       'Shipment Number',
       'From Location',
@@ -294,7 +300,8 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
       'Status',
       'Received Date',
       'Comments',
-      'Created At'
+      'Created At',
+      'Updated At'
     ];
 
     const csvRows = shipments.map(shipment => {
@@ -324,27 +331,26 @@ router.get('/export/csv', asyncHandler(async (req, res) => {
         shipment.shipmentNumber,
         shipment.shipFromLocation,
         shipment.shipToLocation,
-        shipment.shipmentDate ? shipment.shipmentDate.toISOString().split('T')[0] : '',
-        shipment.amountShipped || '',
+        csvDateOnly(shipment.shipmentDate),
+        shipment.amountShipped,
         shipment.unit,
         materialType,
         materialReference,
         materialSpeciesName,
-        shipment.purpose || '',
-        shipment.status || '',
-        shipment.receivedDate ? shipment.receivedDate.toISOString().split('T')[0] : '',
-        shipment.comments || '',
-        shipment.createdAt.toISOString().split('T')[0]
+        shipment.purpose,
+        shipment.status,
+        csvDateOnly(shipment.receivedDate),
+        shipment.comments,
+        csvDateOnly(shipment.createdAt),
+        csvDateOnly(shipment.updatedAt)
       ];
     });
 
-    const csvContent = [csvHeaders, ...csvRows]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="material_shipments.csv"');
-    res.send(csvContent);
+    // Previously this route wrapped every field in quotes but never doubled interior
+    // quotes — `"${field}"` — so a single double-quote character anywhere in comments,
+    // purpose or a location name terminated the field early and shifted the rest of the
+    // row. The shared helper quotes only when needed and always doubles.
+    sendCsv(res, 'material_shipments.csv', csvHeaders, csvRows);
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {
