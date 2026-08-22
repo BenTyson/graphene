@@ -282,3 +282,38 @@ rule was written for stale worktree copies; it turned out to cover missing ones 
 **Related, already established:** Lane B chips that only produce notes should never get worktree
 isolation regardless (see CHIP-PROTOCOL.md §5a) — they touch no source, and an unchanged worktree
 is auto-cleaned, destroying their only output.
+
+---
+
+## D-010 — Chips run in the main repository, not in harness worktrees
+**Status:** ACTIVE · **Date:** 2026-08-21 · **Scope:** Command Center and all chips
+**Chosen over the alternative in D-009 after Wave 1 was aborted.**
+
+Chips are spawned **without worktree isolation**. They work directly in the main repository on
+`staging`, sharing one working directory. **Write-ownership is now the only thing keeping them
+apart** — which is what it always actually was; the worktree was belt-and-braces that turned out to
+be worse than nothing.
+
+**Reasoning.** D-009 left two fixes. Merging `staging` → `main` would restore worktree isolation,
+but `main` auto-deploys to admin.hgraphene.com, so it is a production deploy and belongs to the
+human on their own schedule — not to a recovery step. Running in the main repo needs no deploy, and
+it lets the Command Center **verify the exact base** before spawning rather than inferring it from
+a mechanism it does not control. Wave 1 failed precisely because the base was inferred.
+
+**Rejected: fixing the worktree base by merging to main.** Correct in principle, wrong as a
+recovery action — it would ship the export fix, the Test Matrix tab, and four documents to
+production to unblock an internal tooling problem. Reversing course on a bad deploy is far more
+expensive than losing worktree isolation.
+
+**What this costs, stated plainly.**
+- A chip that writes outside its owned files corrupts the shared tree directly, with no worktree to
+  contain it. Mitigation: the tree is committed clean before every spawn, so any unowned change
+  shows up in `git status` and is revertable. The Command Center checks after every wave.
+- Concurrent `npm run build` runs would race on the same `dist/`. Each chip therefore builds to its
+  own directory: `npx vite build --outDir ../dist-<chip-name>`. `dist-*/` is gitignored.
+- Chips must not run `git checkout`, `git stash`, `git restore`, or any branch operation. This was
+  already true (D-002/D-003); it is now load-bearing rather than tidy.
+
+**Revisit trigger.** Once `main` is current, worktree isolation becomes available again and is
+preferable for Lane A chips. Lane B notes-only chips should stay un-isolated permanently — see
+CHIP-PROTOCOL.md §5a.
