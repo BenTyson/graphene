@@ -150,29 +150,60 @@ app.use('/news-images', (req, res, next) => {
   next();
 }, express.static(path.join(process.cwd(), 'public', 'news-images')));
 
-// Global middleware to restrict THIRD_PARTY users from mutating data
-// This applies to POST, PUT, DELETE requests on /api/* routes (except auth and users)
+// Paths under /api that this guard deliberately does NOT JWT-check, because each
+// authenticates itself by some other mechanism. Anything not on this list needs a
+// valid JWT — reads included. See DECISIONS.md D-006.
+//
+//   /auth            login/logout must be reachable without a token. /auth/me
+//                    applies authenticateToken itself (routes/auth.js:129).
+//   /health          public liveness probe for Railway. Also unreachable from here:
+//                    app.get('/api/health') above is registered earlier and answers
+//                    first. Listed anyway so the exemption survives a reorder.
+//   /email/cron      authenticated by EMAIL_CRON_SECRET, not a JWT
+//                    (middleware/cronAuth.js, applied at routes/emailCron.js:15).
+//   /proforma/share  authenticated by share token (routes/proformaShare.js). The
+//                    investor embed page carries no JWT for either its GET or its
+//                    PUT, so this MUST be evaluated before the JWT check below —
+//                    otherwise a valid investor request is 401'd before the token
+//                    middleware ever runs.
+//
+// Deliberately NOT exempt (it used to be): /users. Every route in routes/users.js
+// already applies authenticateToken + requireSuperAdmin itself, so guarding it here
+// changes no outcome for any role — it just means a future route added to that file
+// without middleware fails closed instead of open, which is exactly how the other
+// 23 route files ended up publicly readable.
+const API_AUTH_EXEMPT_PREFIXES = ['/auth', '/health', '/email/cron', '/proforma/share'];
+
+// Segment-aware prefix match: '/auth' exempts '/auth' and '/auth/login' but not
+// '/authsomethingelse'. Runs on the raw (still percent-encoded) req.path, so an
+// oddly-encoded path fails closed rather than matching an exemption.
+function isApiAuthExempt(reqPath) {
+  return API_AUTH_EXEMPT_PREFIXES.some(
+    (prefix) => reqPath === prefix || reqPath.startsWith(prefix + '/')
+  );
+}
+
+// Global auth guard for /api/*.
+// Every request needs a valid JWT; mutating requests additionally need a role that
+// is allowed to edit. THIRD_PARTY keeps its read access, but *inside* the
+// authenticated path — the role is allowed through the token check, not around it.
 app.use('/api', (req, res, next) => {
-  // Skip routes that handle their own authentication. The proforma share
-  // router (/api/proforma/share/:token) authenticates by share token, not JWT,
-  // and must reach its own handler for mutating (PUT) requests — otherwise the
-  // global JWT/edit-access guard would 401 a valid investor edit before the
-  // token middleware ever runs.
-  if (req.path.startsWith('/auth') || req.path.startsWith('/users') || req.path === '/health' || req.path.startsWith('/email/cron') || req.path.startsWith('/proforma/share')) {
+  if (isApiAuthExempt(req.path)) {
     return next();
   }
 
-  // Skip GET requests - Third Party users can read data
-  if (req.method === 'GET') {
-    return next();
-  }
-
-  // For mutating requests (POST, PUT, DELETE), check authentication and role
   authenticateToken(req, res, (err) => {
     if (err) {
       return next(err);
     }
-    // Check if user can edit (not THIRD_PARTY)
+
+    // Reads are permitted for every authenticated role, THIRD_PARTY included.
+    // HEAD is routed to GET handlers by Express, so it is a read too.
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      return next();
+    }
+
+    // Mutating requests (POST, PUT, PATCH, DELETE, ...) also require edit rights.
     requireEditAccess(req, res, next);
   });
 });
