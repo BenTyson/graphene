@@ -314,6 +314,15 @@ expensive than losing worktree isolation.
 - Chips must not run `git checkout`, `git stash`, `git restore`, or any branch operation. This was
   already true (D-002/D-003); it is now load-bearing rather than tidy.
 
+**Amended 2026-08-21, same day.** The rule "never run `git checkout`, `git stash`, `git restore`, or
+any branch operation" applies to the **Command Center too**, and I broke it within the hour —
+switching to a new branch to park W1-AUTH-GUARD's work while W1-APP-DEDUPE was still running. Its
+uncommitted changes carried across the checkout intact and nothing was lost, but that was luck, not
+design: a conflicting file would have blocked the checkout or the changes would have followed onto
+the wrong branch. Under D-010 there is one shared working tree, so **no branch operation may happen
+while any chip is running** — by anyone. Park work by committing on the current branch, or wait for
+the wave to drain.
+
 **Revisit trigger.** Once `main` is current, worktree isolation becomes available again and is
 preferable for Lane A chips. Lane B notes-only chips should stay un-isolated permanently — see
 CHIP-PROTOCOL.md §5a.
