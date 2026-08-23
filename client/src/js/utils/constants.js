@@ -3,6 +3,8 @@
  * Default form values and other constants used across the application
  */
 
+import { orgYmd } from '@shared/orgTimezone.js';
+
 export const TASK_CATEGORY_TAGS = [
   'Fundraising', 'Shareholders', 'Patents', 'Legal',
   'Decks & Graphics', 'Notes & Research', 'Production',
@@ -316,7 +318,20 @@ export const DEFAULT_FORMS = {
   mcb: {
     mcbNumber: '',
     mcbLocation: '',
-    combinedDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    // A GETTER, deliberately — it fixes two separate defects at once.
+    //
+    // 1. Timezone. This was `new Date().toISOString().split('T')[0]`, i.e. today in *UTC*. An MCB
+    //    created after 18:00 Mountain (17:00 in winter) pre-filled TOMORROW's date, and that wrong
+    //    date was persisted. `orgYmd(new Date())` answers in the organisation's timezone.
+    // 2. Staleness. `DEFAULT_FORMS` is a module-level object literal, so a plain value here is
+    //    evaluated ONCE when the bundle loads and then frozen for the life of the page. This is a
+    //    long-lived SPA; a tab left open overnight handed every new MCB the date the tab was
+    //    opened. A getter re-evaluates on each read.
+    //
+    // Safe with the two consumers, both of which spread (`{ ...DEFAULT_FORMS.mcb }`): spread
+    // invokes getters and copies the result as a plain data property, so the Alpine state that
+    // comes out is an ordinary reactive object with no accessor on it.
+    get combinedDate() { return orgYmd(new Date()); },
     selectedMicronizationIds: [],
     totalRecoveredAmount: 0,
     comments: ''

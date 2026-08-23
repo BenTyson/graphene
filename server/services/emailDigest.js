@@ -1,24 +1,23 @@
 import { PrismaClient } from '@prisma/client';
+import { ymdInTz } from '../../shared/orgTimezone.js';
 
 const prisma = new PrismaClient();
 
 /**
  * YYYY-MM-DD in a given IANA timezone. Used for date-bucket idempotency keys
  * so "due tomorrow" runs are unique per local-day, not per UTC-day.
+ *
+ * This module owned the original implementation — it was the only timezone-aware date conversion
+ * in the codebase — and it has been hoisted verbatim into `shared/orgTimezone.js` so the client
+ * and the rest of the server can use it too. Re-exported rather than deleted so this module's
+ * public surface is unchanged.
+ *
+ * Note the digest is deliberately **per-user** (`UserEmailPreferences.timezone`), not org-wide:
+ * a person wants their 9am digest at 9am where they are. That is a different question from what
+ * calendar date the UI renders, which is fixed to `ORG_TIMEZONE`. Every call site here passes an
+ * explicit timezone, so the shared function's `ORG_TIMEZONE` default is never engaged.
  */
-export function ymdInTz(date, timezone) {
-  try {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    return fmt.format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
+export { ymdInTz };
 
 export function isoWeekKey(date, timezone) {
   // ISO week (Mon-start). Cheap approximation: bucket by local YMD floored to Sunday.

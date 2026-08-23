@@ -9,6 +9,24 @@ import API from './api.js';
 import dataHelpers from '../utils/dataHelpers.js';
 import validators from '../utils/validators.js';
 import formatters from '../utils/formatters.js';
+import { orgYmd } from '@shared/orgTimezone.js';
+
+/**
+ * Today's calendar date in the ORGANISATION's timezone (America/Denver), as YYYY-MM-DD.
+ *
+ * Every "default this new record's date to today" site in this file must use this, NOT
+ * `new Date().toISOString().split('T')[0]`. The latter answers in UTC, which is already tomorrow
+ * from 18:00 Mountain (17:00 during standard time) — so a record created in the evening was saved
+ * with tomorrow's date. That is a *persisted* wrong value, not a rendering glitch.
+ *
+ * The reverse trap, for whoever edits this file next: the other `toISOString().split('T')[0]`
+ * calls here are NOT bugs and must be left alone. They round-trip a date-only column (which is
+ * stored as UTC midnight) back into an `<input type="date">`, so their UTC day IS the day the user
+ * typed. Piping those through `orgYmd()` would shift every one of them back a day.
+ */
+function orgTodayYmd() {
+  return orgYmd(new Date());
+}
 
 class CRUDService {
   constructor() {
@@ -1152,7 +1170,7 @@ class CRUDService {
       shipmentNumber: '', // Clear shipment number for new shipment
       shipFromLocation: shipment.shipFromLocation || 'Curia Frankfurt',
       shipToLocation: shipment.shipToLocation || '',
-      shipmentDate: new Date().toISOString().split('T')[0], // Today's date
+      shipmentDate: orgTodayYmd(), // Today's date, in the org timezone (see orgTodayYmd)
       dateUnknown: false,
       receivedDate: '',
       receivedDateUnknown: true,
@@ -1266,7 +1284,7 @@ class CRUDService {
     appContext.editingMicronization = null;
     appContext.micronizationForm = {
       micronizationNumber: '', // Clear number for new record
-      date: new Date().toISOString().split('T')[0], // Today's date
+      date: orgTodayYmd(), // Today's date, in the org timezone (see orgTodayYmd)
       dateUnknown: false,
       sku: '', // Clear SKU for new record
       materialType: micronization.grapheneSample ? 'graphene' : 'compound',
@@ -1301,7 +1319,9 @@ class CRUDService {
         appContext.mcbForm = {
           mcbNumber: fullMcbData.mcbNumber || '',
           mcbLocation: fullMcbData.mcbLocation || '',
-          combinedDate: fullMcbData.combinedDate ? new Date(fullMcbData.combinedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          // The truthy branch round-trips a stored date-only column (UTC midnight) — correct as-is.
+          // The fallback is a "default to today" and must use the org timezone.
+          combinedDate: fullMcbData.combinedDate ? new Date(fullMcbData.combinedDate).toISOString().split('T')[0] : orgTodayYmd(),
           selectedMicronizationIds: fullMcbData.selectedMicronizationIds || [],
           totalRecoveredAmount: fullMcbData.totalRecoveredAmount || 0,
           comments: fullMcbData.comments || ''
@@ -1355,7 +1375,7 @@ class CRUDService {
     appContext.mcbForm = {
       mcbNumber: '', // Clear number for new record
       mcbLocation: mcb.mcbLocation || '',
-      combinedDate: new Date().toISOString().split('T')[0], // Today's date for duplicate
+      combinedDate: orgTodayYmd(), // Today's date for duplicate, in the org timezone
       selectedMicronizationIds: [], // Clear selected micronizations
       totalRecoveredAmount: 0,
       comments: mcb.comments || ''

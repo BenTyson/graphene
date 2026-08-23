@@ -5,20 +5,23 @@
  */
 
 import API from './api.js';
+import { orgYmd } from '@shared/orgTimezone.js';
 
 /**
- * Today as YYYY-MM-DD in LOCAL time.
+ * Today as YYYY-MM-DD in the ORGANISATION's timezone (America/Denver), not the browser's.
  *
- * Deliberately not `new Date().toISOString().split('T')[0]`, which yields the UTC date and is a
- * day ahead for anyone west of UTC after ~20:00 local — the same reason `_ymd()` in
- * app-refactored.js exists. Duplicated here rather than reached for through ctx so the service
- * has no ordering dependency on the shared wiring file.
+ * `openTaskForm()` stores this as an *explicit* `startDate` on every new task, so it is written to
+ * the database. Two frames have been wrong here in turn:
+ *   - `new Date().toISOString().split('T')[0]` (UTC) would be a day ahead every evening;
+ *   - browser-local (what this function used to compute) is a day out for anyone creating a task
+ *     near midnight from outside Mountain Time — and because the value is stored explicitly rather
+ *     than derived, it never self-corrects afterwards.
+ *
+ * The org timezone is the one frame that makes this agree with the server's derived start date
+ * (`resolveStartYmd()` in server/routes/tasks.js) and with the "Created" line in the detail panel.
  */
 function todayYmd() {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
+  return orgYmd(new Date());
 }
 
 class TaskService {
