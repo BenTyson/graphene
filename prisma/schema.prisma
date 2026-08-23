@@ -980,6 +980,7 @@ model Task {
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?    @map("due_date")
+  startDate   DateTime?  @map("start_date")
   position    Int          @default(0)
   tags        String[]     @default([])
 

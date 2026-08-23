@@ -563,3 +563,54 @@ precisely the risk this ruling exists to avoid.
 path fall back to `createdAt` when it is null. Behaviour is identical for the user, new tasks set
 it explicitly, and not one existing row is written to. Where a fallback in the read path gives the
 same result as a backfill, the fallback wins.
+
+---
+
+## D-017 — Production auto-applies the schema on every deploy, with `--accept-data-loss`
+**Status:** ACTIVE · **Date:** 2026-08-23 · **Severity: high** · **Corrects D-016's model of deploys**
+
+Two facts discovered while adding `Task.startDate`, both of which change how schema risk must be
+managed on this project.
+
+### 1. `.env` does not point at production
+`DATABASE_URL` is `trolley.proxy.rlwy.net:51966` — a **staging** database. Measured the same
+minute: that database holds **2 tasks and 242 graphene records**; production
+(`admin.hgraphene.com`, queried through its own API) holds **88 tasks and 241 graphene records**.
+Different databases.
+
+Consequences, both ways:
+- **Reassuring:** every chip in every wave has been reading staging, not production. D-005's
+  "read-only against the shared remote" carried far less risk than it was written to assume.
+- **Sobering:** every "verified against live data" claim in this repo's notes — CSV row counts,
+  export parity, the 242/209/33 filter checks — describes *staging*. They are still valid as
+  correctness checks. They are not statements about production.
+
+### 2. Every deploy runs `prisma db push --accept-data-loss`
+`scripts/railway-startup.sh`, the Railway start command, runs this on **every** deploy of both
+environments before the server boots. `--accept-data-loss` is exactly what it sounds like: Prisma
+applies destructive changes without prompting.
+
+**So `prisma/schema.prisma` is not a description of the production database. It is a command that
+rewrites it, automatically, on every push to `main`.** Delete a field from that file and the column
+— with its data — is gone from production minutes later, silently, with no review step and no
+migration history to recover from. A chip editing that file would be one merge away from
+irreversible data loss.
+
+This supersedes D-016's assumption that the Command Center applies schema changes by hand. It does
+not; the deploy does. What D-016 gets right, and what still stands, is the *inspection*: generate
+the SQL and read it **before pushing to `main`**, because that push is the point of no return.
+
+### Revised procedure — before any push to `main` that touches `prisma/schema.prisma`
+1. `dbbackup` first.
+2. `npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`
+3. Any `DROP`, `TRUNCATE`, `DELETE`, or `NOT NULL` on a populated table → **stop, take it to Ben.**
+4. Apply to staging, verify row counts either side, and only then push.
+5. `prisma/schema.prisma` remains off-limits to chips (D-004), and this is why.
+
+**Worked example, this change.** `Task.startDate` produced exactly
+`ALTER TABLE "tasks" ADD COLUMN "start_date" TIMESTAMP(3);` — nullable, no default, no backfill.
+Row counts across ten tables identical before and after. Production picks it up on the next deploy.
+
+**Standing hazard, unresolved:** `--accept-data-loss` on an automated deploy path is a loaded
+weapon regardless of process discipline. Proposed as `CHIP-DEPLOY-SCHEMA-GUARD` — at minimum, fail
+the deploy when the diff contains a destructive statement.
