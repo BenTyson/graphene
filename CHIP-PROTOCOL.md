@@ -288,9 +288,12 @@ Occasionally a chip's whole job *is* a shared wiring file — deduplicating `app
 reordering `server/index.js`, restructuring `client/index.html`. Such a chip:
 
 - owns that file exclusively,
-- runs **alone with respect to that file** — no other chip in the wave may own it, and no other
-  chip in the wave may draft wiring into it (§3b). Chips working in unrelated zones may run
-  concurrently; the constraint is the file, not the wave,
+- runs **alone with respect to that file** — no other chip in the wave may own it. A sibling *may*
+  draft wiring into it (§3b) **only when the owning chip's spawn prompt guarantees its change is
+  purely additive** — no method moved, renamed, or reordered — because drafted blocks are anchored
+  to existing methods and an additive change leaves every anchor valid. Absent that guarantee, no
+  sibling drafts into it. Chips in unrelated zones always run concurrently; the constraint is the
+  file, not the wave,
 - is MOVE work by definition (see §6), and
 - must leave the file's public surface unchanged unless the ruling says otherwise, because other
   chips' drafted wiring blocks were written against the old anchors.

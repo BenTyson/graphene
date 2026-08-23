@@ -528,3 +528,38 @@ first, not the second.
    reachable from the remote ref afterwards, rather than trusting that the command printed nothing.
 
 **Chips still never push, and never commit.** Unchanged.
+
+---
+
+## D-016 — Schema changes on the live database: additive only, backup first, no backfill
+**Status:** ACTIVE · **Date:** 2026-08-22 · **Scope:** Command Center
+
+Ben's instruction, verbatim: *"this project is live so DO NOT delete existing data."* This ruling is
+how that gets enforced mechanically rather than by good intentions.
+
+`DATABASE_URL` is a single live Railway Postgres shared by every environment and every chip.
+`prisma/migrations/` is gitignored and the project uses `prisma db push`, which **compares the
+schema file to the database and will drop columns or tables that the schema no longer describes.**
+On a live database with no migration history, one careless push is unrecoverable.
+
+**Chips never run it.** D-004 stands: no `db push`, no `migrate`, no seed. A chip needing a schema
+change drafts the model into its notes and stops.
+
+**The Command Center's procedure, every time, in this order:**
+1. Run the `dbbackup` skill first. Not optional, and not "if it looks risky".
+2. Generate the SQL and read it before applying anything:
+   `npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`
+3. **If that SQL contains `DROP`, `ALTER … DROP COLUMN`, `TRUNCATE`, or a `NOT NULL` addition to a
+   populated table — stop and take it to Ben.** No exceptions, however obviously benign it looks.
+4. Only then apply, and verify the row counts of every affected table before and after.
+
+**New columns are nullable, and are never backfilled.** A backfill is a mass write to live data —
+precisely the risk this ruling exists to avoid.
+
+**Worked example — the Task start date (feature 2 of Ben's Tasks request).** The requirement is
+"defaults to the date the card is created, but editable". The tempting implementation is
+`startDate DateTime? @default(now())` plus an `UPDATE tasks SET start_date = created_at` backfill.
+**Do not do that.** Add `startDate DateTime?`, leave every existing row null, and have the *read*
+path fall back to `createdAt` when it is null. Behaviour is identical for the user, new tasks set
+it explicitly, and not one existing row is written to. Where a fallback in the read path gives the
+same result as a backfill, the fallback wins.
