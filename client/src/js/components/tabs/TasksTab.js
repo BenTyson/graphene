@@ -1,3 +1,32 @@
+/**
+ * Kanban column definitions for the Tasks board.
+ *
+ * Single source of truth for: the rendered column order, the column-visibility
+ * menu, and the SortableJS column id list in app-refactored.js
+ * (`initKanbanDragDrop`). Adding a column here adds it everywhere.
+ *
+ * Tailwind classes are written as literals so the JIT scanner finds them.
+ */
+export const TASK_KANBAN_COLUMNS = [
+  { id: 'TODO',        label: 'To Do',       dotClass: 'bg-gray-400',  bodyClass: 'bg-gray-50' },
+  { id: 'IN_PROGRESS', label: 'In Progress', dotClass: 'bg-blue-500',  bodyClass: 'bg-blue-50/50' },
+  { id: 'IN_REVIEW',   label: 'In Review',   dotClass: 'bg-amber-500', bodyClass: 'bg-amber-50/50' },
+  { id: 'DONE',        label: 'Done',        dotClass: 'bg-green-500', bodyClass: 'bg-green-50/50' },
+  { id: 'ARCHIVED',    label: 'Archived',    dotClass: 'bg-gray-300',  bodyClass: 'bg-gray-50/50' },
+];
+
+/**
+ * Which columns are on for a user who has never touched the control.
+ * Ben's spec: TO DO / IN PROGRESS / IN REVIEW on, DONE and ARCHIVED off.
+ */
+export const TASK_DEFAULT_VISIBLE_COLUMNS = {
+  TODO: true,
+  IN_PROGRESS: true,
+  IN_REVIEW: true,
+  DONE: false,
+  ARCHIVED: false,
+};
+
 export function getTasksTabHtml() {
   return `
     <div x-show="activeTab === 'tasks'" x-cloak>
@@ -78,16 +107,64 @@ export function getTasksTabHtml() {
               class="rounded border-gray-300 text-black focus:ring-black">
             Overdue only
           </label>
-          <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-            <input type="checkbox" x-model="showArchivedTasks"
-              class="rounded border-gray-300 text-black focus:ring-black">
-            Show archived
-          </label>
-          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || taskFilters.tag || taskFilters.institution || taskFilters.goalId || showArchivedTasks">
-            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' }; showArchivedTasks = false; loadTasks()"
+          <!--
+            "Show archived" only appears OUTSIDE the board. On the board the same
+            state is driven by the Columns menu below, so the two controls are
+            never on screen together. Both read/write taskVisibleColumns.ARCHIVED.
+          -->
+          <template x-if="taskViewMode !== 'kanban'">
+            <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" :checked="isTaskColumnVisible('ARCHIVED')"
+                @change="toggleTaskColumn('ARCHIVED')"
+                class="rounded border-gray-300 text-black focus:ring-black">
+              Show archived
+            </label>
+          </template>
+          <template x-if="taskSearch || taskFilters.priority || taskFilters.assigneeId || taskFilters.overdue || taskFilters.tag || taskFilters.institution || taskFilters.goalId">
+            <button @click="taskSearch = ''; taskFilters = { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' }; loadTasks()"
               class="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline">
               Clear filters
             </button>
+          </template>
+          <!-- Column visibility (board only) -->
+          <template x-if="taskViewMode === 'kanban'">
+            <div class="relative ml-auto" @click.away="taskColumnMenuOpen = false" @keydown.escape.window="taskColumnMenuOpen = false">
+              <button type="button" @click="taskColumnMenuOpen = !taskColumnMenuOpen"
+                :class="taskColumnMenuOpen ? 'border-gray-900 text-gray-900' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+                class="flex items-center gap-1.5 px-2 py-1.5 text-sm bg-white border rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-black">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h4v14H4zM10 5h4v14h-4zM16 5h4v14h-4z"/>
+                </svg>
+                Columns
+                <span class="inline-flex items-center justify-center min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600"
+                  x-text="getVisibleTaskColumns().length"></span>
+                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+              <div x-show="taskColumnMenuOpen" x-cloak x-transition.opacity.duration.100ms
+                class="absolute right-0 z-30 mt-1 w-52 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+                <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Visible columns</p>
+                ${TASK_KANBAN_COLUMNS.map(col => `
+                  <label class="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50"
+                    :class="isTaskColumnLastVisible('${col.id}') ? 'cursor-not-allowed opacity-60' : ''">
+                    <input type="checkbox" :checked="isTaskColumnVisible('${col.id}')"
+                      :disabled="isTaskColumnLastVisible('${col.id}')"
+                      @change="toggleTaskColumn('${col.id}')"
+                      class="rounded border-gray-300 text-black focus:ring-black disabled:opacity-50">
+                    <span class="w-2 h-2 rounded-full ${col.dotClass}"></span>
+                    <span class="text-gray-700">${col.label}</span>
+                    <span class="ml-auto text-[10px] text-gray-400" x-text="getTasksByStatus('${col.id}').length"></span>
+                  </label>
+                `).join('')}
+                <div class="border-t border-gray-100 mt-1 pt-1">
+                  <button type="button" @click="resetTaskColumns()"
+                    class="w-full text-left px-3 py-1.5 text-xs text-[#B87333] hover:bg-gray-50">
+                    Reset to default
+                  </button>
+                </div>
+              </div>
+            </div>
           </template>
           <template x-if="taskViewMode === 'list'">
             <div class="flex items-center gap-1.5 ml-auto">
@@ -117,22 +194,14 @@ export function getTasksTabHtml() {
       <!-- Kanban Board View -->
       <template x-if="!taskLoading || tasks.length">
         <div>
-          <div x-show="taskViewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2" :class="showArchivedTasks ? 'xl:grid-cols-5' : 'xl:grid-cols-4'" x-bind:class="showArchivedTasks ? 'xl:grid-cols-5' : 'xl:grid-cols-4'" style="scroll-snap-type: x mandatory;">
-            ${['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map(status => `
-              <div class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
+          <div x-show="taskViewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2" :class="getTaskKanbanGridClass()" style="scroll-snap-type: x mandatory;">
+            ${TASK_KANBAN_COLUMNS.map(({ id: status, label, dotClass, bodyClass }) => `
+              <div x-show="isTaskColumnVisible('${status}')" class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
                 <!-- Column Header -->
                 <div class="flex items-center justify-between mb-3 px-1">
                   <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full ${
-                      status === 'TODO' ? 'bg-gray-400' :
-                      status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                      status === 'IN_REVIEW' ? 'bg-amber-500' : 'bg-green-500'
-                    }"></div>
-                    <h3 class="text-sm font-semibold text-gray-700">${
-                      status === 'TODO' ? 'To Do' :
-                      status === 'IN_PROGRESS' ? 'In Progress' :
-                      status === 'IN_REVIEW' ? 'In Review' : 'Done'
-                    }</h3>
+                    <div class="w-2 h-2 rounded-full ${dotClass}"></div>
+                    <h3 class="text-sm font-semibold text-gray-700">${label}</h3>
                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600"
                       x-text="getTasksByStatus('${status}').length"></span>
                   </div>
@@ -140,16 +209,12 @@ export function getTasksTabHtml() {
 
                 <!-- Column Body (SortableJS container) -->
                 <div id="kanban-col-${status}" data-status="${status}"
-                  class="flex-1 space-y-2 p-2 rounded-lg min-h-[100px] ${
-                  status === 'TODO' ? 'bg-gray-50' :
-                  status === 'IN_PROGRESS' ? 'bg-blue-50/50' :
-                  status === 'IN_REVIEW' ? 'bg-amber-50/50' : 'bg-green-50/50'
-                }">
+                  class="flex-1 space-y-2 p-2 rounded-lg min-h-[100px] ${bodyClass}">
                   <template x-for="task in getTasksByStatus('${status}')" :key="task.id">
                     <div @click="openTaskDetail(task.id)"
                       :data-task-id="task.id"
                       :class="task.incompleteBlockerCount > 0 ? 'ring-1 ring-red-200 bg-red-50/40' : 'bg-white'"
-                      class="rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
+                      class="rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group ${status === 'ARCHIVED' ? 'opacity-60' : ''}">
                       <!-- Title -->
                       <p class="text-sm font-semibold text-gray-900 leading-snug break-words mb-2" x-text="task.title"></p>
 
@@ -278,68 +343,28 @@ export function getTasksTabHtml() {
 
                   <!-- Empty state -->
                   <template x-if="getTasksByStatus('${status}').length === 0">
-                    <div class="text-center py-8 text-gray-400 text-xs">No tasks</div>
+                    <div class="text-center py-8 text-gray-400 text-xs">${status === 'ARCHIVED' ? 'No archived tasks' : 'No tasks'}</div>
                   </template>
                 </div>
 
+                ${status === 'ARCHIVED' ? '' : `
                 <!-- Quick-add button -->
                 <button @click="openTaskFormWithStatus('${status}')"
                   class="mt-2 w-full py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-white rounded border border-dashed border-gray-200 hover:border-gray-300 transition-colors">
                   + Add task
-                </button>
+                </button>`}
               </div>
             `).join('')}
+          </div>
 
-            <!-- Archived Column (conditional) -->
-            <div x-show="showArchivedTasks" class="flex flex-col min-h-[200px] min-w-[280px] snap-start md:min-w-0">
-              <div class="flex items-center justify-between mb-3 px-1">
-                <div class="flex items-center gap-2">
-                  <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-                  <h3 class="text-sm font-semibold text-gray-700">Archived</h3>
-                  <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600"
-                    x-text="getTasksByStatus('ARCHIVED').length"></span>
-                </div>
-              </div>
-              <div id="kanban-col-ARCHIVED" data-status="ARCHIVED" class="flex-1 space-y-2 p-2 rounded-lg min-h-[100px] bg-gray-50/50">
-                <template x-for="task in getTasksByStatus('ARCHIVED')" :key="task.id">
-                  <div @click="openTaskDetail(task.id)"
-                    :data-task-id="task.id"
-                    class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group opacity-60">
-                    <p class="text-sm font-semibold text-gray-900 leading-snug break-words mb-2" x-text="task.title"></p>
-                    <div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-[11px] text-gray-500 mb-2">
-                      <template x-if="getTaskAssigneeUsers(task).length">
-                        <div class="flex items-center gap-1.5" :title="getTaskAssigneeNames(task)">
-                          <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
-                            <span class="text-[9px] font-medium text-gray-600"
-                              x-text="(getTaskAssigneeUsers(task)[0]?.firstName?.[0] || '') + (getTaskAssigneeUsers(task)[0]?.lastName?.[0] || getTaskAssigneeUsers(task)[0]?.username?.[0] || '')"></span>
-                          </div>
-                          <span class="text-gray-700 font-medium" x-text="getTaskPrimaryAssigneeShort(task)"></span>
-                        </div>
-                      </template>
-                      <span class="text-gray-300">·</span>
-                      <span class="flex items-center gap-1">
-                        <span :class="getPriorityDotClass(task.priority)" class="w-1.5 h-1.5 rounded-full"></span>
-                        <span x-text="getPriorityLabel(task.priority)"></span>
-                      </span>
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
-                      <select @change="updateTaskStatus(task.id, $event.target.value); $event.target.value = task.status"
-                        :value="task.status"
-                        class="w-full text-xs py-1 px-2 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-black">
-                        <option value="TODO">To Do</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="IN_REVIEW">In Review</option>
-                        <option value="DONE">Done</option>
-                        <option value="ARCHIVED">Archived</option>
-                      </select>
-                    </div>
-                  </div>
-                </template>
-                <template x-if="getTasksByStatus('ARCHIVED').length === 0">
-                  <div class="text-center py-8 text-gray-400 text-xs">No archived tasks</div>
-                </template>
-              </div>
-            </div>
+          <!-- Belt-and-braces: toggleTaskColumn() refuses to hide the last column,
+               so this should be unreachable. It exists so a corrupt localStorage
+               blob that somehow survives validation shows a way out, not a blank page. -->
+          <div x-show="taskViewMode === 'kanban' && getVisibleTaskColumns().length === 0"
+            class="text-center py-16 border border-dashed border-gray-200 rounded-lg">
+            <p class="text-sm text-gray-500 mb-3">All columns are hidden.</p>
+            <button @click="resetTaskColumns()"
+              class="px-3 py-1.5 text-xs text-[#B87333] hover:underline">Reset columns to default</button>
           </div>
 
           <!-- List View -->

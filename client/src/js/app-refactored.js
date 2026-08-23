@@ -48,7 +48,7 @@ import { getUserModalHtml } from './components/modals/UserModal.js';
 import { getMicronizationModalHtml } from './components/modals/MicronizationModal.js';
 import { getMCBModalHtml } from './components/modals/MCBModal.js';
 import { getRAMANModalHtml } from './components/modals/RAMANModal.js';
-import { getTasksTabHtml } from './components/tabs/TasksTab.js';
+import { getTasksTabHtml, TASK_KANBAN_COLUMNS, TASK_DEFAULT_VISIBLE_COLUMNS } from './components/tabs/TasksTab.js';
 import { getTaskModalHtml } from './components/modals/TaskModal.js';
 import { getTaskDetailPanelHtml } from './components/modals/TaskDetailPanel.js';
 import { getGoalsTabHtml } from './components/tabs/GoalsTab.js';
@@ -189,6 +189,34 @@ window.formatRelativeTime = function(dateString) {
   } catch {
     return '—';
   }
+};
+
+// ---------------------------------------------------------------------------
+// Tasks kanban column visibility
+// ---------------------------------------------------------------------------
+// Pure client-side view state. Hiding a column never touches task data — a task
+// in DONE stays in DONE; the column simply isn't rendered.
+const TASK_VISIBLE_COLUMNS_KEY = 'taskVisibleColumns';
+
+// Read the persisted column-visibility map, falling back to the defaults on
+// anything unexpected: missing key, unparseable JSON, wrong type, unknown keys,
+// or a blob that would leave the board with no columns at all.
+const loadTaskVisibleColumns = () => {
+  const defaults = { ...TASK_DEFAULT_VISIBLE_COLUMNS };
+  let stored;
+  try {
+    stored = JSON.parse(localStorage.getItem(TASK_VISIBLE_COLUMNS_KEY));
+  } catch {
+    return defaults;
+  }
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return defaults;
+  const merged = { ...defaults };
+  for (const { id } of TASK_KANBAN_COLUMNS) {
+    if (typeof stored[id] === 'boolean') merged[id] = stored[id];
+  }
+  // A board with zero columns is not a state the UI can recover from on its own.
+  if (!TASK_KANBAN_COLUMNS.some(({ id }) => merged[id])) return defaults;
+  return merged;
 };
 
 // Main Alpine.js application
@@ -462,6 +490,9 @@ window.grapheneApp = function() {
     calendarSubMode: localStorage.getItem('taskCalendarSubMode') || 'month', // 'month' | 'agenda'
     taskSearch: '',
     taskFilters: { status: '', priority: '', assigneeId: '', overdue: false, tag: '', institution: '', goalId: '' },
+    // Which kanban columns are rendered. Persisted; see loadTaskVisibleColumns().
+    taskVisibleColumns: loadTaskVisibleColumns(),
+    taskColumnMenuOpen: false,
 
     // Goal management
     goals: [],
@@ -483,7 +514,7 @@ window.grapheneApp = function() {
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
-    showArchivedTasks: false,
+    showArchivedTasks: false, // DEPRECATED (W4-TASK-COLUMNS): superseded by taskVisibleColumns.ARCHIVED. No reader remains; kept only so a stale reference fails soft rather than throwing. Safe to delete in a chip that owns this file alone.
     taskAttachmentUploading: false,
     depPickerOpenFor: null, // 'blockedBy' | 'blocking' | null
     depPickerQuery: '',
@@ -5068,9 +5099,12 @@ window.grapheneApp = function() {
 
     async loadTasks() { await taskService.loadTasks(this); },
     async loadTaskAssignees() { await taskService.loadTaskAssignees(this); },
-    getTasksByStatus(status) { return this.getFilteredTasks().filter(t => t.status === status); },
-    getFilteredTasks() {
-      let filtered = this.tasks.filter(t => this.showArchivedTasks || t.status !== 'ARCHIVED');
+    // Asking for a specific status is an explicit request, so 'ARCHIVED' bypasses
+    // the archived gate in getFilteredTasks(); otherwise the Archived column and
+    // its count would always read 0.
+    getTasksByStatus(status) { return this.getFilteredTasks(status === 'ARCHIVED').filter(t => t.status === status); },
+    getFilteredTasks(includeArchived = false) {
+      let filtered = this.tasks.filter(t => includeArchived || this.isTaskColumnVisible('ARCHIVED') || t.status !== 'ARCHIVED');
       if (this.taskSearch) {
         const q = this.taskSearch.toLowerCase();
         filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
@@ -5099,6 +5133,7 @@ window.grapheneApp = function() {
     async addSubtask(parentId) { await taskService.addSubtask(this, parentId); },
     async toggleSubtaskDone(subtask) { await taskService.toggleSubtaskDone(this, subtask); },
     async updateSubtaskDueDate(subtaskId, date) { await taskService.updateSubtaskDueDate(this, subtaskId, date); },
+    async updateSubtaskTitle(subtaskId, title) { await taskService.updateSubtaskTitle(this, subtaskId, title); },
     addTaskTag() {
       const tag = this.taskTagInput.trim();
       if (tag && !this.taskForm.tags.includes(tag)) { this.taskForm.tags.push(tag); }
@@ -5498,11 +5533,49 @@ window.grapheneApp = function() {
     async searchDependencyCandidates(query, direction) {
       await taskService.searchDependencyCandidates(this, query, direction);
     },
+    // ===== KANBAN COLUMN VISIBILITY =====
+    // View-only state. None of these methods writes task data: a task in DONE
+    // stays in DONE when the DONE column is hidden.
+    getTaskKanbanColumns() { return TASK_KANBAN_COLUMNS; },
+    isTaskColumnVisible(status) { return !!this.taskVisibleColumns?.[status]; },
+    getVisibleTaskColumns() { return TASK_KANBAN_COLUMNS.filter(c => this.isTaskColumnVisible(c.id)); },
+    // True when `status` is the only column still on — the menu disables it so the
+    // board can never be emptied.
+    isTaskColumnLastVisible(status) {
+      const visible = this.getVisibleTaskColumns();
+      return visible.length === 1 && visible[0].id === status;
+    },
+    toggleTaskColumn(status) {
+      if (this.isTaskColumnLastVisible(status)) return;
+      this.taskVisibleColumns = { ...this.taskVisibleColumns, [status]: !this.isTaskColumnVisible(status) };
+      this._persistTaskColumns();
+    },
+    resetTaskColumns() {
+      this.taskVisibleColumns = { ...TASK_DEFAULT_VISIBLE_COLUMNS };
+      this._persistTaskColumns();
+    },
+    _persistTaskColumns() {
+      try {
+        localStorage.setItem(TASK_VISIBLE_COLUMNS_KEY, JSON.stringify(this.taskVisibleColumns));
+      } catch (e) {
+        console.warn('Could not persist task column visibility:', e);
+      }
+      // A hidden column's DOM node is gone, so its Sortable instance must be
+      // rebuilt against the columns that remain.
+      if (this.taskViewMode === 'kanban') this.$nextTick(() => this.initKanbanDragDrop());
+    },
+    // Literal Tailwind strings — the JIT scanner cannot see an interpolated class.
+    getTaskKanbanGridClass() {
+      const n = this.getVisibleTaskColumns().length;
+      const map = { 1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5' };
+      return map[n] || 'xl:grid-cols-4';
+    },
+
     initKanbanDragDrop() {
       kanbanService.invalidate('kanban');
       kanbanService.init({
         group: 'kanban',
-        columnIds: ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].map(s => `kanban-col-${s}`),
+        columnIds: this.getVisibleTaskColumns().map(c => `kanban-col-${c.id}`),
         itemIdAttr: 'data-task-id',
         statusAttr: 'data-status',
         onReorder: async (taskId, newStatus, oldStatus, positions) => {
