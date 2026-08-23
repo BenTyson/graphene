@@ -454,8 +454,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
     return res.status(403).json({ error: 'Only the task creator or admin can edit this task' });
   }
 
+  // A title, if sent, must be a non-empty string. Without this an inline edit that
+  // submits "" or "   " would blank out the row's title (POST already guards this).
+  let nextTitle;
+  if (title !== undefined) {
+    if (typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    nextTitle = title.trim();
+  }
+
   const data = {};
-  if (title !== undefined) data.title = title.trim();
+  if (nextTitle !== undefined) data.title = nextTitle;
   if (description !== undefined) data.description = description || null;
   if (tags !== undefined) data.tags = tags;
   if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
@@ -479,8 +489,16 @@ router.put('/:id', asyncHandler(async (req, res) => {
     }
   }
 
-  if (title !== undefined && title.trim() !== existing.title) {
-    await logActivity(prisma, { taskId: id, userId, action: 'edited', fromValue: existing.title, toValue: title.trim() });
+  if (nextTitle !== undefined && nextTitle !== existing.title) {
+    await logActivity(prisma, { taskId: id, userId, action: 'edited', fromValue: existing.title, toValue: nextTitle });
+    // A subtask's own activity trail is not surfaced anywhere in the UI (subtask rows cannot be
+    // opened as a detail panel), so mirror the rename onto the parent, where it is visible.
+    if (existing.parentId) {
+      await logActivity(prisma, {
+        taskId: existing.parentId, userId, action: 'subtask_renamed',
+        fromValue: existing.title, toValue: nextTitle
+      });
+    }
   }
 
   // Cost handling -- amount and paid flag are independent inputs

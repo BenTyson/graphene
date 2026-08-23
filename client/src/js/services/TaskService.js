@@ -8,6 +8,15 @@ import API from './api.js';
 
 class TaskService {
 
+  constructor() {
+    // Parent task ids for which the user has declined "all subtasks are done, mark this done?".
+    // Kept on the service rather than in Alpine state on purpose: nothing renders from it, so it
+    // is not reactive state, and keeping it here avoids a D-001 wiring dependency. Cleared for a
+    // parent when a new subtask is added to it (see addSubtask) — declining sticks until the
+    // shape of the work changes.
+    this._parentCompleteDeclined = new Set();
+  }
+
   async loadTasks(ctx) {
     ctx.taskLoading = true;
     try {
@@ -316,6 +325,8 @@ class TaskService {
     if (!title?.trim()) return;
     try {
       await API.tasks.create({ title: title.trim(), parentId, status: 'TODO', priority: 'MEDIUM' });
+      // The work has changed shape, so an earlier "no, it isn't finished" no longer applies.
+      this._parentCompleteDeclined.delete(parentId);
       if (ctx.selectedTask?.id === parentId) {
         ctx.selectedTask = await API.tasks.getById(parentId);
       }
@@ -325,17 +336,109 @@ class TaskService {
     }
   }
 
-  async toggleSubtaskDone(ctx, subtask) {
-    const newStatus = subtask.status === 'DONE' ? 'TODO' : 'DONE';
+  /**
+   * Rename a subtask in place. A subtask is a Task with a parentId, so this reuses the ordinary
+   * task PUT — which also gets the activity log for free. Never deletes and recreates: the row's
+   * id, comments, attachments and history all survive.
+   * Returns true when a write was actually issued and succeeded.
+   */
+  async updateSubtaskTitle(ctx, subtaskId, title) {
+    const next = typeof title === 'string' ? title.trim() : '';
+    if (!next) return false;
+    const current = (ctx.selectedTask?.subtasks || []).find(s => s.id === subtaskId);
+    if (current && current.title === next) return false;
     try {
-      await API.tasks.updateStatus(subtask.id, newStatus);
+      await API.tasks.update(subtaskId, { title: next });
       if (ctx.selectedTask) {
         ctx.selectedTask = await API.tasks.getById(ctx.selectedTask.id);
       }
-      await this.loadTasks(ctx);
+      return true;
     } catch (error) {
-      console.error('Failed to toggle subtask:', error);
+      console.error('Failed to rename subtask:', error);
+      alert('Failed to rename subtask: ' + (error.message || 'Unknown error'));
+      // Pull server state back so the row shows the title that actually persisted.
+      if (ctx.selectedTask) {
+        try { ctx.selectedTask = await API.tasks.getById(ctx.selectedTask.id); } catch (e) { /* keep last good state */ }
+      }
+      return false;
     }
+  }
+
+  async toggleSubtaskDone(ctx, subtask) {
+    const newStatus = subtask.status === 'DONE' ? 'TODO' : 'DONE';
+    const parentId = subtask.parentId || ctx.selectedTask?.id || null;
+
+    // Route through updateTaskStatus rather than calling the API directly. A subtask can carry
+    // its own TaskDependency blockers, and this checkbox used to bypass the shared DONE guard.
+    await this.updateTaskStatus(ctx, subtask.id, newStatus);
+
+    // updateTaskStatus only refetches selectedTask when it *is* the task that changed; here
+    // selectedTask is the parent, so refresh it for the progress bar and the subtask list.
+    if (parentId && ctx.selectedTask?.id === parentId) {
+      try { ctx.selectedTask = await API.tasks.getById(parentId); } catch (e) { /* keep last good state */ }
+    }
+
+    if (newStatus === 'DONE') {
+      await this.maybePromptParentComplete(ctx, parentId, subtask.id);
+    }
+  }
+
+  /**
+   * Should we ask whether the parent task is now finished?
+   *
+   * Pure: no I/O, no ctx, no side effects — so the firing rules can be exercised directly.
+   * `parent` must be server state fetched *after* the toggle landed, not an optimistic guess;
+   * that is what makes "the subtask that triggered this is actually DONE" a reliable test and
+   * what makes a failed or declined toggle silently produce `false` instead of a stray prompt.
+   *
+   * ARCHIVED counts as settled, matching the blocker rule in hasIncompleteBlockers() and the
+   * overdue-subtask rule in getOverdueSubtaskCount(). It deliberately does NOT match the
+   * progress fraction shown in the panel, which counts only DONE — that is a display ratio.
+   */
+  shouldPromptParentComplete(parent, triggerSubtaskId, declinedIds = null) {
+    if (!parent?.id) return false;
+    // Already finished — nothing to ask.
+    if (parent.status === 'DONE' || parent.status === 'ARCHIVED') return false;
+    // Declining sticks for this parent, so un-completing and re-completing a subtask over and
+    // over does not re-prompt.
+    if (declinedIds?.has(parent.id)) return false;
+
+    const subs = Array.isArray(parent.subtasks) ? parent.subtasks : [];
+    if (!subs.length) return false;
+
+    // Fire only on the transition that settled the last one: the subtask that triggered this
+    // must belong to the parent and must be DONE on the server now.
+    const trigger = subs.find(s => s.id === triggerSubtaskId);
+    if (trigger?.status !== 'DONE') return false;
+
+    return subs.every(s => s.status === 'DONE' || s.status === 'ARCHIVED');
+  }
+
+  async maybePromptParentComplete(ctx, parentId, triggerSubtaskId) {
+    if (!parentId) return;
+
+    let parent = ctx.selectedTask?.id === parentId ? ctx.selectedTask : null;
+    if (!Array.isArray(parent?.subtasks)) {
+      try { parent = await API.tasks.getById(parentId); } catch (e) { return; }
+    }
+    if (!this.shouldPromptParentComplete(parent, triggerSubtaskId, this._parentCompleteDeclined)) return;
+
+    // Every await above has settled, so this synchronous confirm() cannot block an in-flight save.
+    const total = parent.subtasks.length;
+    const accepted = confirm(
+      'All ' + total + ' subtask' + (total === 1 ? '' : 's') + ' of "' + parent.title + '" are complete.\n\n'
+      + 'Mark this task as Done?'
+    );
+
+    if (!accepted) {
+      this._parentCompleteDeclined.add(parent.id);
+      return;
+    }
+    this._parentCompleteDeclined.delete(parent.id);
+
+    // updateTaskStatus carries the incomplete-blocker guard, so a parent with unfinished
+    // blockers still gets the existing "Still blocked by:" warning before it can reach DONE.
+    await this.updateTaskStatus(ctx, parent.id, 'DONE');
   }
 
   async updateSubtaskDueDate(ctx, subtaskId, date) {

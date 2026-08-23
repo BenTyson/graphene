@@ -221,8 +221,13 @@ export function getTaskDetailPanelHtml() {
                         </svg>
                       </template>
                     </button>
-                    <span :class="sub.status === 'DONE' ? 'line-through text-gray-400' : 'text-gray-700'"
-                      class="text-sm flex-1" x-text="sub.title"></span>
+                    <input type="text" :value="sub.title"
+                      @blur="$event.target.value.trim() && $event.target.value.trim() !== sub.title ? updateSubtaskTitle(sub.id, $event.target.value.trim()) : ($event.target.value = sub.title)"
+                      @keydown.enter.prevent="$event.target.blur()"
+                      @keydown.escape.prevent="$event.target.value = sub.title; $event.target.blur()"
+                      :class="sub.status === 'DONE' ? 'line-through text-gray-400' : 'text-gray-700'"
+                      class="text-sm flex-1 min-w-0 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-black rounded px-1 py-0.5 -mx-1"
+                      title="Click to rename">
                     <input type="date" :value="sub.dueDate || ''" @change="updateSubtaskDueDate(sub.id, $event.target.value)"
                       class="text-[11px] text-gray-400 border border-transparent hover:border-gray-200 focus:border-gray-300 rounded px-1 py-0.5 w-24 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                       :class="sub.dueDate ? '!opacity-100' : ''"
@@ -561,6 +566,7 @@ export function getTaskDetailPanelHtml() {
                         activity.action === 'due_date_changed' ? ' changed due date' :
                         activity.action === 'comment_added' ? ' added a comment' :
                         activity.action === 'edited' ? ' edited the title' :
+                        activity.action === 'subtask_renamed' ? ' renamed subtask “' + (activity.fromValue || '') + '” to “' + (activity.toValue || '') + '”' :
                         activity.action === 'attachment_added' ? ' attached ' + (activity.toValue || 'a file') :
                         activity.action === 'attachment_removed' ? ' removed ' + (activity.fromValue || 'an attachment') :
                         activity.action === 'dependency_added' ? ' linked a blocker: ' + (activity.toValue || '') :
