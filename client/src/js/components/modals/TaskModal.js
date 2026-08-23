@@ -65,13 +65,28 @@ export function getTaskModalHtml() {
               </div>
             </div>
 
-            <!-- Due Date + Cost Row -->
+            <!-- Start Date + Due Date Row -->
             <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" x-model="taskForm.startDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+                <p class="text-[11px] text-gray-400 mt-1"
+                  x-text="taskForm.startDate ? 'When work on this begins.' : 'Empty = the date this task was created.'"></p>
+              </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                 <input type="date" x-model="taskForm.dueDate"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black text-sm">
+                <p class="text-[11px] text-amber-600 mt-1"
+                  x-show="isStartAfterDue(taskForm.startDate, taskForm.dueDate)" x-cloak>
+                  Starts after it is due.
+                </p>
               </div>
+            </div>
+
+            <!-- Cost -->
+            <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Cost</label>
                 <div class="flex items-stretch gap-2">

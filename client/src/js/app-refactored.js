@@ -62,6 +62,8 @@ import { getContactDetailPanelHtml } from './components/modals/ContactDetailPane
 import { getProformaTabHtml } from './components/tabs/ProformaTab.js';
 import proformaService from './services/ProformaService.js';
 import { explainCell as explainProformaCell, findUnregisteredOutlookKeys as findUnregisteredProformaKeys } from '@shared/proformaExplain.js';
+// One definition of the organisation's timezone, shared with the server (shared/orgTimezone.js).
+import { orgYmd } from '@shared/orgTimezone.js';
 import { getEmailAdminTabHtml } from './components/tabs/EmailAdminTab.js';
 import { getEmailPreferencesModalHtml } from './components/modals/EmailPreferencesModal.js';
 import emailService from './services/EmailService.js';
@@ -510,7 +512,7 @@ window.grapheneApp = function() {
     showTaskDetail: false,
     selectedTask: null,
     editingTask: null,
-    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId: null, goalId: '', tags: [], cost: '', costPaid: false },
+    taskForm: { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', startDate: '', assigneeIds: [], parentId: null, goalId: '', tags: [], cost: '', costPaid: false },
     taskCommentForm: { content: '' },
     taskLoading: false,
     taskTagInput: '',
@@ -5149,6 +5151,44 @@ window.grapheneApp = function() {
     },
     getTaskDueLabel(dueDate) { return getRelativeDateLabel(dueDate); },
     getTaskDueClass(dueDate, status) { return getRelativeDateClass(dueDate, ['DONE', 'ARCHIVED'], status); },
+    // Start dates are plain calendar dates, not deadlines: getRelativeDateLabel() would render
+    // them as "3d overdue" / "Due today", which is nonsense for a date work began on.
+    //
+    // Takes an already-resolved YYYY-MM-DD and only formats it. Parsing as `ymd + 'T00:00:00'`
+    // makes it local midnight, so `toLocaleDateString` prints back the same calendar date in any
+    // browser timezone — `new Date('2026-08-23')` would be UTC midnight and print "Aug 22" west of
+    // UTC. Same reason the calendar view uses a local `_ymd()` rather than `toISOString()`.
+    getTaskStartLabel(startDate) {
+      if (!startDate) return '';
+      const d = new Date(String(startDate).split('T')[0] + 'T00:00:00');
+      if (Number.isNaN(d.getTime())) return '';
+      // Compared against the org timezone's current year, not the browser's — on New Year's Eve
+      // a viewer in Auckland is already a year ahead, and would see ", 2026" appended to every
+      // date the Mountain-Time office considers current-year.
+      const sameYear = String(d.getFullYear()) === String(orgYmd(new Date())).slice(0, 4);
+      return d.toLocaleDateString('en-US', sameYear
+        ? { month: 'short', day: 'numeric' }
+        : { month: 'short', day: 'numeric', year: 'numeric' });
+    },
+    // A task's creation date, as the SAME calendar date the server derives a start date from.
+    //
+    // This closes the invariant. `createdAt` used to render via `new Date(...).toLocaleDateString()`
+    // — the browser's timezone — while the derived start date came from the server. Two frames,
+    // one panel, and a task created after 18:00 Mountain showed "Created Aug 22" beside
+    // "Start Aug 23". Routing both through the org timezone means they cannot disagree: this is
+    // literally `orgYmd(createdAt)`, which is the exact expression `resolveStartYmd()` uses in
+    // server/routes/tasks.js for a task nobody set a start date on, formatted by the same label
+    // function. Not "the same date by construction" as a claim — the same call.
+    //
+    // Date only, no time, per Ben's instruction.
+    getTaskCreatedLabel(createdAt) {
+      return this.getTaskStartLabel(orgYmd(createdAt));
+    },
+    // Warn, never block: people backfill records out of order, and a due date can legitimately be
+    // pulled earlier than a start date that already happened. YYYY-MM-DD compares lexicographically.
+    isStartAfterDue(startDate, dueDate) {
+      return Boolean(startDate && dueDate && String(startDate) > String(dueDate));
+    },
     getTaskAssigneeUsers(task) {
       return (task?.assignees || []).map(a => a.user).filter(Boolean);
     },

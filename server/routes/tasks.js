@@ -2,6 +2,7 @@ import express from 'express';
 import asyncHandler from 'express-async-handler';
 import { authenticateToken } from './auth.js';
 import { createFileUploadMiddleware, uploadFile, deleteFileFromStorage } from '../utils/fileUpload.js';
+import { orgYmd } from '../../shared/orgTimezone.js';
 
 const router = express.Router();
 
@@ -39,11 +40,64 @@ function normalizeCost(value) {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Format a DATE-valued column as YYYY-MM-DD.
+ *
+ * UTC-based, and that is only safe because `dueDate` and `startDate` are stored as UTC midnight
+ * (`new Date('2026-08-23')`), so the UTC calendar date IS the calendar date the user typed.
+ *
+ * DO NOT pass a real timestamp (`createdAt`, `updatedAt`, `costPaidAt`) through this. A timestamp
+ * has no calendar date until a timezone is chosen, and UTC is not the one this app displays in:
+ * between 18:00 and midnight Mountain Time the UTC day is already tomorrow. Use `orgYmd()` from
+ * shared/orgTimezone.js for those.
+ */
+function toYmd(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+}
+
+/**
+ * Resolve a task's start date to the calendar date the app displays.
+ *
+ * A null `startDate` is MEANINGFUL, not missing: it means "never explicitly set, so it is the day
+ * the card was created". Existing rows are all null and are deliberately never backfilled (D-016:
+ * "Where a fallback in the read path gives the same result as a backfill, the fallback wins").
+ *
+ * The fallback resolves `createdAt` in the ORGANISATION's timezone (`America/Denver`), not UTC.
+ * That distinction is the entire point: `createdAt` is an instant, and an instant has no calendar
+ * date until a zone is chosen. Choosing UTC — which is what `toYmd(createdAt)` did — made the
+ * derived Start date read one day later than the Created date rendered inches away on the same
+ * panel, for every task created after 18:00 Mountain. Choosing the org zone makes the server's
+ * answer the same answer every client would compute, because the zone is a shared constant rather
+ * than a per-viewer accident.
+ *
+ * This is the ONLY place the fallback exists. Do not add `?? createdAt` anywhere else — every
+ * task-shaped response in this router goes through serializeTask() and inherits it.
+ */
+function resolveStartYmd(task) {
+  return task.startDate ? toYmd(task.startDate) : orgYmd(task.createdAt ?? null);
+}
+
+/** Parse a YYYY-MM-DD (or ISO) start date from a request body. Returns undefined if invalid. */
+function parseStartDateInput(value) {
+  if (value === null || value === '') return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+/**
+ * Task -> API shape. `startDate` always ships resolved (see resolveStartYmd), with
+ * `startDateIsDerived` alongside so the UI can distinguish "somebody chose this" from "inherited
+ * from the creation date" without re-deriving it or reaching for the raw column.
+ */
 function serializeTask(task) {
   if (!task) return task;
   return {
     ...task,
     dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null,
+    startDate: resolveStartYmd(task),
+    startDateIsDerived: task.startDate == null,
     cost: task.cost == null ? null : Number(task.cost),
     costPaidAt: task.costPaidAt ? task.costPaidAt.toISOString() : null
   };
@@ -260,12 +314,12 @@ router.get('/', asyncHandler(async (req, res) => {
   const totalByTask = Object.fromEntries(totalCounts.map(c => [c.blockedTaskId, c._count]));
   const incompleteByTask = Object.fromEntries(incompleteCounts.map(c => [c.blockedTaskId, c._count]));
 
-  // Convert dates + attach blocker counts
+  // Convert dates + attach blocker counts.
+  // This used to inline the same three conversions serializeTask() does. It now calls it, so the
+  // startDate -> createdAt fallback has exactly one definition and the list cannot drift from
+  // the single-task responses.
   const result = tasks.map(t => ({
-    ...t,
-    dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null,
-    cost: t.cost == null ? null : Number(t.cost),
-    costPaidAt: t.costPaidAt ? t.costPaidAt.toISOString() : null,
+    ...serializeTask(t),
     blockerCount: totalByTask[t.id] || 0,
     incompleteBlockerCount: incompleteByTask[t.id] || 0
   }));
@@ -376,10 +430,20 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
-  const { title, description, status, priority, dueDate, assigneeIds, parentId, goalId, tags, cost, costPaid } = req.body;
+  const { title, description, status, priority, dueDate, startDate, assigneeIds, parentId, goalId, tags, cost, costPaid } = req.body;
 
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'Title is required' });
+  }
+
+  // Omitted or null leaves the column null, which resolves to createdAt on read -- identical to
+  // what the client's "default to today" would have written, without storing a redundant value.
+  let startDateValue = null;
+  if (startDate !== undefined) {
+    startDateValue = parseStartDateInput(startDate);
+    if (startDateValue === undefined) {
+      return res.status(400).json({ error: 'startDate must be a valid date (YYYY-MM-DD)' });
+    }
   }
 
   const cleanAssigneeIds = Array.isArray(assigneeIds) ? [...new Set(assigneeIds.filter(Boolean))] : [];
@@ -399,6 +463,7 @@ router.post('/', asyncHandler(async (req, res) => {
       status: status || 'TODO',
       priority: priority || 'MEDIUM',
       dueDate: dueDate ? new Date(dueDate) : null,
+      startDate: startDateValue,
       position: (maxPos._max.position ?? -1) + 1,
       tags: tags || [],
       cost: normalizedCost,
@@ -422,6 +487,24 @@ router.post('/', asyncHandler(async (req, res) => {
 
   await logActivity(prisma, { taskId: task.id, userId, action: 'created' });
 
+  // No start-date entry at creation. There used to be one, gated on
+  // `toYmd(task.startDate) !== toYmd(task.createdAt)` -- "log it only if it was backdated". Both
+  // sides of that comparison were in the wrong frame, and only one of them is fixed:
+  //
+  //   * createdAt's calendar date is now well-defined (org timezone), but
+  //   * the date the client SENDS is still browser-local. `openTaskForm()` in
+  //     client/src/js/services/TaskService.js defaults the field to `todayYmd()`, computed from
+  //     the browser clock. A viewer outside Mountain Time creating a task near midnight sends a
+  //     different day from the org-timezone day, and the test would read that as a deliberate
+  //     backdate and log a spurious "set the start date" line next to 'created'.
+  //
+  // Dropped rather than approximated: the entry only ever restated what the panel already shows,
+  // and now that Created and Start are both rendered in the org timezone a reader can compare them
+  // directly. Every start-date change AFTER creation is still logged below in PUT, which is where
+  // an audit trail earns its keep ("who moved this, and when"). If TaskService is later changed to
+  // send the org-timezone today, this entry can come back correctly -- see the Handoff section of
+  // notes/W5-STARTDATE-TZ.md.
+
   for (const uid of cleanAssigneeIds) {
     await logActivity(prisma, { taskId: task.id, userId, action: 'assigned', toValue: uid });
   }
@@ -441,7 +524,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const { prisma } = req.app.locals;
   const userId = req.user.userId;
   const { id } = req.params;
-  const { title, description, status, priority, dueDate, assigneeIds, goalId, tags, cost, costPaid } = req.body;
+  const { title, description, status, priority, dueDate, startDate, assigneeIds, goalId, tags, cost, costPaid } = req.body;
 
   const existing = await prisma.task.findUnique({
     where: { id },
@@ -486,6 +569,36 @@ router.put('/:id', asyncHandler(async (req, res) => {
     const oldDate = existing.dueDate ? existing.dueDate.toISOString().split('T')[0] : null;
     if (dueDate !== oldDate) {
       await logActivity(prisma, { taskId: id, userId, action: 'due_date_changed', fromValue: oldDate, toValue: dueDate || null });
+    }
+  }
+
+  // Start date. The stored value is diffed raw (null vs. a date) so that clearing the field
+  // genuinely writes null and the task reverts to deriving from createdAt -- there is no
+  // "no start date at all" state for a task that exists.
+  //
+  // from/to record the STORED values, so a reset logs `toValue: null`. An activity row is a
+  // permanent historical record of what changed in the column. An explicit date the user typed is
+  // exactly that; "the creation date" is not -- it is a rendering of `createdAt` under whatever
+  // ORG_TIMEZONE happens to be, and writing today's answer into a permanent row would make the log
+  // lie the day that constant changes. `start_date_reset` already names the event, and the panel
+  // renders the live resolved date from the task itself.
+  if (startDate !== undefined) {
+    const parsed = parseStartDateInput(startDate);
+    if (parsed === undefined) {
+      return res.status(400).json({ error: 'startDate must be a valid date (YYYY-MM-DD)' });
+    }
+    const prevStoredYmd = toYmd(existing.startDate);
+    const nextStoredYmd = toYmd(parsed);
+    if (nextStoredYmd !== prevStoredYmd) {
+      data.startDate = parsed;
+      const action = prevStoredYmd == null
+        ? 'start_date_set'
+        : (nextStoredYmd == null ? 'start_date_reset' : 'start_date_changed');
+      await logActivity(prisma, {
+        taskId: id, userId, action,
+        fromValue: prevStoredYmd,
+        toValue: nextStoredYmd
+      });
     }
   }
 

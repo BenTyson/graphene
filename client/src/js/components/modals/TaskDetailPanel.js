@@ -91,11 +91,30 @@ export function getTaskDetailPanelHtml() {
                   </select>
                 </div>
                 <div>
+                  <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Start Date</label>
+                  <!-- Shows the resolved date, so a task nobody set one on displays the SAME
+                       calendar date as "Created" further down this panel — both are the org
+                       timezone's day for createdAt, for every viewer wherever they are. -->
+                  <input type="date" :value="selectedTask.startDate || ''"
+                    @change="($event.target.value || null) !== (selectedTask.startDate || null) && updateTaskInline(selectedTask.id, 'startDate', $event.target.value || null)"
+                    @input="($event.target.value || null) !== (selectedTask.startDate || null) && updateTaskInline(selectedTask.id, 'startDate', $event.target.value || null)"
+                    class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
+                  <!-- A null start date is not missing data: it means nobody set one, so the task
+                       starts the day it was created. Saying so is what stops "clear it and the
+                       same date comes back" reading as a bug. -->
+                  <p class="text-[11px] text-gray-400 mt-1"
+                    x-show="selectedTask.startDateIsDerived" x-cloak>From creation date</p>
+                </div>
+                <div>
                   <label class="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                   <input type="date" :value="selectedTask.dueDate || ''"
                     @change="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
                     @input="($event.target.value || null) !== (selectedTask.dueDate || null) && updateTaskInline(selectedTask.id, 'dueDate', $event.target.value || null)"
                     class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-black bg-white">
+                  <p class="text-[11px] text-amber-600 mt-1"
+                    x-show="isStartAfterDue(selectedTask.startDate, selectedTask.dueDate)" x-cloak>
+                    Starts after it is due
+                  </p>
                 </div>
               </div>
 
@@ -173,7 +192,11 @@ export function getTaskDetailPanelHtml() {
               <!-- Created by / date -->
               <div class="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
                 <span>Created by <span class="text-gray-600" x-text="selectedTask.creator ? ((selectedTask.creator.firstName || '') + ' ' + (selectedTask.creator.lastName || selectedTask.creator.username)) : 'Unknown'"></span></span>
-                <span x-text="selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString() : ''"></span>
+                <!-- Org timezone, not the browser's. Rendered through the same call the server
+                     uses to derive a start date, so "Created" and "Start Date" above can never
+                     name different days for a task nobody set a start date on. Date only, no
+                     time. -->
+                <span x-text="getTaskCreatedLabel(selectedTask.createdAt)"></span>
               </div>
             </div>
 
@@ -557,6 +580,10 @@ export function getTaskDetailPanelHtml() {
                     <div class="flex-1">
                       <span class="font-medium text-gray-600"
                         x-text="(activity.user?.firstName || '') + ' ' + (activity.user?.lastName || activity.user?.username || '')"></span>
+                      <!-- start_date_reset carries toValue null by design: the activity log stores
+                           what the column stores, and the creation date is not a stored value --
+                           it is whatever calendar date createdAt falls on in the reader's
+                           timezone. The resolved date is on the Start Date field above. -->
                       <span x-text="
                         activity.action === 'created' ? ' created this task' :
                         activity.action === 'status_changed' ? ' changed status to ' + (activity.toValue || '') :
@@ -564,6 +591,9 @@ export function getTaskDetailPanelHtml() {
                         activity.action === 'unassigned' ? ' removed ' + (getAssigneeLabelById(activity.fromValue) || 'an assignee') :
                         activity.action === 'priority_changed' ? ' changed priority to ' + (activity.toValue || '') :
                         activity.action === 'due_date_changed' ? ' changed due date' :
+                        activity.action === 'start_date_set' ? ' set the start date to ' + getTaskStartLabel(activity.toValue) :
+                        activity.action === 'start_date_changed' ? ' changed the start date to ' + getTaskStartLabel(activity.toValue) :
+                        activity.action === 'start_date_reset' ? ' reset the start date to the creation date' :
                         activity.action === 'comment_added' ? ' added a comment' :
                         activity.action === 'edited' ? ' edited the title' :
                         activity.action === 'subtask_renamed' ? ' renamed subtask “' + (activity.fromValue || '') + '” to “' + (activity.toValue || '') + '”' :

@@ -378,6 +378,7 @@ export function getTasksTabHtml() {
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Status</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Priority</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-40">Assignee</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Start</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Due</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider w-28">Cost</th>
                   </tr>
@@ -387,7 +388,7 @@ export function getTasksTabHtml() {
                     <tr :class="row.type === 'header' ? 'bg-gray-50/70 border-y border-gray-200 cursor-pointer hover:bg-gray-100/70' : 'hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100'"
                       @click="row.type === 'header' ? toggleTaskGroup(row.group.key) : openTaskDetail(row.task.id)">
                       <template x-if="row.type === 'header'">
-                        <td colspan="6" class="px-4 py-2">
+                        <td colspan="7" class="px-4 py-2">
                           <div class="flex items-center gap-2">
                             <svg class="w-3 h-3 text-gray-400 transition-transform"
                               :class="taskCollapsedGroups[row.group.key] ? '-rotate-90' : ''"
@@ -489,6 +490,18 @@ export function getTasksTabHtml() {
                       </template>
                       <template x-if="row.type === 'task'">
                         <td class="px-4 py-2.5 w-28">
+                          <!-- Always present: the server resolves a null column to the creation
+                               date in the org timezone, so this never renders blank and never
+                               disagrees with the Created date on the detail panel. Muted when
+                               derived, so an explicitly chosen start date stands out. -->
+                          <span class="text-xs"
+                            :class="row.task.startDateIsDerived ? 'text-gray-400' : 'text-gray-700'"
+                            :title="row.task.startDateIsDerived ? 'Defaults to the date this task was created' : 'Start date'"
+                            x-text="getTaskStartLabel(row.task.startDate)"></span>
+                        </td>
+                      </template>
+                      <template x-if="row.type === 'task'">
+                        <td class="px-4 py-2.5 w-28">
                           <template x-if="row.task.dueDate">
                             <span :class="getTaskDueClass(row.task.dueDate, row.task.status)" class="text-xs"
                               x-text="getTaskDueLabel(row.task.dueDate)"></span>
@@ -512,7 +525,7 @@ export function getTasksTabHtml() {
                   </template>
                   <template x-if="getFilteredTasks().length === 0">
                     <tr>
-                      <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-400">
+                      <td colspan="7" class="px-4 py-12 text-center text-sm text-gray-400">
                         No tasks found. Create one to get started.
                       </td>
                     </tr>

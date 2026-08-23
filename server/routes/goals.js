@@ -1,6 +1,7 @@
 import express from 'express';
 import asyncHandler from 'express-async-handler';
 import { authenticateToken } from './auth.js';
+import { orgYmd } from '../../shared/orgTimezone.js';
 
 const router = express.Router();
 
@@ -114,7 +115,16 @@ router.get('/:id', asyncHandler(async (req, res) => {
     ...shapeGoal(goal, buckets),
     tasks: tasks.map(t => ({
       ...t,
-      dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null
+      dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : null,
+      // Same shape serializeTask() emits in routes/tasks.js: a resolved YYYY-MM-DD, with the
+      // null column falling back to createdAt in the org timezone (D-016 -- no backfill), plus
+      // the derived flag. Without this the raw column shipped from here as a full ISO timestamp
+      // (and as null for every legacy row) while the tasks router shipped a plain date — the same
+      // field in two shapes, which is worse than missing: a consumer looks correct until it meets
+      // a row of the other kind. `createdAt` is on these objects because the query above uses
+      // `include`, not a narrowing `select`.
+      startDate: t.startDate ? t.startDate.toISOString().split('T')[0] : orgYmd(t.createdAt),
+      startDateIsDerived: t.startDate == null
     }))
   });
 }));

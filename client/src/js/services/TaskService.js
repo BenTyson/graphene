@@ -6,6 +6,21 @@
 
 import API from './api.js';
 
+/**
+ * Today as YYYY-MM-DD in LOCAL time.
+ *
+ * Deliberately not `new Date().toISOString().split('T')[0]`, which yields the UTC date and is a
+ * day ahead for anyone west of UTC after ~20:00 local — the same reason `_ymd()` in
+ * app-refactored.js exists. Duplicated here rather than reached for through ctx so the service
+ * has no ordering dependency on the shared wiring file.
+ */
+function todayYmd() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 class TaskService {
 
   constructor() {
@@ -54,7 +69,9 @@ class TaskService {
 
   openTaskForm(ctx, parentId = null) {
     ctx.editingTask = null;
-    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', assigneeIds: [], parentId, goalId: '', tags: [], cost: '', costPaid: false };
+    // startDate defaults to today so a new card records when work begins. Existing tasks leave the
+    // column null and derive it from createdAt server-side (D-016 — no backfill).
+    ctx.taskForm = { title: '', description: '', status: 'TODO', priority: 'MEDIUM', dueDate: '', startDate: todayYmd(), assigneeIds: [], parentId, goalId: '', tags: [], cost: '', costPaid: false };
     ctx.taskTagInput = '';
     ctx.showAddTask = true;
   }
@@ -67,6 +84,8 @@ class TaskService {
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate || '',
+      // Always populated: the server resolves a null column to the creation date before it ships.
+      startDate: task.startDate || '',
       assigneeIds: (task.assignees || []).map(a => a.user?.id || a.userId).filter(Boolean),
       parentId: task.parentId || null,
       goalId: task.goalId || task.goal?.id || '',
@@ -86,6 +105,8 @@ class TaskService {
   async saveTask(ctx) {
     try {
       const payload = { ...ctx.taskForm };
+      // Cleared start date -> null, which puts the task back to deriving from its creation date.
+      if (payload.startDate === '' || payload.startDate == null) payload.startDate = null;
       // Normalize cost: empty string -> null; otherwise parse number
       if (payload.cost === '' || payload.cost == null) {
         payload.cost = null;
